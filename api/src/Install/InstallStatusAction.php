@@ -12,7 +12,7 @@ use Psr\Http\Message\ServerRequestInterface;
 // GET /api/install: tells whether the app has been installed.
 // While it has not, also gives the languages the install can be done in and
 // the starting library of sections and instruments, in the language asked
-// with ?language=fr. The library says which of its sections are preselected
+// with ?language=fr. The library says which of its instruments are preselected
 // (model/members.md, "Starting library").
 final class InstallStatusAction
 {

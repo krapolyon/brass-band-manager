@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.8 — 2026-10-11 — no change to the tables: the starting library preselects instrument by instrument, and the saxophones are capitalised (dictionary)
 // v1.7 — 2026-10-10 — no change to the tables: the install key has a minimum length and a wrong one is slowed down (dictionary)
 // v1.6 — 2026-10-10 — no change to the tables: the install key is asked on the first screen and checked at once (dictionary)
 // v1.5 — 2026-10-10 — no change to the tables: instruments are listed flat where one is chosen (dictionary)

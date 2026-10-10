@@ -1,0 +1,22 @@
+.StepIndicator {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+}
+
+.StepIndicator-progress {
+  display: flex;
+  gap: var(--spaceXxs);
+}
+
+/* 36 by 4 in Figma. */
+.StepIndicator-progress span {
+  width: 2.25rem;
+  height: 0.25rem;
+  border-radius: var(--radiusFull);
+  background: var(--border);
+}
+
+.StepIndicator-progress span[data-done="true"] {
+  background: var(--text);
+}

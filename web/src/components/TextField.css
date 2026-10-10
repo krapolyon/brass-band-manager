@@ -30,7 +30,9 @@
   box-shadow: inset 0 0 0 var(--focusWidth) var(--danger);
 }
 
-.TextField input {
+.TextField input,
+.TextField select,
+.TextField-box > button.textBodyLarge {
   flex: 1;
   min-width: 0;
   /* The height of the box, so that the whole box is the touch target. */
@@ -43,7 +45,9 @@
 }
 
 /* The focus is shown by the box. */
-.TextField input:focus-visible {
+.TextField input:focus-visible,
+.TextField select:focus-visible,
+.TextField-box > button.textBodyLarge:focus-visible {
   outline: none;
 }
 
@@ -70,4 +74,32 @@
 
 .TextField[data-error="true"] .TextField-hint {
   color: var(--danger);
+}
+
+/* The select and the picker: the whole box opens the choice, and the chevron
+   sits over its end without catching the press. */
+.TextField select,
+.TextField-box > button.textBodyLarge {
+  appearance: none;
+  margin-inline-end: calc((var(--iconSize) + var(--spaceXs)) * -1);
+  padding-inline-end: calc(var(--iconSize) + var(--spaceXs));
+  overflow: hidden;
+  text-align: start;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* The picker shows a name of the band, which may be long: it wraps, and the box grows. */
+.TextField-box > button.textBodyLarge {
+  padding-block: var(--spaceXs);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.TextField-box > button[data-empty="true"] {
+  color: var(--textMuted);
+}
+
+.TextField-box > .Icon {
+  pointer-events: none;
 }

@@ -1,0 +1,30 @@
+.Chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  padding: var(--spaceXxs) var(--spaceSm);
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+}
+
+.Chip[data-kind="accent"] {
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.Chip[data-kind="success"] {
+  background: var(--successSoft);
+  color: var(--success);
+}
+
+.Chip[data-kind="warning"] {
+  background: var(--warningSoft);
+  color: var(--warning);
+}
+
+.Chip[data-kind="danger"] {
+  background: var(--dangerSoft);
+  color: var(--danger);
+}

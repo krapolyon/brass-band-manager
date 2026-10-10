@@ -22,16 +22,47 @@ function Base({ open, onClose, title, children, form }: Props & { form: Form }) 
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
+  // The browser reports every closing a moment later, this one included. A
+  // closing asked from here is not the member closing the panel: reported as
+  // one, it would close a panel opened again in the meantime.
+  const closedHere = useRef(false);
+  const closed = () => {
+    if (closedHere.current) {
+      closedHere.current = false;
+    } else {
+      onClose();
+    }
+  };
+
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
-    if (open && !element.open) element.showModal();
-    if (!open && element.open) element.close();
+    if (!open) {
+      if (element.open) {
+        closedHere.current = true;
+        element.close();
+      }
+      return;
+    }
+    // Opened once the event that asked for it is over. A panel opened with the
+    // Enter key would otherwise receive the rest of that key press, in the
+    // field that has just taken the focus, and be confirmed at once.
+    const timer = setTimeout(() => {
+      if (element.open) return;
+      element.showModal();
+      // The browser puts the focus on the close button, the first control of
+      // the panel. A panel made to type something marks its field instead.
+      element.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [open]);
 
   // A press on the scrim lands on the <dialog> itself, not on what it holds.
+  // It closes the panel only when it also started there: a selection dragged
+  // out of a field must not.
+  const startedOnScrim = useRef(false);
   const closeOnScrim = (event: MouseEvent<HTMLDialogElement>) => {
-    if (event.target === dialog.current) onClose();
+    if (event.target === dialog.current && startedOnScrim.current) onClose();
   };
 
   return (
@@ -41,7 +72,10 @@ function Base({ open, onClose, title, children, form }: Props & { form: Form }) 
       data-form={form}
       ref={dialog}
       aria-labelledby={titleId}
-      onClose={onClose}
+      onClose={closed}
+      onMouseDown={(event) => {
+        startedOnScrim.current = event.target === dialog.current;
+      }}
       onClick={closeOnScrim}
     >
       <div className="Panel-surface">

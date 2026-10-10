@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
+import { Checkbox } from './Checkbox.tsx';
 import { Icon } from './Icon.tsx';
 import './ListRow.css';
 
@@ -14,19 +15,52 @@ type Props = {
   onPress?: () => void;
   /** With `onPress`: this row is the one currently chosen in its list. */
   current?: boolean;
+  /** Figma: Leading=Checked or Unchecked. The row starts with a checkbox, and pressing its label ticks it. */
+  checked?: boolean;
+  onCheck?: (checked: boolean) => void;
 };
 
 // Figma: ListRow. One line of a list: a label, an optional detail and an
-// optional action at the end. The rows with a checkbox (Leading=Unchecked and
-// Checked) come with the screens that tick things.
-export function ListRow({ label, detail, trailing, add, onPress, current }: Props) {
+// optional action at the end.
+export function ListRow({
+  label,
+  detail,
+  trailing,
+  add,
+  onPress,
+  current,
+  checked,
+  onCheck,
+}: Props) {
+  const id = useId();
+  const texts = (
+    <span className="ListRow-texts">
+      <span className={add ? 'textBodyStrong' : 'textBodyLarge'}>{label}</span>
+      {detail && <span className="ListRow-detail textCaption">{detail}</span>}
+    </span>
+  );
+
+  if (onCheck) {
+    return (
+      <div className="ListRow">
+        {/* The label is the touch target of the checkbox and gives it its name. */}
+        <label className="ListRow-check" htmlFor={id}>
+          <Checkbox
+            id={id}
+            checked={checked ?? false}
+            onChange={(event) => onCheck(event.target.checked)}
+          />
+          {texts}
+        </label>
+        {trailing}
+      </div>
+    );
+  }
+
   const content = (
     <>
       {add && <Icon name="Plus" />}
-      <span className="ListRow-texts">
-        <span className={add ? 'textBodyStrong' : 'textBodyLarge'}>{label}</span>
-        {detail && <span className="ListRow-detail textCaption">{detail}</span>}
-      </span>
+      {texts}
       {trailing}
     </>
   );

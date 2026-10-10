@@ -27,6 +27,8 @@
 
 .InstallLayout-nav {
   display: flex;
+  /* At a large text size the step goes under the way back. */
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spaceSm);
   min-height: var(--controlHeightSm);
@@ -79,9 +81,9 @@
     padding-inline: 0;
   }
 
-  /* 640 and the padding of the bar on each side. */
-  .InstallLayout-right > .BottomBar {
-    max-width: 42rem;
+  /* The bar spans the screen; what it holds stays in the column of 640. */
+  .InstallLayout-right > .BottomBar > * {
+    max-width: 40rem;
   }
 }
 
@@ -99,8 +101,7 @@
     display: flex;
     flex: none;
     flex-direction: column;
-    /* The column sits against the hairline. */
-    align-items: flex-end;
+    align-items: flex-start;
     /* 480 at the 1280 of Figma, the same share of a narrower window. */
     width: clamp(384px, 37.5vw, 480px);
     padding: var(--spaceXxxl);
@@ -138,6 +139,10 @@
   .InstallLayout-right > .BottomBar {
     max-width: var(--contentWidth);
   }
+
+  .InstallLayout-right > .BottomBar > * {
+    max-width: none;
+  }
 }
 
 /* Large desktop: the left pane grows, a form stops at 736, cards at 1032. */
@@ -158,4 +163,113 @@
   .InstallLayout-column {
     max-width: 26.5rem; /* 424 */
   }
+}
+
+/* Two fields side by side from the tablet width, one under the other below. */
+.InstallLayout-pair {
+  display: grid;
+  gap: var(--spaceMd);
+}
+
+/* Cards one under the other on a phone, then in columns filled one after the
+   other, as drawn: two from the tablet width, three on the largest screens. */
+.InstallLayout-columns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+/* A button of the content: as wide as the content, until the desktop. */
+.InstallLayout-start {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .InstallLayout-pair {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .InstallLayout-columns {
+    display: block;
+    columns: 2;
+    column-gap: var(--spaceMd);
+  }
+
+  .InstallLayout-columns > * {
+    break-inside: avoid;
+  }
+
+  .InstallLayout-columns > * + * {
+    margin-top: var(--spaceMd);
+  }
+}
+
+@media (min-width: 1024px) {
+  .InstallLayout-start {
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 1920px) {
+  .InstallLayout-columns {
+    columns: 3;
+  }
+}
+
+/* The forms of the panels of step 2. */
+.InstallLayout-panelForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.InstallLayout-panelActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.InstallLayout-panelActions > .Button[type="submit"] {
+  align-self: stretch;
+}
+
+.InstallLayout-panelActions > p {
+  color: var(--textMuted);
+  text-align: center;
+}
+
+/* In a dialog the actions are one line: the one that confirms on the right. */
+@media (min-width: 1024px) {
+  .InstallLayout-panelActions {
+    flex-flow: row-reverse wrap;
+    justify-content: space-between;
+  }
+
+  .InstallLayout-panelActions > .Button[type="submit"] {
+    align-self: auto;
+  }
+
+  .InstallLayout-panelActions > p {
+    flex-basis: 100%;
+  }
+}
+
+.InstallLayout-order {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.InstallLayout-order > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.InstallLayout-order > div > span {
+  color: var(--textMuted);
 }

@@ -324,7 +324,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 
 `api/src/Install/`. Rules: "Install" in [model/members.md](../model/members.md) and [model/band.md](../model/band.md).
 
-- `GET /api/install` says whether the app is installed (it is as soon as one member exists). While it is not, it also gives the languages the install can be done in and the starting library of sections and instruments, read from `api/resources/instrumentLibrary.<language>.json`. Each section of the library says whether it is preselected.
+- `GET /api/install` says whether the app is installed (it is as soon as one member exists). While it is not, it also gives the languages the install can be done in and the starting library of sections and instruments, read from `api/resources/instrumentLibrary.<language>.json`. Each instrument of the library says whether it is preselected.
 - `POST /api/install/key` tells whether a text is the install key. The welcome screen asks it before the first step, so that a wrong key is found at once. It changes nothing.
 - `POST /api/install` receives everything at once (band name, language, sections and instruments, first member), saves it in one transaction, and signs the first member in as admin.
 - This route is public and creates an admin. It is protected twice: it works only while no member exists, and it asks for the **install key**.
@@ -335,7 +335,22 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - A wrong key costs a second. With a long key, guessing leads nowhere, and the app does not need to remember who tried: no counter, no address stored.
 - Locally, `npm run setup` writes a public key (`config.local.php`); nothing to do.
 
-**The install screens** are in `web/src/screens/install/`. What the member enters is kept in memory by [InstallDraft](../web/src/screens/install/InstallDraft.tsx) and sent once, at the last step; the key is never written on the device. Built so far: the welcome screen (with the key, the language panel and its states) and the screen shown when the app is already installed. The three steps come next.
+**The install screens** are in `web/src/screens/install/`, one file per screen of Figma:
+
+| Address | Screen | What it does |
+|---|---|---|
+| `/install` | `WelcomeScreen` | Asks for the install key and checks it; shows `AlreadyInstalledScreen` on an installed app |
+| `/install/band` | `BandScreen` | Name of the band, logo |
+| `/install/sections` | `SectionsScreen` | Sections and instruments, ticked from the starting library; its panels add, rename, move and remove them |
+| `/install/member` | `MemberScreen` | The first member; sends the install |
+| `/install/done` | `DoneScreen` | What was installed |
+
+- What the member enters is kept in memory by [InstallDraft](../web/src/screens/install/InstallDraft.tsx) and sent once, at the last step. Nothing is written on the device: reloading the page starts again from the welcome screen, and a step opened without the key sends back there. Once the install has succeeded, the key and the password are dropped from the memory.
+- [sections.ts](../web/src/screens/install/sections.ts) holds the sections of the draft. Until step 2 changes something they are the starting library; what is sent is the ticked instruments, in the sections that have some. Two names are the same when they differ only by case or accents, as for the database.
+- Each screen checks what it can before sending (required fields, the length of the password, the weight and the type of the logo), with the rules of the API copied as constants at the top of the file. The API checks everything again: the screens only save the member a round trip.
+- [InstallLayout](../web/src/screens/install/InstallLayout.tsx) is the frame shared by the five screens. Its CSS also holds the three layout helpers of the steps: `InstallLayout-pair` (two fields side by side from the tablet width), `InstallLayout-columns` (cards in two then three columns, filled one after the other as drawn) and `InstallLayout-start`.
+- **Not done: the logo.** The image chosen at step 1 is shown and kept in the draft, but not sent: the API that receives a logo and makes the icons from it is not written yet.
+- **Not done: where the last screen leads.** Its two buttons go to the home address until the members feature (inviting) and the home screen exist.
 - [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
 
 ### Not written yet
@@ -434,11 +449,16 @@ Rules that keep it true:
 - **Typefaces are served by the app**, never by a font service: no visitor is reported to a third party. A test checks that the install screen asks nothing of another site.
 - A component that Figma does not have is not created here.
 
-The components written so far: `Icon`, `Button`, `IconButton`, `TextField`, `ListRow` (without its checkbox forms yet), `Sheet`, `Message`, `BottomBar`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Still to write, with the screens that need them: `Checkbox`, `Chip`, `StepIndicator`, `ImageField`, `InstrumentRow`, `SectionCard`.
+The components written so far. Base layer: `Icon`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `ListRow`, `Chip`, `Sheet`, `Message`, `StepIndicator`, `BottomBar`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`.
+
+- **`TextField` has three forms**, as in Figma where the select is a `TextField` with a chevron: `TextField` (an input), `SelectField` (the browser's own `<select>`, for a short list) and `PickerField` (a button that opens a panel, for a choice made in a list of rows).
+- **A row with a checkbox** is `ListRow` with `checked` and `onCheck`: the label and the checkbox are one target. `Checkbox` is the browser's own, drawn as in Figma.
+- **`BottomBar` takes its main button first.** On a phone it is on top; from the desktop width the buttons are shown in reverse, the main one on the right.
+- **A panel made to type something** marks its field with `data-autofocus`: the focus goes there when the panel opens, instead of the close button.
 
 **Reading a component or a screen from Figma.** The Figma connector is used read-only. Besides `get_design_context` and `get_screenshot`, a short read-only script run with `use_figma` gives the exact names of the variables bound to each layer, which is what the CSS needs. Screenshots of Figma are the visual target: after building a screen, it is captured at the four widths and compared with them.
 
-**Panels.** `BottomSheet` and `Dialog` are the browser's own `<dialog>` element ([Panel.tsx](../web/src/components/Panel.tsx)): the browser keeps the focus inside, closes on Escape and makes the rest of the page inert. A screen uses `Panel`, which is a bottom sheet below 1024 px and a dialog from there.
+**Panels.** `BottomSheet` and `Dialog` are the browser's own `<dialog>` element ([Panel.tsx](../web/src/components/Panel.tsx)): the browser keeps the focus inside, closes on Escape and makes the rest of the page inert. A screen uses `Panel`, which is a bottom sheet below 1024 px and a dialog from there. Three things in it are there for a reason: it opens once the event that asked for it is over (a panel opened with the Enter key would otherwise be confirmed by the same key press); a press closes it only when it started and ended on the scrim (a selection dragged out of a field must not); and when a change removes the control that opened it, the screen says which control takes the focus instead (see `SectionsScreen`).
 
 **The four widths.** Figma draws 390, 768, 1280 and 1920. The layouts change at 768 (tablet), 1024 (two panes) and 1920 (wide). The two panes start below the width they are drawn at, so that a laptop window that is not full screen keeps the desktop layout; `Panel` and `BottomBar` change at the same 1024. The frame of the install screens, [InstallLayout](../web/src/screens/install/InstallLayout.tsx), is the example to follow. Safe areas come from `env(safe-area-inset-*)`, never from the 60 and 34 px that Figma leaves in its phone frames; where a device has none, the padding of the sides applies instead.
 
@@ -620,7 +640,7 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. The three steps of the install (band, sections, first member) and its last screen, then the logo of the band. The sign-in screen is not designed yet.
+1. The logo of the band: the API that receives it, the icons made from it, the manifest served with the name of the band. The sign-in screen is not designed yet.
 2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
 3. The design system in CSS and the first real screens: wait for the Figma file.
 4. Every feature (members, songs, gigs, and the later ones).

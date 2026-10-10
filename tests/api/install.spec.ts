@@ -9,28 +9,35 @@ test('before install, the app says so and offers the starting library', async ({
 
   expect(status.installed).toBe(false);
   expect(status.languages).toEqual(['fr']);
-  type LibrarySection = { name: string; preselected: boolean; instruments: string[] };
+  type LibraryInstrument = { name: string; preselected: boolean };
+  type LibrarySection = { name: string; instruments: LibraryInstrument[] };
   const sections: LibrarySection[] = status.library.sections;
-  // The sections preselected when the step opens, with all their instruments.
-  expect(sections.filter((section) => section.preselected).map((section) => section.name)).toEqual([
+  // The instruments ticked when the step opens: those of the first six
+  // sections, the Sax Baryton excepted.
+  const instruments = sections.flatMap((section) => section.instruments);
+  expect(instruments.filter((i) => i.preselected).map((i) => i.name)).toEqual([
     'Trompette',
-    'Saxophone',
-    'Trombone',
-    "P'tites basses",
-    'Souba',
-    'Percu',
-  ]);
-  expect(sections[1]?.instruments).toEqual([
-    'Sax alto',
-    'Sax ténor',
-    'Sax baryton',
+    'Sax Alto',
+    'Sax Ténor',
     'Sax C Melody',
+    'Trombone Ut',
+    'Trombone Sib',
+    'P’tite basse',
+    'Souba',
+    'Batterie',
+    'Percus',
+  ]);
+  expect(instruments.filter((i) => !i.preselected).map((i) => i.name)).toEqual([
+    'Sax Baryton',
+    'Flûte',
+    'Piccolo',
+    'Clarinette',
   ]);
   expect(sections.map((section) => section.name)).toEqual([
     'Trompette',
     'Saxophone',
     'Trombone',
-    "P'tites basses",
+    'P’tites basses',
     'Souba',
     'Percu',
     'Flûte',
@@ -81,9 +88,9 @@ test('install creates the band, its sections and instruments, and the admin', as
     sql(
       'SELECT s.name, i.name FROM instrument i JOIN section s ON s.id = i.sectionId ORDER BY s.position, i.position',
     ),
-  ).toBe('Trompette\tTrompette\nSaxophone\tSax alto\nSaxophone\tSax ténor\nSouba\tSouba');
+  ).toBe('Trompette\tTrompette\nSaxophone\tSax Alto\nSaxophone\tSax Ténor\nSouba\tSouba');
   expect(sql('SELECT i.name FROM member m JOIN instrument i ON i.id = m.instrumentId')).toBe(
-    'Sax ténor',
+    'Sax Ténor',
   );
 });
 

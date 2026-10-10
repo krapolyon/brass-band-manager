@@ -1,0 +1,38 @@
+.Checkbox {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--iconSize);
+  height: var(--iconSize);
+}
+
+.Checkbox input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  border-radius: var(--radiusXs);
+  /* A line drawn inside, 1.5 px in Figma. */
+  box-shadow: inset 0 0 0 calc(var(--borderWidth) * 1.5) var(--textMuted);
+  cursor: pointer;
+}
+
+.Checkbox input:checked {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.Checkbox .Icon {
+  position: relative;
+  color: var(--onAccent);
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.Checkbox input:checked + .Icon {
+  visibility: visible;
+}

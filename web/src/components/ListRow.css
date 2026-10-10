@@ -44,3 +44,14 @@ button.ListRow {
   height: var(--controlHeightSm);
   color: var(--accentText);
 }
+
+/* A row with a checkbox: the checkbox and the label are one target, as tall as the row. */
+.ListRow-check {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-width: 0;
+  min-height: var(--controlHeightSm);
+  cursor: pointer;
+}

@@ -1,12 +1,12 @@
 {
   "sections": [
-    {"name": "Trompette", "preselected": true, "instruments": ["Trompette"]},
-    {"name": "Saxophone", "preselected": true, "instruments": ["Sax alto", "Sax ténor", "Sax baryton", "Sax C Melody"]},
-    {"name": "Trombone", "preselected": true, "instruments": ["Trombone Ut", "Trombone Sib"]},
-    {"name": "P'tites basses", "preselected": true, "instruments": ["P'tite basse"]},
-    {"name": "Souba", "preselected": true, "instruments": ["Souba"]},
-    {"name": "Percu", "preselected": true, "instruments": ["Batterie", "Percus"]},
-    {"name": "Flûte", "preselected": false, "instruments": ["Flûte", "Piccolo"]},
-    {"name": "Clarinette", "preselected": false, "instruments": ["Clarinette"]}
+    {"name": "Trompette", "instruments": [{"name": "Trompette", "preselected": true}]},
+    {"name": "Saxophone", "instruments": [{"name": "Sax Alto", "preselected": true}, {"name": "Sax Ténor", "preselected": true}, {"name": "Sax Baryton", "preselected": false}, {"name": "Sax C Melody", "preselected": true}]},
+    {"name": "Trombone", "instruments": [{"name": "Trombone Ut", "preselected": true}, {"name": "Trombone Sib", "preselected": true}]},
+    {"name": "P’tites basses", "instruments": [{"name": "P’tite basse", "preselected": true}]},
+    {"name": "Souba", "instruments": [{"name": "Souba", "preselected": true}]},
+    {"name": "Percu", "instruments": [{"name": "Batterie", "preselected": true}, {"name": "Percus", "preselected": true}]},
+    {"name": "Flûte", "instruments": [{"name": "Flûte", "preselected": false}, {"name": "Piccolo", "preselected": false}]},
+    {"name": "Clarinette", "instruments": [{"name": "Clarinette", "preselected": false}]}
   ]
 }

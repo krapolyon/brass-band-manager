@@ -9,7 +9,7 @@ export const admin = {
   lastName: 'Morel-Dubois',
   firstName: 'Jean-Baptiste',
   nickname: 'Jibé',
-  instrument: 'Sax ténor',
+  instrument: 'Sax Ténor',
 };
 
 /** What the install screen sends. A test changes a copy of it to try a faulty install. */
@@ -20,7 +20,7 @@ export function installInput() {
     bandName: 'La Fanfare des Cuivres Déchaînés',
     sections: [
       { name: 'Trompette', instruments: ['Trompette'] },
-      { name: 'Saxophone', instruments: ['Sax alto', 'Sax ténor'] },
+      { name: 'Saxophone', instruments: ['Sax Alto', 'Sax Ténor'] },
       { name: 'Souba', instruments: ['Souba'] },
     ],
     admin: { ...admin },

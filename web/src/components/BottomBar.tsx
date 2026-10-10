@@ -7,7 +7,7 @@ type Props = {
   surface?: 'glass' | 'plain';
   /** Above the buttons: counts what was chosen (info) or says why the button is off (warning). */
   caption?: { kind: 'info' | 'warning'; text: string };
-  /** The buttons. The one that moves forward comes last. */
+  /** The buttons, the one that moves forward first. On a desktop it is shown last, on the right. */
   children: ReactNode;
 };
 

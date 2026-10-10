@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.7 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
+> v1.8 — 2026-10-11 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -22,7 +22,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `city` | City | Ville | No | Lyon | 3 to 30 | |
 | `countryCode` | Country | Pays | No | FR | 2 | Chosen in a list. Stored as a two-letter ISO code, displayed as a name in the member's language |
 | `addressInstructions` | Access instructions | Instructions d'accès | No | Code 4812B, 3e étage gauche | 0 to 200 | Door code, floor, parking |
-| `instrumentId` | Instrument | Instrument | Yes | Sax ténor | — | One instrument per member. Gives the section |
+| `instrumentId` | Instrument | Instrument | Yes | Sax Ténor | — | One instrument per member. Gives the section |
 | `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. The password has 10 characters at least and no composition rule. Two technical limits: 72 bytes at most (what the hashing keeps), and no NUL character |
 | `status` | Status | Statut | Yes | ACTIVE | — | See life cycle |
 | `language` | Language | Langue | Yes | fr | 2 to 5 | Set from the band's default language at creation |
@@ -56,7 +56,7 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 ### Rules
 - **Install.** Installing the app is only possible while the `member` table is empty. A first screen presents the steps, lets the person choose the language (Band domain, `band.md`) and asks for the install key (below). It then goes in three steps:
   1. name the band and, if wanted, give its logo (Band domain, `band.md`);
-  2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot. The rows the library marks as preselected are ticked when the step opens. At least one instrument has to be kept: the first member needs one;
+  2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot. The instruments the library marks as preselected are ticked when the step opens. At least one instrument has to be kept: the first member needs one;
   3. create the first member: email, password, last name, first name, nickname and instrument, chosen among the instruments kept at step 2. This member is `ACTIVE` and holds the `ADMIN` role.
 
   Nothing is saved before the last step is confirmed: an install that is abandoned leaves an empty database. Confirming the last step signs the first member in on the device used, as a sign-in would.
@@ -159,15 +159,15 @@ The library is a file of the app, not a table. French library:
 | Section | Instruments |
 |---|---|
 | Trompette | Trompette |
-| Saxophone | Sax alto, Sax ténor, Sax baryton, Sax C Melody |
+| Saxophone | Sax Alto, Sax Ténor, Sax Baryton (not preselected), Sax C Melody |
 | Trombone | Trombone Ut, Trombone Sib |
-| P'tites basses | P'tite basse (tubas, euphoniums and the like) |
+| P’tites basses | P’tite basse (tubas, euphoniums and the like) |
 | Souba | Souba (sousaphone) |
 | Percu | Batterie, Percus |
 | Flûte | Flûte, Piccolo |
 | Clarinette | Clarinette |
 
-The first six lines are the organisation of the band that started the project. They are the rows preselected at install, with all their instruments: a band unticks what it does not play and ticks the rest. Each library says which of its rows are preselected.
+The first six lines are the organisation of the band that started the project. Their instruments are the ones preselected at install, except the Sax Baryton: a band unticks what it does not play and ticks the rest. Each library says, instrument by instrument, which ones are preselected.
 
 ### Rules
 - A section with instruments cannot be deleted. An instrument played by a member, or used by a part of a song, cannot be deleted. Both can be renamed and moved.

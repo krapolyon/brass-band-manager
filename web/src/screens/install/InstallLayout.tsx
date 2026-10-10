@@ -19,6 +19,18 @@ type Props = {
   onSubmit?: () => void;
 };
 
+// After a form was refused: puts the focus on its first faulty field, once
+// the errors are on the screen, so that the member lands where to fix.
+export function focusFirstError() {
+  requestAnimationFrame(() => {
+    document
+      .querySelector<HTMLElement>(
+        '.InstallLayout .TextField[data-error="true"] :is(input, select, button)',
+      )
+      ?.focus();
+  });
+}
+
 // The frame of every screen of the install, at the four widths of the design.
 // It is layout only (Figma: "plain frames remain only for layout: the panes,
 // the columns"):

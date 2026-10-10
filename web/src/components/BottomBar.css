@@ -54,7 +54,7 @@
   }
 
   .BottomBar-buttons {
-    flex-direction: row;
+    flex-direction: row-reverse;
     gap: var(--spaceMd);
     width: auto;
   }
