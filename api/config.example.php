@@ -15,8 +15,9 @@ return [
 
     // Asked by the install screen, so that only the person who can read this
     // file can install the app and become its first admin. Write a long random
-    // text here before opening the app for the first time.
-    // While it is empty, install is refused.
+    // text here (16 characters at least, 30 is better) before opening the app
+    // for the first time. While it is empty or shorter, install is refused.
+    // It is of no use once the app is installed.
     'installKey' => '',
 
     // There is deliberately no "session" setting here: without one, the

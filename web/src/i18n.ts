@@ -24,4 +24,16 @@ i18n.use(initReactI18next).init({
   },
 });
 
+// The name of a language in that language, as a member expects to find it in
+// a list: "Français", "English". Given by the browser, not by a translation.
+export function languageName(language: string): string {
+  const name = new Intl.DisplayNames([language], { type: 'language' }).of(language) ?? language;
+  return name.charAt(0).toLocaleUpperCase(language) + name.slice(1);
+}
+
+// The page says which language it is in: screen readers pick their voice from it.
+i18n.on('languageChanged', (language) => {
+  document.documentElement.lang = language;
+});
+
 export default i18n;

@@ -27,7 +27,9 @@ use BrassBand\Access\SignOutAction;
 use BrassBand\Band\ShowBandAction;
 use BrassBand\Band\UpdateBandAction;
 use BrassBand\Health\HealthAction;
+use BrassBand\Install\CheckInstallKeyAction;
 use BrassBand\Install\InstallAction;
+use BrassBand\Install\InstallKey;
 use BrassBand\Install\InstallStatusAction;
 use Doctrine\DBAL\Connection;
 use Slim\App;
@@ -41,6 +43,7 @@ return function (App $app, Connection $database, array $config): void {
     // Secure unless the configuration explicitly says otherwise.
     $cookie = new SessionCookie($config['session']['secureCookie'] ?? true);
     $profile = new Profile($database);
+    $installKey = new InstallKey($config['installKey'] ?? '');
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -48,10 +51,8 @@ return function (App $app, Connection $database, array $config): void {
     $app->get('/api/health', new HealthAction($database));
     $app->get('/api/band', new ShowBandAction($database));
     $app->get('/api/install', new InstallStatusAction($database));
-    $app->post(
-        '/api/install',
-        new InstallAction($database, $sessions, $cookie, $profile, $config['installKey'] ?? ''),
-    );
+    $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey));
+    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey));
     $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile));
 
     // ---------------------------------------------------------------

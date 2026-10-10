@@ -1,0 +1,223 @@
+/* The variables of the Figma file "Brass band manager", one for one.
+   A variable keeps its Figma name: `accent` there is `--accent` here.
+
+   Four collections, as in Figma:
+     Primitives   raw colours. Used by Scheme only.
+     Theme        what an accent theme sets. One block per theme. Used by Scheme only.
+     Scheme       the semantic colours, dark and light. This is what components use.
+     Size         spacing, radii, sizes of controls, type sizes, typefaces.
+
+   Scheme points to Theme and Primitives with var(), as it does in Figma with
+   aliases: changing the scheme or the theme is one change at the root.
+
+   The root element carries the two choices of the member:
+     data-scheme="dark" | "light"     absent: follows the device (AUTO)
+     data-theme="copper" | "coral" | "mint" | "lilac"     absent: the first theme
+
+   WHEN FIGMA CHANGES, CHANGE THIS FILE THE SAME WAY, AND NOTHING ELSE:
+   no component holds a colour, a spacing or a size of its own. */
+
+/* ---------------------------------------------------------------
+   Primitives  (Figma: neutral/900 is --neutral900, white/a8 is --whiteA8)
+   --------------------------------------------------------------- */
+:root {
+  --neutral0: #ffffff;
+  --neutral100: #f4f1ea;
+  --neutral300: #b4c0ce;
+  --neutral600: #566173;
+  --neutral900: #141a26;
+  --whiteA8: rgb(255 255 255 / 0.08);
+  --whiteA14: rgb(255 255 255 / 0.14);
+  --whiteA60: rgb(255 255 255 / 0.6);
+  --creamA20: rgb(244 241 234 / 0.2);
+  --inkA6: rgb(20 26 38 / 0.06);
+  --inkA8: rgb(20 26 38 / 0.08);
+  --inkA18: rgb(20 26 38 / 0.18);
+  --inkA40: rgb(20 26 38 / 0.4);
+  --blackA60: rgb(0 0 0 / 0.6);
+  --green300: #86e0c5;
+  --green700: #0f6b50;
+  --green400A16: rgb(86 196 160 / 0.16);
+  --green700A12: rgb(15 107 80 / 0.12);
+  --amber300: #fbcb73;
+  --amber800: #7a4f00;
+  --amber300A16: rgb(251 203 115 / 0.16);
+  --amber600A16: rgb(184 125 0 / 0.16);
+  --red300: #ff9c94;
+  --red700: #b3261e;
+  --red400A16: rgb(255 107 94 / 0.16);
+  --red700A10: rgb(179 38 30 / 0.1);
+  --blue300: #8fa5ff;
+  --blue600: #3a56c4;
+  --violet300: #c9a6f2;
+  --violet600: #6b3fa8;
+}
+
+/* ---------------------------------------------------------------
+   Theme  (one block per mode of the Theme collection)
+   The list of themes is also in web/src/themes.ts and in the API.
+   --------------------------------------------------------------- */
+:root,
+:root[data-theme="copper"] {
+  --themeAccent: #f4ad2a;
+  --themeOnAccent: #1b1300;
+  --themeAccentTextLight: #8a5200;
+  --themeGroundDark: #0a0f1a;
+  --themeSheetDark: #131b2a;
+  --themeGroundLight: #f5f1e8;
+  --themeSheetLight: #ffffff;
+}
+
+:root[data-theme="coral"] {
+  --themeAccent: #ff6b5e;
+  --themeOnAccent: #2a0704;
+  --themeAccentTextLight: #b92d22;
+  --themeGroundDark: #110c12;
+  --themeSheetDark: #1c151e;
+  --themeGroundLight: #f8f0ee;
+  --themeSheetLight: #ffffff;
+}
+
+:root[data-theme="mint"] {
+  --themeAccent: #5bd9ae;
+  --themeOnAccent: #052a1d;
+  --themeAccentTextLight: #0b6e51;
+  --themeGroundDark: #08110f;
+  --themeSheetDark: #111d1a;
+  --themeGroundLight: #eef5f1;
+  --themeSheetLight: #ffffff;
+}
+
+:root[data-theme="lilac"] {
+  --themeAccent: #b3a4ff;
+  --themeOnAccent: #150c40;
+  --themeAccentTextLight: #5540c4;
+  --themeGroundDark: #0d0b19;
+  --themeSheetDark: #171428;
+  --themeGroundLight: #f2f0fa;
+  --themeSheetLight: #ffffff;
+}
+
+/* ---------------------------------------------------------------
+   Scheme  (modes: Dark, Light)
+   The light values are written twice below: once for a member who chose
+   light, once for a member who follows a device set to light. CSS has no
+   older way to share them; keep the two light blocks identical.
+   --------------------------------------------------------------- */
+
+/* Dark: the default mode in Figma. */
+:root {
+  color-scheme: dark;
+  --ground: var(--themeGroundDark);
+  --sheet: var(--themeSheetDark);
+  --glass: var(--whiteA8);
+  --glassBorder: var(--whiteA14);
+  --control: var(--whiteA8);
+  --border: var(--creamA20);
+  --text: var(--neutral100);
+  --textMuted: var(--neutral300);
+  --accent: var(--themeAccent);
+  --onAccent: var(--themeOnAccent);
+  --accentText: var(--themeAccent);
+  --success: var(--green300);
+  --successSoft: var(--green400A16);
+  --warning: var(--amber300);
+  --warningSoft: var(--amber300A16);
+  --danger: var(--red300);
+  --dangerSoft: var(--red400A16);
+  --haloCool: var(--blue600);
+  --haloDeep: var(--violet600);
+  --scrim: var(--blackA60);
+}
+
+/* Light, chosen by the member. */
+:root[data-scheme="light"] {
+  color-scheme: light;
+  --ground: var(--themeGroundLight);
+  --sheet: var(--themeSheetLight);
+  --glass: var(--whiteA60);
+  --glassBorder: var(--inkA8);
+  --control: var(--inkA6);
+  --border: var(--inkA18);
+  --text: var(--neutral900);
+  --textMuted: var(--neutral600);
+  --accentText: var(--themeAccentTextLight);
+  --success: var(--green700);
+  --successSoft: var(--green700A12);
+  --warning: var(--amber800);
+  --warningSoft: var(--amber600A16);
+  --danger: var(--red700);
+  --dangerSoft: var(--red700A10);
+  --haloCool: var(--blue300);
+  --haloDeep: var(--violet300);
+  --scrim: var(--inkA40);
+}
+
+/* Light, because the member follows a device that is set to light. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-scheme="dark"]) {
+    color-scheme: light;
+    --ground: var(--themeGroundLight);
+    --sheet: var(--themeSheetLight);
+    --glass: var(--whiteA60);
+    --glassBorder: var(--inkA8);
+    --control: var(--inkA6);
+    --border: var(--inkA18);
+    --text: var(--neutral900);
+    --textMuted: var(--neutral600);
+    --accentText: var(--themeAccentTextLight);
+    --success: var(--green700);
+    --successSoft: var(--green700A12);
+    --warning: var(--amber800);
+    --warningSoft: var(--amber600A16);
+    --danger: var(--red700);
+    --dangerSoft: var(--red700A10);
+    --haloCool: var(--blue300);
+    --haloDeep: var(--violet300);
+    --scrim: var(--inkA40);
+  }
+}
+
+/* ---------------------------------------------------------------
+   Size
+   Figma gives pixels at a text size of 100 %. They are written in rem
+   (pixels / 16), so that the text size option of a member (100 to 200 %),
+   which sets the font size of the root, enlarges text, spacing and controls
+   together and nothing overflows. Lines stay in pixels: a hairline is a
+   hairline at any text size.
+   --------------------------------------------------------------- */
+:root {
+  --spaceXxs: 0.25rem; /* 4 */
+  --spaceXs: 0.5rem; /* 8 */
+  --spaceSm: 0.75rem; /* 12 */
+  --spaceMd: 1rem; /* 16 */
+  --spaceLg: 1.25rem; /* 20 */
+  --spaceXl: 1.5rem; /* 24 */
+  --spaceXxl: 2rem; /* 32 */
+  --spaceXxxl: 3rem; /* 48 */
+
+  --radiusXs: 0.5rem; /* 8 */
+  --radiusSm: 0.875rem; /* 14 */
+  --radiusMd: 1.25rem; /* 20 */
+  --radiusLg: 1.75rem; /* 28 */
+  --radiusFull: 999px;
+
+  --controlHeight: 3.25rem; /* 52 */
+  --controlHeightSm: 2.75rem; /* 44, the smallest touch target */
+  --iconSize: 1.5rem; /* 24 */
+  --borderWidth: 1px;
+  --focusWidth: 2px;
+
+  --fontSizeDisplay: 2.5rem; /* 40 */
+  --fontSizeTitle: 1.75rem; /* 28 */
+  --fontSizeHeading: 1.3125rem; /* 21 */
+  --fontSizeBodyLarge: 1.0625rem; /* 17 */
+  --fontSizeBody: 0.9375rem; /* 15 */
+  --fontSizeLabel: 0.875rem; /* 14 */
+  --fontSizeCaption: 0.8125rem; /* 13 */
+  --fontSizeMicro: 0.6875rem; /* 11 */
+  --fontSizeButton: 1rem; /* 16 */
+
+  --fontDisplay: "Bricolage Grotesque", system-ui, sans-serif;
+  --fontText: "Instrument Sans", system-ui, sans-serif;
+}

@@ -27,7 +27,7 @@ use Psr\Http\Message\ServerRequestInterface;
 // things keep it safe:
 //   - it works only while no member exists;
 //   - it asks for the install key written in the server configuration, which
-//     only the person who set the app up on the host can read.
+//     only the person who set the app up on the host can read (see InstallKey).
 final class InstallAction
 {
     public function __construct(
@@ -35,8 +35,7 @@ final class InstallAction
         private readonly Sessions $sessions,
         private readonly SessionCookie $cookie,
         private readonly Profile $profile,
-        #[\SensitiveParameter]
-        private readonly string $installKey,
+        private readonly InstallKey $installKey,
     ) {
     }
 
@@ -48,11 +47,8 @@ final class InstallAction
 
         $input = Input::from($request, InstallInput::class);
 
-        // An empty key in the configuration never matches: install is closed
-        // until the owner of the host has written one.
-        if ($this->installKey === '' || !hash_equals($this->installKey, $input->installKey)) {
-            throw new ApiError(403, 'invalidInstallKey');
-        }
+        // Already checked by the welcome screen; checked again here, where it counts.
+        $this->installKey->check($input->installKey);
 
         $this->check($input);
 

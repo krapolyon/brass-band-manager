@@ -2,13 +2,58 @@
   "app": {
     "name": "Fanfare"
   },
+  "common": {
+    "close": "Fermer"
+  },
+  "errors": {
+    "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
+  },
   "shell": {
     "loading": "Chargement…",
-    "ready": "L'application est prête.",
+    "ready": "L’application est prête.",
     "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
   },
   "notFound": {
-    "title": "Cette page n'existe pas.",
-    "backHome": "Revenir à l'accueil"
+    "title": "Cette page n’existe pas.",
+    "backHome": "Revenir à l’accueil"
+  },
+  "install": {
+    "language": {
+      "title": "Langue"
+    },
+    "welcome": {
+      "title": "On installe l’app de ta fanfare",
+      "lead": "Trois étapes, trois minutes. Garde la clé d’installation sous la main.",
+      "steps": {
+        "band": {
+          "label": "1. Ta fanfare",
+          "detail": "Son nom, et son logo si tu l’as sous la main."
+        },
+        "sections": {
+          "label": "2. Pupitres et instruments",
+          "detail": "Ce qu’on joue, rangé comme dans vos arrangements."
+        },
+        "member": {
+          "label": "3. Ton compte",
+          "detail": "Tu seras le premier fanfaron de l’app, et son admin."
+        }
+      },
+      "key": {
+        "label": "Clé d’installation",
+        "hint": "Elle est dans la configuration du serveur, chez la personne qui a mis l’app en ligne.",
+        "missing": "Il manque la clé d’installation. Elle est dans la configuration du serveur.",
+        "wrong": "Ce n’est pas la bonne clé. Compare-la avec celle de la configuration du serveur.",
+        "show": "Afficher la clé",
+        "hide": "Masquer la clé"
+      },
+      "start": "C’est parti",
+      "checking": "Vérification de la clé…"
+    },
+    "alreadyInstalled": {
+      "title": "L’app est déjà installée",
+      "lead": "L’installation ne se fait qu’une fois, et quelqu’un s’en est déjà chargé.",
+      "note": "Pas encore de compte ? Demande une invitation à un admin de la fanfare.",
+      "signIn": "Se connecter"
+    }
   }
 }

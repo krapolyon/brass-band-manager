@@ -1,30 +1,23 @@
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api } from '../api.ts';
+import { Navigate } from 'react-router';
+import { useInstallStatus } from './install/installApi.ts';
 
-type Health = {
-  database: 'ok' | 'unreachable';
-};
-
-// Placeholder for the home screen: it only proves that the front, the API and
-// the database talk to each other. The real screen replaces it.
+// Placeholder for the home screen, which is not designed yet. It does one real
+// thing: an instance that has never been installed sends its visitor to the
+// install.
 export function HomeScreen() {
-  const { t } = useTranslation();
-  const health = useQuery({
-    queryKey: ['health'],
-    queryFn: () => api<Health>('/api/health'),
-    retry: false,
-  });
+  const { t, i18n } = useTranslation();
+  const status = useInstallStatus(i18n.language);
 
-  const state = health.isPending
-    ? 'loading'
-    : health.data?.database === 'ok'
-      ? 'ready'
-      : 'unreachable';
+  if (status.data?.installed === false) {
+    return <Navigate to="/install" replace />;
+  }
+
+  const state = status.isPending ? 'loading' : status.isError ? 'unreachable' : 'ready';
 
   return (
     <main>
-      <h1>{t('app.name')}</h1>
+      <h1 className="textTitle">{t('app.name')}</h1>
       <p role="status" data-state={state}>
         {t(`shell.${state}`)}
       </p>

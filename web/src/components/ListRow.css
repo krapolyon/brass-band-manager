@@ -1,0 +1,46 @@
+.ListRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  /* 56 px in Figma: the 44 px target and the row's own padding. */
+  min-height: calc(var(--controlHeightSm) + var(--spaceSm));
+  padding: var(--spaceXxs) 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: start;
+}
+
+button.ListRow {
+  cursor: pointer;
+}
+
+.ListRow[data-add="true"] {
+  color: var(--accentText);
+}
+
+.ListRow-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ListRow-detail {
+  color: var(--textMuted);
+}
+
+/* A mark at the end of a row that is itself a button (the tick of the current
+   choice): it takes the place an action button would, without being one. */
+.ListRow-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+  color: var(--accentText);
+}

@@ -1,0 +1,34 @@
+.IconButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.IconButton[data-tone="muted"] {
+  color: var(--textMuted);
+}
+
+.IconButton[data-tone="accent"] {
+  color: var(--accentText);
+}
+
+.IconButton[data-kind="control"] {
+  background: var(--control);
+}
+
+.IconButton[data-kind="glass"] {
+  background: var(--glass);
+  box-shadow: inset 0 0 0 var(--borderWidth) var(--glassBorder);
+  /* Figma gives a blur of 40; CSS counts the same blur as half of it. */
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}

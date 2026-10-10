@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.4 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
+> v1.7 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -54,7 +54,7 @@ In every rule below, **a current member** is a member whose status is `ACTIVE` o
 A member is never deleted once `ACTIVE`: their answers to past gigs stay. The email of a member who left is kept so that they can be invited again.
 
 ### Rules
-- **Install.** Installing the app is only possible while the `member` table is empty. A first screen presents the steps and lets the person choose the language (Band domain, `band.md`). It then goes in three steps:
+- **Install.** Installing the app is only possible while the `member` table is empty. A first screen presents the steps, lets the person choose the language (Band domain, `band.md`) and asks for the install key (below). It then goes in three steps:
   1. name the band and, if wanted, give its logo (Band domain, `band.md`);
   2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot. The rows the library marks as preselected are ticked when the step opens. At least one instrument has to be kept: the first member needs one;
   3. create the first member: email, password, last name, first name, nickname and instrument, chosen among the instruments kept at step 2. This member is `ACTIVE` and holds the `ADMIN` role.
@@ -62,6 +62,8 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
   Nothing is saved before the last step is confirmed: an install that is abandoned leaves an empty database. Confirming the last step signs the first member in on the device used, as a sign-in would.
 
   Install also asks for the **install key**: a text written in the configuration of the server by the person who set the app up. Without it, whoever reached a new instance first could make themself its admin.
+
+  The key is asked on the first screen and checked at once, before the three steps: nobody fills them in to learn at the end that the key is wrong. The first screen cannot be left without the right key. The key is checked again when the last step is confirmed: that second check is the one that protects the instance, the first one is a comfort. A wrong key gets its own answer, unlike a wrong password at sign-in: there is no member yet whose existence could leak.
 - **Always one admin.** The last current member holding `ADMIN` can neither lose that role nor become `LEFT`.
 - **Sign-in.** Email and password, for current members only (`ACTIVE` and `POWER_MEMBER`). Every refusal gets the same answer, in the same time: wrong email, wrong password, member who cannot sign in, sign-in locked. The screen therefore says both things at once: wrong email or password, and wait a while after several tries. Signing in again on a device replaces its session.
 - **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
@@ -185,6 +187,7 @@ The first six lines are the organisation of the band that started the project. T
 
 ### Display
 - Sections are listed in the order of `position`, instruments in the order of their own `position` inside their section. Equal positions are ordered by name.
+- Where one instrument is chosen (the instrument of a member), instruments are listed flat, in that same order. Sections are not shown as group titles: many hold a single instrument, and the section follows from the instrument.
 - Representations in the design library: `Instrument/Row` (listed with its actions, to tick, or the one chosen in a list) and `Section/Card` (a section with its instruments, to pick and to manage them). Expected: mention (the instrument beside a member's nickname).
 
 ## 3. Session and password link (`memberSession`, `memberPasswordLink`)
@@ -220,6 +223,11 @@ These apply to every table of the app and are not repeated in the DBML.
 ## 5. Open questions
 
 None blocking.
+
+To confirm:
+
+- Wrong install keys are not counted: no member exists yet to carry a count, and the app stores no IP address. Instead, the key must be 16 characters at least (a shorter one counts as no key, and install stays closed), and a wrong key is answered after one second. With a long random text, as the configuration file asks, guessing leads nowhere.
+- A server whose install key is still empty answers like a wrong key. Default: keep one answer; the screen sends the person to the configuration of the server in both cases.
 
 Noted for later domains:
 

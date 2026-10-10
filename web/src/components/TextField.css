@@ -1,0 +1,73 @@
+.TextField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 0;
+}
+
+.TextField[data-disabled="true"] {
+  opacity: 0.5;
+}
+
+.TextField-box {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  min-height: var(--controlHeight);
+  padding-inline: var(--spaceMd);
+  border-radius: var(--radiusSm);
+  background: var(--control);
+  /* The line is drawn inside the box: going from 1 to 2 px on focus or on
+     error does not move anything. */
+  box-shadow: inset 0 0 0 var(--borderWidth) var(--border);
+}
+
+.TextField-box:focus-within {
+  box-shadow: inset 0 0 0 var(--focusWidth) var(--accent);
+}
+
+.TextField[data-error="true"] .TextField-box {
+  box-shadow: inset 0 0 0 var(--focusWidth) var(--danger);
+}
+
+.TextField input {
+  flex: 1;
+  min-width: 0;
+  /* The height of the box, so that the whole box is the touch target. */
+  min-height: var(--controlHeight);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-overflow: ellipsis;
+}
+
+/* The focus is shown by the box. */
+.TextField input:focus-visible {
+  outline: none;
+}
+
+.TextField input::placeholder {
+  color: var(--textMuted);
+  opacity: 1;
+}
+
+/* The button at the end keeps its 44 px target without widening the box. */
+.TextField-box > .IconButton {
+  margin-inline-end: calc(var(--spaceSm) * -1);
+}
+
+.TextField-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spaceXxs);
+  color: var(--textMuted);
+}
+
+.TextField-hint:empty {
+  display: none;
+}
+
+.TextField[data-error="true"] .TextField-hint {
+  color: var(--danger);
+}

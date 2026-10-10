@@ -1,0 +1,14 @@
+.Sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.Sheet-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}

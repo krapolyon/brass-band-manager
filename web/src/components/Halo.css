@@ -1,0 +1,58 @@
+/* The fields are placed in percent of the halo, as Figma scales them when the
+   component is resized. The halo itself is sized by the screen that holds it
+   (--haloHeight): 440 px on a phone frame of 390. Sizes are in pixels on
+   purpose: light does not grow with the text size option. */
+.Halo {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--haloHeight, 440px);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.Halo > span {
+  position: absolute;
+}
+
+.Halo-accent,
+.Halo-cool,
+.Halo-deep {
+  border-radius: 50%;
+}
+
+/* Figma gives a layer blur of 160 and 180; CSS counts the same blur as half of it. */
+.Halo-accent {
+  inset: -25% 41.03% 52.27% -23.08%;
+  background: var(--accent);
+  opacity: 0.55;
+  filter: blur(80px);
+}
+
+.Halo-cool {
+  inset: -15.91% -25.64% 47.73% 48.72%;
+  background: var(--haloCool);
+  opacity: 0.7;
+  filter: blur(80px);
+}
+
+.Halo-deep {
+  inset: 29.55% 7.69% 11.36% 15.38%;
+  background: var(--haloDeep);
+  opacity: 0.55;
+  filter: blur(90px);
+}
+
+.Halo-fade {
+  inset: 34.09% 0 0;
+  background: linear-gradient(to bottom, transparent, var(--ground));
+}
+
+:root[data-high-contrast="true"] .Halo {
+  display: none;
+}
+
+@media (prefers-contrast: more) {
+  .Halo {
+    display: none;
+  }
+}

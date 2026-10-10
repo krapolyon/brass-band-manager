@@ -15,7 +15,7 @@ export const admin = {
 /** What the install screen sends. A test changes a copy of it to try a faulty install. */
 export function installInput() {
   return {
-    installKey: 'local-only',
+    installKey: 'local-install-key',
     language: 'fr',
     bandName: 'La Fanfare des Cuivres Déchaînés',
     sections: [

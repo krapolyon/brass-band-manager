@@ -218,3 +218,39 @@ test('a password the hashing function refuses is reported as a faulty field', as
   expect(response.status()).toBe(422);
   expect((await response.json()).fields).toEqual({ 'admin.password': 'invalid' });
 });
+
+test('the install key can be checked before the first step', async ({ request }) => {
+  const right = await request.post('/api/install/key', {
+    data: { installKey: 'local-install-key' },
+  });
+  const wrong = await request.post('/api/install/key', {
+    data: { installKey: 'local-install-kez' },
+  });
+  const missing = await request.post('/api/install/key', { data: {} });
+
+  expect(right.status()).toBe(200);
+  expect(await right.json()).toEqual({ valid: true });
+  expect(wrong.status()).toBe(403);
+  expect(await wrong.json()).toEqual({ error: 'invalidInstallKey' });
+  expect(missing.status()).toBe(422);
+  // Checking changes nothing.
+  expect(sql('SELECT COUNT(*) FROM member')).toBe('0');
+});
+
+test('a wrong install key costs a second', async ({ request }) => {
+  const before = Date.now();
+  await request.post('/api/install/key', { data: { installKey: 'x'.repeat(40) } });
+
+  expect(Date.now() - before).toBeGreaterThanOrEqual(1000);
+});
+
+test('once installed, the key is no longer checked for anyone', async ({ request }) => {
+  await install(request);
+
+  const response = await request.post('/api/install/key', {
+    data: { installKey: 'local-install-key' },
+  });
+
+  expect(response.status()).toBe(409);
+  expect(await response.json()).toEqual({ error: 'alreadyInstalled' });
+});

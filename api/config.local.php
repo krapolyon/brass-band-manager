@@ -16,7 +16,8 @@ return [
         'password' => 'local-only',
     ],
 
-    'installKey' => 'local-only',
+    // At least 16 characters, like a real one.
+    'installKey' => 'local-install-key',
 
     'session' => [
         // The local stack has no HTTPS, and a browser refuses a secure cookie without it.

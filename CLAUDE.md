@@ -53,11 +53,26 @@ How the pieces work and fit together is in `docs/architecture.md`, with the reas
 | What | Where | How to use it |
 |---|---|---|
 | Data model | `model/` (one DBML file and one business dictionary per domain) | Follow the `brass-band-model` skill. The model changes first, the migration second |
-| Design | Figma, read through the Figma connector | Follow the `brass-band-design` skill. Implement what is there; do not redesign |
+| Design | Figma, read through the Figma connector: [Brass band manager](https://www.figma.com/design/xYuIOrGu1cS6ocbMo7M5dD/Brass-band-manager) | Follow "Reading the design" below and the `brass-band-design` skill. Implement what is there; do not redesign |
 | Decisions and scope | `docs/scoping.md` | Read before proposing anything structural |
 | Project skills | `skills/` | Versioned with the code, changed through a commit. Claude loads them from the owner's account, so a change made here is also made there |
 
 When the code disagrees with the model or with Figma, the code is wrong. When the model or the design is missing something a task needs, stop and report it: do not invent a field, a status or a screen.
+
+## Reading the design
+
+The design is made in the design conversations of the project and changes there. Here it is read, never altered.
+
+- **Start with the "Read me" note of the feature's page.** It gives the status of the page, what is decided, the components the screens use and the points still open. Build what is marked validated. For a page marked "to validate", ask the owner what is settled before writing screens.
+- **A variable is a CSS custom property with the same name**: `accent` in Figma, `--accent` in the CSS. Components use the `Scheme` collection (semantic colours) and the `Size` collection, never `Primitives` or `Theme` directly. In Figma the `Scheme` values are aliases of `Theme` and `Primitives`: keep that chain in the CSS, so that changing the scheme or the theme is one change at the root.
+- **The two axes are settings of the member.** `colorScheme` chooses the mode of `Scheme` (`AUTO` follows the device). `accentTheme` is the name of a mode of `Theme`, in lowercase (`copper`). The list of themes is written once and shared by the API, which refuses any other value, and by the CSS. The default theme of a band is not modelled yet: until it is, the first mode of `Theme` applies.
+- **A component keeps its Figma name**: `Button`, `BottomSheet`, and `SectionCard` for `Section/Card`. A variant becomes a prop with the same values, a slot becomes `children`, an exposed nested instance is the nested component itself. A component that Figma does not have is not created here: ask for it.
+- **Text uses the text styles** (`display` to `micro`); nothing else sets a typeface, a size or a weight. Figma gives sizes in pixels at 100 %: write sizes and spacing so that the text size option of the member (100 to 200 %) scales them.
+- **The typefaces are served by the app**, from `web/public/`, never loaded from a font service: no visitor is reported to a third party, and nothing the app needs can disappear. The two families are the values of `fontDisplay` and `fontText` in Figma.
+- **Four widths are drawn: 390, 768, 1280 and 1920.** The layouts change at 768, 1024 and 1920: phone below 768, tablet from 768, two panes from 1024 (drawn at 1280, used earlier so that a laptop window that is not full screen keeps the desktop layout), the wide layout from 1920.
+- **What a still screen does not say.** Safe areas come from `env(safe-area-inset-*)`, never from a fixed padding. A `BottomBar` is pinned to the bottom when its screen scrolls. A panel is a `BottomSheet` below 1024 and a `Dialog` from 1024. A column drawn at a fixed width is a `max-width`. The halo is decoration: it is hidden from assistive technology, and the high contrast option removes it.
+- **The copy is in the screens, in French.** Take it as it is drawn, with its no-break spaces before `?`, `!`, `;` and `:`, and give each string a key in `fr.json`.
+- **When a screen and the model disagree, or a screen lacks something the API asks for, stop and report it.** The fix is made in the model or in Figma first, never by a field or a screen invented here.
 
 ## Rules that apply everywhere
 
@@ -75,11 +90,11 @@ When the code disagrees with the model or with Figma, the code is wrong. When th
 
 Features are built one at a time, in the order set by the scoping document.
 
-1. Read the domain in `model/` and the screens of the feature in Figma.
+1. Read the domain in `model/` and the screens of the feature in Figma, starting with the "Read me" note of its page.
 2. List what is missing or unclear, and ask before starting.
 3. Write the migration, then the API, then the interface.
 4. Write the end-to-end tests, including the cases of a member without the right and of empty data.
-5. Check on a phone-sized viewport first.
+5. Check on a phone-sized viewport first, then at the three larger widths, in the light and the dark scheme.
 6. Say what was done, what was not, and what could not be verified.
 
 ## Where things are
@@ -132,10 +147,9 @@ A route is public only by decision: the list is short and written at the top of 
 
 1. `npm run check` and `npm test` pass.
 2. Its tests come from the dictionary: each line of the "Access rights" and "Roles and permissions" tables of `model/` is a test, refusals included.
-3. An independent review, by an agent that did not write the code, read-only: security and privacy against the dictionary, and, when there are screens, conformity to Figma with the six accessibility options on. Its findings are fixed, each with a test, or reported to the owner.
+3. An independent review, by an agent that did not write the code, read-only: security and privacy against the dictionary, and, when there are screens, conformity to Figma with the six accessibility options on. Figma does not say yet how each option looks: until it does, an option is checked for what it does (text grows without breaking the layout, motion stops, translucent surfaces turn opaque), not for a look. Its findings are fixed, each with a test, or reported to the owner.
 
 ## Still to fill in
 
-- Link to the Figma file.
 - Deployment commands.
 - The PHP and MySQL versions of the host, to keep `docker/Dockerfile` and `docker-compose.yml` equal to them (PHP 8.4 and MySQL 8.4 for now).

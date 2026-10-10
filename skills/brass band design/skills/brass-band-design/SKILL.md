@@ -101,7 +101,7 @@ A design conversation often settles things that belong to the model (a default v
 | Typefaces | Bricolage Grotesque for titles, Instrument Sans for text, as in the study. In Figma: `fontDisplay` and `fontText` |
 | Accent themes: number, names, values | Four in Figma: Copper, Coral, Mint, Lilac. The owner tunes them himself in the `Theme` collection |
 | The light scheme | Proposed in Figma, not validated. The owner finds that the halo works less well in light: to rework |
-| The larger screens | The widths are decided. The layouts drawn for Install are a first proposal: one centred column on a tablet, two panes on a desktop (the step and the title on the left, the content and its actions on the right). How the navigation adapts is not designed yet |
+| The larger screens | The widths and the desktop layout are decided (see "Larger screens"). The tablet layout drawn for Install is a first proposal: one centred column, sections in two columns, fields in pairs. How the navigation adapts is not designed yet |
 | The accessibility options | The six options of `model/members.md` (high contrast, text size, spacing, legible font, reduced motion, timeouts) have no visual definition yet. Every screen will have to hold with all six on |
 | The names of the representations | The starting vocabulary above |
 | The Live mode of a song | Drawn in the study, not validated; to be redone with the feature |
@@ -134,6 +134,7 @@ The same app runs in a browser on a tablet or a computer. Every feature is drawn
 | Large desktop | 1920 px |
 
 - A larger screen is derived from the phone screen: the same components, the same order, the same words. More width buys room (a second column, a list beside its detail), never another feature.
+- **On a desktop a screen has two panes.** The left one carries the halo, the step and the title. The right one is plain ground and carries the content and its actions. A hairline separates them. The halo never spreads over the whole window: at that size it is too much.
 - A column of text or of fields does not stretch with the window: cap its width so that lines stay readable. In Figma give that column a fixed width, not a maximum width: instances inside a column capped by a maximum can render at the width of their component. In code it is a max-width.
 - Draw the larger screens at the Rebuild step, once the phone screens are made of components. In an exploration, the phone is enough, unless the larger layout is itself the open question.
 
@@ -179,8 +180,9 @@ The base layer today: `Button`, `IconButton`, `TextField` (also the select, with
 
 - Choosing in a list: rows with a checkbox, each row keeping its own actions at the end. The line that adds an item is the last row of the list (`ListRow`, `Leading=Add`).
 - Editing one item of a list, or choosing one value among many: a `BottomSheet` over the `scrim` on a phone or a tablet, a `Dialog` on a desktop. Not another screen.
-- The main action of a screen lives in a `BottomBar`: glass and pinned when the screen is longer than the phone, plain when the screen fits. The caption above the button counts what was chosen, or says why the button is off. On a desktop the actions follow the content, aligned to its left.
+- The main action of a screen lives in a `BottomBar`: glass and pinned when the screen is longer than the phone, plain when the screen fits. The caption above the button counts what was chosen, or says why the button is off. On a desktop the actions end the content, aligned to its right: the button that moves forward is the rightmost, and any other action sits on its left. The same holds in a `Dialog`.
 - A flow in steps shows where the member is (`StepIndicator`: "Étape 2 sur 3" and a progress line) and offers a way back on every step.
+- Choosing an instrument: a flat list of `Instrument/Row`, in the order of the band. Sections are not used as group titles: many hold a single instrument, and the section follows from the instrument anyway.
 - A group of fields, a list or a summary sits on a `Sheet`.
 - A form in error says how many fields are wrong in one `Message` at the top, and what is wrong under each field.
 
@@ -217,6 +219,7 @@ For an exploration, the first, third and fifth lines are enough. For a rebuilt s
 - After building, run a script that lists what is not bound: spacing, fills, strokes and radii without a variable, text without a style. Fix what it finds before showing the screens.
 - Set the text of an instance through its properties, never by typing into its layers. Fill a slot by appending to the slot of the instance.
 - An empty slot keeps the height it was given: size it small in the component, or the component shows a hole.
+- An instance placed in a slot can be drawn at the width of its component although its layout says it fills the slot (a border that stops halfway, a hint cut off). Look at a screenshot of every screen built by script; resizing the instance once redraws it.
 - Never overwrite a change the owner made by hand. If it conflicts with the task, ask.
 
 ## Keeping this skill current

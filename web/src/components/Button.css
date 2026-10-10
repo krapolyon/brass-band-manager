@@ -1,0 +1,52 @@
+.Button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXs);
+  /* A minimum, not a fixed height: a label that wraps at a large text size
+     makes the button taller instead of spilling out. */
+  min-height: var(--controlHeight);
+  padding: var(--spaceXxs) var(--spaceXl);
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: transparent;
+  text-align: center;
+  cursor: pointer;
+}
+
+.Button[data-size="small"] {
+  min-height: var(--controlHeightSm);
+  padding-inline: var(--spaceMd);
+}
+
+.Button[data-kind="primary"] {
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.Button[data-kind="secondary"] {
+  color: var(--text);
+  /* A line drawn inside the button, so that it does not change its size. */
+  box-shadow: inset 0 0 0 var(--borderWidth) var(--border);
+}
+
+.Button[data-kind="quiet"] {
+  color: var(--accentText);
+}
+
+.Button[data-kind="danger"] {
+  color: var(--danger);
+}
+
+.Button:disabled {
+  color: var(--textMuted);
+  cursor: default;
+}
+
+.Button[data-kind="primary"]:disabled {
+  background: var(--control);
+}
+
+.Button:not([data-kind="primary"]):disabled {
+  opacity: 0.6;
+}

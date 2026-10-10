@@ -64,14 +64,17 @@ Three addresses, three uses: **5173** to write front code comfortably, **8080** 
 web/                      The front
   index.html              The single page
   public/                 Files copied as they are: manifest, icons, .htaccess
+    fonts/                The two typefaces of the design, and their licences
   src/
     main.tsx              Starting point
     router.tsx            Every address of the app and its screen
     api.ts                The only place that calls the API
     i18n.ts               Translation setup
+    themes.ts             The list of accent themes
     locales/fr.json       Every text shown to a member
-    screens/              One file per screen
-    base.css              Minimal styles (see "Styles")
+    styles/               The design system in CSS: tokens, text styles, fonts, base
+    components/           The components of the Figma library, one file each
+    screens/              One file per screen; one folder per feature
   dist/                   The built front (not committed)
 
 api/                      The back
@@ -322,8 +325,17 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 `api/src/Install/`. Rules: "Install" in [model/members.md](../model/members.md) and [model/band.md](../model/band.md).
 
 - `GET /api/install` says whether the app is installed (it is as soon as one member exists). While it is not, it also gives the languages the install can be done in and the starting library of sections and instruments, read from `api/resources/instrumentLibrary.<language>.json`. Each section of the library says whether it is preselected.
+- `POST /api/install/key` tells whether a text is the install key. The welcome screen asks it before the first step, so that a wrong key is found at once. It changes nothing.
 - `POST /api/install` receives everything at once (band name, language, sections and instruments, first member), saves it in one transaction, and signs the first member in as admin.
-- This route is public and creates an admin. It is protected twice: it works only while no member exists, and it asks for the **install key** written in `api/config.php`, which only the person who set the app up on the host can read. With an empty key, install is refused.
+- This route is public and creates an admin. It is protected twice: it works only while no member exists, and it asks for the **install key**.
+
+**The install key** ([InstallKey](../api/src/Install/InstallKey.php)) is a text that the person who puts the app online writes in `api/config.php`, the file where the database password already is. The install asks for it again: only someone who can read the files of the server knows it, so nobody else can install the app and become its admin while it sits online, not yet installed. Once the app is installed the key is of no use.
+
+- A key shorter than 16 characters counts as no key: install stays closed until a real one is written.
+- A wrong key costs a second. With a long key, guessing leads nowhere, and the app does not need to remember who tried: no counter, no address stored.
+- Locally, `npm run setup` writes a public key (`config.local.php`); nothing to do.
+
+**The install screens** are in `web/src/screens/install/`. What the member enters is kept in memory by [InstallDraft](../web/src/screens/install/InstallDraft.tsx) and sent once, at the last step; the key is never written on the device. Built so far: the welcome screen (with the key, the language panel and its states) and the screen shown when the app is already installed. The three steps come next.
 - [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
 
 ### Not written yet
@@ -344,13 +356,13 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 
 ### Adding a screen
 
-1. Create `web/src/screens/<Name>Screen.tsx`, a React component.
+1. Create `web/src/screens/<feature>/<Name>Screen.tsx`, a React component built from the components of `web/src/components/`.
 2. Add its line to `web/src/router.tsx`: `{ path: '/songs', element: <SongsScreen /> }`. A variable part is written `:id` and read with `useParams()`.
 3. Link to it with `<Link to="/songs">`, never with a plain `<a>`, which would reload the whole app.
 
 An address that matches no screen shows `NotFoundScreen`. On the host, [web/public/.htaccess](../web/public/.htaccess) answers any address that is not a file with `index.html`, so that opening `/songs/12` directly works.
 
-Components that draw a business object will follow the names of the design (`Song/Row` in Figma, `SongRow` in code) and live in `web/src/components/`. None exists yet: the Figma file does not exist yet.
+Components that draw a business object follow the names of the design (`Song/Row` in Figma, `SongRow` in code) and live in `web/src/components/` with the others.
 
 ### Calling the API
 
@@ -398,11 +410,39 @@ t('gigs.answersLeft', { count: 3 })     // variables and plurals
 - Content typed by members (song titles, places) is never translated.
 - To add a language: add `locales/<language>.json` with the same keys and list it in `i18n.ts`. The default language will come from the `band` table.
 
-### Styles
+### The design system in code
 
-[base.css](../web/src/base.css) is nearly empty on purpose. Colours, radii, spacing and type sizes will be CSS custom properties mirroring the Figma variables one for one, with two independent axes (light or dark, and the accent theme). The Figma file does not exist yet, so no value has been invented: the placeholder screens use the browser's own colours.
+The design is made in Figma and read from there ([CLAUDE.md](../CLAUDE.md), "Reading the design"). The code mirrors it name for name, so that a change in Figma has one obvious place here.
 
-Styles are plain CSS. No component kit, no CSS framework.
+| In Figma | In the code |
+|---|---|
+| The four variable collections (`Primitives`, `Theme`, `Scheme`, `Size`) | [styles/tokens.css](../web/src/styles/tokens.css): a variable keeps its name, `accent` is `--accent` |
+| The text styles (`display` to `micro`) | [styles/text.css](../web/src/styles/text.css): one class each, `.textDisplay` to `.textMicro` |
+| The typefaces (`fontDisplay`, `fontText`) | [styles/fonts.css](../web/src/styles/fonts.css), files in `web/public/fonts/` |
+| A component (`Button`, `Section/Card`) | `web/src/components/Button.tsx` and `Button.css`, `SectionCard.tsx` |
+| A variant (`Kind=Primary`) | A prop with the same values (`kind="primary"`), written on the element as `data-kind` for the CSS |
+| A slot (`Content`) | `children` |
+| An icon (`Icon/Globe`) | `<Icon name="Globe" />`; the paths are in [Icon.tsx](../web/src/components/Icon.tsx), exported from Figma |
+
+Rules that keep it true:
+
+- **No component holds a value of its own.** Colours, spacing, radii and sizes come from `tokens.css`; typefaces, sizes and weights of text come from the classes of `text.css`.
+- **The alias chain of Figma is kept**: `Scheme` variables point to `Theme` and `Primitives` with `var()`. Changing the scheme or the theme is one attribute on the root element: `data-scheme="light"` or `"dark"` (absent: follows the device), `data-theme="coral"` (absent: the first theme). The list of themes is in [themes.ts](../web/src/themes.ts).
+- **Sizes are in rem.** Figma gives pixels at a text size of 100 %; `tokens.css` writes them as pixels divided by 16. The text size option of a member sets `--textSizePercent` on the root (100 to 200), and text, spacing and controls grow together. Lines (1 and 2 px) and the halo stay in pixels.
+- **Blur.** Figma counts a blur twice as large as CSS does: a blur of 40 in Figma is `blur(20px)`.
+- **Bricolage Grotesque has an optical size axis**, which the browser applies by itself as Figma does: big titles are drawn tighter. Its font files must keep that axis, or titles come out wider than drawn and wrap differently.
+- **Typefaces are served by the app**, never by a font service: no visitor is reported to a third party. A test checks that the install screen asks nothing of another site.
+- A component that Figma does not have is not created here.
+
+The components written so far: `Icon`, `Button`, `IconButton`, `TextField`, `ListRow` (without its checkbox forms yet), `Sheet`, `Message`, `BottomBar`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Still to write, with the screens that need them: `Checkbox`, `Chip`, `StepIndicator`, `ImageField`, `InstrumentRow`, `SectionCard`.
+
+**Reading a component or a screen from Figma.** The Figma connector is used read-only. Besides `get_design_context` and `get_screenshot`, a short read-only script run with `use_figma` gives the exact names of the variables bound to each layer, which is what the CSS needs. Screenshots of Figma are the visual target: after building a screen, it is captured at the four widths and compared with them.
+
+**Panels.** `BottomSheet` and `Dialog` are the browser's own `<dialog>` element ([Panel.tsx](../web/src/components/Panel.tsx)): the browser keeps the focus inside, closes on Escape and makes the rest of the page inert. A screen uses `Panel`, which is a bottom sheet below 1024 px and a dialog from there.
+
+**The four widths.** Figma draws 390, 768, 1280 and 1920. The layouts change at 768 (tablet), 1024 (two panes) and 1920 (wide). The two panes start below the width they are drawn at, so that a laptop window that is not full screen keeps the desktop layout; `Panel` and `BottomBar` change at the same 1024. The frame of the install screens, [InstallLayout](../web/src/screens/install/InstallLayout.tsx), is the example to follow. Safe areas come from `env(safe-area-inset-*)`, never from the 60 and 34 px that Figma leaves in its phone frames; where a device has none, the padding of the sides applies instead.
+
+**Accessibility options.** The six options of a member (`model/members.md`) are attributes and variables on the root element. Two are honoured so far, by every component: the text size (`--textSizePercent`) and reduced motion (`data-reduced-motion`, and the same wish from the device). High contrast already removes the halo. The others, and what each option looks like, wait for their definition in Figma.
 
 ### Installable app (PWA)
 
@@ -566,6 +606,7 @@ To check on the real host, because it cannot be checked locally:
 
 ## Traps
 
+- **A query that fails is retried once** (set in `main.tsx`). A test that cuts the network must therefore wait a little before the screen says so.
 - **`/icons/` is reserved by Apache** for its own files: anything the app puts at that address answers 404. The app's icons are in `web/public/appIcons/`.
 - **Table names and case.** Covered by the local MySQL; see "The local stack".
 - **Port 8080 serves the built front.** After changing front code, `npm run build` before looking at 8080 or running the tests. Port 5173 has no such step.
@@ -579,7 +620,7 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. The screens of install and sign-in (their API exists), then the logo of the band.
+1. The three steps of the install (band, sections, first member) and its last screen, then the logo of the band. The sign-in screen is not designed yet.
 2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
 3. The design system in CSS and the first real screens: wait for the Figma file.
 4. Every feature (members, songs, gigs, and the later ones).

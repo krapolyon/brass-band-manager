@@ -1,0 +1,61 @@
+.BottomBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  /* Figma leaves 34 px at the bottom of a phone frame for the safe area. Here
+     the device gives its own, and never less than the padding of the sides. */
+  padding: var(--spaceMd) var(--spaceMd) max(env(safe-area-inset-bottom), var(--spaceMd));
+}
+
+.BottomBar[data-surface="glass"] {
+  position: sticky;
+  bottom: 0;
+  border-top: var(--borderWidth) solid var(--glassBorder);
+  background: var(--sheet);
+  /* Figma gives a blur of 48; CSS counts the same blur as half of it. */
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+.BottomBar-caption {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXxs);
+  color: var(--textMuted);
+}
+
+.BottomBar-caption[data-kind="warning"] {
+  color: var(--warning);
+}
+
+.BottomBar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  width: 100%;
+}
+
+/* Desktop: the actions end the content, aligned to its right. The button that
+   moves forward is the rightmost; any other action sits on its left. */
+@media (min-width: 1024px) {
+  .BottomBar,
+  .BottomBar[data-surface="glass"] {
+    position: static;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: var(--spaceMd);
+    padding: 0;
+    border: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .BottomBar-buttons {
+    flex-direction: row;
+    gap: var(--spaceMd);
+    width: auto;
+  }
+}

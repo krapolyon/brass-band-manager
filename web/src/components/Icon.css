@@ -1,0 +1,21 @@
+.Icon {
+  flex: none;
+  width: var(--iconSize);
+  height: var(--iconSize);
+}
+
+/* Sizes relative to the 24 of --iconSize, so that they follow the text size option. */
+.Icon[data-size="20"] {
+  width: calc(var(--iconSize) * 20 / 24);
+  height: calc(var(--iconSize) * 20 / 24);
+}
+
+.Icon[data-size="16"] {
+  width: calc(var(--iconSize) * 16 / 24);
+  height: calc(var(--iconSize) * 16 / 24);
+}
+
+.Icon[data-size="32"] {
+  width: calc(var(--iconSize) * 32 / 24);
+  height: calc(var(--iconSize) * 32 / 24);
+}

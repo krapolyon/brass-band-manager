@@ -22,6 +22,10 @@ This installs everything, starts a local stack in Docker (Apache with PHP, and M
 | Check the code | `npm run check` |
 | Stop the stack | `npm run stack:down` |
 
+## Installing it on a host
+
+Deployment is not automated yet, but one thing is worth knowing from the start. When the app is first opened it asks for an **install key**: a text of your choice, 16 characters at least, that you write beforehand in `api/config.php` on the server, next to the database password. It is what stops a stranger from installing your instance, and becoming its admin, before you do. It is used once.
+
 ## Documentation
 
 | Document | What it tells |

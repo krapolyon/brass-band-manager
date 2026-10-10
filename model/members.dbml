@@ -1,4 +1,7 @@
 // Domain: Members
+// v1.7 — 2026-10-10 — no change to the tables: the install key has a minimum length and a wrong one is slowed down (dictionary)
+// v1.6 — 2026-10-10 — no change to the tables: the install key is asked on the first screen and checked at once (dictionary)
+// v1.5 — 2026-10-10 — no change to the tables: instruments are listed flat where one is chosen (dictionary)
 // v1.4 — 2026-10-10 — no change to the tables: install key, limits of the password and behaviour of sign-in made explicit (dictionary)
 // v1.3 — 2026-10-10 — no change to the tables: install preselects instruments and requires one, and signs the first member in (dictionary)
 // v1.2 — 2026-10-10 — no change to the tables: install now starts with the band name and logo (dictionary)
