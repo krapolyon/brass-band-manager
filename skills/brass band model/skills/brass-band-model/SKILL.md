@@ -7,7 +7,7 @@ description: Data model of the brass band app, in DBML with camelCase names, plu
 
 This skill governs the data model of the brass band app: an installable web app (React PWA, framework-free PHP API, MySQL on shared hosting) that a band hosts for itself. The code is meant to be open-sourced and used by other bands, possibly in other countries.
 
-It lives in the repository at `.claude/skills/brass-band-model/SKILL.md` and is versioned with the code. Change it through a commit, like any other file.
+It is versioned in the repository at `skills/brass band model/skills/brass-band-model/SKILL.md`, and loaded by Claude from the owner's account: a change is made in both places. Change it through a commit, like any other file.
 
 ## Deliverables
 
@@ -165,7 +165,7 @@ One Markdown file per domain, one entry per business object (not per table: join
 <One or two sentences.>
 
 ### Fields
-| Field | Label (en) | Label (fr) | Required | Real example | Realistic length | Rules |
+| Field | Label (en) | Label (fr) | Required | Example | Realistic length | Rules |
 |---|---|---|---|---|---|---|
 
 ### Life cycle
@@ -193,7 +193,7 @@ One Markdown file per domain, one entry per business object (not per table: join
 1. …
 ```
 
-Writing rules: **real examples** from the band rather than "John Smith" (compound names, long song titles, edge cases), a **realistic length** rather than the technical maximum, and unknown information stays in "Open questions", never guessed.
+Writing rules: **realistic examples** rather than "John Smith" (compound names, long song titles, edge cases), a **realistic length** rather than the technical maximum, and unknown information stays in "Open questions", never guessed. Examples about people are always made up: no real member, name, phone number or address is written in the repository. Names of songs, instruments and sections can be real.
 
 ## Migrations
 

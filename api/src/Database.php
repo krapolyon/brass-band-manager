@@ -7,6 +7,7 @@ namespace BrassBand;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PDO;
+use Pdo\Mysql;
 
 // The only place where the connection to the database is set up.
 //
@@ -36,6 +37,8 @@ final class Database
             'driverOptions' => [
                 // Real prepared statements, sent to MySQL separately from their values.
                 PDO::ATTR_EMULATE_PREPARES => false,
+                // Instants are stored and read in UTC, whatever the clock of the server.
+                Mysql::ATTR_INIT_COMMAND => "SET time_zone = '+00:00'",
             ],
         ]);
     }

@@ -7,7 +7,7 @@ description: Design of the brass band app, its art direction, its themes and var
 
 This skill governs the design of the brass band app: an installable web app (React PWA) used mostly on a phone by the thirty or so members of a band, and meant to be open-sourced so that other bands can run it under their own name, logo and colours.
 
-It lives in the repository at `.claude/skills/brass-band-design/SKILL.md` and is versioned with the code. It records decisions the project owner has made, and it is adjusted with him as the design evolves (see "Keeping this skill current").
+It is versioned in the repository at `skills/brass band design/skills/brass-band-design/SKILL.md`, and loaded by Claude from the owner's account: a change is made in both places. It records decisions the project owner has made, and it is adjusted with him as the design evolves (see "Keeping this skill current").
 
 ## Where design happens
 

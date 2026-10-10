@@ -252,7 +252,7 @@ Secrets (database password, later the Discord bot token and the push keys) go th
 
 ### Not written yet
 
-- **Sessions, sign-in and role checks.** They need the tables of the `members` domain, which must first be validated in `model/`. They will be Slim middleware: written once, attached to groups of routes in `routes.php`, so that no action checks a session by itself.
+- **Install, sessions, sign-in and permission checks.** Their tables exist (`001_members.sql`); the rules are in [model/members.md](../model/members.md). Actions will check a permission, never a role, through one table in the code that says which roles grant it. Session and permission checks will be Slim middleware: written once, attached to groups of routes in `routes.php`, so that no action checks a session by itself.
 - **Protection against forged requests (CSRF)** comes with the session cookie.
 - **Serving files** (recordings, scores) to signed-in members only.
 
@@ -350,7 +350,17 @@ The schema is described in `model/` (DBML, one file per domain), and created by 
 
 Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code (about 60 lines).
 
-No migration exists yet.
+The first migration is `001_members.sql`: sections, instruments, members, roles, sessions and password links.
+
+### Conventions of every table
+
+Written once in [model/members.md](../model/members.md), "Storage conventions", and applied by every migration:
+
+- `createdAt`, `updatedAt` and `updatedByMemberId` on every table: a technical trace, filled by the database for the two dates and by the API for the member.
+- Instants are `DATETIME` columns holding UTC. The API sets its connection to UTC (`Database.php`), so that `CURRENT_TIMESTAMP` and every value read or written agree whatever the clock of the host. `TIMESTAMP` is not used: in MySQL it stops in January 2038. Converting to the member's local time is the front's job, with `Intl`.
+- Tables are `utf8mb4` with the `utf8mb4_unicode_ci` collation: text is compared without regard to case or accents, which is what makes a nickname unique in the way a person expects. Hashes and codes that must be compared exactly are declared `ascii_bin`.
+- Every rule of the model is a constraint in the database (`NOT NULL`, `UNIQUE`, `FOREIGN KEY`, `CHECK`), not only a check in PHP. A refused write is a bug in the API, which should have refused first with a proper error key.
+- When reading the database by hand with the `mysql` command, add `--default-character-set=utf8mb4`: without it, accents typed in a query are stored wrongly.
 
 ## Tests
 
@@ -459,7 +469,7 @@ To settle then: how `api/src`, `api/vendor` and `api/config.php` are kept out of
 
 In the order of the scoping document:
 
-1. Sign-in, sessions and roles: waits for the validated `members` domain.
+1. Install (sections, instruments, first admin), sign-in, sessions and permissions: the `members` domain is validated and its tables exist; the code is next.
 2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
 3. The design system in CSS and the first real screens: wait for the Figma file.
 4. Every feature (members, songs, gigs, and the later ones).

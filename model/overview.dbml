@@ -1,5 +1,6 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
+// v0.3 — 2026-10-10 — aligned with the validated Members domain: sections, nickname, required names and instrument, POWER_MEMBER status, member and setlist roles, password links
 // v0.2 — 2026-10-10 — roles per member, one instrument per member, song statuses, gigs split into slots, IF_NEEDED answer
 // v0.1 — 2026-10-10 — first draft
 
@@ -28,26 +29,29 @@ Table band {
 Enum memberStatus {
   INVITED [note: 'Invited by an admin, has not chosen a password yet']
   ACTIVE
+  POWER_MEMBER [note: 'Was active and plays less: helps out on some gigs. Signs in, answers and counts like an active member, but is not reminded to answer.']
   LEFT [note: 'Has left the band; access removed, history kept']
 }
 
 Enum role {
-  ADMIN [note: 'Manages members, roles and band settings']
+  ADMIN [note: 'Manages roles and band settings. Holds every permission of the other roles.']
+  MEMBER_MANAGER [note: 'Manages members and their status']
   SONG_MANAGER [note: 'Manages songs and their files']
   GIG_MANAGER [note: 'Manages gigs']
+  SETLIST_MANAGER [note: 'Later feature. Manages setlists.']
   QUOTE_MANAGER [note: 'Later feature. Manages quotes.']
 }
 
 Table member {
   id integer [pk]
+  nickname varchar [not null, unique, note: '🔒 Personal data — purpose: identification. The name shown everywhere in the app.']
   firstName varchar [not null, note: '🔒 Personal data — purpose: identification']
-  lastName varchar [note: '🔒 Personal data — purpose: identification']
-  email varchar [not null, unique, note: '🔒 Personal data — purpose: invitation and sign-in']
-  phone varchar [note: '🔒 Personal data — purpose: contact between members']
-  passwordHash varchar [note: 'Empty until the invited member has chosen a password']
-  instrumentId integer [ref: > instrument.id, note: 'The instrument the member plays. One per member: another part can always be opened by hand.']
+  lastName varchar [not null, note: '🔒 Personal data — purpose: identification']
+  email varchar [not null, unique, note: '🔒 Personal data — purpose: sign-in, and directory of the band']
+  mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band']
+  instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member: another part can always be opened by hand.']
   status memberStatus [not null]
-  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale).'
+  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account. Detailed in members.dbml: postal address, password, display and accessibility preferences.'
 }
 
 Table memberRole {
@@ -60,10 +64,18 @@ Table memberRole {
   }
 }
 
-Table instrument {
+Table section {
   id integer [pk]
   name varchar [not null, unique]
-  Note: 'An instrument played in the band. The list is managed by the band.'
+  position integer [not null]
+  Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is. Detailed in members.dbml.'
+}
+
+Table instrument {
+  id integer [pk]
+  sectionId integer [not null, ref: > section.id]
+  name varchar [not null, unique]
+  Note: 'An instrument played in the band. The list is managed by the band. Detailed in members.dbml.'
 }
 
 Table instrumentAlias {
@@ -79,6 +91,13 @@ Table memberSession {
   lastUsedAt timestamp [not null]
   expiresAt timestamp [not null]
   Note: 'A signed-in device of a member. Deleting the row signs the device out.'
+}
+
+Table memberPasswordLink {
+  id integer [pk]
+  memberId integer [not null, unique, ref: - member.id]
+  expiresAt timestamp [not null]
+  Note: 'A single-use link that lets a member choose a password: invitation or reset. Detailed in members.dbml.'
 }
 
 Table pushSubscription {
@@ -255,9 +274,11 @@ TableGroup bandSettings {
 TableGroup members {
   member
   memberRole
+  section
   instrument
   instrumentAlias
   memberSession
+  memberPasswordLink
   pushSubscription
 }
 

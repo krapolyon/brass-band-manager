@@ -22,6 +22,14 @@ Dependencies themselves are welcome: proven, maintained code is better than a ho
 - What is refused is the large framework that dictates the structure of the app and forces upgrades, not the library.
 - Where the platform already does the job, use it: PHP's password functions, browser APIs (`Intl` for dates and numbers), plain CSS.
 
+## Three principles: secure, private and accessible by design
+
+These are decided when a feature is modelled and designed, not added after it works. Each one is a question to answer before writing the feature, and a point to report on when it is done.
+
+- **Secure by design.** Every feature starts from "who may do this, and how does the server know?". Access is refused unless a rule grants it. Sessions, permission checks, input validation and database access go through the shared layer, never through code written for one feature. Secrets and tokens are stored hashed or outside the database, and nothing sensitive is ever sent to the front "just in case".
+- **Private by design.** A piece of personal data exists only if it has a stated purpose, written in the model. Collect the minimum, make optional what can be, say who can see it, erase it when the purpose ends (a member who leaves), and never write it to a log, a test, or the repository. Examples in the code, the tests and the documentation are made up.
+- **Accessible by design.** The default design is not required to reach the highest level of the accessibility guidelines (WCAG AAA). What is required is that a member can turn on accessibility options that bring the app to level AA at least, and to AAA wherever feasible. So: the options are part of the member's account (see `model/members.md`), every screen is built to honour them (text that can grow without breaking the layout, colours and motion that come from variables an option can change), and the basics hold with no option at all: real buttons and links, labels on every field, a visible focus, nothing conveyed by colour alone, everything reachable without a pointer.
+
 ## Stack
 
 | Part | Choice | Constraint to remember |
@@ -116,7 +124,7 @@ Written once, used by every feature. A feature never does these things by itself
 | Call the API from the front | `api()` of `web/src/api.ts`, through TanStack Query |
 | Show a text | `t('some.key')`, the key being in `web/src/locales/fr.json` |
 
-Sessions and role checks are not written yet: they wait for the validated `members` domain in `model/`.
+Sessions and permission checks are not written yet. Their rules are in `model/members.md`: an action checks a permission, never a role.
 
 ## Still to fill in
 
