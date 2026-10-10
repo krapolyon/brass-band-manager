@@ -13,25 +13,32 @@ This repository is where the app is **built**. It is not where it is designed: t
 
 ## Guiding principle: what is frozen must not age
 
-The app will be changed rarely once it is stable, so nothing may force an update just to keep running. This is why there is no PHP framework and why dependencies are few and pinned.
+The app will be changed rarely once it is stable, so nothing may force an update just to keep running. This is why there is no large framework (Laravel, Symfony as a whole, MUI and the like) and why versions are pinned.
 
-- Do not add a dependency without asking, and say what it would cost to do without it.
-- Prefer what the platform already provides: native PHP functions, browser APIs (`Intl` for dates and numbers), plain CSS.
+Dependencies themselves are welcome: proven, maintained code is better than a home-made copy of it.
+
+- When a need is one that libraries solve well (routing, data access, validation, translation, an ORM if it fits), propose the library that is the best fit, the most robust, the most secure and the easiest to maintain. Do not write a home-made version to keep the count low.
+- The owner validates each dependency before it is installed. Asking is not a reason to propose fewer: give the recommendation, its maintenance record and what it pulls in, and say when writing it ourselves is honestly the better choice.
+- What is refused is the large framework that dictates the structure of the app and forces upgrades, not the library.
+- Where the platform already does the job, use it: PHP's password functions, browser APIs (`Intl` for dates and numbers), plain CSS.
 
 ## Stack
 
 | Part | Choice | Constraint to remember |
 |---|---|---|
-| Front | React with Vite, built to static files | No server-side rendering |
+| Front | React and TypeScript with Vite, built to static files. React Router for screens, TanStack Query for API calls, i18next for text | No server-side rendering |
 | Interface | Components written for this app, plain CSS with custom properties | No component kit. A headless behaviour library is acceptable |
-| Back | PHP without a framework, a few small pinned libraries (routing, input validation, web push) | Runs on shared hosting |
+| Back | PHP with Slim (routing and error handling), Doctrine DBAL (data access, no ORM) and Valinor (input validation) | Runs on shared hosting. No full framework |
 | Database | MySQL | Table names are case-sensitive on the Linux host and not on macOS |
 | Hosting | OVH shared hosting | No Node at runtime, no long-running process, no websockets. Scheduled work goes through the host's scheduled tasks |
 | Sign-in | Email and password, long server-side sessions that can be revoked | No magic link |
 | Tests | Playwright, end to end | Each feature ships with its tests |
+| Code checks | TypeScript, Biome, PHPStan | `npm run check` passes before a commit |
 | Deploy | Files copied to the host from GitHub | No build step on the host |
 
 The reasons behind these choices are in the scoping document, `docs/scoping.md`. A choice recorded there is settled: if one looks wrong, say so once with the reason, and do not work around it.
+
+How the pieces work and fit together is in `docs/architecture.md`, with the reason for each dependency. Read it before writing code, and update it in the same commit as any change it describes: it is what lets the next person, or the next AI, take over without guessing.
 
 ## Sources of truth
 
@@ -67,42 +74,49 @@ Features are built one at a time, in the order set by the scoping document.
 5. Check on a phone-sized viewport first.
 6. Say what was done, what was not, and what could not be verified.
 
-## Folder layout
+## Where things are
 
 | Folder | What it holds |
 |---|---|
-| `web/` | The front. `src/` for React, `src/locales/` for translations, `public/` for files copied as they are (manifest, icons). Built to `web/dist/` |
-| `api/` | The back. `public/index.php` is the single entry point, `src/` the PHP classes, `config.php` the server configuration (never committed, copied from `config.example.php`) |
-| `database/migrations/` | Numbered SQL scripts |
+| `web/` | The front: `src/` (React, TypeScript), `src/locales/` (translations), `public/` (files copied as they are). Built to `web/dist/` |
+| `api/` | The back: `public/index.php` (single entry point), `routes.php` (every address), `src/` (classes), `config.php` (server configuration, never committed) |
+| `database/` | `migrations/` (numbered SQL scripts) and `migrate.php`, which applies them |
 | `tests/` | Playwright end-to-end tests |
-| `docker/` | The local stand-in for the host: Apache with PHP |
+| `docker/`, `docker-compose.yml` | The local stand-in for the host |
+| `scripts/` | Project tooling, `setup.mjs` first |
 | `model/`, `docs/`, `skills/` | The sources of truth above |
-
-There is one `package.json`, at the root, for the front and the tests. PHP has no dependency yet.
 
 ## Commands
 
 | To | Run |
 |---|---|
-| Install | `npm install`, then `npm run test:install` once for the test browsers, and copy `api/config.example.php` to `api/config.php` |
-| Start the local stack | `npm run stack:up` (Docker must be running). The app is at http://localhost:8080 |
-| Stop it | `npm run stack:down` |
-| Work on the front | `npm run dev`, then http://localhost:5173. Changes show at once; `/api` is forwarded to the stack |
-| Build the front | `npm run build` |
-| Test | `npm run build`, then `npm test`. Tests run against the stack on port 8080, so against the built front |
+| Set up a fresh copy, or repair one | `npm run setup` (Docker must be running) |
+| Start / stop the local stack | `npm run stack:up` / `npm run stack:down`. The app is at http://localhost:8080 |
+| Work on the front | `npm run dev`, then http://localhost:5173 |
+| Build the front | `npm run build`. Needed before testing a change of the front |
+| Test | `npm test` |
+| Check the code | `npm run check` (Biome, TypeScript, PHPStan). `npm run format` fixes the layout |
+| Apply the migrations | `npm run db:migrate`, on the local database only |
+| Empty the local database | `npm run db:reset`. Deletes local data: ask first |
+| Add a PHP library | `docker compose run --rm php composer require vendor/name:1.2.3` |
 
-Deployment is not set up yet: it waits for the OVH plan.
+Deployment is not set up yet. The hosting will be the cheapest OVH shared plan that fits, so plan for no command line on the host.
 
-## Local database
+## Shared layer
 
-MySQL runs in Docker, in the `db` service of `docker-compose.yml`, with `lower_case_table_names=0`: table names are case-sensitive, as on the host. Do not point the app at a MySQL installed on macOS, which is not.
+Written once, used by every feature. A feature never does these things by itself. Details and examples in `docs/architecture.md`.
 
-- From the Mac: host `127.0.0.1`, port `3307`, database, user and password as in `docker-compose.yml`.
-- The data lives in the Docker volume `dbData`. `docker compose down -v` deletes it.
+| Need | Use |
+|---|---|
+| Declare an address of the API | One line in `api/routes.php`, pointing to an action class in `api/src/<Domain>/` |
+| Read or write data | The DBAL connection given to the action, with placeholders and the values passed apart |
+| Receive data from the front | `Input::from($request, SomeInput::class)`: a typed class, filled and checked by Valinor |
+| Answer | `Json::write()` |
+| Refuse | `throw new ApiError(status, 'errorKey')`. The front translates the key; the server writes no sentence |
+| Call the API from the front | `api()` of `web/src/api.ts`, through TanStack Query |
+| Show a text | `t('some.key')`, the key being in `web/src/locales/fr.json` |
 
-## Traps already met
-
-- Apache reserves the address `/icons/` for its own files. The app's icons are in `web/public/appIcons/`.
+Sessions and role checks are not written yet: they wait for the validated `members` domain in `model/`.
 
 ## Still to fill in
 

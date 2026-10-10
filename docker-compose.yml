@@ -8,6 +8,7 @@ services:
     volumes:
       - ./web/dist:/var/www/html:ro
       - ./api:/var/www/api:ro
+      - ./database:/var/www/database:ro
     depends_on:
       db:
         condition: service_healthy
@@ -16,6 +17,19 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  # Command-line PHP for development tools (Composer, PHPStan). Not started
+  # with the stack: used through "docker compose run --rm php ...".
+  php:
+    build: docker
+    profiles: ["tools"]
+    working_dir: /app/api
+    volumes:
+      - .:/app
+      - composerCache:/tmp/composer-cache
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      COMPOSER_ALLOW_SUPERUSER: "1"
 
   db:
     image: mysql:8.4
@@ -43,3 +57,4 @@ services:
 
 volumes:
   dbData:
+  composerCache:

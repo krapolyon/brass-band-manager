@@ -4,25 +4,39 @@ declare(strict_types=1);
 
 namespace BrassBand;
 
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use PDO;
 
-// The only place where a database connection is opened.
+// The only place where the connection to the database is set up.
+//
+// It returns a Doctrine DBAL connection, which every action uses for its
+// queries. Values are always passed apart from the SQL, never glued into it:
+//
+//   $database->fetchAssociative('SELECT id, firstName FROM member WHERE email = ?', [$email]);
+//   $database->insert('song', ['title' => $title, 'status' => 'PROPOSED']);
+//
+// The connection is opened by the first query, not here: a request that needs
+// no data opens nothing.
 final class Database
 {
-    public static function connect(array $settings): PDO
+    /**
+     * @param array{host: string, port: int, name: string, user: string, password: string} $settings
+     */
+    public static function connect(array $settings): Connection
     {
-        $dsn = sprintf(
-            'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-            $settings['host'],
-            $settings['port'],
-            $settings['name'],
-        );
-
-        return new PDO($dsn, $settings['user'], $settings['password'], [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            // Real prepared statements, sent to MySQL separately from their values.
-            PDO::ATTR_EMULATE_PREPARES => false,
+        return DriverManager::getConnection([
+            'driver' => 'pdo_mysql',
+            'host' => $settings['host'],
+            'port' => $settings['port'],
+            'dbname' => $settings['name'],
+            'user' => $settings['user'],
+            'password' => $settings['password'],
+            'charset' => 'utf8mb4',
+            'driverOptions' => [
+                // Real prepared statements, sent to MySQL separately from their values.
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ],
         ]);
     }
 }

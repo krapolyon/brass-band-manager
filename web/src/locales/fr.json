@@ -1,6 +1,14 @@
 {
-  "app.name": "Fanfare",
-  "shell.loading": "Chargement…",
-  "shell.ready": "L'application est prête.",
-  "shell.unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
+  "app": {
+    "name": "Fanfare"
+  },
+  "shell": {
+    "loading": "Chargement…",
+    "ready": "L'application est prête.",
+    "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
+  },
+  "notFound": {
+    "title": "Cette page n'existe pas.",
+    "backHome": "Revenir à l'accueil"
+  }
 }

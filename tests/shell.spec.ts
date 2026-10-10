@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+type Manifest = {
+  display: string;
+  icons: { src: string; sizes: string; type: string }[];
+};
+
 test('the app loads and reaches the API and the database', async ({ page }) => {
   await page.goto('/');
 
@@ -13,10 +18,12 @@ test('the app says so when the server does not answer', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveAttribute('data-state', 'unreachable');
 });
 
-test('an address inside the app opens the app', async ({ page }) => {
+test('an address inside the app is answered by the app', async ({ page }) => {
   const response = await page.goto('/songs/12');
 
-  expect(response.status()).toBe(200);
+  // No screen exists there yet: the app itself says so, with a way back.
+  expect(response?.status()).toBe(200);
+  await page.getByRole('link').click();
   await expect(page.getByRole('status')).toBeVisible();
 });
 
@@ -24,7 +31,8 @@ test('the app can be installed: its manifest and icons are served', async ({ pag
   await page.goto('/');
   const href = await page.locator('link[rel="manifest"]').getAttribute('href');
 
-  const manifest = await (await request.get(href)).json();
+  expect(href).not.toBeNull();
+  const manifest: Manifest = await (await request.get(href as string)).json();
   expect(manifest.display).toBe('standalone');
   expect(manifest.icons.map((icon) => icon.sizes)).toEqual(['192x192', '512x512']);
 
@@ -40,4 +48,19 @@ test('the API answers an unknown address with a JSON 404', async ({ request }) =
 
   expect(response.status()).toBe(404);
   expect(await response.json()).toEqual({ error: 'notFound' });
+});
+
+test('the API refuses a method an address does not accept', async ({ request }) => {
+  const response = await request.post('/api/health');
+
+  expect(response.status()).toBe(405);
+  expect(await response.json()).toEqual({ error: 'methodNotAllowed' });
+});
+
+test('API answers are never cached and never reveal the server', async ({ request }) => {
+  const headers = (await request.get('/api/health')).headers();
+
+  expect(headers['cache-control']).toBe('no-store');
+  expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['x-powered-by']).toBeUndefined();
 });

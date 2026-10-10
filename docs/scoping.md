@@ -13,7 +13,7 @@ A decision recorded in this document is settled. If one looks wrong, say so once
 | Kind of app | A single PWA, for phone and web | One codebase, no Apple account or review, updates are immediate |
 | Native app | Set aside for now, possible later by wrapping the PWA | It needs upkeep even when nothing changes. The owner has a Mac and the association is a registered entity, so this exit stays easy ([Apple's conditions](https://developer.apple.com/support/web-distribution-eu/)) |
 | Hosting | OVH shared hosting | Small budget, no server administration |
-| Back end | PHP without a framework, with a few targeted libraries | Avoid forced upgrades: a framework such as Laravel is only patched for 2 years per version ([support policy](https://laravel.com/docs/12.x/releases)) |
+| Back end | PHP without a full framework, with targeted libraries. Slim, a micro-framework limited to routing and error handling, is accepted | Avoid forced upgrades: a framework such as Laravel is only patched for 2 years per version ([support policy](https://laravel.com/docs/12.x/releases)). Slim has stayed on the same major version since 2019 |
 | Front end | React with Vite, built to static files | React is already familiar to the owner, and built files do not age |
 | Database | MySQL, included in the hosting | Nothing more to install or pay for |
 | Sign-in | Identifier and password, long session | Magic links were rejected: too tedious in use |
@@ -25,9 +25,9 @@ A decision recorded in this document is settled. If one looks wrong, say so once
 
 Guiding principle: what is frozen must not age. The app will be changed rarely once it is stable, so nothing may force an update just to keep running.
 
-- **Front end**: React with Vite, built to static files. Dependencies only matter on the day the app is rebuilt.
-- **Back end**: an API in PHP without a framework. Passwords and sessions rely on PHP's native functions.
-- **PHP libraries**: a router, input validation, and sending push notifications. Selection criteria: small, targeted, stable for years. Versions pinned.
+- **Front end**: React and TypeScript with Vite, built to static files. Dependencies only matter on the day the app is rebuilt.
+- **Back end**: an API in PHP without a full framework. Passwords and sessions rely on PHP's native functions.
+- **PHP libraries**: Slim for routing, Doctrine DBAL for data access (no ORM), Valinor for input validation, and later a library to send push notifications. Selection criteria: the best fit for the need, proven, maintained, secure. Versions pinned. Proven libraries are preferred to home-made code; what is avoided is the large framework. The list and the reason for each are in `docs/architecture.md`.
 - **Security base layer**: written once and shared by every feature (database access, sessions, rights, validation). It replaces the safeguards a framework would provide.
 - **Database**: MySQL, evolved through numbered SQL scripts.
 - **Hosting**: OVH shared hosting. OVH maintains PHP and keeps old versions available for a long time ([PHP versions at OVH](https://docs.ovhcloud.com/fr/guides/web-cloud/web-hosting/web-hosting-main-info)).
@@ -37,7 +37,7 @@ Guiding principle: what is frozen must not age. The app will be changed rarely o
 
 **Interface**: no component library such as MUI, which would make the app look like many others. Components are written for the app, in plain CSS, with variables for colours and typography. The same variables let other bands restyle it. A behaviour-only library (dialogs, menus, accessibility, no styling) may be added to the base layer.
 
-**Languages**: interface text goes through a translation library, French first. Dates and numbers rely on the browser's native functions. The library is chosen when the base layer is built.
+**Languages**: interface text goes through a translation library (i18next), French first. Dates and numbers rely on the browser's native functions.
 
 What shared hosting rules out: real time and permanent background processes. No planned feature needs them.
 
@@ -184,7 +184,7 @@ Skills first, agents later.
 
 | Point | To settle during |
 | --- | --- |
-| OVH plan to order: Perso or Pro, depending on the access deployment needs | Base |
+| OVH plan to order: the cheapest one that fits (decided). To check on it: PHP version, MySQL database, scheduled tasks, and whether deployment and migrations work without a command line | Base |
 | Whether a 90-day session really holds on a PWA installed on an iPhone | Base |
 | Push notifications on iPhone, once the app is on the home screen | Base, then gigs |
 | MySQL treats table names as case-sensitive on OVH (Linux) but not on a Mac. With camelCase names, the development database must behave like OVH's | Base |

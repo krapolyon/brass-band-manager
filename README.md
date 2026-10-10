@@ -1,22 +1,40 @@
 # brass-band-manager
 An internal tool for brass bands / marching bands : members, tunes, gigs and setlist
 
-The project is at its very beginning: this repository holds the technical base, not a usable app yet. The decisions behind it are in [docs/scoping.md](docs/scoping.md).
+An installable web app (PWA) that a band hosts for itself: one band, one instance, under its own name, logo and colours.
+
+The project is at its very beginning: this repository holds the technical base, not a usable app yet.
 
 ## Running it locally
 
-You need Node 22 or later and Docker.
+You need [Node](https://nodejs.org) 22.12 or later and [Docker Desktop](https://www.docker.com/products/docker-desktop/), started.
 
 ```sh
-npm install
-npm run test:install                      # once: browsers used by the tests
-cp api/config.example.php api/config.php  # local configuration
-npm run build                             # builds the front to web/dist
-npm run stack:up                          # Apache with PHP, and MySQL, in Docker
+npm run setup
 ```
 
-The app is then at http://localhost:8080.
+This installs everything, starts a local stack in Docker (Apache with PHP, and MySQL) and leaves the app running at http://localhost:8080. It can be run again at any time.
 
-- `npm run dev` serves the front at http://localhost:5173 and reloads it on every change.
-- `npm test` runs the end-to-end tests against the local stack.
-- `npm run stack:down` stops the stack.
+| To | Run |
+|---|---|
+| Work on the front, with live reload | `npm run dev`, then http://localhost:5173 |
+| Run the end-to-end tests | `npm test` |
+| Check the code | `npm run check` |
+| Stop the stack | `npm run stack:down` |
+
+## Documentation
+
+| Document | What it tells |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | How the app is built, how to add a route, a screen, a text or a migration, and why each dependency is there |
+| [docs/scoping.md](docs/scoping.md) | What the app is for, the decisions taken and the build order |
+| [CLAUDE.md](CLAUDE.md) | The rules followed when writing code, for people and for AI assistants |
+| [model/](model/) | The data model |
+
+## Stack
+
+React and TypeScript built with Vite for the front; PHP with Slim, Doctrine DBAL and Valinor for the API; MySQL; Playwright for the tests. It is meant to run on plain shared hosting, with no build step and no permanent process on the host.
+
+## Licence
+
+GNU Affero General Public License v3. See [LICENSE](LICENSE).

@@ -1,0 +1,24 @@
+{
+    "name": "brass-band-manager/api",
+    "description": "API of the brass band app",
+    "type": "project",
+    "license": "AGPL-3.0-only",
+    "require": {
+        "php": ">=8.4",
+        "cuyz/valinor": "2.6.0",
+        "doctrine/dbal": "4.5.0",
+        "slim/psr7": "1.8.0",
+        "slim/slim": "4.15.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "BrassBand\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "require-dev": {
+        "phpstan/phpstan": "2.3.1"
+    }
+}
