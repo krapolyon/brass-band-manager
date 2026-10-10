@@ -1,0 +1,6 @@
+{
+  "app.name": "Fanfare",
+  "shell.loading": "Chargement…",
+  "shell.ready": "L'application est prête.",
+  "shell.unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
+}

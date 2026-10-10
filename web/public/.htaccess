@@ -1,0 +1,7 @@
+# The front is a single page: any address that is not a real file
+# is answered by index.html, and React shows the right screen.
+RewriteEngine On
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]

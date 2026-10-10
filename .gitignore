@@ -28,3 +28,6 @@ playwright-report/
 
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# Server configuration: holds the database password on the host
+api/config.php

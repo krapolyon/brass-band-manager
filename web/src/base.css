@@ -1,0 +1,17 @@
+/* Deliberately bare: colours, radii, spacing and type sizes will be custom
+   properties mirroring the Figma variables, once the Figma file exists.
+   Until then the shell relies on the browser's own light and dark colours. */
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+main {
+  padding: 1rem;
+}

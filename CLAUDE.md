@@ -67,9 +67,45 @@ Features are built one at a time, in the order set by the scoping document.
 5. Check on a phone-sized viewport first.
 6. Say what was done, what was not, and what could not be verified.
 
-## To fill in when the repository is scaffolded
+## Folder layout
 
-- Folder layout of the front and the back.
-- Commands: install, run locally, build, test, deploy.
+| Folder | What it holds |
+|---|---|
+| `web/` | The front. `src/` for React, `src/locales/` for translations, `public/` for files copied as they are (manifest, icons). Built to `web/dist/` |
+| `api/` | The back. `public/index.php` is the single entry point, `src/` the PHP classes, `config.php` the server configuration (never committed, copied from `config.example.php`) |
+| `database/migrations/` | Numbered SQL scripts |
+| `tests/` | Playwright end-to-end tests |
+| `docker/` | The local stand-in for the host: Apache with PHP |
+| `model/`, `docs/`, `skills/` | The sources of truth above |
+
+There is one `package.json`, at the root, for the front and the tests. PHP has no dependency yet.
+
+## Commands
+
+| To | Run |
+|---|---|
+| Install | `npm install`, then `npm run test:install` once for the test browsers, and copy `api/config.example.php` to `api/config.php` |
+| Start the local stack | `npm run stack:up` (Docker must be running). The app is at http://localhost:8080 |
+| Stop it | `npm run stack:down` |
+| Work on the front | `npm run dev`, then http://localhost:5173. Changes show at once; `/api` is forwarded to the stack |
+| Build the front | `npm run build` |
+| Test | `npm run build`, then `npm test`. Tests run against the stack on port 8080, so against the built front |
+
+Deployment is not set up yet: it waits for the OVH plan.
+
+## Local database
+
+MySQL runs in Docker, in the `db` service of `docker-compose.yml`, with `lower_case_table_names=0`: table names are case-sensitive, as on the host. Do not point the app at a MySQL installed on macOS, which is not.
+
+- From the Mac: host `127.0.0.1`, port `3307`, database, user and password as in `docker-compose.yml`.
+- The data lives in the Docker volume `dbData`. `docker compose down -v` deletes it.
+
+## Traps already met
+
+- Apache reserves the address `/icons/` for its own files. The app's icons are in `web/public/appIcons/`.
+
+## Still to fill in
+
 - Link to the Figma file.
-- Local database setup, with MySQL configured to treat table names as the host does.
+- Deployment commands.
+- The PHP and MySQL versions of the host, to keep `docker/Dockerfile` and `docker-compose.yml` equal to them (PHP 8.4 and MySQL 8.4 for now).

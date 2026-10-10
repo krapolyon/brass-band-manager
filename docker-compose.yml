@@ -1,0 +1,45 @@
+# Local stack: the same pieces as the shared hosting (Apache with PHP, MySQL).
+# Passwords here are for this local stack only.
+services:
+  web:
+    build: docker
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web/dist:/var/www/html:ro
+      - ./api:/var/www/api:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/api/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  db:
+    image: mysql:8.4
+    # Table names are case-sensitive, as on the Linux host. The data lives in a
+    # Docker volume, not in a macOS folder, which is what makes this possible.
+    command:
+      - --lower-case-table-names=0
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: brassBand
+      MYSQL_USER: brassBand
+      MYSQL_PASSWORD: local-only
+      MYSQL_ROOT_PASSWORD: local-only
+    ports:
+      # 3307 on the Mac, to leave 3306 to a MySQL installed locally.
+      - "3307:3306"
+    volumes:
+      - dbData:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-plocal-only"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  dbData:
