@@ -350,7 +350,7 @@ The schema is described in `model/` (DBML, one file per domain), and created by 
 
 Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code (about 60 lines).
 
-The first migration is `001_members.sql`: sections, instruments, members, roles, sessions and password links.
+Two migrations exist: `001_members.sql` (sections, instruments, members, roles, sessions and password links) and `002_band.sql` (the band and its settings).
 
 ### Conventions of every table
 

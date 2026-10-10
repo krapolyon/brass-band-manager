@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.1 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
+> v1.2 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -54,9 +54,12 @@ In every rule below, **a current member** is a member whose status is `ACTIVE` o
 A member is never deleted once `ACTIVE`: their answers to past gigs stay. The email of a member who left is kept so that they can be invited again.
 
 ### Rules
-- **Install.** Installing the app is only possible while the `member` table is empty. It goes in two steps:
-  1. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot;
-  2. create the first member: email, password, last name, first name, nickname and instrument. This member is `ACTIVE` and holds the `ADMIN` role.
+- **Install.** Installing the app is only possible while the `member` table is empty. It goes in three steps:
+  1. name the band and, if wanted, give its logo (Band domain, `band.md`);
+  2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot;
+  3. create the first member: email, password, last name, first name, nickname and instrument. This member is `ACTIVE` and holds the `ADMIN` role.
+
+  Nothing is saved before the last step is confirmed: an install that is abandoned leaves an empty database.
 - **Always one admin.** The last current member holding `ADMIN` can neither lose that role nor become `LEFT`.
 - **Sign-in.** Email and password, for current members only (`ACTIVE` and `POWER_MEMBER`). The answer to a wrong email and to a wrong password is the same.
 - **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`). A successful sign-in resets the count.
