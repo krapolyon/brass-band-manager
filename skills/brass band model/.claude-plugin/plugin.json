@@ -1,0 +1,1 @@
+{"name": "brass-band-model", "description": "Data model of the brass band app, in DBML with camelCase names, plus the business dictionary and the MySQL migrations derived from it. Use whenever the work touches business objects, tables, fields, relations, statuses, personal data, a .dbml file, a dictionary entry or a migration, even if the request does not say \"data model\"."}

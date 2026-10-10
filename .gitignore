@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Dependencies and build output
+node_modules/
+vendor/
+dist/
+
+# Local configuration and secrets: never committed
+.env
+.env.*
+!.env.example
+
+# Music files: never committed, even in tests
+*.mscz
+*.mp3
+*.mid
+*.midi
+*.musicxml
+*.mxl
+
+# Test output
+test-results/
+playwright-report/
+
+# Logs
+*.log
+
+# Personal Claude Code settings
+.claude/settings.local.json
