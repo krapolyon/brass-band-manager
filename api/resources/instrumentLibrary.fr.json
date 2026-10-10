@@ -1,0 +1,12 @@
+{
+  "sections": [
+    {"name": "Trompette", "preselected": true, "instruments": ["Trompette"]},
+    {"name": "Saxophone", "preselected": true, "instruments": ["Sax alto", "Sax ténor", "Sax baryton", "Sax C Melody"]},
+    {"name": "Trombone", "preselected": true, "instruments": ["Trombone Ut", "Trombone Sib"]},
+    {"name": "P'tites basses", "preselected": true, "instruments": ["P'tite basse"]},
+    {"name": "Souba", "preselected": true, "instruments": ["Souba"]},
+    {"name": "Percu", "preselected": true, "instruments": ["Batterie", "Percus"]},
+    {"name": "Flûte", "preselected": false, "instruments": ["Flûte", "Piccolo"]},
+    {"name": "Clarinette", "preselected": false, "instruments": ["Clarinette"]}
+  ]
+}

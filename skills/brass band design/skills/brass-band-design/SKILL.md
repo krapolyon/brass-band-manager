@@ -29,7 +29,7 @@ The art direction was settled in a study canvas, "Les Krapos — étude de style
 
 - **`Design system` page.** One frame, three groups: Foundations (colour, accent themes, typography, space and sizes, surfaces), Components — base, Components — business objects. Every component sits in a card with its name and one line on when to use it. A new component gets its card; a business object gets its card with its first representation.
 - **One page per feature**, named after the feature in English: `Install`, then sign-in, then members.
-- **On a feature page**: numbered sections (the flow, then the states of each step, then the larger screens, then the schemes and accent themes), and a "Read me" note at the left. The note carries the status (exploration or validated), the source in the model with its version, what is not a component yet, and the open points. Keep it true: it is what the owner and Claude in VS Code read first.
+- **On a feature page**: numbered sections (the flow on a phone, then its states, then one section per larger width, then the schemes and accent themes), and a "Read me" note at the left. The note carries the status (exploration, to validate or validated), the source in the model with its version, what is decided, the components the screens are built from, and the open points. Keep it true: it is what the owner and Claude in VS Code read first.
 - **Screen frames** are named `<Feature> / <Screen> — <state>`: `Install / First member — errors`.
 - **Scheme and theme checks are clones**, not redrawn screens: clone the frame and set other variable modes on it. If a clone looks wrong, the fix belongs in a variable or a component.
 
@@ -62,7 +62,7 @@ Design work is done feature by feature, each in its own conversation, in this or
 1. **Brief.** Read the feature in the model first, at its latest version: a model that changed since the last conversation changes the screens. Restate the feature in a few lines. List the business objects it shows and the states to cover. Describe one or two ways to lay it out, in words. Nothing is drawn yet.
 2. **Explore.** Draw the screens freely, at phone width. Everything can still move, so do not build business representations yet: plain frames bound to variables are fine. Base components are the exception. A button or a field serves every feature, so build it in the library as soon as a screen needs it and use instances from the start. When two layouts are plausible, draw both side by side with real content and let the owner choose.
 3. **Extract.** Once the owner has chosen, list the objects on the screens and the representations they need. For each one, say whether it exists, has to be extended, or has to be created. Build what is missing in the library, bound to variables.
-4. **Rebuild.** Redo the screens from library components. Then cover the states: empty, loading, error, long text, missing data, a member without the right. Then the four widths (see "Larger screens"), the light and the dark scheme, and at least two accent themes.
+4. **Rebuild.** Redo the screens from library components. Then cover the states: empty, loading, error, long text, missing data, a member without the right. Then the four widths (see "Larger screens"), the light and the dark scheme, and at least two accent themes. The rebuilt screens replace the exploration on the page: the layout that was not chosen is not kept.
 5. **Check** against the list at the end of this skill.
 6. **Hand-off.** Notes for the code, read from VS Code: variables used, component mapping, behaviours a static screen does not show, translation keys for the copy.
 
@@ -101,7 +101,7 @@ A design conversation often settles things that belong to the model (a default v
 | Typefaces | Bricolage Grotesque for titles, Instrument Sans for text, as in the study. In Figma: `fontDisplay` and `fontText` |
 | Accent themes: number, names, values | Four in Figma: Copper, Coral, Mint, Lilac. The owner tunes them himself in the `Theme` collection |
 | The light scheme | Proposed in Figma, not validated. The owner finds that the halo works less well in light: to rework |
-| The larger screens | The three widths below are a proposal. How the navigation and the layouts adapt is not designed yet |
+| The larger screens | The widths are decided. The layouts drawn for Install are a first proposal: one centred column on a tablet, two panes on a desktop (the step and the title on the left, the content and its actions on the right). How the navigation adapts is not designed yet |
 | The accessibility options | The six options of `model/members.md` (high contrast, text size, spacing, legible font, reduced motion, timeouts) have no visual definition yet. Every screen will have to hold with all six on |
 | The names of the representations | The starting vocabulary above |
 | The Live mode of a song | Drawn in the study, not validated; to be redone with the feature |
@@ -134,7 +134,7 @@ The same app runs in a browser on a tablet or a computer. Every feature is drawn
 | Large desktop | 1920 px |
 
 - A larger screen is derived from the phone screen: the same components, the same order, the same words. More width buys room (a second column, a list beside its detail), never another feature.
-- A column of text or of fields does not stretch with the window: cap its width so that lines stay readable.
+- A column of text or of fields does not stretch with the window: cap its width so that lines stay readable. In Figma give that column a fixed width, not a maximum width: instances inside a column capped by a maximum can render at the width of their component. In code it is a max-width.
 - Draw the larger screens at the Rebuild step, once the phone screens are made of components. In an exploration, the phone is enough, unless the larger layout is itself the open question.
 
 ## Variables and themes
@@ -167,18 +167,22 @@ The file holds four collections:
 - Look in the library before creating. A new component is justified by a need no existing one covers, not by a slightly different screen.
 - Components are named in English, in PascalCase, and carry a description of what they are for. Business components follow `<Object>/<Representation>`.
 - What changes the look is a variant (`Kind`, `Size`, `State`); what changes the content is a property (a label, an icon to swap, a part to show or hide).
+- A component whose content varies takes it in a slot: `Sheet`, `BottomSheet`, `Dialog`, `Section/Card`. The slot of the component stays empty; each instance fills its own.
+- A component that contains another one keeps it as an exposed nested instance (the buttons of a `BottomBar`, the `ListRow` of an `Instrument/Row`): its label and its state are set on the nested instance.
 - A component uses only semantic variables.
 
-The base layer today: `Button`, `IconButton`, `TextField` (also the select, with a chevron as trailing icon), `Checkbox`, `ListRow`, `Chip`, `Message`, `Halo`, and the icons. The library in Figma is the reference, not this list.
+The base layer today: `Button`, `IconButton`, `TextField` (also the select, with a chevron as trailing icon), `ImageField`, `Checkbox`, `ListRow`, `Chip`, `Message`, `Sheet`, `StepIndicator`, `BottomBar`, `BottomSheet`, `Dialog`, `Halo`, and the icons. The business objects today: `Instrument/Row`, `Section/Card`. The library in Figma is the reference, not this list.
 
 **Icons** are named `Icon/<Name>`: 24 px, a 2 px stroke with round caps, one single vector whose stroke is bound to `text`. Inside a component an icon is a swappable property, never a variant per icon. To recolour an icon in an instance, set the stroke of its vector. After swapping an icon, set that stroke again and look at the result: the override does not always follow the swap.
 
-**Patterns in use**, drawn for the Install feature as plain frames. They become components at its Extract step:
+**Patterns**, settled with the Install feature. Reuse them before inventing another way:
 
-- Choosing in a list: rows with a checkbox, each row keeping its own actions at the end.
-- Editing one item of a list: a bottom sheet over the `scrim`, not another screen.
-- A screen longer than the phone keeps its main action in a glass bar pinned to the bottom.
-- A flow in steps shows where the member is ("Étape 2 sur 3" and a progress line) and offers a way back from the second step.
+- Choosing in a list: rows with a checkbox, each row keeping its own actions at the end. The line that adds an item is the last row of the list (`ListRow`, `Leading=Add`).
+- Editing one item of a list, or choosing one value among many: a `BottomSheet` over the `scrim` on a phone or a tablet, a `Dialog` on a desktop. Not another screen.
+- The main action of a screen lives in a `BottomBar`: glass and pinned when the screen is longer than the phone, plain when the screen fits. The caption above the button counts what was chosen, or says why the button is off. On a desktop the actions follow the content, aligned to its left.
+- A flow in steps shows where the member is (`StepIndicator`: "Étape 2 sur 3" and a progress line) and offers a way back on every step.
+- A group of fields, a list or a summary sits on a `Sheet`.
+- A form in error says how many fields are wrong in one `Message` at the top, and what is wrong under each field.
 
 ## Words in the interface
 
@@ -188,6 +192,7 @@ The base layer today: `Button`, `IconButton`, `TextField` (also the select, with
 - A button says what it does ("Lire ma partie", not "Valider"), and keeps the same name through the whole flow.
 - A field has its label above it, never inside. The hint under it gives the rule before the member breaks it.
 - Sentence case everywhere. No all-caps labels.
+- French copy takes a no-break space before `?`, `!`, `;` and `:`: without it, a title leaves its question mark alone on a line.
 
 ## Check before showing a screen
 
@@ -210,6 +215,8 @@ For an exploration, the first, third and fifth lines are enough. For a rebuilt s
 - Read first, write second, and say what is about to be written before doing it. The owner works in the same file and may have changed it since the last conversation.
 - Work in small steps and look at the result after each write. A screen that was never looked at is not finished. If the screenshot link cannot be downloaded, take the capture from inside the script (`await node.screenshot()`).
 - After building, run a script that lists what is not bound: spacing, fills, strokes and radii without a variable, text without a style. Fix what it finds before showing the screens.
+- Set the text of an instance through its properties, never by typing into its layers. Fill a slot by appending to the slot of the instance.
+- An empty slot keeps the height it was given: size it small in the component, or the component shows a hole.
 - Never overwrite a change the owner made by hand. If it conflicts with the task, ask.
 
 ## Keeping this skill current

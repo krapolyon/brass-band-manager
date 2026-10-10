@@ -1,4 +1,6 @@
 // Domain: Band
+// v1.2 — 2026-10-10 — no change to the table: the two technical public routes are named (dictionary)
+// v1.1 — 2026-10-10 — no change to the table: the install opens in French and lets the person choose the language (dictionary)
 // v1.0 — 2026-10-10 — validated: the logo is optional, the icons of the installed app are produced from it
 // v0.1 — 2026-10-10 — first draft: name, logo and default language, set at install
 

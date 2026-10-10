@@ -35,8 +35,11 @@ final class Input
      */
     public static function from(ServerRequestInterface $request, string $class): object
     {
+        // JSON and nothing else. A form of another site can send form data
+        // without asking the browser for permission, but it cannot send JSON.
+        $isJson = str_starts_with(strtolower($request->getHeaderLine('Content-Type')), 'application/json');
         $body = $request->getParsedBody();
-        if (!is_array($body)) {
+        if (!$isJson || !is_array($body)) {
             throw new ApiError(400, 'invalidBody');
         }
 

@@ -49,14 +49,14 @@ The app is then at http://localhost:8080.
 | Read the PHP log | `npm run stack:logs` | Errors of the API appear here |
 | Work on the front | `npm run dev` | http://localhost:5173, reloads on every change. Calls to `/api` go to the stack, which must be running |
 | Build the front | `npm run build` | Type-checks, then writes `web/dist/`, which is what port 8080 serves |
-| Run the tests | `npm test` | Against port 8080: run `npm run build` first if the front changed |
+| Run the tests | `npm test` | Against the test server on port 8081: run `npm run build` first if the front changed |
 | Check the code | `npm run check` | Biome, TypeScript and PHPStan. Must pass before a commit |
 | Fix the layout of the code | `npm run format` | |
 | Apply the migrations | `npm run db:migrate` | |
 | Install the PHP libraries | `npm run api:install` | After `api/composer.lock` changed |
 | Empty the local database | `npm run db:reset` | Deletes all local data, then applies every migration again |
 
-Two addresses, two uses: **5173** to write front code comfortably, **8080** to see the app as the host will serve it. Tests always use 8080.
+Three addresses, three uses: **5173** to write front code comfortably, **8080** to see the app as the host will serve it, **8081** for the tests, which have a database of their own and empty it at will.
 
 ## Where things are
 
@@ -79,12 +79,17 @@ api/                      The back
   public/.htaccess        Sends every /api/... address to index.php
   routes.php              Every address the API answers
   bootstrap.php           Loads the libraries and the configuration
-  config.example.php      Model of the configuration
-  config.php              The real configuration (not committed)
+  config.example.php      Model of the configuration for the host
+  config.local.php        Configuration of the local stack
+  config.php              The configuration in use (not committed)
+  resources/              Data shipped with the app: starting library of instruments
   src/
     Database.php          Sets up the database connection
-    Http/                 Shared layer: Json, ApiError, ErrorHandler, Input
-    Health/               The one feature that exists: GET /api/health
+    Http/                 Shared layer: Json, ApiError, ErrorHandler, Input, FieldErrors, Text
+    Access/               Shared layer: sessions, sign-in, roles and permissions
+    Install/              First-time setup of an instance
+    Band/                 The band and its settings
+    Health/               GET /api/health
   composer.json           PHP libraries, exact versions
   phpstan.neon            Settings of the PHP analysis
   vendor/                 The libraries themselves (not committed)
@@ -94,9 +99,11 @@ database/
   migrate.php             Applies those that have not run yet
 
 tests/                    Playwright end-to-end tests
+  api/                    The API alone, without a browser
+  support/                Made-up band and members, access to the test database
 docker/                   Image of the local web server (Apache with PHP)
 docker-compose.yml        The local stack
-scripts/setup.mjs         npm run setup
+scripts/                  setup.mjs (npm run setup), prepare-test-database.mjs
 model/                    Data model (DBML and business dictionary)
 docs/                     This document and the scoping
 skills/                   Versioned copies of the project's Claude skills
@@ -111,14 +118,16 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 | Service | What it is | Reached at |
 |---|---|---|
 | `web` | Apache with PHP 8.4. Serves `web/dist` at `/` and `api/public` at `/api` | http://localhost:8080 |
-| `db` | MySQL 8.4 | `127.0.0.1`, port `3307`, database `brassBand`, user `brassBand`, password `local-only` |
+| `web-test` | The same server, on the database `brassBandTest` | http://localhost:8081 |
+| `db` | MySQL 8.4 | `127.0.0.1`, port `3307`, databases `brassBand` and `brassBandTest`, user `brassBand`, password `local-only` |
 | `php` | The same image, used for command-line tools only. Not started with the stack | `docker compose run --rm php <command>` |
 
 - The folders `web/dist`, `api` and `database` are shared with the `web` container, read-only: a change to a PHP file is live at once, no restart.
 - **Table names are case-sensitive**, as on the Linux host and unlike a MySQL installed on a Mac. This is the reason for running MySQL in Docker: a table written `Member` instead of `member` fails here as it would in production. Do not point the app at another MySQL.
 - The database's data lives in the Docker volume `dbData`. It survives `stack:down`. `npm run db:reset` deletes it.
 - Port 3307 is used so that a MySQL installed on the Mac can keep 3306.
-- The passwords in `docker-compose.yml` and `config.example.php` are for this local stack only. They are not secrets.
+- The passwords in `docker-compose.yml` and `config.local.php` are for this local stack only. They are not secrets, and must never reach the host.
+- `web-test` reads the same code and the same `config.php`; only the name of its database differs, through the `BRASS_BAND_DATABASE` variable set in `docker-compose.yml`.
 - The PHP and MySQL versions must stay equal to those of the host. They are written in `docker/Dockerfile` (`FROM php:8.4-apache`) and `docker-compose.yml` (`image: mysql:8.4`).
 
 ## The API
@@ -159,10 +168,12 @@ An address that is not in `routes.php` does not exist: Slim answers 404 through 
    }
    ```
 
-2. Add its line to `api/routes.php`:
+2. Add its line to `api/routes.php`, **in the block that says who may call it** (see "Who can call a route"):
 
    ```php
-   $app->get('/api/songs', new ListSongsAction($database));
+   $group->get('/api/songs', new ListSongsAction($database));
+   $group->post('/api/songs', new CreateSongAction($database))
+       ->add(new RequirePermission(Permission::MANAGE_SONGS));
    ```
 
    A variable part of the address is written `{id}` and arrives as the third argument of `__invoke()`: `$app->get('/api/songs/{id}', ...)` then `array $arguments` with `$arguments['id']`.
@@ -218,7 +229,20 @@ A stricter type than PHP's own is written as a comment above the property, for i
 
 with status 422. Past `Input::from()`, the data has the announced shape, and PHPStan knows its types.
 
-Rules that are about meaning and not shape (this email is already used, this slot is in the past) are checked by the action, which throws an `ApiError`.
+Valinor judges the shape. The content of each field (length, format, duplicates) is then checked with [FieldErrors](../api/src/Http/FieldErrors.php), which collects every fault and refuses them together, in the same 422 format, so that a form can show them all at once:
+
+```php
+$errors = new FieldErrors();
+$errors->text('name', $input->name, 80);      // not blank, 80 characters at most
+$errors->email('email', $input->email);
+$errors->throwIfAny();
+```
+
+The problems a field can have are `required`, `tooLong`, `tooShort`, `invalid` and `duplicate`. A one-line text is saved after [Text::clean()](../api/src/Http/Text.php), which removes invisible characters and outer spaces of every kind; `FieldErrors::text()` judges it in that form.
+
+Only JSON is accepted. Form data is refused on purpose: a page of another site can send a form without the browser asking, but not JSON.
+
+Rules that are about meaning (this email is already used, this slot is in the past) are checked by the action, which throws an `ApiError`.
 
 ### Refusing, and the shape of errors
 
@@ -231,9 +255,13 @@ throw new ApiError(409, 'emailAlreadyUsed');
 | Status | Key | When |
 |---|---|---|
 | 400 | `invalidBody` | The body is not JSON |
+| 401 | `notSignedIn` | The route needs a signed-in member |
+| 401 | `invalidCredentials` | Sign-in refused, whatever the reason |
+| 403 | `forbidden` | The member does not hold the permission |
+| 403 | `crossSiteRequest` | A browser says the request comes from another site |
 | 404 | `notFound` | No such address, or no such object |
 | 405 | `methodNotAllowed` | The address exists, not with this method |
-| 422 | `invalidInput` | The data does not have the expected shape. Comes with `fields` |
+| 422 | `invalidInput` | The data does not have the expected shape or content. Comes with `fields` |
 | 500 | `serverError` | Anything that was not foreseen |
 | 503 | — | Only `GET /api/health`, with `{"database": "unreachable"}` |
 | other | the key given to `ApiError` | A refusal decided by an action |
@@ -246,14 +274,62 @@ Every JSON answer carries `Cache-Control: no-store` (answers hold members' data,
 
 ### Configuration
 
-`api/config.php` returns an array. It is not committed: locally it is a copy of `config.example.php`, on the host it holds the real database password. A new setting is added to both files, and to the type written above `Database::connect()` if it concerns the database.
+`api/config.php` returns an array and is never committed. It is a copy of one of two files:
+
+- [config.local.php](../api/config.local.php) for the local stack, copied by `npm run setup`. Every value in it is public.
+- [config.example.php](../api/config.example.php) for the host, to fill in by hand. Its defaults are the safe ones: install is refused until an install key is written, and the session cookie only travels over HTTPS.
+
+A new setting is added to both files. When the safe value and the convenient value differ, the code takes the safe one when the setting is missing, and only `config.local.php` says otherwise.
 
 Secrets (database password, later the Discord bot token and the push keys) go there and nowhere else. Settings of the band (name, logo, colours) are not configuration: they belong to the `band` table.
 
+### Who can call a route
+
+Decided in [api/routes.php](../api/routes.php), by the block a route is written in. There are three, and nothing else decides access:
+
+| Block | Who | How |
+|---|---|---|
+| 1. Public | Anyone | Written directly on `$app`. Today: health, the name of the band, install, sign-in. Adding a route here is a decision to justify |
+| 2. Signed in | Any current member (`ACTIVE` or `POWER_MEMBER`) | Inside the group that carries `RequireSession` |
+| 3. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
+
+A new route goes in block 2 unless there is a reason. An action behind `RequireSession` gets the member with `CurrentMember::of($request)`: its `id`, and `can(Permission::...)` for a finer check inside the action.
+
+**Roles and permissions.** A member holds roles ([Role](../api/src/Access/Role.php)). Code never tests a role: it asks for a [Permission](../api/src/Access/Permission.php), and the table inside that file is the only place that says which roles grant what. It mirrors "Roles and permissions" in [model/members.md](../model/members.md); the two change together. The permissions of a member are sent to the front in `/api/me`, to show or hide actions. Hiding is a comfort; the check that counts is the server's.
+
+### Sessions and sign-in
+
+All of it is in `api/src/Access/`, and the rules come from [model/members.md](../model/members.md).
+
+- **The token.** Signing in creates a random token ([Sessions](../api/src/Access/Sessions.php)). The device keeps it in a cookie; the database keeps only its SHA-256. A copy of the database lets nobody sign in.
+- **The cookie** ([SessionCookie](../api/src/Access/SessionCookie.php)) is `HttpOnly` (page code cannot read it), `SameSite=Strict` (not sent with a request coming from another site) and, on the host, `Secure` with the `__Host-` prefix.
+- **Every request** behind `RequireSession` looks the session up again: it must exist, be less than a year old, have been used in the last 90 days, and belong to a member who can still sign in. A member marked as gone, or a role taken away, takes effect at the next request.
+- **Sign-in** ([SignInAction](../api/src/Access/SignInAction.php)) gives one answer to every refusal, `invalidCredentials`, and takes the same time for an unknown email as for a wrong password: the route cannot be used to find out who is a member. After five wrong passwords in a row, sign-in for that member is refused for fifteen minutes, right password included. Tries are judged one at a time for a given member (the row is locked with `SELECT ... FOR UPDATE`), so that sending many at once gives no extra guesses.
+- **Passwords** ([Passwords](../api/src/Access/Passwords.php)) are hashed by PHP's own `password_hash()`. Never stored, logged or sent back.
+- **Forged requests (CSRF).** Three barriers: the `SameSite=Strict` cookie, [SameSiteOnly](../api/src/Access/SameSiteOnly.php) which refuses a write that a browser announces as coming from another site, and JSON-only input.
+- **The numbers** (durations, number of tries, password length) are in [AccessRules](../api/src/Access/AccessRules.php).
+- **What a member receives about themself** is built by [Profile](../api/src/Access/Profile.php) from an explicit list of columns: a column added to the table is never sent by accident.
+
+| Route | Does |
+|---|---|
+| `POST /api/session` | Signs in. Answers the member's profile and sets the cookie |
+| `GET /api/me` | The signed-in member: record, preferences, roles, permissions. 401 when nobody is signed in |
+| `DELETE /api/session` | Signs this device out |
+| `DELETE /api/sessions` | Signs every device of the member out |
+
+### Install
+
+`api/src/Install/`. Rules: "Install" in [model/members.md](../model/members.md) and [model/band.md](../model/band.md).
+
+- `GET /api/install` says whether the app is installed (it is as soon as one member exists). While it is not, it also gives the languages the install can be done in and the starting library of sections and instruments, read from `api/resources/instrumentLibrary.<language>.json`. Each section of the library says whether it is preselected.
+- `POST /api/install` receives everything at once (band name, language, sections and instruments, first member), saves it in one transaction, and signs the first member in as admin.
+- This route is public and creates an admin. It is protected twice: it works only while no member exists, and it asks for the **install key** written in `api/config.php`, which only the person who set the app up on the host can read. With an empty key, install is refused.
+- [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
+
 ### Not written yet
 
-- **Install, sessions, sign-in and permission checks.** Their tables exist (`001_members.sql`); the rules are in [model/members.md](../model/members.md). Actions will check a permission, never a role, through one table in the code that says which roles grant it. Session and permission checks will be Slim middleware: written once, attached to groups of routes in `routes.php`, so that no action checks a session by itself.
-- **Protection against forged requests (CSRF)** comes with the session cookie.
+- **Password links** (invitation, forgotten password), **member management** and **changing one's own record**: with the Members feature.
+- **The logo of the band**, the icons made from it, and a manifest served by the API: next.
 - **Serving files** (recordings, scores) to signed-in members only.
 
 ## The front
@@ -364,12 +440,36 @@ Written once in [model/members.md](../model/members.md), "Storage conventions", 
 
 ## Tests
 
-Tests are end to end, with Playwright: they drive a real browser against the local stack on port 8080, so they exercise the front, the API and the database together. They are in `tests/`, in TypeScript.
+Tests are end to end, with Playwright, in `tests/`, in TypeScript. They run against the test server on port 8081, so they exercise the real API and a real database.
 
-- Each test runs twice, as an Android phone (Chromium) and as an iPhone (WebKit). The phone is the main use; there is no desktop run.
-- `npm test` needs the stack running and the front built.
-- After a failure, `npx playwright show-report` opens the report, with a recording of each failed test.
-- A test finds elements by their role or their state (`getByRole('status')`), not by their French text, so that a change of wording does not break it.
+- **`tests/api/`** tests the API alone, without a browser. This is where rules are checked: who may do what, what is refused, what is saved.
+- **The other files** drive a real browser, twice: as an Android phone (Chromium) and as an iPhone (WebKit). The phone is the main use; there is no desktop run.
+
+**The tests have their own database**, `brassBandTest`, and empty it whenever they need to. They never touch the data of port 8080. `npm test` creates that database and applies the migrations to it first (`scripts/prepare-test-database.mjs`). Because they share it, tests run one at a time.
+
+Writing a test of the API:
+
+```ts
+test.beforeEach(async ({ playwright, baseURL }) => {
+  emptyDatabase();                                   // a database never installed
+  const setup = await playwright.request.newContext({ baseURL });
+  await install(setup);                              // the made-up band and its admin
+  await setup.dispose();
+});
+
+test('a member without the right cannot rename the band', async ({ request }) => {
+  const email = addMember({ nickname: 'Zaza', roles: ['SONG_MANAGER'] });
+  await signIn(request, email);
+  expect((await request.patch('/api/band', { data: { name: 'x' } })).status()).toBe(403);
+});
+```
+
+- [tests/support/scenario.ts](../tests/support/scenario.ts) holds the made-up band and members, `install()`, `addMember()` and `signIn()`. Nobody in it is real.
+- [tests/support/database.ts](../tests/support/database.ts) gives `emptyDatabase()` and `sql()`, to set up what the API cannot (a session that is 91 days old) and to look at what was saved.
+- Each `request` keeps its own cookies, like one device. A second device is `playwright.request.newContext({ baseURL })`.
+- **Tests are written from the dictionary, not from the code**: each line of an "Access rights" or "Roles and permissions" table in `model/` becomes a test, the refusals as much as the permissions.
+- A browser test finds elements by their role or their state (`getByRole('status')`), not by their French text, so that a change of wording does not break it.
+- After a failure, `npx playwright show-report` opens the report.
 - Each feature ships with its tests, including a member without the right and empty data.
 
 There are no unit tests. Code checks (below) cover what unit tests would catch at this size.
@@ -457,6 +557,13 @@ What is already decided:
 
 To settle then: how `api/src`, `api/vendor` and `api/config.php` are kept out of the folder Apache serves, and how `migrate.php` is run without a command line (today it refuses to run outside one).
 
+To check on the real host, because it cannot be checked locally:
+
+- every address is redirected to HTTPS (a rule to add to the `.htaccess` files);
+- the session cookie arrives as `__Host-session` with `Secure`, and sign-in works on an iPhone and an Android phone;
+- a write sent by an older browser, which announces itself with `Origin` only, is accepted (see `SameSiteOnly`);
+- PHP errors are not displayed.
+
 ## Traps
 
 - **`/icons/` is reserved by Apache** for its own files: anything the app puts at that address answers 404. The app's icons are in `web/public/appIcons/`.
@@ -464,12 +571,15 @@ To settle then: how `api/src`, `api/vendor` and `api/config.php` are kept out of
 - **Port 8080 serves the built front.** After changing front code, `npm run build` before looking at 8080 or running the tests. Port 5173 has no such step.
 - **A migration file holds several statements**, which MySQL's real prepared statements refuse. `migrate.php` switches that setting for itself only; the API keeps real prepared statements.
 - **`npm run db:reset` and `docker compose down -v` delete the local data.**
+- **Text compared by PHP and by the database.** The database ignores case and accents (`Flute` = `Flûte`); PHP's `mb_strtolower` ignores case only. A uniqueness check written in PHP is a courtesy to give a precise error; the constraint of the database is the judge, and its refusal must be caught and turned into a proper error.
+- **`assert()` does nothing on the host**, where PHP runs with assertions off. Never use it to guard against something that can happen: throw.
+- **`password_hash()` refuses a password holding a NUL character** and throws, while `password_verify()` just says no. `Passwords` hides the difference; go through it.
 
 ## Not built yet
 
 In the order of the scoping document:
 
-1. Install (sections, instruments, first admin), sign-in, sessions and permissions: the `members` domain is validated and its tables exist; the code is next.
+1. The screens of install and sign-in (their API exists), then the logo of the band.
 2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
 3. The design system in CSS and the first real screens: wait for the Figma file.
 4. Every feature (members, songs, gigs, and the later ones).

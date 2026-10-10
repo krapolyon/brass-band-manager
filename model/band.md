@@ -1,6 +1,6 @@
 # Business dictionary — Band domain
 
-> v1.0 — 2026-10-10 · Model: `band.dbml` · Validated · Migration: `002_band.sql`
+> v1.2 — 2026-10-10 · Model: `band.dbml` · Validated · Migration: `002_band.sql`
 
 Examples in this document are made up, except the name of the band that started the project.
 
@@ -18,11 +18,11 @@ The band this instance of the app belongs to, and the settings that make the app
 
 ### Rules
 - **Created at install, never deleted.** Install asks for the name and, optionally, the logo. Both can be changed later in the settings.
-- **The name and the logo are public.** They appear on the sign-in screen and in what the phone shows when the app is installed (its name and its icon), which a device reads without being signed in. Nothing else of the app is served without sign-in.
+- **The name and the logo are public.** They appear on the sign-in screen and in what the phone shows when the app is installed (its name and its icon), which a device reads without being signed in. Nothing else about the band or its members is served without sign-in. (Two technical routes are public too: whether the app is installed, and whether the server reaches its database.)
 - **Logo file.** Accepted when it really is an image of one of the four formats, whatever its extension says. Stored under a name chosen by the app, never the uploaded file name. An SVG can carry scripts: it is only ever served as an image, with headers that forbid running anything in it.
 - **Icon of the installed app.** A phone needs square PNG icons, whatever the format of the logo. They are produced from the logo when it is uploaded: the logo fitted in a square, on a plain background. Without a logo, the app keeps its neutral icon. No second image is asked for.
 - **Replacing the logo** replaces the file and the icons. A phone that has already installed the app may keep the old icon until the app is installed again: this is how phones behave.
-- **Default language.** Set at install to the language the install was done in, and given to each new member.
+- **Default language.** The install opens in French, and its first screen offers the other languages shipped with the app. `defaultLanguage` is set to the language the install was done in, and given to each new member.
 
 ### Relations
 - None. Other tables carry no reference to the band: the app holds one band (see the `brass-band-model` skill, "One instance, one band").

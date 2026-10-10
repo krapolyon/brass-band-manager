@@ -18,6 +18,28 @@ services:
       timeout: 3s
       retries: 20
 
+  # The same server, pointed at a separate database that the tests empty at
+  # will. Tests use this one (port 8081), so they never touch the data of 8080.
+  web-test:
+    build: docker
+    ports:
+      - "8081:80"
+    volumes:
+      - ./web/dist:/var/www/html:ro
+      - ./api:/var/www/api:ro
+      - ./database:/var/www/database:ro
+    environment:
+      BRASS_BAND_DATABASE: brassBandTest
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # A static file: the test database may not exist yet when the stack starts.
+      test: ["CMD", "curl", "-fsS", "http://localhost/manifest.webmanifest"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
   # Command-line PHP for development tools (Composer, PHPStan). Not started
   # with the stack: used through "docker compose run --rm php ...".
   php:

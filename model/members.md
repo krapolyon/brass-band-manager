@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.2 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
+> v1.4 — 2026-10-10 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -23,7 +23,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `countryCode` | Country | Pays | No | FR | 2 | Chosen in a list. Stored as a two-letter ISO code, displayed as a name in the member's language |
 | `addressInstructions` | Access instructions | Instructions d'accès | No | Code 4812B, 3e étage gauche | 0 to 200 | Door code, floor, parking |
 | `instrumentId` | Instrument | Instrument | Yes | Sax ténor | — | One instrument per member. Gives the section |
-| `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. Minimum length of the password: 10 characters, no other composition rule |
+| `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. The password has 10 characters at least and no composition rule. Two technical limits: 72 bytes at most (what the hashing keeps), and no NUL character |
 | `status` | Status | Statut | Yes | ACTIVE | — | See life cycle |
 | `language` | Language | Langue | Yes | fr | 2 to 5 | Set from the band's default language at creation |
 | `colorScheme` | Appearance | Apparence | Yes | AUTO | — | Automatic (follows the device), light or dark |
@@ -54,15 +54,17 @@ In every rule below, **a current member** is a member whose status is `ACTIVE` o
 A member is never deleted once `ACTIVE`: their answers to past gigs stay. The email of a member who left is kept so that they can be invited again.
 
 ### Rules
-- **Install.** Installing the app is only possible while the `member` table is empty. It goes in three steps:
+- **Install.** Installing the app is only possible while the `member` table is empty. A first screen presents the steps and lets the person choose the language (Band domain, `band.md`). It then goes in three steps:
   1. name the band and, if wanted, give its logo (Band domain, `band.md`);
-  2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot;
-  3. create the first member: email, password, last name, first name, nickname and instrument. This member is `ACTIVE` and holds the `ADMIN` role.
+  2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot. The rows the library marks as preselected are ticked when the step opens. At least one instrument has to be kept: the first member needs one;
+  3. create the first member: email, password, last name, first name, nickname and instrument, chosen among the instruments kept at step 2. This member is `ACTIVE` and holds the `ADMIN` role.
 
-  Nothing is saved before the last step is confirmed: an install that is abandoned leaves an empty database.
+  Nothing is saved before the last step is confirmed: an install that is abandoned leaves an empty database. Confirming the last step signs the first member in on the device used, as a sign-in would.
+
+  Install also asks for the **install key**: a text written in the configuration of the server by the person who set the app up. Without it, whoever reached a new instance first could make themself its admin.
 - **Always one admin.** The last current member holding `ADMIN` can neither lose that role nor become `LEFT`.
-- **Sign-in.** Email and password, for current members only (`ACTIVE` and `POWER_MEMBER`). The answer to a wrong email and to a wrong password is the same.
-- **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`). A successful sign-in resets the count.
+- **Sign-in.** Email and password, for current members only (`ACTIVE` and `POWER_MEMBER`). Every refusal gets the same answer, in the same time: wrong email, wrong password, member who cannot sign in, sign-in locked. The screen therefore says both things at once: wrong email or password, and wait a while after several tries. Signing in again on a device replaces its session.
+- **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
 - **Password change.** Deletes every other session of the member.
 
 ### Roles and permissions
@@ -163,7 +165,7 @@ The library is a file of the app, not a table. French library:
 | Flûte | Flûte, Piccolo |
 | Clarinette | Clarinette |
 
-The first six lines are the organisation of the band that started the project.
+The first six lines are the organisation of the band that started the project. They are the rows preselected at install, with all their instruments: a band unticks what it does not play and ticks the rest. Each library says which of its rows are preselected.
 
 ### Rules
 - A section with instruments cannot be deleted. An instrument played by a member, or used by a part of a song, cannot be deleted. Both can be renamed and moved.
@@ -183,7 +185,7 @@ The first six lines are the organisation of the band that started the project.
 
 ### Display
 - Sections are listed in the order of `position`, instruments in the order of their own `position` inside their section. Equal positions are ordered by name.
-- Representations in the design library: none exists yet. Expected: mention (the instrument beside a member's nickname).
+- Representations in the design library: `Instrument/Row` (listed with its actions, to tick, or the one chosen in a list) and `Section/Card` (a section with its instruments, to pick and to manage them). Expected: mention (the instrument beside a member's nickname).
 
 ## 3. Session and password link (`memberSession`, `memberPasswordLink`)
 

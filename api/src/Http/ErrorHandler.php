@@ -27,7 +27,12 @@ final class ErrorHandler
 
         // A refusal decided by our code.
         if ($thrown instanceof ApiError) {
-            return Json::write($response, ['error' => $thrown->error], $thrown->status);
+            $body = ['error' => $thrown->error];
+            if ($thrown->fields !== []) {
+                $body['fields'] = $thrown->fields;
+            }
+
+            return Json::write($response, $body, $thrown->status);
         }
 
         // Data sent by the front that does not have the expected shape (see Input).

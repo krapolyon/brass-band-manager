@@ -17,6 +17,7 @@ const steps = [
   ['Building the front', () => run('npm run build')],
   ['Starting the local stack', () => run('npm run stack:up')],
   ['Applying the migrations', () => run('npm run db:migrate')],
+  ['Preparing the test database', () => run('npm run test:prepare')],
   ['Installing the test browsers', () => run('npm run test:install')],
 ];
 
@@ -51,8 +52,8 @@ function createConfig() {
     console.log('api/config.php already exists: left as it is');
     return;
   }
-  copyFileSync('api/config.example.php', 'api/config.php');
-  console.log('api/config.php created from api/config.example.php');
+  copyFileSync('api/config.local.php', 'api/config.php');
+  console.log('api/config.php created from api/config.local.php');
 }
 
 for (const [index, [title, step]] of steps.entries()) {

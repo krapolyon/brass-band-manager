@@ -102,7 +102,7 @@ Features are built one at a time, in the order set by the scoping document.
 | Start / stop the local stack | `npm run stack:up` / `npm run stack:down`. The app is at http://localhost:8080 |
 | Work on the front | `npm run dev`, then http://localhost:5173 |
 | Build the front | `npm run build`. Needed before testing a change of the front |
-| Test | `npm test` |
+| Test | `npm test`. Runs against the test server (port 8081) and its own database, never the data of 8080 |
 | Check the code | `npm run check` (Biome, TypeScript, PHPStan). `npm run format` fixes the layout |
 | Apply the migrations | `npm run db:migrate`, on the local database only |
 | Empty the local database | `npm run db:reset`. Deletes local data: ask first |
@@ -116,15 +116,23 @@ Written once, used by every feature. A feature never does these things by itself
 
 | Need | Use |
 |---|---|
-| Declare an address of the API | One line in `api/routes.php`, pointing to an action class in `api/src/<Domain>/` |
+| Declare an address of the API | One line in `api/routes.php`, pointing to an action class in `api/src/<Domain>/`, written in the block that says who may call it: public, signed in, or with a permission |
+| Know who is asking | `CurrentMember::of($request)`, behind `RequireSession` |
+| Restrict an action | `->add(new RequirePermission(Permission::...))` on the route. Never test a role; the table of who gets what is in `Permission.php` |
 | Read or write data | The DBAL connection given to the action, with placeholders and the values passed apart |
-| Receive data from the front | `Input::from($request, SomeInput::class)`: a typed class, filled and checked by Valinor |
+| Receive data from the front | `Input::from($request, SomeInput::class)`: a typed class, filled and checked by Valinor. Then `FieldErrors` for lengths and formats, and `Text::clean()` before saving a text |
 | Answer | `Json::write()` |
 | Refuse | `throw new ApiError(status, 'errorKey')`. The front translates the key; the server writes no sentence |
 | Call the API from the front | `api()` of `web/src/api.ts`, through TanStack Query |
 | Show a text | `t('some.key')`, the key being in `web/src/locales/fr.json` |
 
-Sessions and permission checks are not written yet. Their rules are in `model/members.md`: an action checks a permission, never a role.
+A route is public only by decision: the list is short and written at the top of `api/routes.php`.
+
+## How a feature is checked before it is committed
+
+1. `npm run check` and `npm test` pass.
+2. Its tests come from the dictionary: each line of the "Access rights" and "Roles and permissions" tables of `model/` is a test, refusals included.
+3. An independent review, by an agent that did not write the code, read-only: security and privacy against the dictionary, and, when there are screens, conformity to Figma with the six accessibility options on. Its findings are fixed, each with a test, or reported to the owner.
 
 ## Still to fill in
 

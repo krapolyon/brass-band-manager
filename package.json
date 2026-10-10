@@ -19,6 +19,8 @@
     "db:reset": "docker compose down -v && npm run stack:up && npm run db:migrate",
     "check": "biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
     "format": "biome check --write .",
+    "test:prepare": "node scripts/prepare-test-database.mjs",
+    "pretest": "npm run test:prepare",
     "test": "playwright test",
     "test:install": "playwright install chromium webkit"
   },

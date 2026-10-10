@@ -1,4 +1,6 @@
 // Domain: Members
+// v1.4 — 2026-10-10 — no change to the tables: install key, limits of the password and behaviour of sign-in made explicit (dictionary)
+// v1.3 — 2026-10-10 — no change to the tables: install preselects instruments and requires one, and signs the first member in (dictionary)
 // v1.2 — 2026-10-10 — no change to the tables: install now starts with the band name and logo (dictionary)
 // v1.1 — 2026-10-10 — POWER_MEMBER status and MEMBER_MANAGER role added, before the first migration was committed
 // v1.0 — 2026-10-10 — validated. Accessibility options settled (six), order fields no longer unique, starting library completed
