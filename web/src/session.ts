@@ -32,13 +32,27 @@ export const HOME = '/members';
 
 /** The signed-in member; null when nobody is signed in on this device. */
 export function useMe() {
+  const queryClient = useQueryClient();
+
   return useQuery({
     queryKey: ['me'],
     queryFn: async (): Promise<Me | null> => {
       try {
         return await api<Me>('/api/me');
       } catch (error) {
-        if (error instanceof ApiError && error.status === 401) return null;
+        if (error instanceof ApiError && error.status === 401) {
+          // The session ended elsewhere (a departure, "sign out everywhere",
+          // too many wrong passwords): what the member saw leaves the memory
+          // of the page. The band stays: it is public.
+          // Only when someone was signed in: a visitor has nothing to
+          // forget, and the screens before sign-in are asking things too.
+          if (queryClient.getQueryData(['me'])) {
+            queryClient.removeQueries({
+              predicate: (query) => query.queryKey[0] !== 'me' && query.queryKey[0] !== 'band',
+            });
+          }
+          return null;
+        }
         throw error;
       }
     },

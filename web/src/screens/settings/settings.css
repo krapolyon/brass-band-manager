@@ -1,0 +1,44 @@
+/* Layout of the settings screens. */
+
+/* The member at the top of the summary: the whole line opens the profile. */
+.settings-me {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.settings-me > .MemberHeader {
+  flex: 1;
+}
+
+.settings-me > .Icon {
+  color: var(--textMuted);
+}
+
+.settings-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+}
+
+.settings-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.settings-note {
+  color: var(--textMuted);
+}
+
+.settings-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.settings-swatches > * {
+  flex: 1;
+}

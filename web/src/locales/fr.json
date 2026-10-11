@@ -399,5 +399,237 @@
     "goThere": "Y aller",
     "allWithPointer_one": "1 fanfaron. Clique sur une tête pour l’appeler, lui écrire ou passer la voir.",
     "allWithPointer_other": "{{count}} fanfarons, de A à Z. Clique sur une tête pour l’appeler, lui écrire ou passer la voir."
+  },
+  "theme": {
+    "copper": "Cuivre",
+    "coral": "Corail",
+    "mint": "Menthe",
+    "lilac": "Lilas"
+  },
+  "settings": {
+    "account": "Mon compte",
+    "band": "La fanfare",
+    "save": "Enregistrer",
+    "profile": {
+      "open": "Mon profil",
+      "title": "Mon profil",
+      "lead": "Ce que les autres fanfarons voient de toi."
+    },
+    "password": {
+      "title": "Mot de passe",
+      "current": "Mot de passe actuel",
+      "currentMissing": "Il manque ton mot de passe actuel.",
+      "currentWrong": "Ce n’est pas ton mot de passe actuel. Après plusieurs essais ratés, la connexion se bloque un quart d’heure.",
+      "otherDevices": "Changer de mot de passe déconnecte tes autres appareils.",
+      "submit": "Changer le mot de passe"
+    },
+    "appearance": {
+      "title": "Apparence",
+      "lead": "Ça s’applique tout de suite, et ça te suit d’un appareil à l’autre.",
+      "schemeTitle": "Clair ou sombre",
+      "scheme": {
+        "AUTO": "Auto",
+        "LIGHT": "Clair",
+        "DARK": "Sombre"
+      },
+      "schemeNote": "Auto suit le réglage de ton téléphone : clair le jour, sombre la nuit s’il est réglé comme ça.",
+      "accentTitle": "Couleur d’accent",
+      "band": "Fanfare",
+      "bandColour": "couleur de la fanfare",
+      "accentNote": "Fanfare, c’est la couleur choisie par ta fanfare : si elle en change, tu suis."
+    },
+    "accessibility": {
+      "lead": "Règle l’app à ta vue. Ces réglages ne regardent que toi : personne d’autre ne les voit.",
+      "none": "Aucune option activée",
+      "textSize": "texte à {{percent}} %",
+      "highContrast": "contraste élevé",
+      "increasedSpacing": "espacement augmenté",
+      "legibleFont": "police plus lisible",
+      "reducedMotion": "mouvement réduit",
+      "extendedTimeouts": "délais augmentés"
+    },
+    "language": {
+      "title": "Langue"
+    },
+    "manageMembers": "Gérer les fanfarons",
+    "invitations_one": "1 invitation en attente",
+    "invitations_other": "{{count}} invitations en attente",
+    "bandSettings": "Réglages de la fanfare",
+    "bandSettingsDetail": "Apparence, pupitres",
+    "signOut": "Me déconnecter",
+    "signOutDetail": "Sur cet appareil seulement",
+    "signOutEverywhere": "Déconnecter tous mes appareils",
+    "signOutEverywhereDetail": "Celui-ci compris",
+    "confirmSignOut": {
+      "title": "Tout déconnecter ?",
+      "text": "Tous tes appareils seront déconnectés, celui-ci compris. Il te faudra ton mot de passe pour revenir.",
+      "cancel": "Annuler"
+    }
+  },
+  "manage": {
+    "count": {
+      "members_one": "1 fanfaron",
+      "members_other": "{{count}} fanfarons",
+      "powerMembers_one": ", dont 1 power member",
+      "powerMembers_other": ", dont {{count}} power members",
+      "invited_one": "1 invitation en attente",
+      "invited_other": "{{count}} invitations en attente",
+      "former_one": "1 ancien",
+      "former_other": "{{count}} anciens"
+    },
+    "filter": {
+      "label": "Qui afficher",
+      "all": "Tous",
+      "powerMembers": "Power members",
+      "invited": "Invités"
+    },
+    "showFormer": "Afficher les anciens",
+    "empty": {
+      "all": {
+        "title": "Personne pour l’instant.",
+        "text": "Invite quelqu’un pour commencer."
+      },
+      "powerMembers": {
+        "title": "Pas de power member pour l’instant.",
+        "text": "Tout le monde joue à fond. Tu peux passer quelqu’un en power member depuis sa fiche."
+      },
+      "invited": {
+        "title": "Pas d’invitation en attente.",
+        "text": "Tout le monde est arrivé."
+      }
+    },
+    "table": {
+      "member": "Fanfaron",
+      "status": "Statut",
+      "roles": "Rôles",
+      "open": "Ouvrir la fiche de {{nickname}}"
+    },
+    "status": {
+      "ACTIVE": "Joue régulièrement, reçoit les rappels pour les plans",
+      "POWER_MEMBER": "Joue moins souvent, ne reçoit pas les rappels",
+      "INVITED": "Le lien d’invitation marche jusqu’au {{date}}",
+      "EXPIRED": "Le lien d’invitation ne marche plus : crée-en un nouveau",
+      "LEFT": "Coordonnées, photo et rôles effacés à son départ",
+      "expiredShort": "Expirée"
+    },
+    "actions": {
+      "title": "Actions",
+      "toPowerMember": "Passer en power member",
+      "toPowerMemberDetail": "Joue moins souvent : plus de rappels pour les plans",
+      "toActive": "Repasser en actif",
+      "toActiveDetail": "Reprend les rappels pour les plans",
+      "passwordLink": "Créer un lien de mot de passe",
+      "passwordLinkDetail": "Si le sien est perdu",
+      "leave": "Marquer comme parti",
+      "leaveDetail": "Coupe son accès, efface ses coordonnées",
+      "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
+      "newLink": "Créer un nouveau lien",
+      "newLinkDetail": "L’ancien ne marchera plus",
+      "cancelInvitation": "Annuler l’invitation",
+      "cancelInvitationDetail": "Supprime cette fiche : rien d’autre n’en dépend",
+      "bringBack": "Faire revenir {{nickname}}",
+      "bringBackDetail": "Crée une nouvelle invitation : l’ancien mot de passe ne sert plus"
+    },
+    "roles": {
+      "ADMIN": {
+        "label": "Admin",
+        "detail": "Tout, rôles et réglages compris"
+      },
+      "MEMBER_MANAGER": {
+        "label": "Gère les fanfarons",
+        "detail": "Invite, modifie, change les statuts"
+      },
+      "SONG_MANAGER": {
+        "label": "Gère les morceaux",
+        "detail": "Ajoute, modifie, archive"
+      },
+      "GIG_MANAGER": {
+        "label": "Gère les plans",
+        "detail": "Crée, modifie, annule"
+      }
+    },
+    "member": {
+      "lastAdmin": "{{nickname}} est le dernier admin. Nomme quelqu’un d’autre avant de lui retirer ce rôle ou de le marquer comme parti.",
+      "lastAdminRefused": "Il faut toujours un admin. Nomme quelqu’un d’autre avant de retirer ce rôle.",
+      "reserved": "Réservé aux admins : ce fanfaron a plus de droits que toi.",
+      "notFound": "Cette fiche n’existe pas, ou plus."
+    },
+    "leave": {
+      "title": "Marquer {{nickname}} comme parti ?",
+      "text": "Son accès est coupé tout de suite. Son téléphone, son adresse, sa photo et ses rôles sont effacés. Son nom et ses réponses aux plans passés restent, et une nouvelle invitation reste possible."
+    },
+    "invite": {
+      "open": "Inviter un fanfaron",
+      "lead": "Remplis ce que tu sais. La personne vérifiera et complétera le reste en arrivant.",
+      "submit": "Créer l’invitation"
+    },
+    "link": {
+      "once": "On ne te le montrera plus : copie-le maintenant.",
+      "copy": "Copier le lien",
+      "copied": "Lien copié",
+      "share": "Partager",
+      "invitation": {
+        "title": "Invitation prête",
+        "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours.",
+        "label": "Lien d’invitation"
+      },
+      "password": {
+        "title": "Lien prêt",
+        "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours, et lui permet de choisir un nouveau mot de passe.",
+        "label": "Lien de mot de passe"
+      }
+    },
+    "noRight": {
+      "title": "Pas par ici",
+      "text": "Cette page est réservée à celles et ceux qui gèrent les fanfarons. Tu penses devoir y être ? Vois ça avec un admin.",
+      "back": "Retour aux fanfarons"
+    }
+  },
+  "band": {
+    "title": "La fanfare",
+    "lead": "Ce qui fait que cette app est la vôtre. Réservé aux admins.",
+    "adminsOnly": "Cette page est réservée aux admins de la fanfare. Tu penses devoir y être ? Vois ça avec l’un d’eux.",
+    "backToSettings": "Retour aux réglages",
+    "connections": "Branchements",
+    "discord": "Les fils de discussion des morceaux",
+    "soon": "Bientôt",
+    "appearance": {
+      "title": "Apparence",
+      "detail": "Nom, logo, couleur, langue",
+      "lead": "Le nom, le logo, la couleur et la langue de votre app. Le nom et le logo se voient avant même la connexion.",
+      "nameAndLogo": "Nom et logo",
+      "logoHint": "PNG, SVG, JPEG ou WebP, 2 Mo maximum. Il sert aussi d’icône à l’app installée.",
+      "accentNote": "Celle de la fanfare. Chaque fanfaron peut en choisir une autre pour lui, dans ses réglages.",
+      "language": "Langue par défaut",
+      "languageNote": "Celle des nouveaux fanfarons. Chacun peut changer la sienne."
+    },
+    "sections": {
+      "title": "Pupitres et instruments",
+      "lead": "Rangés comme dans vos arrangements. Un pupitre est présent à un plan dès qu’un de ses fanfarons l’est.",
+      "players_zero": "Personne n’en joue",
+      "players_one": "1 fanfaron",
+      "players_other": "{{count}} fanfarons",
+      "playerCount_zero": "aucun fanfaron",
+      "playerCount_one": "1 fanfaron",
+      "playerCount_other": "{{count}} fanfarons",
+      "moveNote_one": "Le changer de pupitre emmène son fanfaron avec lui.",
+      "moveNote_other": "Le changer de pupitre emmène ses {{count}} fanfarons avec lui.",
+      "instrumentInUse_one": "1 fanfaron en joue. Change son instrument avant de le retirer.",
+      "instrumentInUse_other": "{{count}} fanfarons en jouent. Change leur instrument avant de le retirer.",
+      "sectionNotEmpty": "{{name}} a encore {{instruments}} et {{players}}. Déplace ou retire ses instruments d’abord.",
+      "pictogram": {
+        "label": "Pictogramme",
+        "hint": "Il accompagne le surnom de chaque fanfaron du pupitre.",
+        "none": "Sans pictogramme",
+        "trumpet": "Trompette",
+        "saxophone": "Saxophone",
+        "trombone": "Trombone",
+        "tuba": "Tuba",
+        "sousaphone": "Soubassophone",
+        "drum": "Batterie",
+        "flute": "Flûte",
+        "clarinet": "Clarinette"
+      }
+    }
   }
 }

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Halo } from '../components/Halo.tsx';
+import { Icon } from '../components/Icon.tsx';
 import { IconButton } from '../components/IconButton.tsx';
 import type { NavKey } from '../components/nav.ts';
 import { ScreenTop } from '../components/ScreenTop.tsx';
@@ -19,6 +20,8 @@ type Props = {
    * a tab (a form, a record) hides the TabBar and shows a way back.
    */
   back?: string;
+  /** The name of that screen, shown beside the way back on a desktop: "Fanfarons". */
+  backLabel?: string;
   /** One action of the page, beside its title. */
   action?: ReactNode;
   /** What narrows or sorts the content: filters. Under the title on a phone, beside it on a desktop. */
@@ -46,6 +49,7 @@ export function AppLayout({
   title,
   subtitle,
   back,
+  backLabel,
   action,
   toolbar,
   width = 'wide',
@@ -71,12 +75,21 @@ export function AppLayout({
           <ScreenTop
             leading={
               back && (
-                <IconButton
-                  kind="glass"
-                  icon="ChevronLeft"
-                  label={t('common.back')}
-                  onClick={() => navigate(back)}
-                />
+                <>
+                  <span className="AppLayout-backButton">
+                    <IconButton
+                      kind="glass"
+                      icon="ChevronLeft"
+                      label={t('common.back')}
+                      onClick={() => navigate(back)}
+                    />
+                  </span>
+                  {/* On a desktop the way back is a line of text that names where it leads. */}
+                  <Link className="AppLayout-backLink textLabel" to={back}>
+                    <Icon name="ChevronLeft" size={20} />
+                    {backLabel ?? t('common.back')}
+                  </Link>
+                </>
               )
             }
             action={action}

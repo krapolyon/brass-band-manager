@@ -33,7 +33,9 @@ export function DoneScreen() {
         <BottomBar>
           {/* Inviting belongs to the members feature, which is not built yet:
               for now both buttons lead to the home address. */}
-          <Button onClick={() => navigate('/')}>{t('install.done.invite')}</Button>
+          <Button onClick={() => navigate('/members/manage/invite')}>
+            {t('install.done.invite')}
+          </Button>
           <Button kind="quiet" onClick={() => navigate('/')}>
             {t('install.done.home')}
           </Button>

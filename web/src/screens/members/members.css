@@ -42,3 +42,55 @@
   display: flex;
   gap: var(--spaceXs);
 }
+
+/* Managing members. */
+.members-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.members-former {
+  padding-inline: var(--spaceXxs);
+}
+
+.members-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+}
+
+/* A list on a phone and a tablet, a table on a desktop: each exists once on
+   the screen, the other is not drawn and is not read out. */
+.members-desktopOnly {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .members-desktopOnly {
+    display: block;
+  }
+
+  .members-belowDesktop {
+    display: none;
+  }
+}
+
+/* The choice and the switch: one under the other, on one line on a desktop. */
+.members-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+@media (min-width: 1024px) {
+  .members-controls {
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .members-former .SwitchRow {
+    gap: var(--spaceXxl);
+  }
+}

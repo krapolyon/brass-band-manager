@@ -20,6 +20,10 @@ type Props = {
   /** A state or a small action at the end (Figma: Trailing=Chip, Trailing=Button). */
   trailing?: ReactNode;
   disabled?: boolean;
+  /** The action opens a panel: said to screen readers. */
+  opensPanel?: boolean;
+  /** Figma: Trailing=Chevron on a row that is not a link: it leads to a choice. */
+  chevron?: boolean;
 };
 
 // Figma: NavRow. A row that leads somewhere or does one thing. With neither
@@ -34,6 +38,8 @@ export function NavRow({
   href,
   trailing,
   disabled,
+  opensPanel,
+  chevron,
 }: Props) {
   const content = (
     <>
@@ -42,7 +48,7 @@ export function NavRow({
         <span className="NavRow-label textBodyLarge">{label}</span>
         {detail && <span className="NavRow-detail textCaption">{detail}</span>}
       </span>
-      {to && <Icon name="ChevronRight" />}
+      {(to || chevron) && <Icon name="ChevronRight" />}
     </>
   );
 
@@ -65,6 +71,7 @@ export function NavRow({
       <button
         type="button"
         className="NavRow"
+        aria-haspopup={opensPanel ? 'dialog' : undefined}
         data-tone={tone}
         onClick={onClick}
         disabled={disabled}

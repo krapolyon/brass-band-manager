@@ -3,7 +3,8 @@
   flex-direction: column;
   align-items: center;
   gap: var(--spaceXs);
-  min-width: 4rem; /* 64 */
+  /* 64 wide alone; side by side, five share the width of a sheet on a phone. */
+  min-width: 3rem;
   padding: var(--spaceXs) 0;
   color: var(--textMuted);
   text-align: center;

@@ -36,6 +36,11 @@
   position: relative;
 }
 
+/* The way back: a round button below the desktop width, a line of text from it. */
+.AppLayout-backLink {
+  display: none;
+}
+
 /* The filters: 24 under the top, in the gutters of the content. */
 .AppLayout-toolbar {
   display: flex;
@@ -128,13 +133,34 @@
     font-size: var(--fontSizeBody);
   }
 
+  /* The way back takes a line of its own, above the title; the action of
+     the page ends the line of the title. */
   .AppLayout-header .ScreenTop-navigation {
-    order: 3;
+    display: contents;
   }
 
-  /* A way back is the first thing of the line. */
-  .AppLayout[data-has-back="true"] .ScreenTop-navigation {
+  .AppLayout-header .ScreenTop-leading {
+    flex-basis: 100%;
     order: 0;
+  }
+
+  .AppLayout-header .ScreenTop-action {
+    order: 3;
+    margin: 0;
+  }
+
+  .AppLayout-backButton {
+    display: none;
+  }
+
+  .AppLayout-backLink {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spaceXxs);
+    min-height: var(--controlHeightSm);
+    padding-right: var(--spaceSm);
+    color: var(--accentText);
+    text-decoration: none;
   }
 
   .AppLayout-toolbar {

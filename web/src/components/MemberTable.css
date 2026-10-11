@@ -1,0 +1,58 @@
+/* Columns of 228, 170, 160 and 190 in Figma, on a table of 856: the member
+   takes what is left when the window is wider. */
+.MemberTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.MemberTable th,
+.MemberTable td {
+  padding: var(--spaceXs) var(--spaceMd) var(--spaceXs) 0;
+  border-bottom: var(--borderWidth) solid var(--border);
+  font-weight: inherit;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.MemberTable thead th {
+  color: var(--textMuted);
+}
+
+.MemberTable tbody tr {
+  height: 4rem; /* 64 */
+}
+
+.MemberTable-member {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.MemberTable-texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.MemberTable-name,
+.MemberTable-muted,
+.MemberTable-instrument .Icon,
+.MemberTable-chevron,
+.MemberTable tr[data-muted="true"] .MemberTable-nickname {
+  color: var(--textMuted);
+}
+
+.MemberTable-instrument {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXxs);
+}
+
+.MemberTable-chevron {
+  width: var(--controlHeightSm);
+  padding-right: 0;
+  text-align: center;
+}

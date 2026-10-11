@@ -11,7 +11,15 @@ import { MemberScreen } from './screens/install/MemberScreen.tsx';
 import { SectionsScreen } from './screens/install/SectionsScreen.tsx';
 import { WelcomeScreen } from './screens/install/WelcomeScreen.tsx';
 import { DirectoryScreen } from './screens/members/DirectoryScreen.tsx';
+import { InviteScreen } from './screens/members/InviteScreen.tsx';
+import { ManageListScreen } from './screens/members/ManageListScreen.tsx';
+import { ManageMemberScreen } from './screens/members/ManageMemberScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
+import { AccessibilityScreen } from './screens/settings/AccessibilityScreen.tsx';
+import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
+import { PasswordScreen } from './screens/settings/PasswordScreen.tsx';
+import { ProfileScreen } from './screens/settings/ProfileScreen.tsx';
+import { SettingsScreen } from './screens/settings/SettingsScreen.tsx';
 
 // Every address of the app and the screen it shows, in one place.
 export const router = createBrowserRouter([
@@ -23,6 +31,14 @@ export const router = createBrowserRouter([
       { path: '/songs', element: <ComingSoonScreen tab="songs" /> },
       { path: '/gigs', element: <ComingSoonScreen tab="gigs" /> },
       { path: '/members', element: <DirectoryScreen /> },
+      { path: '/members/manage', element: <ManageListScreen /> },
+      { path: '/members/manage/invite', element: <InviteScreen /> },
+      { path: '/members/manage/:id', element: <ManageMemberScreen /> },
+      { path: '/settings', element: <SettingsScreen /> },
+      { path: '/settings/profile', element: <ProfileScreen /> },
+      { path: '/settings/password', element: <PasswordScreen /> },
+      { path: '/settings/appearance', element: <AppearanceScreen /> },
+      { path: '/settings/accessibility', element: <AccessibilityScreen /> },
     ],
   },
   {
