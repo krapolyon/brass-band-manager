@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useContext, useMemo, useState } from 'react';
 import { Outlet } from 'react-router';
+import type { LogoInput } from './installApi.ts';
 
 // What the member has entered so far in the install. It lives in memory only,
 // for as long as the install screens are open: nothing is saved before the
@@ -47,6 +48,8 @@ export type InstallDraft = {
   installKey: string;
   bandName: string;
   logo: File | null;
+  /** The logo as the API wants it, prepared when the file is chosen. Null without a logo. */
+  logoInput: LogoInput | null;
   /** Null until step 2 changes something: the starting library then applies (see sections.ts). */
   sections: DraftSection[] | null;
   member: DraftMember;
@@ -65,6 +68,7 @@ const empty: InstallDraft = {
   installKey: '',
   bandName: '',
   logo: null,
+  logoInput: null,
   sections: null,
   member: {
     firstName: '',

@@ -9,6 +9,7 @@ import { Sheet } from '../../components/Sheet.tsx';
 import { TextField } from '../../components/TextField.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
 import { focusFirstError, InstallLayout } from './InstallLayout.tsx';
+import { prepareLogo } from './logo.ts';
 import { StepNav } from './StepNav.tsx';
 
 // The rules of model/band.md for the logo.
@@ -32,7 +33,7 @@ export function BandScreen() {
   const nameError = wasSent && isNameMissing ? t('install.band.name.missing') : undefined;
 
   // A file that is refused is not kept: the logo stays what it was.
-  const chooseLogo = (file: File | null) => {
+  const chooseLogo = async (file: File | null) => {
     // Some systems give no type to an SVG file: its name then says what it is.
     const type = file?.type || (file?.name.toLowerCase().endsWith('.svg') ? 'image/svg+xml' : '');
     if (file && !LOGO_TYPES.includes(type)) {
@@ -43,8 +44,14 @@ export function BandScreen() {
       );
       setLogoError(t('install.band.logo.tooBig', { size: megabytes }));
     } else {
-      setLogoError(undefined);
-      update({ logo: file });
+      try {
+        // Drawn into its icons at once: a file the browser cannot read is refused here.
+        const logoInput = file ? await prepareLogo(file) : null;
+        setLogoError(undefined);
+        update({ logo: file, logoInput });
+      } catch {
+        setLogoError(t('install.band.logo.wrongType'));
+      }
     }
   };
 

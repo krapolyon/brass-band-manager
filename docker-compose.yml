@@ -9,6 +9,8 @@ services:
       - ./web/dist:/var/www/html:ro
       - ./api:/var/www/api:ro
       - ./database:/var/www/database:ro
+      # The only folder of the app the server writes to: the uploaded files.
+      - storage:/var/www/storage
     depends_on:
       db:
         condition: service_healthy
@@ -28,6 +30,7 @@ services:
       - ./web/dist:/var/www/html:ro
       - ./api:/var/www/api:ro
       - ./database:/var/www/database:ro
+      - storageTest:/var/www/storage
     environment:
       BRASS_BAND_DATABASE: brassBandTest
     depends_on:
@@ -35,7 +38,7 @@ services:
         condition: service_healthy
     healthcheck:
       # A static file: the test database may not exist yet when the stack starts.
-      test: ["CMD", "curl", "-fsS", "http://localhost/manifest.webmanifest"]
+      test: ["CMD", "curl", "-fsS", "http://localhost/appIcons/icon-192.png"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -79,4 +82,6 @@ services:
 
 volumes:
   dbData:
+  storage:
+  storageTest:
   composerCache:

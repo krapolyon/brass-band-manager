@@ -36,6 +36,9 @@ final class InstallStatusAction
     }
 
     // The app is installed as soon as a member exists (model/members.md, "Install").
+    //
+    // Marked impure: it reads the database, so asking twice can give two answers.
+    /** @phpstan-impure */
     public static function isInstalled(Connection $database): bool
     {
         return (int) $database->fetchOne('SELECT COUNT(*) FROM member') > 0;

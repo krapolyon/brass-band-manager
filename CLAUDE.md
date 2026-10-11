@@ -105,6 +105,7 @@ Features are built one at a time, in the order set by the scoping document.
 | `api/` | The back: `public/index.php` (single entry point), `routes.php` (every address), `src/` (classes), `config.php` (server configuration, never committed) |
 | `database/` | `migrations/` (numbered SQL scripts) and `migrate.php`, which applies them |
 | `tests/` | Playwright end-to-end tests |
+| `storage/` | Files uploaded by members (the logo, later the songs). Never committed, never served directly: a file leaves it through an action of the API |
 | `docker/`, `docker-compose.yml` | The local stand-in for the host |
 | `scripts/` | Project tooling, `setup.mjs` first |
 | `model/`, `docs/`, `skills/` | The sources of truth above |

@@ -97,6 +97,7 @@ They are not built in the first version, but the model and the design reserve a 
 - **Rehearsals**: songs to work on.
 - **Song statistics**.
 - **Quotes**: quotes for paid gigs.
+- **Export and import of the data of an instance**, to move a band from one install to another (noted by the owner on 2026-10-11, not scoped yet). It has to carry the database and the uploaded files of `storage/` together, and to say what happens to passwords and sessions.
 
 ### Opening the code
 

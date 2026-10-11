@@ -41,7 +41,13 @@ export type InstallInput = {
     /** The name of one of the instruments sent in the sections. */
     instrument: string;
   };
+  /** Left out when the band gives no logo. */
+  logo?: LogoInput;
 };
+
+// What the API receives for a logo (api/src/Band/LogoInput.php): the content
+// of the file and of its three icons, in base64. Made by prepareLogo().
+export type LogoInput = { image: string; icon180: string; icon192: string; icon512: string };
 
 /** Installs the app. The device is then signed in as the first member. */
 export function install(input: InstallInput) {

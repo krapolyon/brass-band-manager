@@ -31,3 +31,6 @@ playwright-report/
 
 # Server configuration: holds the database password on the host
 api/config.php
+
+# Files uploaded by members (logo, later songs): never committed
+/storage/

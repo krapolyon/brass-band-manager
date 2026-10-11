@@ -377,6 +377,69 @@ test.describe('the end of the install', () => {
     await expect(field(page, 'installKey')).toHaveCount(0);
   });
 
+  test('the logo chosen at step 1 becomes the logo of the band and the icon of the page', async ({
+    page,
+  }) => {
+    await toBand(page);
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'logo.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c00"/></svg>',
+      ),
+    });
+    await expect(page.locator('.ImageField-preview img')).toBeVisible();
+    await field(page, 'bandName').fill('Les Cuivres');
+    await next(page).click();
+    await next(page).click();
+    await fillMember(page);
+    await next(page).click();
+    await expect(page).toHaveURL('/install/done');
+
+    const band = await (await page.request.get('/api/band')).json();
+    expect(sql('SELECT logoPath FROM band')).toMatch(/logo\.svg$/);
+    // The page takes the name and the icon of the band.
+    await expect(page).toHaveTitle('Les Cuivres');
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', band.icons['192']);
+
+    // The icon is a square of the size asked, with the logo fitted in the
+    // middle on white: red at the centre, white in the corner and above the logo.
+    const pixels = await page.evaluate(async (src) => {
+      const image = new Image();
+      image.src = src;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+      context.drawImage(image, 0, 0);
+      const at = (x: number, y: number) => [...context.getImageData(x, y, 1, 1).data.slice(0, 3)];
+      return {
+        side: [image.naturalWidth, image.naturalHeight],
+        centre: at(256, 256),
+        corner: at(4, 4),
+        above: at(256, 100),
+      };
+    }, band.icons['512']);
+    expect(pixels.side).toEqual([512, 512]);
+    expect(pixels.centre[0]).toBeGreaterThan(180);
+    expect(pixels.centre[1]).toBeLessThan(40);
+    expect(pixels.corner).toEqual([255, 255, 255]);
+    expect(pixels.above).toEqual([255, 255, 255]);
+  });
+
+  test('a file that only pretends to be an image is refused at step 1', async ({ page }) => {
+    await toBand(page);
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'logo.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('not a picture'),
+    });
+
+    await expect(page.locator('.ImageField[data-error="true"]')).toBeVisible();
+    await expect(page.locator('.ImageField-preview img')).toHaveCount(0);
+  });
+
   test('the install key and the password are not kept on the device', async ({ page }) => {
     await toMember(page);
     await fillMember(page);

@@ -9,11 +9,15 @@ test.beforeEach(async ({ playwright, baseURL }) => {
   await setup.dispose();
 });
 
-test('the name of the band is public, and nothing else is', async ({ request }) => {
+test('the name of the band and its logo are public, and nothing else is', async ({ request }) => {
   const response = await request.get('/api/band');
 
   expect(response.status()).toBe(200);
-  expect(await response.json()).toEqual({ name: 'La Fanfare des Cuivres Déchaînés' });
+  expect(await response.json()).toEqual({
+    name: 'La Fanfare des Cuivres Déchaînés',
+    logoUrl: null,
+    icons: null,
+  });
 });
 
 test('before install there is no band to show', async ({ request }) => {

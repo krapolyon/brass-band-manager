@@ -63,7 +63,7 @@ Three addresses, three uses: **5173** to write front code comfortably, **8080** 
 ```
 web/                      The front
   index.html              The single page
-  public/                 Files copied as they are: manifest, icons, .htaccess
+  public/                 Files copied as they are: neutral icons, .htaccess
     fonts/                The two typefaces of the design, and their licences
   src/
     main.tsx              Starting point
@@ -127,6 +127,7 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 
 - The folders `web/dist`, `api` and `database` are shared with the `web` container, read-only: a change to a PHP file is live at once, no restart.
 - **Table names are case-sensitive**, as on the Linux host and unlike a MySQL installed on a Mac. This is the reason for running MySQL in Docker: a table written `Member` instead of `member` fails here as it would in production. Do not point the app at another MySQL.
+- The files members upload live in the Docker volumes `storage` (for `web`) and `storageTest` (for `web-test`), mounted at `/var/www/storage`: the only folder the server writes to. They survive `stack:down`.
 - The database's data lives in the Docker volume `dbData`. It survives `stack:down`. `npm run db:reset` deletes it.
 - Port 3307 is used so that a MySQL installed on the Mac can keep 3306.
 - The passwords in `docker-compose.yml` and `config.local.php` are for this local stack only. They are not secrets, and must never reach the host.
@@ -292,7 +293,7 @@ Decided in [api/routes.php](../api/routes.php), by the block a route is written 
 
 | Block | Who | How |
 |---|---|---|
-| 1. Public | Anyone | Written directly on `$app`. Today: health, the name of the band, install, sign-in. Adding a route here is a decision to justify |
+| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in. Adding a route here is a decision to justify |
 | 2. Signed in | Any current member (`ACTIVE` or `POWER_MEMBER`) | Inside the group that carries `RequireSession` |
 | 3. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
 
@@ -349,14 +350,36 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - [sections.ts](../web/src/screens/install/sections.ts) holds the sections of the draft. Until step 2 changes something they are the starting library; what is sent is the ticked instruments, in the sections that have some. Two names are the same when they differ only by case or accents, as for the database.
 - Each screen checks what it can before sending (required fields, the length of the password, the weight and the type of the logo), with the rules of the API copied as constants at the top of the file. The API checks everything again: the screens only save the member a round trip.
 - [InstallLayout](../web/src/screens/install/InstallLayout.tsx) is the frame shared by the five screens. Its CSS also holds the three layout helpers of the steps: `InstallLayout-pair` (two fields side by side from the tablet width), `InstallLayout-columns` (cards in two then three columns, filled one after the other as drawn) and `InstallLayout-start`.
-- **Not done: the logo.** The image chosen at step 1 is shown and kept in the draft, but not sent: the API that receives a logo and makes the icons from it is not written yet.
+- The logo chosen at step 1 is prepared for the API as soon as it is chosen ([logo.ts](../web/src/screens/install/logo.ts)) and sent with the rest at the last step.
 - **Not done: where the last screen leads.** Its two buttons go to the home address until the members feature (inviting) and the home screen exist.
 - [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
+
+### The logo of the band and the icons of the app
+
+`api/src/Band/`. Rules: [model/band.md](../model/band.md).
+
+| Address | Who | What |
+|---|---|---|
+| `GET /api/band` | Anyone | The name, and the addresses of the logo and of the icons (null without a logo) |
+| `GET /api/band/logo`, `GET /api/band/icon/{180, 192 or 512}` | Anyone | The files |
+| `GET /api/manifest` | Anyone | What a phone reads to install the app: the name and the icons of the band |
+| `PUT /api/band/logo`, `DELETE /api/band/logo` | `MANAGE_BAND` | Gives, replaces or removes the logo |
+
+- **The icons are drawn by the browser, not by the server.** A phone wants square PNG icons whatever the format of the logo, and the logo may be an SVG, which PHP cannot draw without an image extension that a shared host may not have. The browser of the admin reads the four formats: [logo.ts](../web/src/screens/install/logo.ts) fits the logo in a white square at the three sizes and sends the icons with the file. The server needs no image library, and nothing here depends on the host.
+- **A logo travels as JSON**, like everything the API receives: the content of the file and of the three icons in base64 ([LogoInput](../api/src/Band/LogoInput.php)). No form upload, so the rule "JSON and nothing else" of `Input` has no exception.
+- **[LogoStore](../api/src/Band/LogoStore.php) is the only code that touches the files.** It decides what a file is from its content (never from a name or a type that was sent), refuses what is not a PNG, a JPEG, a WebP or an SVG, refuses an SVG that declares a document type, and checks that each icon is a PNG of the exact size.
+- **The files are in `storage/`, next to `api/`**, a folder the web server does not serve. Each logo has a folder under a name drawn at random (`storage/band/<16 characters>/`); `band.logoPath` holds the path of the logo. Replacing a logo writes a new folder and deletes the old one.
+- **Serving** ([ShowLogoAction](../api/src/Band/ShowLogoAction.php)): the type comes from the stored extension, the browser is told not to guess another one, and a policy forbids the file to run or load anything, because an SVG can carry scripts. An address carries the version of the logo (`?v=...`): with the current version the browser may keep the file for good, otherwise it asks again.
+- **What is checked, and what is not.** A logo is at most 2 MB and 4096 pixels a side; a PNG must end as a PNG; an SVG must be written in UTF-8 and declare no document type. What an icon shows is not checked: only someone who manages the band can send one. Replacing a logo holds the row of the band until it is done, so that two replacements at the same instant leave the files of one logo only.
+- **`storage/.htaccess`** is written by `LogoStore` and tells Apache to serve nothing from the folder, should a host put it where it can be reached.
+- **No request body above 8 MB** is read ([BodyLimit](../api/src/Http/BodyLimit.php), for every route): it is refused with 413 before anything else, signed in or not.
+- **At install**, the files are written before the transaction and removed if it fails: the band is saved with its logo or not at all.
+- **On the page**, [band.ts](../web/src/band.ts) gives the tab the name of the band and its icon, and the icon an iPhone takes when the app is added to its home screen.
+- No screen changes the logo after the install yet: that is the settings feature.
 
 ### Not written yet
 
 - **Password links** (invitation, forgotten password), **member management** and **changing one's own record**: with the Members feature.
-- **The logo of the band**, the icons made from it, and a manifest served by the API: next.
 - **Serving files** (recordings, scores) to signed-in members only.
 
 ## The front
@@ -466,8 +489,9 @@ The components written so far. Base layer: `Icon`, `Button`, `IconButton`, `Text
 
 ### Installable app (PWA)
 
-- [web/public/manifest.webmanifest](../web/public/manifest.webmanifest) is what makes the app installable.
-- Its name is fixed ("Brass band") and its icons are grey placeholders. Both must come from the band's settings once the `band` table exists, which means the manifest will be served by the API.
+- The manifest is what makes the app installable. It is served by the API (`GET /api/manifest`, [ManifestAction](../api/src/Band/ManifestAction.php)) because its name and its icons are those of the band.
+- Before the install, and for a band without a logo, the name is "Brass band" and the icons are the grey placeholders of `web/public/appIcons/`.
+- A phone that has already installed the app may keep the old name and icon until the app is installed again: this is how phones behave.
 - There is no service worker. It is not needed to install the app, and offline use is not a goal. One will be added with push notifications, which require it.
 - The icons are in `appIcons/`, not `icons/`: see "Traps".
 
@@ -612,6 +636,7 @@ What is already decided:
 
 - The host receives files and builds nothing: the built front (`web/dist/`) and the API with its `vendor/` folder are copied as they are.
 - `api/config.php` is written once on the host, by hand, and is never part of what is copied.
+- `storage/`, next to `api/`, holds the uploaded files. It must exist on the host, be writable by PHP, stay outside the folder Apache serves, and never be emptied or replaced by a deployment. It is part of what a backup must keep, with the database.
 - Migrations are applied on the host by `database/migrate.php`, after having run locally.
 - The Apache rules the app needs are in the two `.htaccess` files, which travel with the code.
 
@@ -640,7 +665,7 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. The logo of the band: the API that receives it, the icons made from it, the manifest served with the name of the band. The sign-in screen is not designed yet.
+1. The sign-in screen, which is not designed yet.
 2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
 3. The design system in CSS and the first real screens: wait for the Figma file.
 4. Every feature (members, songs, gigs, and the later ones).

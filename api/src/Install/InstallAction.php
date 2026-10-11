@@ -9,6 +9,7 @@ use BrassBand\Access\Profile;
 use BrassBand\Access\Role;
 use BrassBand\Access\SessionCookie;
 use BrassBand\Access\Sessions;
+use BrassBand\Band\LogoStore;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
@@ -36,6 +37,7 @@ final class InstallAction
         private readonly SessionCookie $cookie,
         private readonly Profile $profile,
         private readonly InstallKey $installKey,
+        private readonly LogoStore $logos,
     ) {
     }
 
@@ -50,11 +52,16 @@ final class InstallAction
         // Already checked by the welcome screen; checked again here, where it counts.
         $this->installKey->check($input->installKey);
 
-        $this->check($input);
+        $logo = $this->check($input);
+
+        // The files of the logo are written first, so that the band is saved
+        // with its logo or not at all; they are removed if the install fails.
+        $logoPath = $logo === null ? null : $this->logos->write($logo);
 
         try {
-            $memberId = $this->database->transactional(fn () => $this->save($input));
+            $memberId = $this->database->transactional(fn () => $this->save($input, $logoPath));
         } catch (UniqueConstraintViolationException) {
+            $this->logos->delete($logoPath);
             // Either another install finished at the same instant and won...
             if (InstallStatusAction::isInstalled($this->database)) {
                 throw new ApiError(409, 'alreadyInstalled');
@@ -62,6 +69,9 @@ final class InstallAction
             // ...or two names are the same for the database, which also
             // ignores accents ("Flute" and "Flûte"), unlike the check above.
             throw new ApiError(422, 'invalidInput', ['sections' => 'duplicate']);
+        } catch (\Throwable $failure) {
+            $this->logos->delete($logoPath);
+            throw $failure;
         }
 
         [$current, $token] = $this->sessions->signIn($memberId);
@@ -69,9 +79,16 @@ final class InstallAction
         return $this->cookie->write(Json::write($response, $this->profile->of($current), 201), $token);
     }
 
-    private function check(InstallInput $input): void
+    /**
+     * Refuses the install if anything in it is wrong. Returns the files of
+     * the logo, when one was sent.
+     *
+     * @return array{extension: string, image: string, icons: array<int, string>}|null
+     */
+    private function check(InstallInput $input): ?array
     {
         $errors = new FieldErrors();
+        $logo = $input->logo === null ? null : $this->logos->read($errors, 'logo', $input->logo);
 
         if (!Languages::isAvailable($input->language)) {
             $errors->add('language', 'invalid');
@@ -114,16 +131,19 @@ final class InstallAction
         }
 
         $errors->throwIfAny();
+
+        return $logo;
     }
 
     // Returns the id of the first member.
-    private function save(InstallInput $input): int
+    private function save(InstallInput $input, ?string $logoPath): int
     {
         // The band comes first: its id is always 1, so a second install running
         // at the same instant fails here and saves nothing.
         $this->database->insert('band', [
             'id' => 1,
             'name' => Text::clean($input->bandName),
+            'logoPath' => $logoPath,
             'defaultLanguage' => $input->language,
         ]);
 

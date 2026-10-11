@@ -51,6 +51,8 @@ export function MemberScreen() {
       // The key, the password and the contact details have done their work: they leave the memory.
       update({
         installKey: '',
+        logo: null,
+        logoInput: null,
         member: {
           firstName: '',
           lastName: '',
@@ -68,6 +70,8 @@ export function MemberScreen() {
         },
       });
       queryClient.invalidateQueries({ queryKey: ['install'] });
+      // The page takes the name and the icon of the band.
+      queryClient.invalidateQueries({ queryKey: ['band'] });
       navigate('/install/done', { replace: true });
     },
     onError: (error) => {
@@ -164,6 +168,7 @@ export function MemberScreen() {
         nickname: member.nickname,
         instrument: instrument.name,
       },
+      ...(draft.logoInput ? { logo: draft.logoInput } : {}),
     });
   };
 

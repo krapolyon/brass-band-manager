@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 use BrassBand\Access\SameSiteOnly;
 use BrassBand\Database;
+use BrassBand\Http\BodyLimit;
 use BrassBand\Http\ErrorHandler;
 use Slim\Factory\AppFactory;
 
@@ -34,6 +35,9 @@ $app->addRoutingMiddleware();
 
 // Refuses a request that changes something when it comes from another site.
 $app->add(new SameSiteOnly());
+
+// Refuses a body too large to be anything the app expects, before reading it.
+$app->add(new BodyLimit());
 
 // Added last, so that it wraps everything above: whatever goes wrong in a
 // route ends in ErrorHandler. Slim's own display and logging are turned off.
