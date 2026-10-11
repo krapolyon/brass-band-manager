@@ -14,6 +14,8 @@ export type Band = {
   defaultAccentTheme: AccentTheme;
   /** The country a phone number typed without its prefix belongs to. */
   defaultCountryCode: string;
+  /** False on an instance without a mail server: no forgotten password by email. */
+  canSendEmail: boolean;
   /** Null when the band has no logo. */
   logoUrl: string | null;
   /** The square icons made from the logo, by size in pixels. */

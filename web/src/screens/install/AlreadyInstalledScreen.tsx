@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
 import { Message } from '../../components/Message.tsx';
-import { InstallLayout } from './InstallLayout.tsx';
+import { FlowLayout } from '../FlowLayout.tsx';
 
 // Figma: Install / Already installed. The install address opened on an
 // instance that someone has already installed.
@@ -12,7 +12,7 @@ export function AlreadyInstalledScreen() {
   const navigate = useNavigate();
 
   return (
-    <InstallLayout
+    <FlowLayout
       title={t('install.alreadyInstalled.title')}
       lead={t('install.alreadyInstalled.lead')}
       actions={
@@ -23,6 +23,6 @@ export function AlreadyInstalledScreen() {
       }
     >
       <Message>{t('install.alreadyInstalled.note')}</Message>
-    </InstallLayout>
+    </FlowLayout>
   );
 }

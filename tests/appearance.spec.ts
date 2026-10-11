@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase } from './support/database.ts';
 
 // The scheme and the accessibility options, as the root element carries them
@@ -56,9 +57,9 @@ test('at a text size of 200 %, text grows, page titles and spacing do not', asyn
   };
   expect(before).toEqual({ title: '40px', lead: '17px', space: '1rem', root: '16px' });
 
-  await page.evaluate(() => {
-    document.documentElement.dataset.textSize = '200';
-  });
+  await chooseAccessibility(page, { textSizePercent: 200 });
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
 
   expect(await title.evaluate(fontSize)).toBe('40px');
   expect(await lead.evaluate(fontSize)).toBe('34px');
@@ -79,9 +80,8 @@ test('the legible font is served by the app, to who turns the option on only', a
   await page.evaluate(() => document.fonts.ready);
   expect(fonts.filter((font) => font.includes('Atkinson'))).toEqual([]);
 
-  await page.evaluate(() => {
-    document.documentElement.dataset.typeface = 'legible';
-  });
+  await chooseAccessibility(page, { hasLegibleFont: true });
+  await page.reload();
   await expect.poll(() => fonts).toContain('/fonts/AtkinsonHyperlegibleNext-latin.woff2');
   expect(await page.locator('h1').evaluate((h1) => getComputedStyle(h1).fontFamily)).toContain(
     'Atkinson Hyperlegible Next',
@@ -91,10 +91,9 @@ test('the legible font is served by the app, to who turns the option on only', a
 test('increased spacing sets the four measures of the guidelines on every text', async ({
   page,
 }) => {
+  await chooseAccessibility(page, { hasIncreasedSpacing: true });
   await page.goto('/install');
-  await page.evaluate(() => {
-    document.documentElement.dataset.spacing = 'increased';
-  });
+  await expect(page.locator('html')).toHaveAttribute('data-spacing', 'increased');
 
   const measures = await page.locator('h1').evaluate((h1) => {
     const style = getComputedStyle(h1);
@@ -141,7 +140,7 @@ test('on a desktop the title sits in a floating panel that stays while the page 
   // A window lower than the content, so that the page scrolls for good.
   await page.setViewportSize({ width: 1280, height: 400 });
   await page.goto('/install');
-  const panel = page.locator('.InstallLayout-left');
+  const panel = page.locator('.FlowLayout-left');
   const box = async () => panel.evaluate((element) => element.getBoundingClientRect().toJSON());
 
   expect(await box()).toMatchObject({ x: 16, y: 16, width: 448, height: 368 });
@@ -157,19 +156,17 @@ test('in a low desktop window at the largest text size, the whole title can stil
   page,
 }) => {
   await page.setViewportSize({ width: 1024, height: 500 });
+  await chooseAccessibility(page, { textSizePercent: 200, hasIncreasedSpacing: true });
   await page.goto('/install');
-  await page.evaluate(() => {
-    document.documentElement.dataset.textSize = '200';
-    document.documentElement.dataset.spacing = 'increased';
-  });
-  const top = page.locator('.InstallLayout-left .ScreenTop');
+  await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
+  const top = page.locator('.FlowLayout-left .ScreenTop');
 
   // The text is taller than the panel: it scrolls inside it, down to its last line.
   expect(await top.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
   await top.evaluate((element) => element.scrollTo(0, element.scrollHeight));
   const hidden = await page.evaluate(() => {
-    const lead = document.querySelector('.InstallLayout-left h1 + p') as Element;
-    const panel = document.querySelector('.InstallLayout-left') as Element;
+    const lead = document.querySelector('.FlowLayout-left h1 + p') as Element;
+    const panel = document.querySelector('.FlowLayout-left') as Element;
     return lead.getBoundingClientRect().bottom - panel.getBoundingClientRect().bottom;
   });
   expect(hidden).toBeLessThanOrEqual(0);

@@ -49,7 +49,7 @@ test('a current member receives a link that lets them choose a new password, for
 });
 
 test('a power member is a current member too', async ({ request }) => {
-  const email = addMember({ nickname: 'Dédé', status: 'POWER_MEMBER' });
+  const email = addMember({ nickname: 'Tonton', status: 'POWER_MEMBER' });
 
   await request.post('/api/passwordLink/request', { data: { email } });
 
@@ -76,14 +76,6 @@ test('whatever the address, the answer is the same and nobody else gets an email
   expect(sql('SELECT COUNT(*) FROM memberPasswordLink')).toBe('0');
 });
 
-test('the address is recognised whatever its case and its outer spaces', async ({ request }) => {
-  addMember({ nickname: 'Zaza' });
-
-  await request.post('/api/passwordLink/request', { data: { email: '  ZAZA@Example.org ' } });
-
-  expect((await receivedMails(1))[0]?.to).toBe('zaza@example.org');
-});
-
 test('no second email leaves within five minutes, and the first link still works', async ({
   request,
 }) => {
@@ -91,17 +83,19 @@ test('no second email leaves within five minutes, and the first link still works
   await request.post('/api/passwordLink/request', { data: { email } });
   const [first] = await receivedMails(1);
 
+  const check = (text: string) =>
+    request.post('/api/passwordLink/check', { data: { token: tokenIn(text) } });
   const again = await request.post('/api/passwordLink/request', { data: { email } });
   expect(await again.json()).toEqual({ sent: true });
   expect(await mailsAfterAWhile()).toHaveLength(1);
+  // The request made too soon changed nothing: the first link still opens.
+  expect((await check(first?.text ?? '')).status()).toBe(200);
 
   // Five minutes later, a new email leaves, and the old link is cancelled.
   sql('UPDATE memberPasswordLink SET emailedAt = NOW() - INTERVAL 6 MINUTE');
   await request.post('/api/passwordLink/request', { data: { email } });
   const mails = await receivedMails(2);
   const second = mails.find((mail) => mail.text !== first?.text);
-  const check = (text: string) =>
-    request.post('/api/passwordLink/check', { data: { token: tokenIn(text) } });
   expect((await check(first?.text ?? '')).status()).toBe(404);
   expect((await check(second?.text ?? '')).status()).toBe(200);
 });
@@ -109,27 +103,80 @@ test('no second email leaves within five minutes, and the first link still works
 test('requests made at the same instant send one email', async ({ request }) => {
   const email = addMember({ nickname: 'Zaza' });
 
-  await Promise.all(
+  const answers = await Promise.all(
     Array.from({ length: 5 }, () => request.post('/api/passwordLink/request', { data: { email } })),
   );
+
+  expect(answers.map((answer) => answer.status())).toEqual([200, 200, 200, 200, 200]);
 
   expect(await mailsAfterAWhile()).toHaveLength(1);
 });
 
-test('the link of the email never follows the host a request claims', async ({ request }) => {
+test('nothing in the email follows the host a request claims', async ({ request }) => {
   const email = addMember({ nickname: 'Zaza' });
 
   await request.post('/api/passwordLink/request', {
     data: { email },
-    headers: { 'X-Forwarded-Host': 'evil.example', Forwarded: 'host=evil.example' },
+    headers: { Host: 'evil.example', 'X-Forwarded-Host': 'evil.example' },
   });
 
   const [mail] = await receivedMails(1);
   expect(mail?.text).not.toContain('evil.example');
   expect(mail?.text).toContain('http://localhost:8081/password#');
+  // Nor the id of the message, which mail servers judge an email by.
+  expect(mail?.messageId).toMatch(/@localhost$/);
 });
 
-test('the answer says its length, so that it is complete before the email is sent', async ({
+test('an address that only looks like the one of a member gets nothing', async ({ request }) => {
+  addMember({ nickname: 'Zaza' });
+  // For the database "é" is "e", and a full-width letter is a plain one:
+  // these addresses are found there, and are someone else's mailbox.
+  for (const email of [
+    'zazá@example.org',
+    'ｚaza@example.org',
+    'zaza@exämple.org',
+    'zaza@example.org\u0001',
+  ]) {
+    const response = await request.post('/api/passwordLink/request', { data: { email } });
+    expect(response.status(), email).toBe(200);
+    expect(await response.json()).toEqual({ sent: true });
+  }
+
+  expect(await mailsAfterAWhile()).toEqual([]);
+  expect(sql('SELECT COUNT(*) FROM memberPasswordLink')).toBe('0');
+});
+
+test('the email goes to the address the database holds', async ({ request }) => {
+  addMember({ nickname: 'Zaza' });
+
+  await request.post('/api/passwordLink/request', { data: { email: ' Zaza@EXAMPLE.org' } });
+
+  expect((await receivedMails(1))[0]?.to).toBe('zaza@example.org');
+});
+
+test('a link sent by email is refused after its hour', async ({ request }) => {
+  const email = addMember({ nickname: 'Zaza' });
+  await request.post('/api/passwordLink/request', { data: { email } });
+  const [mail] = await receivedMails(1);
+
+  sql('UPDATE memberPasswordLink SET expiresAt = NOW() - INTERVAL 1 SECOND');
+
+  const used = await request.post('/api/passwordLink/use', {
+    data: { token: tokenIn(mail?.text ?? ''), password: 'un-nouveau-mot-de-passe' },
+  });
+  expect(used.status()).toBe(404);
+});
+
+test('an address far too long is not even looked up', async ({ request }) => {
+  const response = await request.post('/api/passwordLink/request', {
+    data: { email: `${'a'.repeat(300)}@example.org` },
+  });
+
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({ sent: true });
+});
+
+test('the answer says its length, so that the browser has it whole at once', async ({
   request,
 }) => {
   const email = addMember({ nickname: 'Zaza' });

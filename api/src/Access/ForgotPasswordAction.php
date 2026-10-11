@@ -6,6 +6,7 @@ namespace BrassBand\Access;
 
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\ApiError;
+use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
 use BrassBand\Mail\Emails;
@@ -44,15 +45,28 @@ final class ForgotPasswordAction
         }
 
         $email = mb_strtolower(trim($input->email));
-        $link = $this->database->transactional(fn () => $this->createLink($email));
+        // What is not an email address belongs to nobody: it is not looked up.
+        $errors = new FieldErrors();
+        $errors->email('email', $email);
+        $link = $errors->isEmpty() ? $this->database->transactional(fn () => $this->createLink($email)) : null;
         if ($link !== null) {
             $mailer = $this->mailer;
-            AfterResponse::add(static function () use ($mailer, $email, $link): void {
+            $links = $this->links;
+            AfterResponse::add(static function () use ($mailer, $links, $link): void {
                 $text = Emails::text('passwordLink', $link['language'], [
                     'band' => $link['band'],
                     'link' => $mailer->url('/password#' . $link['token']),
                 ]);
-                $mailer->send($email, $link['band'], $text['subject'], $text['body']);
+                try {
+                    // To the address of the member as the database holds it,
+                    // never to the one that was typed.
+                    $mailer->send($link['email'], $link['band'], $text['subject'], $text['body']);
+                } catch (\Throwable $failure) {
+                    // The email did not leave: the link nobody received is
+                    // removed, so that the member can ask again at once.
+                    $links->cancel($link['memberId']);
+                    throw $failure;
+                }
             });
         }
 
@@ -67,21 +81,29 @@ final class ForgotPasswordAction
      * Creates the link of the current member who has this address, unless an
      * email was sent to them in the last minutes.
      *
-     * @return array{token: string, language: string, band: string}|null Null: no email is to be sent
+     * @return array{memberId: int, email: string, token: string, language: string, band: string}|null Null: no email is to be sent
      */
     private function createLink(string $email): ?array
     {
         // The row of the member is held, so that two requests at the same
         // instant send one email.
         $member = $this->database->fetchAssociative(
-            'SELECT id, language FROM member WHERE email = ? AND status IN (?, ?) FOR UPDATE',
+            'SELECT id, email, language FROM member WHERE email = ? AND status IN (?, ?) FOR UPDATE',
             [$email, ...AccessRules::SIGN_IN_STATUSES],
         );
-        if ($member === false || $this->links->wasEmailedRecently((int) $member['id'])) {
+        // The database compares addresses without regard to accents: "é" is
+        // "e" for it. Here the address must be the stored one, character for
+        // character, or a look-alike address would receive the link of a member.
+        if ($member === false || !hash_equals((string) $member['email'], $email)) {
+            return null;
+        }
+        if ($this->links->wasEmailedRecently((int) $member['id'])) {
             return null;
         }
 
         return [
+            'memberId' => (int) $member['id'],
+            'email' => (string) $member['email'],
             'token' => $this->links->create((int) $member['id'], null, emailed: true),
             'language' => (string) $member['language'],
             'band' => (string) $this->database->fetchOne('SELECT name FROM band WHERE id = 1'),

@@ -34,7 +34,7 @@ return [
         'from' => '',
         'host' => '',
         'port' => 587,
-        // 'tls' (port 587) or 'ssl' (port 465).
+        // 'tls' (port 587) or 'ssl' (port 465). Nothing else is accepted.
         'encryption' => 'tls',
         'user' => '',
         'password' => '',

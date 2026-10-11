@@ -34,7 +34,8 @@ final class Mailer
         $this->from = $text($mail['from'] ?? '');
         $this->host = $text($mail['host'] ?? '');
         $this->port = is_int($mail['port'] ?? null) ? $mail['port'] : 587;
-        $this->encryption = $text($mail['encryption'] ?? '');
+        // Encrypted unless the configuration explicitly says otherwise.
+        $this->encryption = $text($mail['encryption'] ?? 'tls');
         $this->user = $text($mail['user'] ?? '');
         $this->password = is_string($mail['password'] ?? null) ? $mail['password'] : '';
         $this->appUrl = rtrim($text($config['appUrl'] ?? ''), '/');
@@ -44,7 +45,18 @@ final class Mailer
     // address to write from, and its own public address to write links with.
     public function canSend(): bool
     {
-        return $this->from !== '' && $this->host !== '' && $this->appUrl !== '';
+        if ($this->from === '' || $this->host === '' || $this->appUrl === '') {
+            return false;
+        }
+        if (filter_var($this->from, FILTER_VALIDATE_EMAIL) === false) {
+            return false;
+        }
+        // 'tls' and 'ssl' are the two ways to encrypt. None at all is for a
+        // mail server on the same machine, and never with a password, which
+        // would travel in clear. Anything else is a mistake in the file:
+        // better no email than an exchange nobody meant to leave unencrypted.
+        return in_array($this->encryption, ['tls', 'ssl'], true)
+            || ($this->encryption === '' && $this->user === '');
     }
 
     // An address of the app, as written in an email. It comes from the
@@ -71,6 +83,13 @@ final class Mailer
         $mail->Username = $this->user;
         $mail->Password = $this->password;
         $mail->Timeout = 10;
+        $mail->getSMTPInstance()->Timelimit = 10;
+        // The name this server gives itself, in the exchange and in the id of
+        // the message: the one of the configuration, never the host a
+        // request claims.
+        $mail->Hostname = (string) (parse_url($this->appUrl, PHP_URL_HOST) ?: 'localhost');
+        // Does not say which library sends, nor its version.
+        $mail->XMailer = ' ';
         $mail->CharSet = PHPMailer::CHARSET_UTF8;
 
         $mail->setFrom($this->from, $fromName);

@@ -3,7 +3,7 @@
 
 const mailbox = 'http://localhost:8025/api/v1';
 
-export type Mail = { to: string; from: string; subject: string; text: string };
+export type Mail = { to: string; from: string; subject: string; text: string; messageId: string };
 
 export async function emptyMailbox(): Promise<void> {
   await fetch(`${mailbox}/messages`, { method: 'DELETE' });
@@ -19,19 +19,29 @@ async function mails(): Promise<Mail[]> {
         from: `${mail.From.Name} <${mail.From.Address}>`,
         subject: mail.Subject,
         text: mail.Text,
+        messageId: mail.MessageID,
       };
     }),
   );
 }
 
-/** The emails received, once there are at least `count` of them (an email leaves after the answer). */
+/**
+ * The emails received, once there are `count` of them (an email leaves after
+ * the answer). Fails if more arrive: a test that expects one email must not
+ * pass when two were sent.
+ */
 export async function receivedMails(count: number): Promise<Mail[]> {
   for (let tries = 0; tries < 50; tries++) {
-    const received = await mails();
-    if (received.length >= count) return received;
+    if ((await mails()).length >= count) break;
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error(`Fewer than ${count} email(s) arrived`);
+  // Leaves a late second email the time to show up.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const received = await mails();
+  if (received.length !== count) {
+    throw new Error(`${received.length} email(s) arrived, ${count} expected`);
+  }
+  return received;
 }
 
 /** The emails received after leaving the server the time to send one. */

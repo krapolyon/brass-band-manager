@@ -207,6 +207,56 @@
     "extendedTimeouts": {
       "label": "Délais augmentés",
       "description": "Les notifications et les infobulles restent affichées jusqu’à ce que tu les fermes."
-    }
+    },
+    "forDevice": "Réglé pour cet appareil. Une fois la connexion faite, ce sont les réglages de ton compte qui s’appliquent.",
+    "forAccount": "Ces réglages seront enregistrés avec ton compte. Tu pourras les changer à tout moment dans tes réglages."
+  },
+  "password": {
+    "hint": "{{min}} caractères minimum.",
+    "tooShort_one": "Encore {{count}} caractère : il en faut {{min}} au minimum.",
+    "tooShort_other": "Encore {{count}} caractères : il en faut {{min}} au minimum.",
+    "invalid": "Ce mot de passe ne convient pas. Choisis-en un autre.",
+    "show": "Afficher le mot de passe",
+    "hide": "Masquer le mot de passe"
+  },
+  "signIn": {
+    "title": "Te revoilà !",
+    "lead": "Connecte-toi pour retrouver les morceaux, les plans et les fanfarons.",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "forgot": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "refused": "Adresse email ou mot de passe incorrect. Après plusieurs essais ratés, la connexion se bloque un quart d’heure : dans ce cas, patiente un peu."
+  },
+  "forgotPassword": {
+    "title": "Mot de passe oublié ?",
+    "lead": "Ça arrive aux meilleurs. Donne ton adresse email : si c’est celle d’un fanfaron, on y envoie un lien pour en choisir un nouveau.",
+    "submit": "Envoyer le lien",
+    "backToSignIn": "Retour à la connexion",
+    "sent": {
+      "title": "Regarde tes mails",
+      "lead": "Si cette adresse est celle d’un fanfaron, le lien vient de partir. Il marche une fois, pendant une heure.",
+      "nothing": "Rien reçu ? Regarde dans les indésirables, ou demande un lien à quelqu’un qui gère les fanfarons."
+    },
+    "noEmail": {
+      "lead": "Ça arrive aux meilleurs. Demande un lien à quelqu’un qui gère les fanfarons : il te permettra d’en choisir un nouveau.",
+      "who": "Tu ne sais pas à qui demander ? N’importe quel admin de la fanfare peut te le créer."
+    },
+    "emailMissing": "Il manque ton adresse email.",
+    "emailInvalid": "Cette adresse n’a pas l’air complète. Vérifie ce qui suit le @."
+  },
+  "newPassword": {
+    "title": "Un nouveau mot de passe",
+    "lead": "Choisis-en un que tu retiendras. Ou que ton téléphone retiendra pour toi.",
+    "label": "Nouveau mot de passe",
+    "otherDevices": "Tes autres appareils seront déconnectés : il faudra t’y reconnecter avec le nouveau.",
+    "submit": "Enregistrer et me connecter"
+  },
+  "linkExpired": {
+    "title": "Ce lien ne marche plus",
+    "lead": "Il a déjà servi, ou il a dépassé sa date. Rien de grave : on t’en refait un.",
+    "invitation": "C’était une invitation ? Redemande le lien à la personne qui te l’a envoyé.",
+    "newLink": "Recevoir un nouveau lien",
+    "toSignIn": "Aller à la connexion"
   }
 }

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router/dom';
+import { AppearanceOf } from './AppearanceOf.tsx';
 import { followDevice } from './appearance.ts';
 import { BandIdentity } from './band.ts';
 import i18n from './i18n.ts';
@@ -36,6 +37,7 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BandIdentity />
+      <AppearanceOf />
       <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,

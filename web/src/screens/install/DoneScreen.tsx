@@ -6,8 +6,8 @@ import { Chip } from '../../components/Chip.tsx';
 import { ListRow } from '../../components/ListRow.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
+import { FlowLayout } from '../FlowLayout.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
-import { InstallLayout } from './InstallLayout.tsx';
 
 // Figma: Install / Done. Shown once, right after the install: the first
 // member is signed in. Opened in any other way, it has nothing to show.
@@ -21,7 +21,7 @@ export function DoneScreen() {
   }
 
   return (
-    <InstallLayout
+    <FlowLayout
       nav={
         <Chip kind="success" icon="Check">
           {t('install.done.chip')}
@@ -55,6 +55,6 @@ export function DoneScreen() {
         />
       </Sheet>
       <Message>{t('install.done.note')}</Message>
-    </InstallLayout>
+    </FlowLayout>
   );
 }

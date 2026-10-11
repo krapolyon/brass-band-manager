@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase } from './support/database.ts';
 import { install, installInput } from './support/scenario.ts';
 
@@ -100,10 +101,9 @@ test('the welcome screen says so when the server does not answer', async ({ page
 });
 
 test('at the largest text size, nothing spills out of the screen', async ({ page }) => {
+  await chooseAccessibility(page, { textSizePercent: 200 });
   await page.goto('/install');
-  await page.evaluate(() => {
-    document.documentElement.dataset.textSize = '200';
-  });
+  await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

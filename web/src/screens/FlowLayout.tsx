@@ -1,15 +1,19 @@
 import type { FormEvent, ReactNode } from 'react';
-import { Halo } from '../../components/Halo.tsx';
-import { ScreenTop } from '../../components/ScreenTop.tsx';
-import './InstallLayout.css';
+import { Halo } from '../components/Halo.tsx';
+import { ScreenTop } from '../components/ScreenTop.tsx';
+import './FlowLayout.css';
 
 type Props = {
   /** Above the title: the language button, or the way back and the step. */
   nav?: ReactNode;
   /** On a phone, puts the nav at the end of its line, as on the welcome screen. */
   navAtEnd?: boolean;
+  /** One action at the end of the line of the nav: the accessibility button before sign-in. */
+  action?: ReactNode;
+  /** The band above the title, on a screen shown before sign-in. */
+  band?: ReactNode;
   title: string;
-  lead: string;
+  lead?: string;
   /** The sheets, fields and messages of the screen. */
   children?: ReactNode;
   /** The BottomBar of the screen. */
@@ -26,7 +30,7 @@ export function focusFirstError() {
   requestAnimationFrame(() => {
     document
       .querySelector<HTMLElement>(
-        '.InstallLayout .TextField[data-error="true"] :is(input, select, button)',
+        '.FlowLayout .TextField[data-error="true"] :is(input, select, button)',
       )
       ?.focus();
   });
@@ -42,9 +46,11 @@ export function focusFirstError() {
 //                as the window: the nav and the title. On the right, on plain
 //                ground, the content then its actions
 //   from 1920    the same, with a wider panel
-export function InstallLayout({
+export function FlowLayout({
   nav,
   navAtEnd,
+  action,
+  band,
   title,
   lead,
   children,
@@ -59,19 +65,20 @@ export function InstallLayout({
   const Right = onSubmit ? 'form' : 'div';
 
   return (
-    <main className="InstallLayout" data-width={width}>
-      <div className="InstallLayout-left">
+    <main className="FlowLayout" data-width={width}>
+      <div className="FlowLayout-left">
         <Halo />
-        <div className="InstallLayout-glass" />
+        <div className="FlowLayout-glass" />
         <ScreenTop
           leading={navAtEnd ? undefined : nav}
-          action={navAtEnd ? nav : undefined}
+          action={action ?? (navAtEnd ? nav : undefined)}
+          band={band}
           title={title}
           subtitle={lead}
         />
       </div>
-      <Right className="InstallLayout-right" onSubmit={onSubmit ? submit : undefined} noValidate>
-        <div className="InstallLayout-content">{children}</div>
+      <Right className="FlowLayout-right" onSubmit={onSubmit ? submit : undefined} noValidate>
+        <div className="FlowLayout-content">{children}</div>
         {actions}
       </Right>
     </main>

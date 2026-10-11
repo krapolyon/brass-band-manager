@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { admin, install, installInput } from './support/scenario.ts';
 
@@ -11,7 +12,7 @@ import { admin, install, installInput } from './support/scenario.ts';
 
 test.beforeEach(() => emptyDatabase());
 
-const next = (page: Page) => page.locator('.InstallLayout-right button[type="submit"]');
+const next = (page: Page) => page.locator('.FlowLayout-right button[type="submit"]');
 const field = (page: Page, name: string) => page.locator(`input[name="${name}"]`);
 const panel = (page: Page) => page.getByRole('dialog');
 const cards = (page: Page) => page.locator('.SectionCard');
@@ -50,9 +51,6 @@ async function fillMember(page: Page) {
 }
 
 const noOverflow = async (page: Page) => {
-  await page.evaluate(() => {
-    document.documentElement.dataset.textSize = '200';
-  });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
@@ -71,7 +69,7 @@ for (const step of ['band', 'sections', 'member']) {
 test('the last screen opened by its address has nothing to show', async ({ page, request }) => {
   await install(request);
   await page.goto('/install/done');
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/sign-in');
 });
 
 test.describe('step 1, the band', () => {
@@ -218,7 +216,7 @@ test.describe('step 2, sections and instruments', () => {
 
   test('a section is added, renamed and moved up', async ({ page }) => {
     await toSections(page);
-    await page.locator('.InstallLayout-start button').click();
+    await page.locator('.FlowLayout-start button').click();
     await field(page, 'sectionName').fill('Accordéon');
     await field(page, 'sectionName').press('Enter');
     await expect(cards(page)).toHaveCount(9);
@@ -227,8 +225,8 @@ test.describe('step 2, sections and instruments', () => {
     await cards(page).last().locator('.SectionCard-header .IconButton').click();
     await field(page, 'sectionName').fill('Soufflets');
     const [up, down] = [
-      panel(page).locator('.InstallLayout-order button').first(),
-      panel(page).locator('.InstallLayout-order button').last(),
+      panel(page).locator('.FlowLayout-order button').first(),
+      panel(page).locator('.FlowLayout-order button').last(),
     ];
     // Last of the list: it cannot go further down.
     await expect(down).toBeDisabled();
@@ -241,7 +239,7 @@ test.describe('step 2, sections and instruments', () => {
 
   test('a section is deleted only once it has no instrument left', async ({ page }) => {
     await toSections(page);
-    const remove = panel(page).locator('.InstallLayout-panelActions button[data-kind="danger"]');
+    const remove = panel(page).locator('.FlowLayout-panelActions button[data-kind="danger"]');
 
     await card(page, 'Clarinette').locator('.SectionCard-header .IconButton').click();
     await expect(remove).toBeDisabled();
@@ -586,7 +584,9 @@ test.describe('the focus is never lost', () => {
 });
 
 test('at the largest text size, no step spills out of the screen', async ({ page }) => {
+  await chooseAccessibility(page, { textSizePercent: 200 });
   await toBand(page);
+  await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
   await noOverflow(page);
   await field(page, 'bandName').fill('La Fanfare des Cuivres Déchaînés');
   await next(page).click();
