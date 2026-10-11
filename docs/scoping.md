@@ -49,8 +49,8 @@ The session is long but not eternal, and above all revocable: the app holds pers
 | --- | --- |
 | Expiry on inactivity | 90 days without opening the app, extended on each use |
 | Maximum length of a session | 1 year, so one sign-in per year and per device |
-| Account creation | On invitation by an admin; the member chooses a password |
-| Forgotten password | Reset by an admin; by email as an option, to be decided |
+| Account creation | On invitation by someone who manages members; the member chooses a password. In the first version the invitation link is copied and sent by whoever invites, and stays valid 7 days; sending it by email from the app comes later |
+| Forgotten password | By email, with a link valid 1 hour (decided on 2026-10-11). On an instance that cannot send email, the screen sends the member to those who manage members, who create a link |
 
 - **Revocation**: sessions are stored on the server. A member can sign out all devices, and disabling an account cuts access immediately.
 - **Protected cookie**: unreadable by page code, sent over HTTPS only.
@@ -59,6 +59,7 @@ The session is long but not eternal, and above all revocable: the app holds pers
 - **Sign-in attempts**: limited, against brute force.
 - **Files**: recordings, scores and other files are served to signed-in members only.
 - **Who sees what**: decided feature by feature in the model, starting with members.
+- **Sending email**: forgotten password makes it a dependency of the server. The address and the access to the mail server are server configuration; an instance can run without them.
 
 ## Scope of the first version
 
@@ -134,6 +135,8 @@ The design is thought out for the whole app before features are built: adding a 
 
 - **Scope**: the navigation and the screens of every feature of the first version, plus the place of later features (setlists, rehearsals, statistics).
 - **Phone first**: the main use is on a phone; the web version follows from it.
+- **On a computer** (decided on 2026-10-11): the navigation is a floating menu on the left, and the install follows the same floating panel. A list that is managed, the members first, is a table; a list that is browsed stays a grid of cards.
+- **Accessibility** (decided on 2026-10-11): the options are offered behind a button on every screen before sign-in, the invitation included, and in the settings afterwards. Setting them is never a step to go through.
 - **Design system**: colours, typography and components defined once and reused everywhere.
 - **Reading mode**: its design is finalised after the prototype, which will show what is readable and smooth on a real phone.
 - **Dependency**: the design builds on an overview data model, at a coarse grain, established just before.

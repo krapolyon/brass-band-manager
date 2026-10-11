@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.11 — 2026-10-11 · Model: `members.dbml` · To validate: v1.9 is validated; what v1.10 and v1.11 add is listed in "Open questions" · Migrations: `001_members.sql`, `003_memberPhoto.sql`
+> v1.12 — 2026-10-11 · Model: `members.dbml` · To validate: v1.9 is validated; what v1.10 to v1.12 add is listed in "Open questions" · Migrations: `001_members.sql`, `003_memberPhoto.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -81,7 +81,7 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 - **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
 - **Password change.** Asks for the current password. Deletes every other session of the member, and their pending password link. A wrong current password counts like a wrong password at sign-in: at the fifth, sign-in is locked and the device is signed out.
 - **Forgotten password.** On the sign-in screen, a person gives an email address. If it is the address of a current member, the app creates a password link and sends it to that address (entry 3). Whatever the address, the screen answers the same thing, in the same time: nothing tells whether an address belongs to a member. A member still `INVITED` gets nothing: their link comes from the person who invited them.
-- **Reading comfort before sign-in.** The screens shown before sign-in (sign-in, forgotten password, the screen a password link opens) offer the accessibility options. Chosen there, they are kept on the device only, in the storage of the browser, and are sent to no one. They apply on that device until a member signs in on it: from then on the options of the account apply. A member who arrives from an invitation sets the options first; they are saved to the account when the invitation is completed.
+- **Accessibility before sign-in.** Every screen shown before sign-in (sign-in, forgotten password, the screen a password link opens, the screens of an invitation) carries a button that opens the accessibility options. The button is always visible, reachable from the keyboard and named for screen readers. Nobody is asked to set the options: they are offered, never a step to go through. Chosen before sign-in, they are kept on the device only, in the storage of the browser, and are sent to no one; they apply on that device until a member signs in on it, and from then on the options of the account apply. Chosen during an invitation, they are saved to the account when the invitation is completed.
 
 ### Roles and permissions
 A member holds zero, one or several roles. The list of roles is fixed by the app.
@@ -136,8 +136,8 @@ Exporting the list of members asks for the password again.
 - The nickname is the name shown in every representation. First and last names appear on the member's own screen and in the directory.
 - Missing phone or address: the line is not shown.
 - Missing photo: a placeholder defined by the design.
-- **Directory.** The directory lists members as cards, in alphabetical order of the nickname (the name shown; to confirm against the first name). By default it shows `ACTIVE` members only. Two options, both off when the directory opens: one adds the `POWER_MEMBER` members, each of them marked as such; the other keeps the members of the section of the signed-in member ("Mon pupitre" in French). `INVITED` and `LEFT` members never appear in it.
-- Representations in the design library: none exists yet. Being explored on the `Members` page of the Figma file: tile (the directory), row, header (the member's sheet), and the base component `Avatar` (photo, or initials when there is none). Expected as well: mention.
+- **Directory.** The directory lists members as cards, in alphabetical order of the nickname, the name shown. By default it shows `ACTIVE` members only. Two options, both off when the directory opens: one adds the `POWER_MEMBER` members, each of them marked as such; the other keeps the members of the section of the signed-in member ("Mon pupitre" in French). `INVITED` and `LEFT` members never appear in it.
+- Representations in the design library (Figma, `Design system` page): `Member/Card` (the directory), `Member/Row` (lists), `Member/TableRow` with `Member/TableHeader` (managing members on a desktop), `Member/Header` (the member's sheet), `Member/Mention`, and the base component `Avatar` (photo, or initials when there is none).
 
 ### Accessibility options
 The default design is not required to reach the highest level of the accessibility guidelines (WCAG AAA). The options below must let a member bring the app to level AA at least, and to AAA wherever that is feasible.
@@ -225,7 +225,7 @@ A session is a device on which a member is signed in. A password link is a singl
 - A member can sign out the current device, or all their devices at once.
 - **A link created by a member manager is sent by him.** The app shows the link once, when it is created; the member manager copies it and sends it by the means of his choice. It is valid 7 days and once.
 - **A link asked from the sign-in screen is sent by the app**, by email, to the address of the member (rule "Forgotten password"). It is valid 1 hour and once. The email is written in the language of the member and holds the name of the band and the link, nothing else about the member. No new email is sent to the same member within 5 minutes of the previous one (`emailedAt`): a request made sooner changes nothing, and gets the same answer on screen.
-- **Sending email.** The address the app writes from and the access to the mail server are in the configuration of the server, never in the database. An instance without them has no forgotten password by email: the sign-in screen then sends the member to those who manage members.
+- **Sending email.** The address the app writes from and the access to the mail server are in the configuration of the server, never in the database. An instance without them has no forgotten password by email: the forgotten password screen then sends the member to those who manage members.
 - **The link carries its secret after a `#`.** That part of an address is never sent to a server: the secret does not end in the log of the host. The page reads it and sends it in the body of its requests.
 - Creating a new link for a member, by either way, cancels the previous one. So does changing their roles or their password (entry 1, "Rules").
 - Using a password link sets the password, moves an `INVITED` member to `ACTIVE`, deletes the link and every existing session of the member, and signs the member in.
@@ -249,17 +249,22 @@ These apply to every table of the app and are not repeated in the DBML.
 
 ## 5. Open questions
 
-None blocking for v1.9. What v1.10 and v1.11 add is to validate; each point comes with the default applied.
+None blocking for v1.9. What v1.10 to v1.12 add is to validate; each point comes with the default applied, or with the decision when the owner made one.
 
 From the design of the `Members` and `Band settings` pages (the version of the dictionary written by the design conversation, merged here in v1.11):
 
-1. `section.icon`: a key among the eight pictograms shipped with the app, empty for the generic one. The pictograms themselves are a proposal of the design (Figma, `Design system` page). In the DBML as a draft; no migration yet.
+1. `section.icon`: a key among the eight pictograms shipped with the app, empty for the generic one. The pictograms are in the design library (Figma, `Design system` page): six drawn by the owner, flute and clarinet drawn after them. In the DBML as a draft; no migration yet.
 2. Forgotten password by email: only current members get a link; a member still `INVITED` asks the person who invited them. Default: yes.
-3. Validity of a link asked by email: 1 hour (7 days for a link created by a member manager). Default: 1 hour.
+3. Decided on 2026-10-11: a link asked by email is valid 1 hour (7 days for a link created by a member manager).
 4. Time between two emails to the same member: 5 minutes (`memberPasswordLink.emailedAt`, in the DBML as a draft; no migration yet). Default: 5 minutes.
 5. Decided on 2026-10-11: in the first version the invitation link is copied and sent by the member manager, and stays valid 7 days. Sending it by email from the app comes later; its validity will be settled then.
-6. An instance whose server cannot send email: the sign-in screen sends the member to those who manage members. Default: yes.
-7. `band.defaultAccentTheme` is named here but belongs to the Band domain: `band.md` and `band.dbml` do not hold it yet.
+6. Decided on 2026-10-11: on an instance whose server cannot send email, the forgotten password screen sends the member to those who manage members. The screen is drawn (Figma, `Members` page).
+7. `band.defaultAccentTheme` is named here but belongs to the Band domain: it is in `band.md` and `band.dbml` v1.4, to validate.
+
+Decided on 2026-10-11 in the design conversation (v1.12), no change to the tables:
+
+- Accessibility is offered behind a button on every screen before sign-in, the invitation included; it is never a step to go through (rule "Accessibility before sign-in"). It replaces "Reading comfort before sign-in", in which an invited member set the options first.
+- The directory is in alphabetical order of the nickname, not of the first name.
 
 From writing the API of members (v1.10 of the repository). These rules are stricter than what was validated; they are applied, say so if one should be relaxed:
 
@@ -275,6 +280,7 @@ Not built yet, on the server:
 - Forgotten password by email (points 2 to 4 and 6): it needs a way to send email, which is a dependency to choose.
 - The pictogram of a section (point 1) and the default accent theme of the band (point 7).
 - Exporting the list of members, which asks for the password again.
+- Onboarding from an invitation: its screens let the invited member correct their details and reach the accessibility options before choosing the password, while using a password link takes the token and the password only. Default: the page uses the link first, which signs the member in, then saves the details and the options with the member's own routes. To confirm with the development side.
 
 To confirm, from earlier versions:
 

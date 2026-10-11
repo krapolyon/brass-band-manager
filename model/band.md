@@ -1,6 +1,6 @@
 # Business dictionary — Band domain
 
-> v1.3 — 2026-10-11 · Model: `band.dbml` · Validated · Migration: `002_band.sql`
+> v1.4 — 2026-10-11 · Model: `band.dbml` · To validate: v1.3 is validated, v1.4 adds `defaultAccentTheme` · Migration: `002_band.sql`
 
 Examples in this document are made up, except the name of the band that started the project.
 
@@ -15,6 +15,7 @@ The band this instance of the app belongs to, and the settings that make the app
 | `name` | Band name | Nom de la fanfare | Yes | Les Krapos · La Fanfare des Cuivres Déchaînés | 5 to 40 | Never translated |
 | `logoPath` | Logo | Logo | No | — | — | An image file: PNG, SVG, JPEG or WebP, 2 MB at most |
 | `defaultLanguage` | Default language | Langue par défaut | Yes | fr | 2 to 5 | One of the languages shipped with the app |
+| `defaultAccentTheme` | Accent colour | Couleur d'accent | Yes | copper | — | One of the accent themes of the design system |
 
 ### Rules
 - **Created at install, never deleted.** Install asks for the name and, optionally, the logo. Both can be changed later in the settings.
@@ -22,6 +23,7 @@ The band this instance of the app belongs to, and the settings that make the app
 - **Logo file.** Accepted when it really is an image of one of the four formats, whatever its extension says. An SVG that declares a document type is refused. Stored under a name chosen by the app, never the uploaded file name. An SVG can carry scripts: it is only ever served as an image, with headers that forbid running anything in it.
 - **Icon of the installed app.** A phone needs square PNG icons, whatever the format of the logo. They are produced from the logo when it is uploaded: the logo fitted in a square, with a margin, on a white background (no colour of the band is modelled yet). They are drawn by the browser of the person who uploads, and checked by the server. Without a logo, the app keeps its neutral icon. No second image is asked for.
 - **Replacing the logo** replaces the file and the icons. A phone that has already installed the app may keep the old icon until the app is installed again: this is how phones behave.
+- **Default accent theme.** The accent colour of the band: the one shown before sign-in, and to every member who has not chosen their own (`member.accentTheme` empty). Install does not ask for it: it starts as the first theme of the list. An admin changes it in the settings; the change applies at once to the members who follow the colour of the band. A band cannot define its own colours for now.
 - **Default language.** The install opens in French, and its first screen offers the other languages shipped with the app. `defaultLanguage` is set to the language the install was done in, and given to each new member.
 
 ### Relations
@@ -40,7 +42,7 @@ The band this instance of the app belongs to, and the settings that make the app
 ### Display
 - A long name is cut with an ellipsis under the icon of the installed app, by the phone itself: about 12 characters are visible.
 - Without a logo, the name alone is shown.
-- Representations in the design library: none exists yet. Expected: header (sign-in screen), mention.
+- Representations in the design library (Figma, `Design system` page): `Band/Mention`, the logo and the name on one line, used above the title of the sign-in screen and at the top of the desktop menu. Expected: header.
 
 ## 2. Open questions
 
@@ -48,5 +50,6 @@ None blocking.
 
 For later:
 
-- The default accent theme of the band, and whether a band can define its own colours: with the design system.
+- Whether a band can define its own colours: with the design system.
+- The address the app sends email from is server configuration, not a setting of the band (Members domain, entry 3).
 - Discord settings (`discordServerId` in the overview model): with the Discord feature.

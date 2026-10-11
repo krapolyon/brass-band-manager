@@ -1,5 +1,6 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
+// v0.4 — 2026-10-11 — aligned with Members v1.12 and Band v1.4, both to validate: pictogram of a section, default accent theme of the band, photo of a member
 // v0.3 — 2026-10-10 — aligned with the validated Members domain: sections, nickname, required names and instrument, POWER_MEMBER status, member and setlist roles, password links
 // v0.2 — 2026-10-10 — roles per member, one instrument per member, song statuses, gigs split into slots, IF_NEEDED answer
 // v0.1 — 2026-10-10 — first draft
@@ -18,6 +19,7 @@ Table band {
   name varchar [not null]
   logoPath varchar
   defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr']
+  defaultAccentTheme varchar [not null, note: 'Accent theme shown to members who have not chosen one']
   discordServerId varchar [note: 'Discord server of the band. The bot token stays in the server configuration.']
   Note: 'The band this instance belongs to. Holds a single row. Colours and other display settings are detailed in the band domain.'
 }
@@ -51,7 +53,7 @@ Table member {
   mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band']
   instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member: another part can always be opened by hand.']
   status memberStatus [not null]
-  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account. Detailed in members.dbml: postal address, password, display and accessibility preferences.'
+  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account. Detailed in members.dbml: postal address, photo, password, display and accessibility preferences.'
 }
 
 Table memberRole {
@@ -68,6 +70,7 @@ Table section {
   id integer [pk]
   name varchar [not null, unique]
   position integer [not null]
+  icon varchar [note: 'Key of one of the section pictograms shipped with the app']
   Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is. Detailed in members.dbml.'
 }
 
