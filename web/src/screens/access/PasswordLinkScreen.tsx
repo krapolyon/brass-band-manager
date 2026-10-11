@@ -11,12 +11,13 @@ import { Sheet } from '../../components/Sheet.tsx';
 import { type Me, useSetMe } from '../../session.ts';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { AccessibilityButton } from './AccessibilityButton.tsx';
+import { type Invitation, OnboardingScreen } from './OnboardingScreen.tsx';
 import { PasswordField } from './PasswordField.tsx';
 
 export const PASSWORD_MIN_CHARACTERS = 10;
 
 // What POST /api/passwordLink/check answers (api/src/Access/CheckPasswordLinkAction.php).
-export type PasswordLink = { nickname: string };
+export type PasswordLink = { isInvitation: false; nickname: string } | Invitation;
 
 /** The secret of a password link: what follows the # of the address, which is never sent to a server. */
 export function usePasswordLinkToken(): string {
@@ -24,10 +25,11 @@ export function usePasswordLinkToken(): string {
 }
 
 /** Asks the API whether a link still opens something. */
-export function usePasswordLink<Link = PasswordLink>(token: string) {
+export function usePasswordLink(token: string) {
   return useQuery({
     queryKey: ['passwordLink', token],
-    queryFn: () => api<Link>('/api/passwordLink/check', { method: 'POST', body: { token } }),
+    queryFn: () =>
+      api<PasswordLink>('/api/passwordLink/check', { method: 'POST', body: { token } }),
     // A link that opens nothing will not open anything a second later.
     retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 1,
     // Not asked again behind the member's back while they type.
@@ -74,6 +76,8 @@ export function PasswordLinkScreen() {
     error instanceof ApiError && error.error === 'invalidPasswordLink';
   if (isGone(link.error) || isGone(save.error)) return <LinkExpiredScreen />;
   if (link.isPending) return <FlowLayout title={t('shell.loading')} />;
+  // An invitation is completed on its own screens.
+  if (link.data?.isInvitation) return <OnboardingScreen token={token} invitation={link.data} />;
 
   const refused = save.error instanceof ApiError ? save.error.fields : {};
   const error = wasSent ? passwordError(password, Boolean(refused.password)) : null;

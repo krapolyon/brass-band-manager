@@ -258,5 +258,110 @@
     "invitation": "C’était une invitation ? Redemande le lien à la personne qui te l’a envoyé.",
     "newLink": "Recevoir un nouveau lien",
     "toSignIn": "Aller à la connexion"
+  },
+  "member": {
+    "inTheBand": "Dans la fanfare",
+    "toReachYou": "Pour te joindre",
+    "contact": "Coordonnées",
+    "optional": "Facultatif.",
+    "photo": {
+      "label": "Photo",
+      "unreadable": "Cette image ne peut pas être lue. Essaie avec un JPEG, un PNG ou un WebP.",
+      "hint": {
+        "self": "JPEG, PNG ou WebP. Elle est recadrée en carré.",
+        "other": "JPEG, PNG ou WebP. Elle est recadrée en carré.",
+        "invited": "Ajoutée par la personne qui t’a invité. Change-la ou retire-la si tu préfères.",
+        "invite": "Facultatif. La personne pourra la changer ou la retirer."
+      }
+    },
+    "nickname": {
+      "label": "Surnom",
+      "hint": "Le nom affiché partout dans l’app."
+    },
+    "firstName": {
+      "label": "Prénom"
+    },
+    "lastName": {
+      "label": "Nom"
+    },
+    "instrument": {
+      "label": "Instrument",
+      "placeholder": "Choisir un instrument"
+    },
+    "email": {
+      "label": "Adresse email",
+      "hint": {
+        "self": "C’est aussi ton identifiant pour te connecter.",
+        "invited": "C’est aussi ton identifiant pour te connecter.",
+        "other": "C’est son identifiant pour se connecter.",
+        "invite": "Ce sera son identifiant pour se connecter."
+      }
+    },
+    "mobilePhone": {
+      "label": "Téléphone mobile"
+    },
+    "home": {
+      "title": "Chez toi",
+      "hint": "Facultatif. Pratique pour les répètes à la maison et le covoiturage."
+    },
+    "streetAddress": {
+      "label": "Adresse",
+      "placeholder": "Numéro et rue"
+    },
+    "postalCode": {
+      "label": "Code postal"
+    },
+    "city": {
+      "label": "Ville"
+    },
+    "countryCode": {
+      "label": "Pays",
+      "none": "Non renseigné"
+    },
+    "addressInstructions": {
+      "label": "Instructions d’accès",
+      "placeholder": "Code, étage, où se garer"
+    },
+    "errors": {
+      "beforeContinuing_one": "Un champ est à corriger avant de continuer.",
+      "beforeContinuing_other": "{{count}} champs sont à corriger avant de continuer.",
+      "beforeSaving_one": "Un champ est à corriger avant d’enregistrer.",
+      "beforeSaving_other": "{{count}} champs sont à corriger avant d’enregistrer.",
+      "nickname": {
+        "missing": "Il manque le surnom.",
+        "invalid": "Ce surnom ne convient pas. Il lui faut au moins une lettre ou un chiffre.",
+        "duplicate": "Ce surnom est déjà pris. Essaie une variante."
+      },
+      "firstName": {
+        "missing": "Il manque le prénom.",
+        "invalid": "Ce prénom ne convient pas. Il lui faut au moins une lettre."
+      },
+      "lastName": {
+        "missing": "Il manque le nom.",
+        "invalid": "Ce nom ne convient pas. Il lui faut au moins une lettre."
+      },
+      "instrument": {
+        "missing": "Il manque l’instrument."
+      },
+      "email": {
+        "missing": "Il manque l’adresse email.",
+        "invalid": "Cette adresse n’a pas l’air complète. Vérifie ce qui suit le @.",
+        "duplicate": "Cette adresse est déjà celle d’un fanfaron."
+      },
+      "mobilePhone": {
+        "invalid": "Ce numéro n’a pas l’air complet. Pour un numéro étranger, commence par + et l’indicatif du pays."
+      },
+      "tooLong": "Ce texte est trop long."
+    }
+  },
+  "onboarding": {
+    "title": "Bienvenue, {{nickname}} !",
+    "lead": "On a rempli ce qu’on savait de toi. Vérifie, corrige, complète : seuls les fanfarons connectés voient ces infos.",
+    "continue": "Continuer",
+    "password": {
+      "title": "Plus qu’un mot de passe",
+      "lead": "Avec ton adresse email, c’est lui qui t’ouvre l’app sur tous tes appareils.",
+      "submit": "Entrer dans l’app"
+    }
   }
 }

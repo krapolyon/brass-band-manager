@@ -43,3 +43,9 @@
     padding-inline: 0;
   }
 }
+
+/* The band keeps the 100 px Figma gives it above a title: room to breathe
+   between the line of the nav and the title. */
+.ScreenTop-heading > .BandMention {
+  min-height: 6.25rem;
+}

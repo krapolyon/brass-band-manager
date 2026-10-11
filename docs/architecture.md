@@ -375,7 +375,8 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 | `GET /api/sections` | Signed in | Sections with their pictogram, and their instruments with the number of members who play each |
 | `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes; sets the pictogram of a section, one of `SectionIcons::AVAILABLE` |
 | `PUT /api/me/preferences`, `PUT /api/me/password` | Oneself | Preferences; password, with the current one |
-| `POST /api/passwordLink/check`, `/use` | Anyone holding a link | Says who a link is for; chooses a password with it and signs in |
+| `POST /api/passwordLink/check`, `/use` | Anyone holding a link | Says who a link is for; chooses a password with it and signs in. For an invitation, `check` gives the invited member their own record, their photo and the instruments of the band, and `use` takes the whole account (record, photo, accessibility options, password), saved together or not at all |
+| `POST /api/passwordLink/validate` | Anyone holding the link of an invitation | Says whether a record would be accepted, and saves nothing: the first step of an invitation asks it |
 | `POST /api/passwordLink/request` | Anyone | Forgotten password: sends a link, valid one hour, to the address given if it is the one of a current member. Always the same answer |
 
 - **[Members](../api/src/Members/Members.php)** holds what the actions share: who sees whom, the columns that are sent (listed one by one, so that the password hash, the sign-in counters and the preferences never leave by accident), and the two rules that protect accounts.
@@ -449,6 +450,7 @@ The session is a cookie the page cannot read. The front learns who is signed in 
 - **A password link opens `/password#<secret>`.** What follows the `#` is never sent to a server; the page reads it and sends it in the body of its requests ([PasswordLinkScreen.tsx](../web/src/screens/access/PasswordLinkScreen.tsx)).
 - **Signing out empties the memory of the page** (`useSetMe(null)` clears every answer kept by TanStack Query): nothing a member saw stays for the next person on the device.
 - **[AppearanceOf](../web/src/AppearanceOf.tsx)** decides the look and the language: the choices of the account when someone is signed in; otherwise the scheme of the device, the theme and the language of the band, and the accessibility options chosen before sign-in. Those are kept in the storage of the browser, on the device only ([deviceAccessibility.ts](../web/src/deviceAccessibility.ts)); the options of an account are never written there.
+- **The record of a member is one form**, [MemberRecordFields](../web/src/screens/members/MemberRecordFields.tsx), used by an invitation, the profile and those who manage members; [record.ts](../web/src/screens/members/record.ts) turns what is typed into what the API receives. A phone number is typed the local way and stored in the international one ([phone.ts](../web/src/screens/members/phone.ts), with libphonenumber-js): a number without a prefix belongs to the country of the member, or to the one of the band. A photo is cropped to a square and redrawn by the browser before it is sent ([photo.ts](../web/src/screens/members/photo.ts)).
 - **The screens of a flow** (install, sign-in, forgotten password, invitation) share one frame, [FlowLayout](../web/src/screens/FlowLayout.tsx).
 
 ### Adding a screen
@@ -657,6 +659,7 @@ To come: `minishlink/web-push` for push notifications, with the gigs feature.
 |---|---|---|---|
 | `react`, `react-dom` | 19.3.0 | The interface | Settled in the scoping |
 | `react-router` | 8.4.0 | Addresses and screens | The standard router of React |
+| `libphonenumber-js` | 1.13.14 | Reads a phone number typed the local way and writes it in the international form, and back | Google's own rules for every country, without a dependency. Writing them here would only work for one country |
 | `@tanstack/react-query` | 5.104.1 | API calls: loading, error, keeping and refreshing data | Fits an app without real time |
 | `i18next`, `react-i18next` | 26.4.3, 17.0.16 | Translations, variables, plurals | The standard; its file format is known to contributors |
 

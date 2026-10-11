@@ -39,6 +39,7 @@ use BrassBand\Install\InstallKey;
 use BrassBand\Install\InstallStatusAction;
 use BrassBand\Access\ChangePasswordAction;
 use BrassBand\Access\CheckPasswordLinkAction;
+use BrassBand\Access\ValidateInvitationAction;
 use BrassBand\Access\ForgotPasswordAction;
 use BrassBand\Mail\Mailer;
 use BrassBand\Access\PasswordLinks;
@@ -106,8 +107,9 @@ return function (App $app, Connection $database, array $config): void {
     $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile));
     // Whoever holds a password link is not signed in yet.
     $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer));
-    $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($links));
-    $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile));
+    $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections));
+    $app->post('/api/passwordLink/validate', new ValidateInvitationAction($links, $record));
+    $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile, $record, $photos));
 
     // ---------------------------------------------------------------
     // 2. Signed in

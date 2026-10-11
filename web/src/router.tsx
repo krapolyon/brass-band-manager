@@ -30,6 +30,7 @@ export const router = createBrowserRouter([
   // What a password link opens: the link wins over a session already open
   // on the device, which may be someone else's.
   { path: '/password', element: <PasswordLinkScreen /> },
+  { path: '/invitation', element: <PasswordLinkScreen /> },
   {
     // The screens of the install share what has been entered so far.
     path: '/install',

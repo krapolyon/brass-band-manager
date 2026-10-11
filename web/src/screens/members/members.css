@@ -1,0 +1,14 @@
+/* Layout of the screens about members. */
+
+.members-note {
+  color: var(--textMuted);
+}
+
+/* Two short fields side by side, on a phone too: the postal code and the
+   city. At a large text size each takes its own line. */
+.members-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  align-items: start;
+  gap: var(--spaceMd) var(--spaceSm);
+}

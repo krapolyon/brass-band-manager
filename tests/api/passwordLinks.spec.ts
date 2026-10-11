@@ -45,7 +45,7 @@ test('an invited member chooses a password with their link, and is active and si
 
   // The screen first asks who the link is for.
   const check = await request.post('/api/passwordLink/check', { data: { token } });
-  expect(await check.json()).toEqual({ nickname: 'Titi' });
+  expect(await check.json()).toMatchObject({ isInvitation: true, nickname: 'Titi' });
 
   const used = await request.post('/api/passwordLink/use', {
     data: { token, password: newPassword },
