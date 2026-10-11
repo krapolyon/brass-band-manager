@@ -21,17 +21,37 @@ final class PasswordLinks
 
     // Creates the link of a member and returns its token. A member has one
     // pending link at most: a new one cancels the previous one.
-    public function create(int $memberId, ?int $byMemberId): string
+    //
+    // A link created by a member manager, who sends it himself, lasts 7 days.
+    // A link the app sends by email ($emailed) lasts one hour.
+    public function create(int $memberId, ?int $byMemberId, bool $emailed = false): string
     {
         $token = bin2hex(random_bytes(32));
         $this->cancel($memberId);
         $this->database->executeStatement(
-            'INSERT INTO memberPasswordLink (memberId, tokenHash, expiresAt, updatedByMemberId)
-             VALUES (?, ?, NOW() + INTERVAL ? DAY, ?)',
-            [$memberId, self::hash($token), AccessRules::PASSWORD_LINK_DAYS, $byMemberId],
+            'INSERT INTO memberPasswordLink (memberId, tokenHash, expiresAt, emailedAt, updatedByMemberId)
+             VALUES (?, ?, NOW() + INTERVAL ? MINUTE, IF(?, NOW(), NULL), ?)',
+            [
+                $memberId,
+                self::hash($token),
+                $emailed ? AccessRules::EMAILED_LINK_MINUTES : AccessRules::PASSWORD_LINK_DAYS * 24 * 60,
+                (int) $emailed,
+                $byMemberId,
+            ],
         );
 
         return $token;
+    }
+
+    // Whether the app sent a link to this member by email in the last
+    // minutes: no new email is sent that soon.
+    public function wasEmailedRecently(int $memberId): bool
+    {
+        return (int) $this->database->fetchOne(
+            'SELECT COUNT(*) FROM memberPasswordLink
+             WHERE memberId = ? AND emailedAt > NOW() - INTERVAL ? MINUTE',
+            [$memberId, AccessRules::EMAIL_INTERVAL_MINUTES],
+        ) > 0;
     }
 
     public function cancel(int $memberId): void

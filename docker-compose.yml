@@ -33,6 +33,7 @@ services:
       - storageTest:/var/www/storage
     environment:
       BRASS_BAND_DATABASE: brassBandTest
+      BRASS_BAND_APP_URL: http://localhost:8081
     depends_on:
       db:
         condition: service_healthy
@@ -42,6 +43,32 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  # The test server again, without a mail server: an instance that cannot
+  # send email (port 8082). Same test database, same files.
+  web-test-no-mail:
+    build: docker
+    ports:
+      - "8082:80"
+    volumes:
+      - ./web/dist:/var/www/html:ro
+      - ./api:/var/www/api:ro
+      - ./database:/var/www/database:ro
+      - storageTest:/var/www/storage
+    environment:
+      BRASS_BAND_DATABASE: brassBandTest
+      BRASS_BAND_APP_URL: http://localhost:8082
+      BRASS_BAND_NO_MAIL: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # The mailbox of the local stack: receives the emails the app sends and
+  # sends none further. Read them at http://localhost:8025.
+  mail:
+    image: axllent/mailpit:v1.31.3
+    ports:
+      - "8025:8025"
 
   # Command-line PHP for development tools (Composer, PHPStan). Not started
   # with the stack: used through "docker compose run --rm php ...".

@@ -39,6 +39,8 @@ use BrassBand\Install\InstallKey;
 use BrassBand\Install\InstallStatusAction;
 use BrassBand\Access\ChangePasswordAction;
 use BrassBand\Access\CheckPasswordLinkAction;
+use BrassBand\Access\ForgotPasswordAction;
+use BrassBand\Mail\Mailer;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\RequireSelfOrPermission;
 use BrassBand\Access\SignInFailures;
@@ -70,7 +72,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{installKey?: string, session?: array{secureCookie?: bool}} $config
+ * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -82,7 +84,8 @@ return function (App $app, Connection $database, array $config): void {
     // does not serve: a file leaves it only through an action.
     $files = new Files(dirname(__DIR__) . '/storage');
     $logos = new LogoStore($database, $files);
-    $bands = new Bands($database, $logos);
+    $mailer = new Mailer($config);
+    $bands = new Bands($database, $logos, $mailer);
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
     $members = new Members($database);
@@ -102,6 +105,7 @@ return function (App $app, Connection $database, array $config): void {
     $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos));
     $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile));
     // Whoever holds a password link is not signed in yet.
+    $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer));
     $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($links));
     $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile));
 

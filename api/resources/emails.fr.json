@@ -1,0 +1,6 @@
+{
+  "passwordLink": {
+    "subject": "Ton nouveau mot de passe pour {band}",
+    "body": "Bonjour,\n\nQuelqu’un, sans doute toi, a demandé à choisir un nouveau mot de passe pour l’app de {band}. Ouvre ce lien :\n\n{link}\n\nIl marche une fois, pendant une heure.\n\nTu n’as rien demandé ? Ignore ce message : ton mot de passe ne change pas.\n"
+  }
+}

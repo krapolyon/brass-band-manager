@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Band;
 
 use BrassBand\Http\ApiError;
+use BrassBand\Mail\Mailer;
 use Doctrine\DBAL\Connection;
 
 // The band as the API shows it. Everything here is public: it is what a
@@ -14,6 +15,7 @@ final class Bands
     public function __construct(
         private readonly Connection $database,
         private readonly LogoStore $logos,
+        private readonly Mailer $mailer,
     ) {
     }
 
@@ -34,6 +36,8 @@ final class Bands
             'defaultLanguage' => $band['defaultLanguage'],
             'defaultAccentTheme' => $band['defaultAccentTheme'],
             'defaultCountryCode' => $band['defaultCountryCode'],
+            // Decides what the forgotten password screen offers.
+            'canSendEmail' => $this->mailer->canSend(),
             ...($this->logos->urls() ?? ['logoUrl' => null, 'icons' => null]),
         ];
     }

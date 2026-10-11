@@ -20,6 +20,8 @@ test('the band is public: its name, its logo and its three defaults', async ({ r
     defaultLanguage: 'fr',
     defaultAccentTheme: 'copper',
     defaultCountryCode: 'FR',
+    // The test server has a mail server.
+    canSendEmail: true,
     logoUrl: null,
     icons: null,
   });

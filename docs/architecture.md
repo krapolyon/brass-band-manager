@@ -123,6 +123,8 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 | `web` | Apache with PHP 8.4. Serves `web/dist` at `/` and `api/public` at `/api` | http://localhost:8080 |
 | `web-test` | The same server, on the database `brassBandTest` | http://localhost:8081 |
 | `db` | MySQL 8.4 | `127.0.0.1`, port `3307`, databases `brassBand` and `brassBandTest`, user `brassBand`, password `local-only` |
+| `web-test-no-mail` | The test server again, without a mail server, to test an instance that cannot send email | http://localhost:8082 |
+| `mail` | Mailpit: the mailbox of the local stack. It receives every email the app sends and sends none further | http://localhost:8025 |
 | `php` | The same image, used for command-line tools only. Not started with the stack | `docker compose run --rm php <command>` |
 
 - The folders `web/dist`, `api` and `database` are shared with the `web` container, read-only: a change to a PHP file is live at once, no restart.
@@ -131,7 +133,7 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 - The database's data lives in the Docker volume `dbData`. It survives `stack:down`. `npm run db:reset` deletes it.
 - Port 3307 is used so that a MySQL installed on the Mac can keep 3306.
 - The passwords in `docker-compose.yml` and `config.local.php` are for this local stack only. They are not secrets, and must never reach the host.
-- `web-test` reads the same code and the same `config.php`; only the name of its database differs, through the `BRASS_BAND_DATABASE` variable set in `docker-compose.yml`.
+- `web-test` reads the same code and the same `config.php`; only the name of its database and its own address differ, through the `BRASS_BAND_DATABASE` and `BRASS_BAND_APP_URL` variables set in `docker-compose.yml`.
 - The PHP and MySQL versions must stay equal to those of the host. They are written in `docker/Dockerfile` (`FROM php:8.4-apache`) and `docker-compose.yml` (`image: mysql:8.4`).
 
 ## The API
@@ -285,7 +287,7 @@ Every JSON answer carries `Cache-Control: no-store` (answers hold members' data,
 
 A new setting is added to both files. When the safe value and the convenient value differ, the code takes the safe one when the setting is missing, and only `config.local.php` says otherwise.
 
-Secrets (database password, later the Discord bot token and the push keys) go there and nowhere else. Settings of the band (name, logo, colours) are not configuration: they belong to the `band` table.
+Secrets (database password, password of the mail server, later the Discord bot token and the push keys) go there and nowhere else. So does `appUrl`, the public address of the app: the links written in emails start with it, never with the host a request claims. Settings of the band (name, logo, colours) are not configuration: they belong to the `band` table.
 
 ### Who can call a route
 
@@ -374,6 +376,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 | `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes; sets the pictogram of a section, one of `SectionIcons::AVAILABLE` |
 | `PUT /api/me/preferences`, `PUT /api/me/password` | Oneself | Preferences; password, with the current one |
 | `POST /api/passwordLink/check`, `/use` | Anyone holding a link | Says who a link is for; chooses a password with it and signs in |
+| `POST /api/passwordLink/request` | Anyone | Forgotten password: sends a link, valid one hour, to the address given if it is the one of a current member. Always the same answer |
 
 - **[Members](../api/src/Members/Members.php)** holds what the actions share: who sees whom, the columns that are sent (listed one by one, so that the password hash, the sign-in counters and the preferences never leave by accident), and the two rules that protect accounts.
 - **"Oneself, or a permission"** is the middleware [RequireSelfOrPermission](../api/src/Access/RequireSelfOrPermission.php), declared on the route like `RequirePermission`.
@@ -386,7 +389,17 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - **Profile photos** ([PhotoStore](../api/src/Members/PhotoStore.php)) follow the logo: the browser makes the photo a small square, the server checks it and keeps the file in `storage/members/`. Unlike the logo, a photo is served to signed-in members only, browsers are told not to share it and to ask again each time (`Cache-Control: private, no-cache`, with an `ETag` so that an unchanged photo is not sent twice).
 - **Storage** is shared by the logo and the photos: [Files](../api/src/Storage/Files.php) writes and deletes, [Images](../api/src/Storage/Images.php) says what a file really is, [ServeFile](../api/src/Storage/ServeFile.php) sends it with protective headers.
 - **Order of sections and instruments**: a place is asked as a number (1 is the first) and the whole list is numbered again (`Sections::place`).
-- Not written: forgotten password by email (it needs a way to send email, a dependency to choose), the pictogram of a section, the default accent theme of the band, the export of the directory, and every screen.
+- Not written: the export of the directory, and every screen.
+
+### Emails
+
+The app sends one email so far: the link of a forgotten password ([ForgotPasswordAction](../api/src/Access/ForgotPasswordAction.php)).
+
+- **[Mailer](../api/src/Mail/Mailer.php)** sends through the mail server written in `config.php` (`mail`), with PHPMailer. Without that configuration, or without `appUrl`, it sends nothing and `GET /api/band` answers `canSendEmail: false`: the forgotten password screen then sends the member to those who manage members.
+- **The texts are in `api/resources/emails.<language>.json`**, in the language of the member. An email is the one text the server writes; everything else is translated by the front. Emails are plain text for now.
+- **An email leaves after the answer** ([AfterResponse](../api/src/Http/AfterResponse.php), run by `index.php` once the answer was handed over). Sending takes a second or two: the time of the answer must not tell whether an address is the one of a member. The host has no background process, so this is the end of the same request: with PHP-FPM the answer is closed first; elsewhere the `Content-Length` of the answer tells the browser that it has everything.
+- **Nothing about an email is logged**: when sending fails, the log holds the kind of failure only.
+- Locally the emails land in Mailpit (http://localhost:8025); the tests read them there ([mail.ts](../tests/support/mail.ts)).
 
 ### The logo of the band and the icons of the app
 
@@ -616,6 +629,7 @@ Each one was validated by the owner. The rule ([CLAUDE.md](../CLAUDE.md), "Guidi
 | `slim/slim` | 4.15.3 | Routing, middleware, error handling | A micro-framework that stops there. On the same major version since 2019, still maintained |
 | `slim/psr7` | 1.8.0 | The request and response objects Slim works with | Slim's own |
 | `doctrine/dbal` | 4.5.0 | Database access: prepared statements, insert and update helpers, transactions | The most widely used database layer in PHP. Doctrine ORM is built on it and can be added later without a rewrite |
+| `phpmailer/phpmailer` | 7.1.1 | Sends emails through a mail server (SMTP) | No dependency of its own, maintained for more than twenty years, the most used mail library in PHP. LGPL 2.1 |
 | `cuyz/valinor` | 2.6.0 | Turns incoming JSON into typed objects, or refuses it | No dependency of its own, strict by default, works with PHP enums |
 
 To come: `minishlink/web-push` for push notifications, with the gigs feature.
@@ -644,6 +658,17 @@ To come: `minishlink/web-push` for push notifications, with the gigs feature.
 | `@types/react`, `@types/react-dom`, `@types/node` | 19.3.0, 19.3.0, 24.19.2 | Types of React and Node for TypeScript |
 | `@biomejs/biome` | 2.5.15 | Formatting and linting |
 | `@playwright/test` | 1.64.0 | End-to-end tests |
+
+### Files taken from other projects
+
+Not installed by a package manager: copied into the repository, with their licence beside them.
+
+| What | Where | Licence |
+|---|---|---|
+| The typefaces Bricolage Grotesque, Instrument Sans and Atkinson Hyperlegible Next | `web/public/fonts/` | SIL Open Font License 1.1, one `…-OFL.txt` per family |
+| The paths of the icons that come from Lucide | [Icon.tsx](../web/src/components/Icon.tsx), from the comment that names them | ISC, [Lucide-LICENSE.txt](../web/src/components/Lucide-LICENSE.txt) |
+
+Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: the mailbox the tests read. Nothing of it reaches the host.
 
 ### Written here on purpose
 
@@ -682,7 +707,8 @@ To check on the real host, because it cannot be checked locally:
 - every address is redirected to HTTPS (a rule to add to the `.htaccess` files);
 - the session cookie arrives as `__Host-session` with `Secure`, and sign-in works on an iPhone and an Android phone;
 - a write sent by an older browser, which announces itself with `Origin` only, is accepted (see `SameSiteOnly`);
-- PHP errors are not displayed.
+- PHP errors are not displayed;
+- the answer to a forgotten password request comes back at once, before the email is sent (it relies on PHP-FPM, see "Emails"), and the email arrives from the mailbox of the domain.
 
 ## Traps
 
