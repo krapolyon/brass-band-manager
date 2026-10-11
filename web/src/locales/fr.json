@@ -180,5 +180,33 @@
     "choose": "Choisir une image",
     "change": "Changer",
     "remove": "Retirer"
+  },
+  "accessibility": {
+    "title": "Accessibilité",
+    "textSize": {
+      "label": "Taille du texte",
+      "value": "{{percent}} %",
+      "description": "Agrandit les textes sans modifier la mise en page."
+    },
+    "highContrast": {
+      "label": "Contraste élevé",
+      "description": "Renforce le contraste entre le texte et le fond. Utile en cas de basse vision, de fatigue visuelle ou de forte luminosité ambiante."
+    },
+    "increasedSpacing": {
+      "label": "Espacement augmenté",
+      "description": "Aère le texte : espace entre les lettres, entre les mots et entre les lignes."
+    },
+    "legibleFont": {
+      "label": "Police plus lisible",
+      "description": "Distingue plus nettement les caractères qui se ressemblent (I / l / 1, O / 0)."
+    },
+    "reducedMotion": {
+      "label": "Mouvement réduit",
+      "description": "Supprime les animations et les transitions de grande amplitude. Utile en cas de troubles vestibulaires, de migraines ou de sensibilité au mouvement."
+    },
+    "extendedTimeouts": {
+      "label": "Délais augmentés",
+      "description": "Les notifications et les infobulles restent affichées jusqu’à ce que tu les fermes."
+    }
   }
 }

@@ -71,9 +71,11 @@
 /* ---------------------------------------------------------------
    Theme  (one block per mode of the Theme collection)
    The list of themes is also in web/src/themes.ts and in the API.
+   A block applies to the root element, and to a ThemeSwatch, which shows a
+   theme that is not the one in use.
    --------------------------------------------------------------- */
 :root,
-:root[data-theme="copper"] {
+[data-theme="copper"] {
   --themeAccent: #f4ad2a;
   --themeOnAccent: #1b1300;
   --themeAccentTextLight: #8a5200;
@@ -83,7 +85,7 @@
   --themeSheetLight: #ffffff;
 }
 
-:root[data-theme="coral"] {
+[data-theme="coral"] {
   --themeAccent: #ff6b5e;
   --themeOnAccent: #2a0704;
   --themeAccentTextLight: #b92d22;
@@ -93,7 +95,7 @@
   --themeSheetLight: #ffffff;
 }
 
-:root[data-theme="mint"] {
+[data-theme="mint"] {
   --themeAccent: #5bd9ae;
   --themeOnAccent: #052a1d;
   --themeAccentTextLight: #0b6e51;
@@ -103,7 +105,7 @@
   --themeSheetLight: #ffffff;
 }
 
-:root[data-theme="lilac"] {
+[data-theme="lilac"] {
   --themeAccent: #b3a4ff;
   --themeOnAccent: #150c40;
   --themeAccentTextLight: #5540c4;

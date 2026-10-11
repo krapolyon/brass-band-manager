@@ -1,0 +1,21 @@
+.SwitchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceMd);
+  min-height: var(--controlHeightSm);
+  padding: var(--spaceXs) 0;
+  cursor: pointer;
+}
+
+.SwitchRow-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.SwitchRow-description {
+  color: var(--textMuted);
+}

@@ -1,0 +1,21 @@
+.QuickAction {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  min-width: 0;
+  min-height: 4.5rem; /* 72 */
+  padding: var(--spaceSm) var(--spaceXs);
+  border-radius: var(--radiusMd);
+  background: var(--control);
+  color: var(--text);
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.QuickAction .Icon {
+  color: var(--accentText);
+}

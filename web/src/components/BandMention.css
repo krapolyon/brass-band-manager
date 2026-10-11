@@ -1,0 +1,32 @@
+.BandMention {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 40 in Figma. */
+.BandMention-logo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radiusSm);
+  background: var(--accent);
+  color: var(--onAccent);
+  overflow: hidden;
+}
+
+/* A logo brings its own ground. */
+.BandMention-logo:has(img) {
+  background: transparent;
+}
+
+.BandMention-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}

@@ -1,0 +1,28 @@
+.SliderRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  padding: var(--spaceXs) 0;
+}
+
+.SliderRow-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--spaceXxs) var(--spaceSm);
+}
+
+.SliderRow-value {
+  color: var(--accentText);
+}
+
+.SliderRow-scale {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  color: var(--textMuted);
+}
+
+.SliderRow-description {
+  color: var(--textMuted);
+}
