@@ -1,0 +1,305 @@
+// Overview model: every object of the app at a coarse grain.
+// Key fields only. Each domain is detailed later in its own file.
+// v0.3 — 2026-10-10 — aligned with the validated Members domain: sections, nickname, required names and instrument, POWER_MEMBER status, member and setlist roles, password links
+// v0.2 — 2026-10-10 — roles per member, one instrument per member, song statuses, gigs split into slots, IF_NEEDED answer
+// v0.1 — 2026-10-10 — first draft
+
+Project brassBand {
+  database_type: 'MySQL'
+  Note: 'Brass band app — overview model'
+}
+
+// ---------------------------------------------------------------
+// Band: the instance and its settings
+// ---------------------------------------------------------------
+
+Table band {
+  id integer [pk]
+  name varchar [not null]
+  logoPath varchar
+  defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr']
+  discordServerId varchar [note: 'Discord server of the band. The bot token stays in the server configuration.']
+  Note: 'The band this instance belongs to. Holds a single row. Colours and other display settings are detailed in the band domain.'
+}
+
+// ---------------------------------------------------------------
+// Members
+// ---------------------------------------------------------------
+
+Enum memberStatus {
+  INVITED [note: 'Invited by an admin, has not chosen a password yet']
+  ACTIVE
+  POWER_MEMBER [note: 'Was active and plays less: helps out on some gigs. Signs in, answers and counts like an active member, but is not reminded to answer.']
+  LEFT [note: 'Has left the band; access removed, history kept']
+}
+
+Enum role {
+  ADMIN [note: 'Manages roles and band settings. Holds every permission of the other roles.']
+  MEMBER_MANAGER [note: 'Manages members and their status']
+  SONG_MANAGER [note: 'Manages songs and their files']
+  GIG_MANAGER [note: 'Manages gigs']
+  SETLIST_MANAGER [note: 'Later feature. Manages setlists.']
+  QUOTE_MANAGER [note: 'Later feature. Manages quotes.']
+}
+
+Table member {
+  id integer [pk]
+  nickname varchar [not null, unique, note: '🔒 Personal data — purpose: identification. The name shown everywhere in the app.']
+  firstName varchar [not null, note: '🔒 Personal data — purpose: identification']
+  lastName varchar [not null, note: '🔒 Personal data — purpose: identification']
+  email varchar [not null, unique, note: '🔒 Personal data — purpose: sign-in, and directory of the band']
+  mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band']
+  instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member: another part can always be opened by hand.']
+  status memberStatus [not null]
+  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account. Detailed in members.dbml: postal address, password, display and accessibility preferences.'
+}
+
+Table memberRole {
+  memberId integer [not null, ref: > member.id]
+  role role [not null]
+  Note: 'A management role held by a member. A member can hold several. No row means a plain member, who can view everything and answer for gigs.'
+
+  indexes {
+    (memberId, role) [pk]
+  }
+}
+
+Table section {
+  id integer [pk]
+  name varchar [not null, unique]
+  position integer [not null]
+  Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is. Detailed in members.dbml.'
+}
+
+Table instrument {
+  id integer [pk]
+  sectionId integer [not null, ref: > section.id]
+  name varchar [not null, unique]
+  Note: 'An instrument played in the band. The list is managed by the band. Detailed in members.dbml.'
+}
+
+Table instrumentAlias {
+  id integer [pk]
+  instrumentId integer [not null, ref: > instrument.id]
+  alias varchar [not null, unique, note: 'A track name found in score files, for instance "Sax Mib" or "sax-m"']
+  Note: 'Known spellings of an instrument in score files, used to attach each track to its instrument at import.'
+}
+
+Table memberSession {
+  id integer [pk]
+  memberId integer [not null, ref: > member.id]
+  lastUsedAt timestamp [not null]
+  expiresAt timestamp [not null]
+  Note: 'A signed-in device of a member. Deleting the row signs the device out.'
+}
+
+Table memberPasswordLink {
+  id integer [pk]
+  memberId integer [not null, unique, ref: - member.id]
+  expiresAt timestamp [not null]
+  Note: 'A single-use link that lets a member choose a password: invitation or reset. Detailed in members.dbml.'
+}
+
+Table pushSubscription {
+  id integer [pk]
+  memberId integer [not null, ref: > member.id]
+  endpoint varchar [not null, unique]
+  Note: 'A device that accepted push notifications.'
+}
+
+// ---------------------------------------------------------------
+// Songs
+// ---------------------------------------------------------------
+
+Enum songStatus {
+  PROPOSED [note: 'In the backlog of songs proposed for the repertoire']
+  IN_PROGRESS [note: 'Being arranged and learned ("montage en cours" in the French locale)']
+  ACTIVE [note: 'In the current repertoire']
+  ARCHIVED [note: 'No longer played, kept for history']
+}
+
+Table song {
+  id integer [pk]
+  title varchar [not null]
+  originalArtist varchar
+  clipUrl varchar
+  bpm integer [note: 'Default tempo, taken from the score']
+  discordThreadId varchar [note: 'Discord thread where the band discusses this song']
+  status songStatus [not null]
+  isOneOff boolean [not null, note: 'TODO: confirm. A song learned for a single event and not meant to join the repertoire.']
+  Note: 'A piece the band plays, is learning or considers playing.'
+}
+
+Table songPart {
+  id integer [pk]
+  songId integer [not null, ref: > song.id]
+  instrumentId integer [not null, ref: > instrument.id]
+  trackName varchar [not null, note: 'Track name exactly as written in the score file']
+  Note: 'The part of one instrument in a song. Links a track of the score and of the MIDI file to an instrument.'
+}
+
+Enum songFileKind {
+  MSCZ [note: 'MuseScore source file']
+  MP3
+  MIDI
+  PDF
+  MUSICXML
+}
+
+Table songFile {
+  id integer [pk]
+  songId integer [not null, ref: > song.id]
+  songPartId integer [ref: > songPart.id, note: 'Set when the file belongs to one part (a PDF or MusicXML part). Empty for a file of the whole song.']
+  kind songFileKind [not null]
+  path varchar [not null]
+  Note: 'A file attached to a song or to one of its parts.'
+}
+
+// ---------------------------------------------------------------
+// Gigs
+// A gig always has at least one slot. A simple concert is a gig with
+// one slot; a weekend away is a gig with one slot per day or per part
+// of the day. Dates, meeting points and attendance live on the slot.
+// ---------------------------------------------------------------
+
+Table gig {
+  id integer [pk]
+  title varchar [not null]
+  Note: 'A concert, an outing or a several-day event of the band (a "plan" in the French locale). Its dates are those of its slots.'
+}
+
+Table gigSlot {
+  id integer [pk]
+  gigId integer [not null, ref: > gig.id]
+  name varchar [note: 'Optional, for instance "Saturday evening"']
+  startsAt timestamp [not null]
+  endsAt timestamp
+  meetingAt timestamp
+  meetingPlace varchar
+  Note: 'A time slot of a gig: a day, or a part of a day (midday, afternoon, evening). Members answer for each slot. TODO: confirm whether a slot is declared playable by an organiser or computed from the answers.'
+}
+
+Table gigStop {
+  id integer [pk]
+  gigSlotId integer [not null, ref: > gigSlot.id]
+  position integer [not null]
+  place varchar [not null]
+  startsAt timestamp
+  Note: 'A place and a time where the band plays during a slot.'
+}
+
+Table gigOrganizer {
+  gigId integer [not null, ref: > gig.id]
+  memberId integer [not null, ref: > member.id]
+  Note: 'A member who organises the gig ("qui brasse" in the French locale). A gig can have several.'
+
+  indexes {
+    (gigId, memberId) [pk]
+  }
+}
+
+Enum attendanceAnswer {
+  YES
+  NO
+  MAYBE
+  IF_NEEDED [note: 'Not coming by default, but can make it if that saves the gig']
+}
+
+Table gigSlotAttendance {
+  gigSlotId integer [not null, ref: > gigSlot.id]
+  memberId integer [not null, ref: > member.id]
+  answer attendanceAnswer [not null]
+  Note: 'The answer of a member for a slot. No row means no answer yet.'
+
+  indexes {
+    (gigSlotId, memberId) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Later features: place reserved, not detailed
+// Song stats need no table: they are computed from setlists and gigs.
+// ---------------------------------------------------------------
+
+Table setlist {
+  id integer [pk]
+  gigId integer [ref: > gig.id, note: 'Empty for a setlist not tied to a gig. Whether it ties to the gig or to a slot is decided when the feature is designed.']
+  number integer [not null, unique]
+  Note: 'Later feature. An ordered list of songs, usually played at a gig.'
+}
+
+Table setlistSong {
+  setlistId integer [not null, ref: > setlist.id]
+  songId integer [not null, ref: > song.id]
+  position integer [not null]
+  Note: 'Later feature. A song at a given position in a setlist.'
+
+  indexes {
+    (setlistId, position) [pk]
+  }
+}
+
+Table rehearsal {
+  id integer [pk]
+  startsAt timestamp [not null]
+  place varchar
+  Note: 'Later feature. A rehearsal of the band.'
+}
+
+Table rehearsalSong {
+  rehearsalId integer [not null, ref: > rehearsal.id]
+  songId integer [not null, ref: > song.id]
+  Note: 'Later feature. A song to work on during a rehearsal.'
+
+  indexes {
+    (rehearsalId, songId) [pk]
+  }
+}
+
+Table quote {
+  id integer [pk]
+  gigId integer [ref: > gig.id, note: 'Empty until the quote leads to a gig']
+  clientName varchar [not null]
+  Note: 'Later feature. A quote sent to a client for a paid gig.'
+}
+
+// ---------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------
+
+TableGroup bandSettings {
+  band
+}
+
+TableGroup members {
+  member
+  memberRole
+  section
+  instrument
+  instrumentAlias
+  memberSession
+  memberPasswordLink
+  pushSubscription
+}
+
+TableGroup songs {
+  song
+  songPart
+  songFile
+}
+
+TableGroup gigs {
+  gig
+  gigSlot
+  gigStop
+  gigOrganizer
+  gigSlotAttendance
+}
+
+TableGroup later {
+  setlist
+  setlistSong
+  rehearsal
+  rehearsalSong
+  quote
+}

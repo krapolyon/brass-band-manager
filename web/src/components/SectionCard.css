@@ -1,0 +1,25 @@
+.SectionCard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spaceSm) var(--spaceXs) var(--spaceXs) var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.SectionCard-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  min-height: var(--controlHeightSm);
+}
+
+.SectionCard-header h2 {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.SectionCard-instruments {
+  display: flex;
+  flex-direction: column;
+}

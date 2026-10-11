@@ -1,0 +1,70 @@
+.ImageField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 0;
+}
+
+.ImageField-box {
+  display: flex;
+  /* At a large text size the buttons go under the preview instead of spilling out. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceMd);
+}
+
+/* 72 by 72 in Figma. */
+.ImageField-preview {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  overflow: hidden;
+  border: var(--borderWidth) dashed var(--border);
+  border-radius: var(--radiusMd);
+  background: var(--control);
+  color: var(--text);
+}
+
+.ImageField-preview[data-filled="true"] {
+  border: 0;
+}
+
+.ImageField[data-error="true"] .ImageField-preview {
+  border: var(--focusWidth) solid var(--danger);
+}
+
+/* The whole image, whatever its shape. */
+.ImageField-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ImageField-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+  min-width: 0;
+}
+
+.ImageField-actions .Button {
+  max-width: 100%;
+}
+
+.ImageField-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spaceXxs);
+  color: var(--textMuted);
+}
+
+.ImageField-hint:empty {
+  display: none;
+}
+
+.ImageField[data-error="true"] .ImageField-hint {
+  color: var(--danger);
+}

@@ -1,0 +1,87 @@
+# Local stack: the same pieces as the shared hosting (Apache with PHP, MySQL).
+# Passwords here are for this local stack only.
+services:
+  web:
+    build: docker
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web/dist:/var/www/html:ro
+      - ./api:/var/www/api:ro
+      - ./database:/var/www/database:ro
+      # The only folder of the app the server writes to: the uploaded files.
+      - storage:/var/www/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/api/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # The same server, pointed at a separate database that the tests empty at
+  # will. Tests use this one (port 8081), so they never touch the data of 8080.
+  web-test:
+    build: docker
+    ports:
+      - "8081:80"
+    volumes:
+      - ./web/dist:/var/www/html:ro
+      - ./api:/var/www/api:ro
+      - ./database:/var/www/database:ro
+      - storageTest:/var/www/storage
+    environment:
+      BRASS_BAND_DATABASE: brassBandTest
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # A static file: the test database may not exist yet when the stack starts.
+      test: ["CMD", "curl", "-fsS", "http://localhost/appIcons/icon-192.png"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Command-line PHP for development tools (Composer, PHPStan). Not started
+  # with the stack: used through "docker compose run --rm php ...".
+  php:
+    build: docker
+    profiles: ["tools"]
+    working_dir: /app/api
+    volumes:
+      - .:/app
+      - composerCache:/tmp/composer-cache
+    environment:
+      COMPOSER_CACHE_DIR: /tmp/composer-cache
+      COMPOSER_ALLOW_SUPERUSER: "1"
+
+  db:
+    image: mysql:8.4
+    # Table names are case-sensitive, as on the Linux host. The data lives in a
+    # Docker volume, not in a macOS folder, which is what makes this possible.
+    command:
+      - --lower-case-table-names=0
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: brassBand
+      MYSQL_USER: brassBand
+      MYSQL_PASSWORD: local-only
+      MYSQL_ROOT_PASSWORD: local-only
+    ports:
+      # 3307 on the Mac, to leave 3306 to a MySQL installed locally.
+      - "3307:3306"
+    volumes:
+      - dbData:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-plocal-only"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  dbData:
+  storage:
+  storageTest:
+  composerCache:

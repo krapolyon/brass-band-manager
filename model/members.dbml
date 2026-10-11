@@ -1,0 +1,147 @@
+// Domain: Members
+// v1.8 — 2026-10-11 — no change to the tables: the starting library preselects instrument by instrument, and the saxophones are capitalised (dictionary)
+// v1.7 — 2026-10-10 — no change to the tables: the install key has a minimum length and a wrong one is slowed down (dictionary)
+// v1.6 — 2026-10-10 — no change to the tables: the install key is asked on the first screen and checked at once (dictionary)
+// v1.5 — 2026-10-10 — no change to the tables: instruments are listed flat where one is chosen (dictionary)
+// v1.4 — 2026-10-10 — no change to the tables: install key, limits of the password and behaviour of sign-in made explicit (dictionary)
+// v1.3 — 2026-10-10 — no change to the tables: install preselects instruments and requires one, and signs the first member in (dictionary)
+// v1.2 — 2026-10-10 — no change to the tables: install now starts with the band name and logo (dictionary)
+// v1.1 — 2026-10-10 — POWER_MEMBER status and MEMBER_MANAGER role added, before the first migration was committed
+// v1.0 — 2026-10-10 — validated. Accessibility options settled (six), order fields no longer unique, starting library completed
+// v0.2 — 2026-10-10 — names and instrument required, address as a directory, setlist role, display and accessibility preferences on the account, password link sent by the admin
+// v0.1 — 2026-10-10 — first draft: member, sections and instruments, roles, sessions, password links
+
+Project brassBand {
+  database_type: 'MySQL'
+  Note: 'Brass band app — Members domain'
+}
+
+// ---------------------------------------------------------------
+// Sections and instruments
+// Reference lists managed by each band: the way instruments are
+// grouped into sections differs from one band to another.
+// They are filled at install from a starting library shipped with
+// the app (see the dictionary), then belong to the band.
+// ---------------------------------------------------------------
+
+Table section {
+  id integer [pk]
+  name varchar [not null, unique, note: 'In the band\'s own words, for instance "P\'tites basses". Never translated.']
+  position integer [not null, note: 'Order in which sections are listed, starting at 1. Two sections with the same position are ordered by name.']
+  Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is.'
+}
+
+Table instrument {
+  id integer [pk]
+  sectionId integer [not null, ref: > section.id, note: 'The section this instrument belongs to. Every instrument is in exactly one section.']
+  name varchar [not null, unique, note: 'In the band\'s own words, for instance "Souba". Never translated.']
+  position integer [not null, note: 'Order inside its section, starting at 1. Two instruments with the same position are ordered by name.']
+  Note: 'An instrument played in the band. The list is managed by the band.'
+}
+
+// ---------------------------------------------------------------
+// Member
+// ---------------------------------------------------------------
+
+Enum memberStatus {
+  INVITED [note: 'Created by an admin, has not chosen a password yet. Cannot sign in.']
+  ACTIVE [note: 'Plays regularly. Can sign in.']
+  POWER_MEMBER [note: 'Was active and plays less: comes to help out on some gigs. Can sign in, answers for gigs and counts in whether a gig is playable, but is not reminded to answer. Set by hand.']
+  LEFT [note: 'Has left the band. Cannot sign in; history kept.']
+}
+
+Enum colorScheme {
+  AUTO [note: 'Follows the device']
+  LIGHT
+  DARK
+}
+
+Table member {
+  id integer [pk]
+  nickname varchar [not null, unique, note: '🔒 Personal data — purpose: identification. The name shown everywhere in the app.']
+  firstName varchar [not null, note: '🔒 Personal data — purpose: identification']
+  lastName varchar [not null, note: '🔒 Personal data — purpose: identification']
+  email varchar [not null, unique, note: '🔒 Personal data — purpose: sign-in, and directory of the band. Stored in lowercase.']
+  mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band. Stored in international format, for instance +33612345678.']
+  streetAddress varchar [note: '🔒 Personal data — purpose: directory of the band. Number and street; can hold several lines.']
+  postalCode varchar [note: '🔒 Personal data — purpose: directory of the band']
+  city varchar [note: '🔒 Personal data — purpose: directory of the band']
+  countryCode varchar [note: '🔒 Personal data — purpose: directory of the band. Two-letter ISO 3166-1 code, for instance FR. The country name is displayed by the app in the member\'s language.']
+  addressInstructions varchar [note: '🔒 Personal data — purpose: directory of the band. How to get in: door code, floor, where to park.']
+  instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member.']
+  passwordHash varchar [note: 'Result of PHP password_hash(). Required when the status is ACTIVE or POWER_MEMBER, empty while it is INVITED. Never sent to the front.']
+  failedSignInCount integer [not null, default: 0, note: 'Wrong passwords in a row. Back to 0 after a successful sign-in.']
+  signInLockedUntil timestamp [note: 'Set after too many wrong passwords in a row: no sign-in is accepted before this instant. Empty otherwise.']
+  status memberStatus [not null]
+
+  language varchar [not null, note: 'Locale of the interface for this member, for instance fr. Set from band.defaultLanguage at creation.']
+  colorScheme colorScheme [not null, default: 'AUTO', note: 'Light or dark interface']
+  accentTheme varchar [note: 'Key of one of the accent themes shipped with the app, for instance copper. Empty means the default theme of the band. The list of themes is the one of the design system; the API refuses any other value.']
+  textSizePercent integer [not null, default: 100, note: 'Accessibility option: size of all text, in percent of the normal size. From 100 to 200. The design chooses the steps offered.']
+  hasHighContrast boolean [not null, default: false, note: 'Accessibility option: stronger contrast between text and background, opaque surfaces instead of translucent ones. Also applied when the device asks for it.']
+  hasIncreasedSpacing boolean [not null, default: false, note: 'Accessibility option: more space between letters, words and lines']
+  hasLegibleFont boolean [not null, default: false, note: 'Accessibility option: replaces the typefaces of the app with one designed to tell similar characters apart']
+  hasReducedMotion boolean [not null, default: false, note: 'Accessibility option: no animation or transition of large amplitude. Also applied when the device asks for it.']
+  hasExtendedTimeouts boolean [not null, default: false, note: 'Accessibility option: notifications and tooltips stay on screen until the member closes them']
+
+  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account in the app: the two are the same object. Display and accessibility preferences are on the account, so that they follow the member from one device to another.'
+}
+
+// ---------------------------------------------------------------
+// Roles
+// The list is fixed by the app. What each role allows is a list of
+// permissions defined once in the code (see the dictionary).
+// ---------------------------------------------------------------
+
+Enum role {
+  ADMIN [note: 'Manages roles, sections, instruments and band settings. Holds every permission of the other roles.']
+  MEMBER_MANAGER [note: 'Creates and edits members, changes their status, creates their password links']
+  SONG_MANAGER [note: 'Creates, edits and archives songs and their files']
+  GIG_MANAGER [note: 'Creates, edits and cancels gigs']
+  SETLIST_MANAGER [note: 'Later feature. Creates and edits setlists.']
+  QUOTE_MANAGER [note: 'Later feature. Manages quotes.']
+}
+
+Table memberRole {
+  memberId integer [not null, ref: > member.id]
+  role role [not null]
+  Note: 'A management role held by a member. A member can hold several. No row means a plain member, who can view everything and answer for gigs.'
+
+  indexes {
+    (memberId, role) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Access: signed-in devices and password links
+// ---------------------------------------------------------------
+
+Table memberSession {
+  id integer [pk]
+  memberId integer [not null, ref: > member.id]
+  tokenHash varchar [not null, unique, note: 'SHA-256 of the random token held by the device in its cookie. The token itself is never stored.']
+  lastUsedAt timestamp [not null, note: 'Last request made with this session. The session ends after a period without use (90 days by default).']
+  expiresAt timestamp [not null, note: 'Set once, when the member signs in: the session ends at this instant whatever its use (1 year by default).']
+  Note: 'A signed-in device of a member. Deleting the row signs the device out.'
+}
+
+Table memberPasswordLink {
+  id integer [pk]
+  memberId integer [not null, unique, ref: - member.id, note: 'One pending link per member at most: a new one replaces the previous one.']
+  tokenHash varchar [not null, unique, note: 'SHA-256 of the random token carried by the link. The token itself is never stored.']
+  expiresAt timestamp [not null, note: 'The link is refused after this instant (7 days by default)']
+  Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a reset asked from an admin. The admin copies the link and sends it to the member himself. Deleted once used.'
+}
+
+// ---------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------
+
+TableGroup members {
+  member
+  memberRole
+  section
+  instrument
+  memberSession
+  memberPasswordLink
+}

@@ -1,0 +1,45 @@
+{
+  "name": "brass-band-manager",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "stack:up": "docker compose up -d --build --wait",
+    "stack:down": "docker compose down",
+    "stack:logs": "docker compose logs -f web",
+    "api:install": "docker compose run --rm php composer install",
+    "db:migrate": "docker compose exec web php /var/www/database/migrate.php",
+    "db:reset": "docker compose down -v && npm run stack:up && npm run db:migrate",
+    "check": "biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
+    "format": "biome check --write .",
+    "test:prepare": "node scripts/prepare-test-database.mjs",
+    "pretest": "npm run test:prepare",
+    "test": "playwright test",
+    "test:install": "playwright install chromium webkit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.104.1",
+    "i18next": "26.4.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-i18next": "17.0.16",
+    "react-router": "8.4.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.64.0",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,9 @@
+# Static analysis of the PHP code: docker compose run --rm php vendor/bin/phpstan
+parameters:
+    level: 8
+    paths:
+        - bootstrap.php
+        - routes.php
+        - public
+        - src
+        - ../database/migrate.php

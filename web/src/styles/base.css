@@ -1,0 +1,81 @@
+/* biome-ignore-all lint/complexity/noImportantStyles: the reduced motion option must win over the animation of any component */
+/* What every screen starts from. Colours, sizes and typefaces come from
+   tokens.css; text styles from text.css. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* The text size option of a member, 100 to 200 %: set on the root as
+     --textSizePercent. Everything written in rem follows. */
+  font-size: calc(var(--textSizePercent, 100) * 1%);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--fontText);
+  font-size: var(--fontSizeBody);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* The keyboard focus, the same on every control. */
+:focus-visible {
+  outline: var(--focusWidth) solid var(--accentText);
+  outline-offset: 2px;
+}
+
+/* Read by screen readers, not shown. */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The reduced motion option of a member, and the same wish from the device. */
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

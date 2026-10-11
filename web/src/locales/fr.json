@@ -1,0 +1,184 @@
+{
+  "app": {
+    "name": "Fanfare"
+  },
+  "common": {
+    "close": "Fermer",
+    "back": "Retour"
+  },
+  "errors": {
+    "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
+  },
+  "shell": {
+    "loading": "Chargement…",
+    "ready": "L’application est prête.",
+    "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
+  },
+  "notFound": {
+    "title": "Cette page n’existe pas.",
+    "backHome": "Revenir à l’accueil"
+  },
+  "install": {
+    "language": {
+      "title": "Langue"
+    },
+    "welcome": {
+      "title": "On installe l’app de ta fanfare",
+      "lead": "Trois étapes, trois minutes. Garde la clé d’installation sous la main.",
+      "steps": {
+        "band": {
+          "label": "1. Ta fanfare",
+          "detail": "Son nom, et son logo si tu l’as sous la main."
+        },
+        "sections": {
+          "label": "2. Pupitres et instruments",
+          "detail": "Ce qu’on joue, rangé comme dans vos arrangements."
+        },
+        "member": {
+          "label": "3. Ton compte",
+          "detail": "Tu seras le premier fanfaron de l’app, et son admin."
+        }
+      },
+      "key": {
+        "label": "Clé d’installation",
+        "hint": "Elle est dans la configuration du serveur, chez la personne qui a mis l’app en ligne.",
+        "missing": "Il manque la clé d’installation. Elle est dans la configuration du serveur.",
+        "wrong": "Ce n’est pas la bonne clé. Compare-la avec celle de la configuration du serveur.",
+        "show": "Afficher la clé",
+        "hide": "Masquer la clé"
+      },
+      "start": "C’est parti",
+      "checking": "Vérification de la clé…"
+    },
+    "alreadyInstalled": {
+      "title": "L’app est déjà installée",
+      "lead": "L’installation ne se fait qu’une fois, et quelqu’un s’en est déjà chargé.",
+      "note": "Pas encore de compte ? Demande une invitation à un admin de la fanfare.",
+      "signIn": "Se connecter"
+    },
+    "step": "Étape {{step}} sur {{count}}",
+    "continue": "Continuer",
+    "errors": {
+      "beforeContinuing_one": "Il reste 1 champ à revoir avant de continuer.",
+      "beforeContinuing_other": "Il reste {{count}} champs à revoir avant de continuer.",
+      "beforeFinishing_one": "Il reste 1 champ à revoir avant de terminer.",
+      "beforeFinishing_other": "Il reste {{count}} champs à revoir avant de terminer."
+    },
+    "band": {
+      "title": "C’est quoi, ta fanfare ?",
+      "lead": "Son nom s’affiche à la connexion et sous l’icône de l’app. Le logo peut attendre.",
+      "name": {
+        "label": "Nom de la fanfare",
+        "hint": "Sur l’écran d’accueil du téléphone, on en voit à peu près 12 caractères.",
+        "missing": "Il manque le nom de la fanfare."
+      },
+      "logo": {
+        "label": "Logo",
+        "hint": "Facultatif. PNG, SVG, JPEG ou WebP, 2 Mo maximum.",
+        "tooBig": "Ce fichier pèse {{size}} Mo. Choisis une image de 2 Mo au plus.",
+        "wrongType": "Ce fichier n’est pas une image PNG, SVG, JPEG ou WebP. Choisis-en une autre."
+      }
+    },
+    "sections": {
+      "title": "Qu’est-ce qu’on joue ?",
+      "lead": "On a coché une formation de départ. Décoche, renomme, range autrement, complète : maintenant ou plus tard.",
+      "sectionCount_one": "{{count}} pupitre",
+      "sectionCount_other": "{{count}} pupitres",
+      "instrumentCount_one": "{{count}} instrument",
+      "instrumentCount_other": "{{count}} instruments",
+      "summary": "{{sections}} · {{instruments}}",
+      "nothingChosen": "Coche au moins un instrument pour continuer.",
+      "save": "Enregistrer",
+      "name": {
+        "label": "Nom",
+        "hint": "Avec vos mots à vous : il ne sera jamais traduit.",
+        "missing": "Il manque le nom.",
+        "taken": "Ce nom est déjà pris. Choisis-en un autre."
+      },
+      "instrument": {
+        "title": "Instrument",
+        "titleNew": "Nouvel instrument",
+        "add": "Ajouter un instrument",
+        "edit": "Modifier {{name}}",
+        "section": "Pupitre",
+        "confirmNew": "Ajouter l’instrument",
+        "remove": "Retirer cet instrument"
+      },
+      "section": {
+        "title": "Pupitre",
+        "titleNew": "Nouveau pupitre",
+        "add": "Ajouter un pupitre",
+        "edit": "Modifier le pupitre {{name}}",
+        "order": "Ordre dans les listes",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "rank_ordinal_one": "{{count}}er",
+        "rank_ordinal_other": "{{count}}e",
+        "position": "{{rank}} sur {{total}}",
+        "delete": "Supprimer ce pupitre",
+        "deleteNote": "Un pupitre qui a encore des instruments ne se supprime pas. Déplace-les ou retire-les d’abord."
+      }
+    },
+    "member": {
+      "title": "Et toi, t’es qui ?",
+      "lead": "Tu es le premier fanfaron de l’app, et son admin : c’est toi qui inviteras les autres.",
+      "inTheBand": "Dans la fanfare",
+      "toSignIn": "Pour te connecter",
+      "firstName": {
+        "label": "Prénom",
+        "missing": "Il manque ton prénom."
+      },
+      "lastName": {
+        "label": "Nom",
+        "missing": "Il manque ton nom."
+      },
+      "nickname": {
+        "label": "Surnom",
+        "hint": "Le nom affiché partout dans l’app.",
+        "missing": "Il manque ton surnom."
+      },
+      "instrument": {
+        "label": "Instrument",
+        "placeholder": "Choisis ton instrument",
+        "missing": "Il manque ton instrument.",
+        "title": "Ton instrument"
+      },
+      "email": {
+        "label": "Adresse email",
+        "hint": "Ce sera ton identifiant pour te connecter.",
+        "missing": "Il manque ton adresse email.",
+        "invalid": "Cette adresse n’a pas l’air complète. Vérifie ce qui suit le @."
+      },
+      "password": {
+        "label": "Mot de passe",
+        "hint": "{{min}} caractères minimum.",
+        "tooShort_one": "Trop court : il manque {{count}} caractère sur {{min}}.",
+        "tooShort_other": "Trop court : il manque {{count}} caractères sur {{min}}.",
+        "invalid": "Ce mot de passe ne convient pas. Choisis-en un autre.",
+        "show": "Afficher le mot de passe",
+        "hide": "Masquer le mot de passe"
+      },
+      "finish": "Terminer l’installation",
+      "sending": "Installation en cours…",
+      "failed": "Le serveur ne répond pas. Tes réponses sont gardées : réessaie dans un instant.",
+      "refused": "Le serveur a refusé l’installation. Reviens sur les étapes précédentes et vérifie tes réponses."
+    },
+    "done": {
+      "chip": "Installation terminée",
+      "title": "C’est installé.",
+      "lead": "L’app est prête et tu es connecté. Il ne manque plus que les autres.",
+      "bandDetail": "Le nom et le logo se changent dans les réglages.",
+      "sections": "{{sections}}, {{instruments}}",
+      "sectionsDetail": "À compléter quand tu veux dans les réglages.",
+      "memberDetail": "{{instrument}} · admin",
+      "note": "Une fanfare d’un seul fanfaron, ça s’appelle un solo. Invite les copains.",
+      "invite": "Inviter les fanfarons",
+      "home": "Aller à l’accueil"
+    }
+  },
+  "imageField": {
+    "choose": "Choisir une image",
+    "change": "Changer",
+    "remove": "Retirer"
+  }
+}

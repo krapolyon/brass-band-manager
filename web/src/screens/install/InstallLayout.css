@@ -1,0 +1,275 @@
+/* Widths drawn in Figma are written in rem (pixels / 16) and used as maximums.
+   The width of the panes and the height of the halo stay in pixels: they are
+   the frame of the screen, not its content. */
+
+.InstallLayout {
+  --haloHeight: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100dvh;
+}
+
+.InstallLayout-left {
+  position: relative;
+  width: 100%;
+}
+
+.InstallLayout-column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXl);
+  /* Figma leaves 60 px at the top of a phone frame for the safe area. Here
+     the device gives its own, and never less than the padding of the sides. */
+  padding: max(env(safe-area-inset-top), var(--spaceXl)) var(--spaceXl) 0;
+}
+
+.InstallLayout-nav {
+  display: flex;
+  /* At a large text size the step goes under the way back. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+}
+
+.InstallLayout-nav[data-at-end="true"] {
+  justify-content: flex-end;
+}
+
+.InstallLayout-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  overflow-wrap: anywhere;
+}
+
+/* Above the halo, which spreads below the title on a phone. */
+.InstallLayout-right {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.InstallLayout-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  width: 100%;
+  padding: var(--spaceXl) var(--spaceMd);
+}
+
+/* Tablet: one centred column of 640. */
+@media (min-width: 768px) {
+  .InstallLayout {
+    --haloHeight: 600px;
+  }
+
+  .InstallLayout-column {
+    max-width: 40rem;
+    margin-inline: auto;
+    padding: var(--spaceXxxl) 0 0;
+  }
+
+  .InstallLayout-content {
+    max-width: 40rem;
+    padding-inline: 0;
+  }
+
+  /* The bar spans the screen; what it holds stays in the column of 640. */
+  .InstallLayout-right > .BottomBar > * {
+    max-width: 40rem;
+  }
+}
+
+/* Small desktop: two panes, separated by a hairline. Drawn at 1280, used
+   from 1024: a laptop window that is not full screen is still a desktop. */
+@media (min-width: 1024px) {
+  .InstallLayout {
+    --haloHeight: 540px;
+    --contentWidth: 44rem; /* 704 */
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .InstallLayout-left {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-start;
+    /* 480 at the 1280 of Figma, the same share of a narrower window. */
+    width: clamp(384px, 37.5vw, 480px);
+    padding: var(--spaceXxxl);
+    border-right: var(--borderWidth) solid var(--border);
+    /* The halo stays in this pane. */
+    overflow: hidden;
+  }
+
+  .InstallLayout-column {
+    width: 100%;
+    max-width: 24rem; /* 384 */
+    margin: 0;
+    padding: 0;
+  }
+
+  /* On a desktop the nav always starts the line. */
+  .InstallLayout-nav[data-at-end="true"] {
+    justify-content: flex-start;
+  }
+
+  /* The content and its actions are centred in the pane, from the top. */
+  .InstallLayout-right {
+    align-items: center;
+    gap: var(--spaceXl);
+    min-width: 0;
+    padding: var(--spaceXxxl);
+  }
+
+  .InstallLayout-content {
+    flex: none;
+    max-width: var(--contentWidth);
+    padding: 0;
+  }
+
+  .InstallLayout-right > .BottomBar {
+    max-width: var(--contentWidth);
+  }
+
+  .InstallLayout-right > .BottomBar > * {
+    max-width: none;
+  }
+}
+
+/* Large desktop: the left pane grows, a form stops at 736, cards at 1032. */
+@media (min-width: 1920px) {
+  .InstallLayout {
+    --haloHeight: 720px;
+    --contentWidth: 46rem; /* 736 */
+  }
+
+  .InstallLayout[data-width="cards"] {
+    --contentWidth: 64.5rem; /* 1032 */
+  }
+
+  .InstallLayout-left {
+    width: 680px;
+  }
+
+  .InstallLayout-column {
+    max-width: 26.5rem; /* 424 */
+  }
+}
+
+/* Two fields side by side from the tablet width, one under the other below. */
+.InstallLayout-pair {
+  display: grid;
+  gap: var(--spaceMd);
+}
+
+/* Cards one under the other on a phone, then in columns filled one after the
+   other, as drawn: two from the tablet width, three on the largest screens. */
+.InstallLayout-columns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+/* A button of the content: as wide as the content, until the desktop. */
+.InstallLayout-start {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .InstallLayout-pair {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .InstallLayout-columns {
+    display: block;
+    columns: 2;
+    column-gap: var(--spaceMd);
+  }
+
+  .InstallLayout-columns > * {
+    break-inside: avoid;
+  }
+
+  .InstallLayout-columns > * + * {
+    margin-top: var(--spaceMd);
+  }
+}
+
+@media (min-width: 1024px) {
+  .InstallLayout-start {
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 1920px) {
+  .InstallLayout-columns {
+    columns: 3;
+  }
+}
+
+/* The forms of the panels of step 2. */
+.InstallLayout-panelForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.InstallLayout-panelActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.InstallLayout-panelActions > .Button[type="submit"] {
+  align-self: stretch;
+}
+
+.InstallLayout-panelActions > p {
+  color: var(--textMuted);
+  text-align: center;
+}
+
+/* In a dialog the actions are one line: the one that confirms on the right. */
+@media (min-width: 1024px) {
+  .InstallLayout-panelActions {
+    flex-flow: row-reverse wrap;
+    justify-content: space-between;
+  }
+
+  .InstallLayout-panelActions > .Button[type="submit"] {
+    align-self: auto;
+  }
+
+  .InstallLayout-panelActions > p {
+    flex-basis: 100%;
+  }
+}
+
+.InstallLayout-order {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.InstallLayout-order > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.InstallLayout-order > div > span {
+  color: var(--textMuted);
+}

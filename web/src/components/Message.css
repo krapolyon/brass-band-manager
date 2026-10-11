@@ -1,0 +1,49 @@
+.Message {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spaceSm);
+  padding: var(--spaceMd);
+  border-radius: var(--radiusMd);
+  color: var(--text);
+}
+
+.Message p {
+  flex: 1;
+  min-width: 0;
+}
+
+.Message[data-kind="neutral"] {
+  background: var(--glass);
+  box-shadow: inset 0 0 0 var(--borderWidth) var(--glassBorder);
+  /* Figma gives a blur of 48; CSS counts the same blur as half of it. */
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+.Message[data-kind="neutral"] .Icon {
+  color: var(--accentText);
+}
+
+.Message[data-kind="success"] {
+  background: var(--successSoft);
+}
+
+.Message[data-kind="success"] .Icon {
+  color: var(--success);
+}
+
+.Message[data-kind="warning"] {
+  background: var(--warningSoft);
+}
+
+.Message[data-kind="warning"] .Icon {
+  color: var(--warning);
+}
+
+.Message[data-kind="danger"] {
+  background: var(--dangerSoft);
+}
+
+.Message[data-kind="danger"] .Icon {
+  color: var(--danger);
+}

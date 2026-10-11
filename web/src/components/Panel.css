@@ -1,0 +1,98 @@
+/* The <dialog> fills the window and is transparent: it is the area of the
+   scrim, and a press on it closes the panel. The visible panel is
+   .Panel-surface. */
+.Panel {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+}
+
+.Panel::backdrop {
+  background: var(--scrim);
+}
+
+.Panel[open] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Bottom sheet: at the bottom of the screen. */
+  justify-content: flex-end;
+}
+
+.Panel-surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+  /* Figma leaves 34 px at the bottom for the safe area of a phone. */
+  padding: var(--spaceSm) var(--spaceLg) max(env(safe-area-inset-bottom), var(--spaceLg));
+  border-radius: var(--radiusLg) var(--radiusLg) 0 0;
+  background: var(--sheet);
+}
+
+.Panel-grabber {
+  align-self: center;
+  flex: none;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radiusFull);
+  background: var(--border);
+}
+
+.Panel-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.Panel-header h2 {
+  flex: 1;
+  min-width: 0;
+}
+
+.Panel-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dialog: centred, 480 px wide, with no grabber. */
+.Panel[data-form="dialog"][open] {
+  justify-content: center;
+  padding: var(--spaceMd);
+}
+
+.Panel[data-form="dialog"] .Panel-surface {
+  max-width: 30rem;
+  padding: var(--spaceXl);
+  border-radius: var(--radiusLg);
+}
+
+.Panel[data-form="dialog"] .Panel-grabber {
+  display: none;
+}
+
+/* The same rules again for the adaptive panel, from the desktop width. */
+@media (min-width: 1024px) {
+  .Panel[data-form="adaptive"][open] {
+    justify-content: center;
+    padding: var(--spaceMd);
+  }
+
+  .Panel[data-form="adaptive"] .Panel-surface {
+    max-width: 30rem;
+    padding: var(--spaceXl);
+    border-radius: var(--radiusLg);
+  }
+
+  .Panel[data-form="adaptive"] .Panel-grabber {
+    display: none;
+  }
+}

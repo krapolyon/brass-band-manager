@@ -1,0 +1,23 @@
+// Domain: Band
+// v1.3 — 2026-10-11 — no change to the table: how the icons are produced and which SVG files are refused (dictionary)
+// v1.2 — 2026-10-10 — no change to the table: the two technical public routes are named (dictionary)
+// v1.1 — 2026-10-10 — no change to the table: the install opens in French and lets the person choose the language (dictionary)
+// v1.0 — 2026-10-10 — validated: the logo is optional, the icons of the installed app are produced from it
+// v0.1 — 2026-10-10 — first draft: name, logo and default language, set at install
+
+Project brassBand {
+  database_type: 'MySQL'
+  Note: 'Brass band app — Band domain'
+}
+
+Table band {
+  id integer [pk, note: 'Always 1: the table holds a single row, created at install.']
+  name varchar [not null, note: 'Name of the band, shown on the sign-in screen and as the name of the installed app. Never translated.']
+  logoPath varchar [note: 'File of the logo as it was uploaded (PNG, SVG, JPEG or WebP), relative to the storage folder of the app. Empty when the band has given no logo.']
+  defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr. Set at install to the language the install was done in.']
+  Note: 'The band this instance belongs to, and its settings. The name and the logo are public: they are shown before sign-in. Secrets never go here; they stay in the server configuration.'
+}
+
+TableGroup bandSettings {
+  band
+}

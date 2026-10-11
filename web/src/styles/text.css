@@ -1,0 +1,78 @@
+/* The text styles of Figma, one class each: `display` there is `.textDisplay`
+   here. Nothing else in the app sets a typeface, a size or a weight.
+
+   Figma gives the letter spacing in percent of the font size (-2.5 %), which
+   is -0.025em in CSS. */
+
+.textDisplay {
+  font-family: var(--fontDisplay);
+  font-size: var(--fontSizeDisplay);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+}
+
+.textTitle {
+  font-family: var(--fontDisplay);
+  font-size: var(--fontSizeTitle);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+
+.textHeading {
+  font-family: var(--fontDisplay);
+  font-size: var(--fontSizeHeading);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.textBodyLarge {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeBodyLarge);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.textBody {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeBody);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.textBodyStrong {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeBody);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.textLabel {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeLabel);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.textButton {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeButton);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.textCaption {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeCaption);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.textMicro {
+  font-family: var(--fontText);
+  font-size: var(--fontSizeMicro);
+  font-weight: 600;
+  line-height: 1.3;
+}
