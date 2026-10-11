@@ -35,7 +35,7 @@ test.describe('preferences', () => {
     language: 'fr',
     colorScheme: 'DARK',
     accentTheme: 'mint',
-    textSizePercent: 150,
+    textSizePercent: 140,
     hasHighContrast: true,
     hasIncreasedSpacing: false,
     hasLegibleFont: true,
@@ -75,6 +75,8 @@ test.describe('preferences', () => {
     await refused({ accentTheme: 'gold' }, { accentTheme: 'invalid' });
     await refused({ textSizePercent: 99 }, { textSizePercent: 'invalid' });
     await refused({ textSizePercent: 201 }, { textSizePercent: 'invalid' });
+    // Six steps only, 100 to 200 by 20.
+    await refused({ textSizePercent: 150 }, { textSizePercent: 'invalid' });
     await refused({ hasHighContrast: 'yes' }, { hasHighContrast: 'invalid' });
     await refused({ status: 'LEFT' }, { status: 'invalid' });
     expect(sql("SELECT colorScheme, textSizePercent FROM member WHERE nickname = 'Zaza'")).toBe(

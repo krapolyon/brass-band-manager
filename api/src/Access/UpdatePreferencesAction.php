@@ -19,6 +19,9 @@ final class UpdatePreferencesAction
 {
     private const COLOR_SCHEMES = ['AUTO', 'LIGHT', 'DARK'];
 
+    // The six steps of the design (Figma: the modes of the TextSize collection).
+    private const TEXT_SIZES = [100, 120, 140, 160, 180, 200];
+
     public function __construct(
         private readonly Connection $database,
         private readonly Profile $profile,
@@ -40,7 +43,7 @@ final class UpdatePreferencesAction
         if ($input->accentTheme !== null && !in_array($input->accentTheme, AccentThemes::AVAILABLE, true)) {
             $errors->add('accentTheme', 'invalid');
         }
-        if ($input->textSizePercent < 100 || $input->textSizePercent > 200) {
+        if (!in_array($input->textSizePercent, self::TEXT_SIZES, true)) {
             $errors->add('textSizePercent', 'invalid');
         }
         $errors->throwIfAny();

@@ -282,7 +282,10 @@ function SectionForm({ opened, sections, onChange }: FormProps<'section'>) {
       moved.splice(position, 0, { ...section, name: name.trim() });
       onChange(moved);
     } else {
-      onChange([...sections, { id: nextId(sections), name: name.trim(), instruments: [] }]);
+      onChange([
+        ...sections,
+        { id: nextId(sections), name: name.trim(), icon: null, instruments: [] },
+      ]);
     }
   };
 

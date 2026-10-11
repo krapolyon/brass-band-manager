@@ -19,7 +19,7 @@ test.beforeEach(async ({ playwright, baseURL }) => {
 test('a band without a logo has none to show, and the app keeps its neutral icons', async ({
   request,
 }) => {
-  expect(await (await request.get('/api/band')).json()).toEqual({
+  expect(await (await request.get('/api/band')).json()).toMatchObject({
     name: 'La Fanfare des Cuivres Déchaînés',
     logoUrl: null,
     icons: null,
@@ -61,7 +61,7 @@ test('an admin gives the band a logo; anyone can then see it and its icons', asy
 
   // Someone who is not signed in.
   const visitor = await playwright.request.newContext({ baseURL });
-  expect(await (await visitor.get('/api/band')).json()).toEqual({
+  expect(await (await visitor.get('/api/band')).json()).toMatchObject({
     name: 'La Fanfare des Cuivres Déchaînés',
     logoUrl,
     icons,

@@ -14,7 +14,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // POST /api/sections and PUT /api/sections/{id}: adds a section, or renames
-// and moves one. Asks for MANAGE_SECTIONS. Answers with every section, since
+// one, moves it and sets its pictogram. Asks for MANAGE_SECTIONS. Answers with every section, since
 // moving one renumbers the others.
 final class SaveSectionAction
 {
@@ -36,18 +36,26 @@ final class SaveSectionAction
         }
         $input = Input::from($request, SectionInput::class);
         $name = $this->sections->name('section', $input->name, $id);
+        if ($input->icon !== null && !SectionIcons::exists($input->icon)) {
+            throw new ApiError(422, 'invalidInput', ['icon' => 'invalid']);
+        }
 
         try {
             $this->database->transactional(function () use ($id, $name, $input, $me): void {
                 if ($id === null) {
                     $this->database->insert('section', [
                         'name' => $name,
+                        'icon' => $input->icon,
                         'position' => $this->sections->end('section', null),
                         'updatedByMemberId' => $me->id,
                     ]);
                     $id = (int) $this->database->lastInsertId();
                 } else {
-                    $this->database->update('section', ['name' => $name, 'updatedByMemberId' => $me->id], ['id' => $id]);
+                    $this->database->update(
+                        'section',
+                        ['name' => $name, 'icon' => $input->icon, 'updatedByMemberId' => $me->id],
+                        ['id' => $id],
+                    );
                 }
                 if ($input->position !== null) {
                     $this->sections->place('section', $id, $input->position, null, $me->id);

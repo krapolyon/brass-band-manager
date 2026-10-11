@@ -370,8 +370,8 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 | `PUT /api/members/{id}/status` | `MANAGE_MEMBERS` | Moves a member along the life cycle |
 | `POST`, `DELETE /api/members/{id}/passwordLink` | `MANAGE_MEMBERS` | Creates or cancels a password link |
 | `PUT /api/members/{id}/roles` | `MANAGE_ROLES` | Sets the roles, all at once |
-| `GET /api/sections` | Signed in | Sections and their instruments |
-| `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes |
+| `GET /api/sections` | Signed in | Sections with their pictogram, and their instruments with the number of members who play each |
+| `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes; sets the pictogram of a section, one of `SectionIcons::AVAILABLE` |
 | `PUT /api/me/preferences`, `PUT /api/me/password` | Oneself | Preferences; password, with the current one |
 | `POST /api/passwordLink/check`, `/use` | Anyone holding a link | Says who a link is for; chooses a password with it and signs in |
 
@@ -394,9 +394,10 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 
 | Address | Who | What |
 |---|---|---|
-| `GET /api/band` | Anyone | The name, and the addresses of the logo and of the icons (null without a logo) |
+| `GET /api/band` | Anyone | The name, the three defaults (language, accent theme, country), and the addresses of the logo and of the icons (null without a logo). The table holds nothing private |
 | `GET /api/band/logo`, `GET /api/band/icon/{180, 192 or 512}` | Anyone | The files |
 | `GET /api/manifest` | Anyone | What a phone reads to install the app: the name and the icons of the band |
+| `PATCH /api/band` | `MANAGE_BAND` | Changes what is sent among the name, the accent theme, the default language and the country |
 | `PUT /api/band/logo`, `DELETE /api/band/logo` | `MANAGE_BAND` | Gives, replaces or removes the logo |
 
 - **The icons are drawn by the browser, not by the server.** A phone wants square PNG icons whatever the format of the logo, and the logo may be an SVG, which PHP cannot draw without an image extension that a shared host may not have. The browser of the admin reads the four formats: [logo.ts](../web/src/screens/install/logo.ts) fits the logo in a white square at the three sizes and sends the icons with the file. The server needs no image library, and nothing here depends on the host.

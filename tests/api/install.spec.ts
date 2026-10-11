@@ -10,7 +10,7 @@ test('before install, the app says so and offers the starting library', async ({
   expect(status.installed).toBe(false);
   expect(status.languages).toEqual(['fr']);
   type LibraryInstrument = { name: string; preselected: boolean };
-  type LibrarySection = { name: string; instruments: LibraryInstrument[] };
+  type LibrarySection = { name: string; icon: string; instruments: LibraryInstrument[] };
   const sections: LibrarySection[] = status.library.sections;
   // The instruments ticked when the step opens: those of the first six
   // sections, the Sax Baryton excepted.
@@ -42,6 +42,17 @@ test('before install, the app says so and offers the starting library', async ({
     'Percu',
     'Flûte',
     'Clarinette',
+  ]);
+  // Each section of the library comes with its pictogram.
+  expect(sections.map((section) => section.icon)).toEqual([
+    'trumpet',
+    'saxophone',
+    'trombone',
+    'tuba',
+    'sousaphone',
+    'drum',
+    'flute',
+    'clarinet',
   ]);
 });
 
@@ -143,7 +154,7 @@ test('install reports every faulty field at once and saves nothing', async ({ re
   input.bandName = '   ';
   input.language = 'xx';
   input.sections[1]?.instruments.push('SAX ALTO');
-  input.sections.push({ name: 'trompette', instruments: [] });
+  input.sections.push({ name: 'trompette', icon: 'kazoo', instruments: [] });
   input.admin.email = 'not-an-email';
   input.admin.password = 'short';
   input.admin.nickname = '';
@@ -159,6 +170,7 @@ test('install reports every faulty field at once and saves nothing', async ({ re
       bandName: 'required',
       'sections.1.instruments.2': 'duplicate',
       'sections.3.name': 'duplicate',
+      'sections.3.icon': 'invalid',
       'sections.3.instruments': 'required',
       'admin.email': 'invalid',
       'admin.password': 'tooShort',

@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.12 — 2026-10-11 · Model: `members.dbml` · To validate: v1.9 is validated; what v1.10 to v1.12 add is listed in "Open questions" · Migrations: `001_members.sql`, `003_memberPhoto.sql`
+> v1.14 — 2026-10-11 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -16,7 +16,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `firstName` | First name | Prénom | Yes | Jean-Baptiste · Marie-Lou | 3 to 20 | |
 | `lastName` | Last name | Nom | Yes | Morel-Dubois · Fontaine | 3 to 25 | |
 | `email` | Email address | Adresse email | Yes | jb.morel@example.org | 15 to 40 | Unique. Stored in lowercase. Is the sign-in identifier |
-| `mobilePhone` | Mobile phone | Téléphone mobile | No | +33612345678 | 12 | Stored in international format, displayed in the local format |
+| `mobilePhone` | Mobile phone | Téléphone mobile | No | +33612345678 | 12 | Stored in international format, displayed in the local format. A number typed without its country prefix is read as a number of the country of the band (`band.defaultCountryCode`) |
 | `streetAddress` | Address | Adresse | No | 12 bis rue des Tanneurs | 10 to 60 | Can hold several lines |
 | `postalCode` | Postal code | Code postal | No | 69007 | 5 to 10 | Free text: formats differ between countries |
 | `city` | City | Ville | No | Lyon | 3 to 30 | |
@@ -29,7 +29,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `language` | Language | Langue | Yes | fr | 2 to 5 | Set from the band's default language at creation |
 | `colorScheme` | Appearance | Apparence | Yes | AUTO | — | Automatic (follows the device), light or dark |
 | `accentTheme` | Theme | Thème | No | copper | — | One of the accent themes of the design system. Empty: the default theme of the band |
-| `textSizePercent` | Text size | Taille de police | Yes | 125 | — | Accessibility option. From 100 to 200 |
+| `textSizePercent` | Text size | Taille du texte | Yes | 140 | — | Accessibility option. One of 100, 120, 140, 160, 180, 200 |
 | `hasHighContrast` | High contrast | Contraste élevé | Yes | false | — | Accessibility option |
 | `hasIncreasedSpacing` | Increased spacing | Espacement augmenté | Yes | false | — | Accessibility option |
 | `hasLegibleFont` | More legible font | Police plus lisible | Yes | false | — | Accessibility option |
@@ -145,7 +145,7 @@ The default design is not required to reach the highest level of the accessibili
 | Option | Values | What it does | Text shown under the option (fr) |
 |---|---|---|---|
 | High contrast | Off, on | Stronger contrast between text and background; translucent surfaces and coloured halos become plain and opaque | Renforce le contraste entre le texte et le fond. Utile en cas de basse vision, de fatigue visuelle ou de forte luminosité ambiante. |
-| Text size | 100 % to 200 % | Enlarges all text without breaking the layout. An installed app has no zoom control, so this is the only way to get bigger text | Agrandit tous les textes sans modifier la mise en page. |
+| Text size | 100, 120, 140, 160, 180 or 200 % | Enlarges text without breaking the layout. An installed app has no zoom control, so this is the only way to get bigger text. A text never grows beyond the size of a page title, and page titles do not grow: they are large enough to read. Spacing and controls keep their size | Agrandit les textes sans modifier la mise en page. |
 | Increased spacing | Off, on | More space between letters, between words and between lines | Aère le texte : espace entre les lettres, entre les mots et entre les lignes. |
 | More legible font | Off, on | Replaces the typefaces of the app with one designed to tell similar characters apart (I / l / 1, O / 0). Atkinson Hyperlegible is the reference; the choice belongs to the design | Distingue plus nettement les caractères qui se ressemblent (I / l / 1, O / 0). |
 | Reduced motion | Off, on | Removes animations and transitions of large amplitude | Supprime les animations et les transitions de grande amplitude. Utile en cas de troubles vestibulaires, de migraines ou de sensibilité au mouvement. |
@@ -153,8 +153,8 @@ The default design is not required to reach the highest level of the accessibili
 
 - The list and the wording come from another project of the owner, adapted to the "tu" used in this app.
 - High contrast and reduced motion are also applied when the device asks for them, without the member having to set anything.
-- Text size is offered as a slider with a few steps; the steps are chosen by the design, within 100 to 200 %.
-- The exact visual effect of each option is defined by the design (`brass-band-design` skill). Every screen must hold with all six options on.
+- Text size is offered as a slider with six steps: 100, 120, 140, 160, 180 and 200 %. The API refuses any other value.
+- The exact visual effect of each option is defined by the design (`brass-band-design` skill). In Figma, text size, the legible font and high contrast are variable modes (`TextSize`, `Typeface`, two modes of `Scheme`), so a screen can be checked with them; increased spacing, reduced motion and extended timeouts are rules written in the skill. Every screen must hold with all six options on.
 
 ## 2. Section and instrument (`section`, `instrument`)
 
@@ -229,6 +229,7 @@ A session is a device on which a member is signed in. A password link is a singl
 - **The link carries its secret after a `#`.** That part of an address is never sent to a server: the secret does not end in the log of the host. The page reads it and sends it in the body of its requests.
 - Creating a new link for a member, by either way, cancels the previous one. So does changing their roles or their password (entry 1, "Rules").
 - Using a password link sets the password, moves an `INVITED` member to `ACTIVE`, deletes the link and every existing session of the member, and signs the member in.
+- **An invitation is completed in one request.** The link of a member still `INVITED` shows them their own record, as whoever invited them filled it in, so that they can check and complete it. Their details, their photo, their accessibility options and their password are then sent together and saved together, or not at all: an invitation that is abandoned changes nothing. Whoever holds the link reads that record; the link already lets them take the account, so it gives away nothing more. The link of a current member (a forgotten password) shows the nickname only.
 
 ### Access rights
 | Who | View | Create | Delete |
@@ -249,48 +250,25 @@ These apply to every table of the app and are not repeated in the DBML.
 
 ## 5. Open questions
 
-None blocking for v1.9. What v1.10 to v1.12 add is to validate; each point comes with the default applied, or with the decision when the owner made one.
+None blocking. Validated by the owner on 2026-10-11 (v1.14): `section.icon`, `memberPasswordLink.emailedAt` and the 5 minutes between two emails, the forgotten password by email for current members only, the six steps of the text size, the rules found while writing the API (nobody acts on the access of someone who may do more, a member who left is not edited, the current password is asked to change it), and the invitation completed in one request.
 
-From the design of the `Members` and `Band settings` pages (the version of the dictionary written by the design conversation, merged here in v1.11):
+Kept as they are, by default:
 
-1. `section.icon`: a key among the eight pictograms shipped with the app, empty for the generic one. The pictograms are in the design library (Figma, `Design system` page): six drawn by the owner, flute and clarinet drawn after them. In the DBML as a draft; no migration yet.
-2. Forgotten password by email: only current members get a link; a member still `INVITED` asks the person who invited them. Default: yes.
-3. Decided on 2026-10-11: a link asked by email is valid 1 hour (7 days for a link created by a member manager).
-4. Time between two emails to the same member: 5 minutes (`memberPasswordLink.emailedAt`, in the DBML as a draft; no migration yet). Default: 5 minutes.
-5. Decided on 2026-10-11: in the first version the invitation link is copied and sent by the member manager, and stays valid 7 days. Sending it by email from the app comes later; its validity will be settled then.
-6. Decided on 2026-10-11: on an instance whose server cannot send email, the forgotten password screen sends the member to those who manage members. The screen is drawn (Figma, `Members` page).
-7. `band.defaultAccentTheme` is named here but belongs to the Band domain: it is in `band.md` and `band.dbml` v1.4, to validate.
+- A name holds at least one letter or digit. A nickname can still imitate another one with letters of another alphabet that look the same (a Cyrillic "А" for a Latin "A"): accepted; members know each other, and refusing mixed alphabets would refuse real names.
+- A member who edits their own record learns that an email or a nickname is taken, even by an invited member or one who left, whom they cannot see: the two must be unique.
+- A member changes their own email without being asked their password.
+- Wrong install keys are not counted: no member exists yet to carry a count, and the app stores no IP address. Instead, the key must be 16 characters at least (a shorter one counts as no key, and install stays closed), and a wrong key is answered after one second.
+- A server whose install key is still empty answers like a wrong key.
 
-Decided on 2026-10-11 in the design conversation (v1.12), no change to the tables:
+Not built yet:
 
-- Accessibility is offered behind a button on every screen before sign-in, the invitation included; it is never a step to go through (rule "Accessibility before sign-in"). It replaces "Reading comfort before sign-in", in which an invited member set the options first.
-- The directory is in alphabetical order of the nickname, not of the first name.
-
-From writing the API of members (v1.10 of the repository). These rules are stricter than what was validated; they are applied, say so if one should be relaxed:
-
-8. "Nobody acts on the access of someone who may do more than them", and its consequence: changing the roles of a member cancels their pending password link.
-9. "A member who left is not edited."
-10. The current password is asked to change a password, and a wrong one counts like a wrong password at sign-in.
-11. A name holds at least one letter or digit. A nickname can still imitate another one with letters of another alphabet that look the same (a Cyrillic "А" for a Latin "A"). Default: accept it; members know each other, and refusing mixed alphabets would refuse real names.
-12. A member who edits their own record learns that an email or a nickname is taken, even by an invited member or one who left, whom they cannot see. Default: accept it; the two must be unique.
-13. A member changes their own email without being asked their password. Default: keep it so; the password is asked only to change the password.
-
-Not built yet, on the server:
-
-- Forgotten password by email (points 2 to 4 and 6): it needs a way to send email, which is a dependency to choose.
-- The pictogram of a section (point 1) and the default accent theme of the band (point 7).
 - Exporting the list of members, which asks for the password again.
-- Onboarding from an invitation: its screens let the invited member correct their details and reach the accessibility options before choosing the password, while using a password link takes the token and the password only. Default: the page uses the link first, which signs the member in, then saves the details and the options with the member's own routes. To confirm with the development side.
-
-To confirm, from earlier versions:
-
-- Wrong install keys are not counted: no member exists yet to carry a count, and the app stores no IP address. Instead, the key must be 16 characters at least (a shorter one counts as no key, and install stays closed), and a wrong key is answered after one second. With a long random text, as the configuration file asks, guessing leads nowhere.
-- A server whose install key is still empty answers like a wrong key. Default: keep one answer; the screen sends the person to the configuration of the server in both cases.
+- Sending the invitation link by email from the app; its validity will be settled then.
+- The email of a forgotten password is plain text for now.
 
 Noted for later domains:
 
 - How presence per section makes a gig slot playable: Gigs domain. `POWER_MEMBER` members count in it like `ACTIVE` ones.
 - Reminders to answer for a gig are sent to `ACTIVE` members only, never to `POWER_MEMBER` ones: Gigs domain.
 - Push subscriptions (`pushSubscription` in the overview model): later.
-- The list of accent themes and of section pictograms: design system.
 - The Discord account of a member (`discordUserId`), so that the directory can open their Discord profile: Discord feature. The directory screens reserve the button; it is not to be built before.

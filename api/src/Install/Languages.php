@@ -12,6 +12,9 @@ final class Languages
     public const AVAILABLE = ['fr'];
     public const DEFAULT = 'fr';
 
+    // The country a band installed in a language starts with (model/band.md, "Country").
+    public const COUNTRIES = ['fr' => 'FR'];
+
     public static function isAvailable(string $language): bool
     {
         return in_array($language, self::AVAILABLE, true);

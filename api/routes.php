@@ -24,6 +24,7 @@ use BrassBand\Access\SessionCookie;
 use BrassBand\Access\Sessions;
 use BrassBand\Access\SignInAction;
 use BrassBand\Access\SignOutAction;
+use BrassBand\Band\Bands;
 use BrassBand\Band\ShowBandAction;
 use BrassBand\Band\UpdateBandAction;
 use BrassBand\Health\HealthAction;
@@ -81,6 +82,7 @@ return function (App $app, Connection $database, array $config): void {
     // does not serve: a file leaves it only through an action.
     $files = new Files(dirname(__DIR__) . '/storage');
     $logos = new LogoStore($database, $files);
+    $bands = new Bands($database, $logos);
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
     $members = new Members($database);
@@ -91,7 +93,7 @@ return function (App $app, Connection $database, array $config): void {
     // 1. Public
     // ---------------------------------------------------------------
     $app->get('/api/health', new HealthAction($database));
-    $app->get('/api/band', new ShowBandAction($database, $logos));
+    $app->get('/api/band', new ShowBandAction($bands));
     $app->get('/api/band/logo', new ShowLogoAction($logos));
     $app->get('/api/band/icon/{size:180|192|512}', new ShowLogoAction($logos));
     $app->get('/api/manifest', new ManifestAction($database, $logos));
@@ -112,6 +114,7 @@ return function (App $app, Connection $database, array $config): void {
         $cookie,
         $profile,
         $logos,
+        $bands,
         $photos,
         $links,
         $members,
@@ -168,7 +171,7 @@ return function (App $app, Connection $database, array $config): void {
         $group->delete('/api/instruments/{id:[0-9]+}', new DeleteInstrumentAction($database, $sections))->add($manageSections);
 
         $manageBand = new RequirePermission(Permission::MANAGE_BAND);
-        $group->patch('/api/band', new UpdateBandAction($database))->add($manageBand);
+        $group->patch('/api/band', new UpdateBandAction($database, $bands))->add($manageBand);
         $group->put('/api/band/logo', new UpdateLogoAction($logos))->add($manageBand);
         $group->delete('/api/band/logo', new DeleteLogoAction($logos))->add($manageBand);
     })->add(new RequireSession($sessions, $cookie));

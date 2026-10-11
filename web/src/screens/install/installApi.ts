@@ -10,7 +10,12 @@ export type InstallStatus =
       languages: string[];
       /** The starting library of sections and instruments, in the language asked. */
       library: {
-        sections: { name: string; instruments: { name: string; preselected: boolean }[] }[];
+        sections: {
+          name: string;
+          /** The pictogram of the section: a key of the design system. */
+          icon: string;
+          instruments: { name: string; preselected: boolean }[];
+        }[];
       };
     };
 
@@ -31,7 +36,7 @@ export type InstallInput = {
   language: string;
   bandName: string;
   /** In the order they will be listed. */
-  sections: { name: string; instruments: string[] }[];
+  sections: { name: string; icon: string | null; instruments: string[] }[];
   admin: {
     email: string;
     password: string;

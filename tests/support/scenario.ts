@@ -19,8 +19,8 @@ export function installInput() {
     language: 'fr',
     bandName: 'La Fanfare des Cuivres Déchaînés',
     sections: [
-      { name: 'Trompette', instruments: ['Trompette'] },
-      { name: 'Saxophone', instruments: ['Sax Alto', 'Sax Ténor'] },
+      { name: 'Trompette', icon: 'trumpet', instruments: ['Trompette'] },
+      { name: 'Saxophone', icon: 'saxophone', instruments: ['Sax Alto', 'Sax Ténor'] },
       { name: 'Souba', instruments: ['Souba'] },
     ],
     admin: { ...admin },

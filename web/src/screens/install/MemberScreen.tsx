@@ -158,6 +158,7 @@ export function MemberScreen() {
       bandName: draft.bandName,
       sections: kept.map((section) => ({
         name: section.name,
+        icon: section.icon,
         instruments: section.instruments.map((other) => other.name),
       })),
       admin: {

@@ -22,26 +22,35 @@ final class Sections
     /**
      * The sections of the band with their instruments, in the order of the band.
      *
-     * @return list<array{id: int, name: string, position: int, instruments: list<array{id: int, name: string, position: int}>}>
+     * memberCount is the number of members whose instrument it is, whatever
+     * their status: it is what keeps an instrument from being deleted.
+     *
+     * @return list<array{id: int, name: string, position: int, icon: string|null, instruments: list<array{id: int, name: string, position: int, memberCount: int}>}>
      */
     public function all(): array
     {
         $instruments = [];
-        $rows = $this->database->fetchAllAssociative('SELECT id, sectionId, name, position FROM instrument ORDER BY position, name');
+        $rows = $this->database->fetchAllAssociative(
+            'SELECT i.id, i.sectionId, i.name, i.position,
+                    (SELECT COUNT(*) FROM member m WHERE m.instrumentId = i.id) AS memberCount
+             FROM instrument i ORDER BY i.position, i.name',
+        );
         foreach ($rows as $instrument) {
             $instruments[(int) $instrument['sectionId']][] = [
                 'id' => (int) $instrument['id'],
                 'name' => (string) $instrument['name'],
                 'position' => (int) $instrument['position'],
+                'memberCount' => (int) $instrument['memberCount'],
             ];
         }
 
         $sections = [];
-        foreach ($this->database->fetchAllAssociative('SELECT id, name, position FROM section ORDER BY position, name') as $section) {
+        foreach ($this->database->fetchAllAssociative('SELECT id, name, position, icon FROM section ORDER BY position, name') as $section) {
             $sections[] = [
                 'id' => (int) $section['id'],
                 'name' => (string) $section['name'],
                 'position' => (int) $section['position'],
+                'icon' => $section['icon'] === null ? null : (string) $section['icon'],
                 'instruments' => $instruments[(int) $section['id']] ?? [],
             ];
         }

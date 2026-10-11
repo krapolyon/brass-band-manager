@@ -1,6 +1,7 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
-// v0.4 — 2026-10-11 — aligned with Members v1.12 and Band v1.4, both to validate: pictogram of a section, default accent theme of the band, photo of a member
+// v0.5 — 2026-10-11 — aligned with Members v1.14 and Band v1.5, both validated: country of the band
+// v0.4 — 2026-10-11 — pictogram of a section, default accent theme of the band, photo of a member
 // v0.3 — 2026-10-10 — aligned with the validated Members domain: sections, nickname, required names and instrument, POWER_MEMBER status, member and setlist roles, password links
 // v0.2 — 2026-10-10 — roles per member, one instrument per member, song statuses, gigs split into slots, IF_NEEDED answer
 // v0.1 — 2026-10-10 — first draft
@@ -20,6 +21,7 @@ Table band {
   logoPath varchar
   defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr']
   defaultAccentTheme varchar [not null, note: 'Accent theme shown to members who have not chosen one']
+  defaultCountryCode varchar [not null, note: 'Country of the band: reads phone numbers typed without a prefix']
   discordServerId varchar [note: 'Discord server of the band. The bot token stays in the server configuration.']
   Note: 'The band this instance belongs to. Holds a single row. Colours and other display settings are detailed in the band domain.'
 }

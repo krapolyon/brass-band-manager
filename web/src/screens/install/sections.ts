@@ -14,6 +14,7 @@ function fromLibrary(library: Library): DraftSection[] {
   return library.sections.map((section, s) => ({
     id: s + 1,
     name: section.name,
+    icon: section.icon,
     instruments: section.instruments.map((instrument, i) => ({
       id: (s + 1) * 1000 + i,
       name: instrument.name,

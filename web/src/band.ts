@@ -1,11 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError, api } from './api.ts';
+import type { AccentTheme } from './themes.ts';
 
-// What GET /api/band answers (api/src/Band/ShowBandAction.php): the only
-// things of the app that are shown without signing in.
+// What GET /api/band answers (api/src/Band/Bands.php): what the app shows
+// without signing in.
 export type Band = {
   name: string;
+  /** The language of the screens shown before sign-in, and of new members. */
+  defaultLanguage: string;
+  /** The accent theme shown before sign-in, and to members who have chosen none. */
+  defaultAccentTheme: AccentTheme;
+  /** The country a phone number typed without its prefix belongs to. */
+  defaultCountryCode: string;
   /** Null when the band has no logo. */
   logoUrl: string | null;
   /** The square icons made from the logo, by size in pixels. */

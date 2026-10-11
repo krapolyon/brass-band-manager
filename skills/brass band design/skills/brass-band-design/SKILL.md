@@ -103,7 +103,7 @@ A design conversation often settles things that belong to the model (a default v
 | Accent themes: number, names, values | Four in Figma: Copper, Coral, Mint, Lilac. The owner tunes them himself in the `Theme` collection |
 | The light scheme | Proposed in Figma, not validated. The owner finds that the halo works less well in light: to rework |
 | The larger screens | The widths are decided (see "Larger screens"), and so is the navigation of the app on a desktop (floating menu). The tablet layout drawn for Install is a first proposal; the app itself is not drawn on a tablet or on a large desktop yet |
-| The accessibility options | Their controls are drawn (the sheet opened before sign-in, the settings). Their visual effect goes through variable modes (decided), still to set up. Checked in Figma in October 2026: a line height or a letter spacing bound to a variable is counted in pixels, so it cannot follow a text size that is itself a mode. Proposal that follows: text size as six modes of a collection holding the font sizes (line heights stay in percent and follow); the legible font as two modes of a collection holding the two typefaces (Atkinson Hyperlegible Next has the weights the text styles use); high contrast as two more modes of `Scheme`. Increased spacing, reduced motion and extended timeouts have no mode: they are rules for the code, checked in the browser. Every screen will have to hold with all six on |
+| The accessibility options | Set up in Figma in October 2026 (see "Accessibility modes" under "Variables and themes"); the values of the two high contrast modes and the sizes of `TextSize` are validated by the owner. Still to settle, seen on the clones of the `Members` page: a chip can be cut in a column of fixed width when the text grows; in high contrast the status colours and the accent used as text keep their ordinary values, and the soft status backgrounds stay translucent |
 | The names of the representations | The starting vocabulary above |
 | The Live mode of a song | Drawn in the study, not validated; to be redone with the feature |
 
@@ -119,7 +119,7 @@ The app is used standing up, often outdoors, sometimes with an instrument in the
 - Put the main action where the thumb rests, in the lower half. Reaching for the top of the screen is for secondary actions.
 - Touch targets are at least 44 px. In the modes used while playing, go well beyond: a control hit with a free finger between two phrases has to be hard to miss.
 - Nothing depends on hover. A gesture always has a visible control that does the same thing.
-- Navigation is a floating tab bar with five entries: home, songs, gigs, members, settings (`TabBar`). It sits 12px from the sides and above the bottom safe area; a screen that scrolls under it keeps 126px free at its end. A screen opened from a tab (a form, a record) hides it and shows a back button.
+- Navigation is a floating tab bar with five entries: home, songs, gigs, members, settings (`TabBar`). It sits 12px from the sides and above the bottom safe area; a screen that scrolls under it keeps 126px free at its end. A screen opened from a tab (a form, a record) hides it and shows a back button. From a text size of 160 % it shows its icons alone (`Show labels` off): five labels no longer fit, and each entry keeps its name for screen readers.
 - A song is organised by modes, switched from one bar: MP3, MIDI, PDF, Clip, Live. The artwork is large when one arrives on the song, and shrinks to a thumbnail beside the title when a mode needs the room.
 - The app is a PWA: do not draw a fake status bar or a fake keyboard. A phone frame does not reserve the top safe area: the content starts 32 px from the top (`spaceXxl`), in `ScreenTop`. In code the top padding is the larger of 32 px and `env(safe-area-inset-top)` plus 8 px, so that a notch never covers the back button. 34 px stay free at the bottom of a phone frame, under the bars. Safe areas are not variables: in code they come from `env(safe-area-inset-*)`.
 
@@ -146,17 +146,19 @@ The same app runs in a browser on a tablet or a computer. Every feature is drawn
 
 Every colour, radius, spacing and type size is a variable, in explorations as well as in components. A value typed by hand cannot follow a theme change, and the whole point of the themes, of the two schemes, of the owner's direct edits and of other bands' rebranding is that one change reaches everything.
 
-The file holds four collections:
+The file holds six collections:
 
 | Collection | Modes | What it holds | Who uses it |
 |---|---|---|---|
 | `Primitives` | Default | Raw colours, named by hue and step: `neutral/900`, `white/a8` | `Scheme` only, through aliases. Hidden from the pickers |
 | `Theme` | One per accent theme | What a theme sets: the accent, the text on it, and the tint of the ground and of the sheets in each scheme | `Scheme` only, through aliases. Hidden from the pickers |
-| `Scheme` | Dark, Light | The semantic colours | Components and screens |
-| `Size` | Default | Spacing, radii, sizes of controls, type sizes, the two typefaces | Components, screens and text styles |
+| `Scheme` | Dark, Light, Dark high contrast, Light high contrast | The semantic colours | Components and screens |
+| `Size` | Default | Spacing, radii, sizes of controls, type sizes, the two typefaces. The type sizes and the typefaces are aliases of the two collections below | Components, screens and text styles |
+| `TextSize` | 100 %, 120 %, 140 %, 160 %, 180 %, 200 % | The size of each text style at each step of the text size option (`textSizeBody`…) | `Size` only, through aliases. Hidden from the pickers |
+| `Typeface` | Default, Legible | The family of titles and of text (`typefaceDisplay`, `typefaceText`): the two of the app, or Atkinson Hyperlegible Next | `Size` only, through aliases. Hidden from the pickers |
 
 - **Two independent axes**: the scheme and the accent theme. A member can combine any scheme with any theme, which is why they are two collections and not one list of combinations. A frame takes its scheme and its theme from the modes set on it.
-- **Semantic colours are named for their role, not their look.** Surfaces: `ground`, `sheet`, `glass`, `control`, `scrim`. Lines: `border`, `glassBorder`. Text and icons: `text`, `textMuted`, `accentText`. Accent: `accent`, `onAccent`. Status: `success`, `warning`, `danger`, each with a `…Soft` background. Halo: `haloCool`, `haloDeep`.
+- **Semantic colours are named for their role, not their look.** Surfaces: `ground`, `sheet`, `glass`, `control`, `scrim`. Lines: `border`, `glassBorder`. Text and icons: `text`, `textMuted`, `accentText`. Accent: `accent`, `onAccent`. Status: `success`, `warning`, `danger`, each with a `…Soft` background. Halo: `haloAccent`, `haloCool`, `haloDeep`.
 - **`accent` is a fill; accent-coloured text or icons use `accentText`.** On a light ground the accent fill is too pale to read as text, so `accentText` is darker in the light scheme.
 - Status colours (playable, something missing, cancelled) are not the accent and do not change with the theme. A status is never carried by colour alone: add an icon or a word.
 - **Sizes**: `space…` for gaps and paddings, `radius…`, `controlHeight` and `controlHeightSm` (the smallest touch target), `iconSize`, `borderWidth`, `focusWidth`, `fontSize…`, `fontDisplay` and `fontText`. Read the values in Figma.
@@ -165,6 +167,17 @@ The file holds four collections:
 - **A new variable** gets a semantic name, explicit scopes (never all of them), the code syntax `var(--name)`, a one-line description, and its swatch on the `Design system` page.
 - **A new accent theme is a new mode of `Theme`.** The team's Figma plan (Professional) allows up to 10 modes per collection (checked in October 2026).
 - Names are in English and camelCase, the same in Figma and in the CSS (`accent` in Figma, `--accent` in the code).
+
+### Accessibility modes
+
+The six accessibility options of a member (`model/members.md`) combine freely. Three of them are variable modes, so that a frame can be checked with them; the three others cannot be modes and are rules for the code.
+
+- **Text size** is the mode of `TextSize`: six steps, 100 to 200 % by 20. Only text grows: spacing, radii, icons and the height of controls keep their size, so a control gets its height as a minimum, never as a fixed height. A size never grows beyond the display size (40 px), and the display size does not grow: page titles are large enough to read (decided by the owner). Line heights stay in percent and follow.
+- **The legible font** is the mode `Legible` of `Typeface`: Atkinson Hyperlegible Next for titles and text, in the weights the text styles already use.
+- **High contrast** is two more modes of `Scheme`. Text and secondary text reach 7:1 on every surface, lines reach 3:1, `glass` and `control` turn opaque, `onAccent` is black, and the three fields of the halo take the colour of the ground: the halo disappears. It is also applied when the device asks for more contrast.
+- **Increased spacing** has no mode, because a line height or a letter spacing bound to a variable is counted in pixels and could not follow the text size. In code: letter spacing 0.12 em, word spacing 0.16 em, line height 1.5 at least, and twice the font size between two paragraphs.
+- **Reduced motion** removes animations and transitions of large amplitude; it is also applied when the device asks for it. **Extended timeouts** keep notifications and tooltips on screen until they are closed. Neither changes a still screen.
+- A frame takes its modes like its scheme and its theme. The `Members` page has a section of clones under these modes; the card "Accessibility modes" of the `Design system` page shows them side by side.
 
 ## Components
 
@@ -176,7 +189,7 @@ The file holds four collections:
 - A component that contains another one keeps it as an exposed nested instance (the buttons of a `BottomBar`, the `ListRow` of an `Instrument/Row`): its label and its state are set on the nested instance.
 - A component uses only semantic variables.
 
-The base layer today: `Button`, `IconButton`, `TextField` (also the select, with a chevron as trailing icon), `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `Chip`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `Sheet`, `StepIndicator` (two or three steps), `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `BottomSheet`, `Dialog`, `Halo`, and the icons. The business objects today: `Instrument/Row`, `Section/Card`, `Section/Badge`, `PictogramChoice`, `Band/Mention`, `Member/Card`, `Member/Row`, `Member/Header`, `Member/Mention`, `Member/TableHeader`, `Member/TableRow`. The library in Figma is the reference, not this list.
+The base layer today: `Button`, `IconButton`, `TextField` (also the select, with a chevron as trailing icon), `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `Chip`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `SliderRow`, `AccessibilityOptions`, `Sheet`, `StepIndicator` (two or three steps), `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `BottomSheet`, `Dialog`, `Halo`, and the icons. The business objects today: `Instrument/Row`, `Section/Card`, `Section/Badge`, `PictogramChoice`, `Band/Mention`, `Member/Card`, `Member/Row`, `Member/Header`, `Member/Mention`, `Member/TableHeader`, `Member/TableRow`. The library in Figma is the reference, not this list.
 
 **Icons** are named `Icon/<Name>`: 24 px, a 2 px stroke with round caps, one single vector whose stroke is bound to `text`. Inside a component an icon is a swappable property, never a variant per icon. To recolour an icon in an instance, set the stroke of its vector. After swapping an icon, set that stroke again and look at the result: the override does not always follow the swap.
 
@@ -203,7 +216,7 @@ On the accent colour, an icon or a pictogram takes `onAccent`, never `text`: lig
 - A filter that narrows a list is a `FilterChip`, a toggle that shows a tick when it is on. Filters are off when the screen opens.
 - A summary of settings is made of `NavRow` and stays short: settings that belong together share one entry (name, logo, accent colour and language of the band under "Apparence").
 - Every screen starts with `ScreenTop`: back button, step, one action, the band, the title and its subtitle, each shown or hidden by a property. It is the only place where the top margin of a screen is set.
-- Accessibility is never a forced step. Every screen before sign-in, onboarding included, shows a button "Accessibilité" in `ScreenTop`, which opens the options in a `BottomSheet`. After sign-in the options are in the settings.
+- Accessibility is never a forced step. Every screen before sign-in, onboarding included, shows a button "Accessibilité" in `ScreenTop`, which opens the options in a `BottomSheet`. After sign-in the options are in the settings. In both places they are the same component, `AccessibilityOptions`.
 
 ## Words in the interface
 
@@ -222,6 +235,7 @@ For an exploration, the first, third and fifth lines are enough. For a rebuilt s
 - Every colour, radius and spacing comes from a variable, and every text uses a text style.
 - Every business object on the screen is an instance of one of its representations.
 - The screen holds in the dark and the light scheme, and with at least two accent themes.
+- The screen holds with text at 200 %, with the legible font and in the two high contrast modes: clone it and set the modes.
 - Text contrast is at least 4.5:1 (3:1 from 24 px), including muted text, text on the accent and text over a halo.
 - Real content was used: a long song title, a compound first name, a gig with three slots, a name that wraps on two lines.
 - Touch targets are at least 44 px; the main action sits in the lower half.
@@ -248,6 +262,7 @@ For an exploration, the first, third and fifth lines are enough. For a rebuilt s
 - After the children of a slot are replaced, the slot can keep its old height and the old positions: put the new children in one frame, and check the height in a screenshot. Inside a slot, `children.indexOf(node)` fails: compare ids.
 - An auto-layout frame that hugs keeps a width of 100 px when all its children are hidden: marks that can all be absent go directly in the row, not in a group of their own.
 - A line height or a letter spacing bound to a variable is counted in pixels, even when the text had it in percent. Leave them in percent, unbound, wherever they have to follow the font size.
+- Before a script sets a mode of `Typeface` on a frame, or changes a typeface variable, it loads every family the variable can take, in every weight the text styles use.
 
 ## Keeping this skill current
 

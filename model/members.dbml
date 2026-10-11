@@ -1,4 +1,6 @@
 // Domain: Members
+// v1.14 — 2026-10-11 — validated: section.icon and memberPasswordLink.emailedAt (migration 004); an invitation is completed in one request (dictionary)
+// v1.13 — 2026-10-11 — no change to the tables: the text size has six steps, 100 to 200 by 20 (decided); a field label corrected (dictionary)
 // v1.12 — 2026-10-11 — no change to the tables: accessibility before sign-in is a button, never a step; the directory is ordered by nickname; a link sent by email lasts 1 hour (decided) (dictionary)
 // v1.11 — 2026-10-11 — DRAFT for two fields, no migration yet: merges the version written by the design conversation (section.icon, memberPasswordLink.emailedAt, forgotten password by email) with v1.10
 // v1.10 — 2026-10-11 — no change to the tables: rules found while writing the API of members, to confirm (dictionary, "Open questions")
@@ -32,7 +34,7 @@ Table section {
   id integer [pk]
   name varchar [not null, unique, note: 'In the band\'s own words, for instance "P\'tites basses". Never translated.']
   position integer [not null, note: 'Order in which sections are listed, starting at 1. Two sections with the same position are ordered by name.']
-  icon varchar [note: 'TODO: draft, to validate. Key of one of the section pictograms shipped with the app, for instance trumpet. Empty means the generic pictogram. The list of keys is the one of the design system; the API refuses any other value.']
+  icon varchar [note: 'Key of one of the section pictograms shipped with the app, for instance trumpet. Empty means the generic pictogram. The list of keys is the one of the design system; the API refuses any other value.']
   Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is.'
 }
 
@@ -83,7 +85,7 @@ Table member {
   language varchar [not null, note: 'Locale of the interface for this member, for instance fr. Set from band.defaultLanguage at creation.']
   colorScheme colorScheme [not null, default: 'AUTO', note: 'Light or dark interface']
   accentTheme varchar [note: 'Key of one of the accent themes shipped with the app, for instance copper. Empty means the default theme of the band. The list of themes is the one of the design system; the API refuses any other value.']
-  textSizePercent integer [not null, default: 100, note: 'Accessibility option: size of all text, in percent of the normal size. From 100 to 200. The design chooses the steps offered.']
+  textSizePercent integer [not null, default: 100, note: 'Accessibility option: size of all text, in percent of the normal size. One of 100, 120, 140, 160, 180, 200: the six steps of the design.']
   hasHighContrast boolean [not null, default: false, note: 'Accessibility option: stronger contrast between text and background, opaque surfaces instead of translucent ones. Also applied when the device asks for it.']
   hasIncreasedSpacing boolean [not null, default: false, note: 'Accessibility option: more space between letters, words and lines']
   hasLegibleFont boolean [not null, default: false, note: 'Accessibility option: replaces the typefaces of the app with one designed to tell similar characters apart']
@@ -136,7 +138,7 @@ Table memberPasswordLink {
   memberId integer [not null, unique, ref: - member.id, note: 'One pending link per member at most: a new one replaces the previous one.']
   tokenHash varchar [not null, unique, note: 'SHA-256 of the random token carried by the link. The token itself is never stored.']
   expiresAt timestamp [not null, note: 'The link is refused after this instant: 7 days after a member manager created it, 1 hour after the app sent it by email']
-  emailedAt timestamp [note: 'TODO: draft, to validate. Instant the app sent this link by email, for a forgotten password. Empty for a link created by a member manager. No new email is sent to the member within 5 minutes of it.']
+  emailedAt timestamp [note: 'Instant the app sent this link by email, for a forgotten password. Empty for a link created by a member manager. No new email is sent to the member within 5 minutes of it.']
   Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a forgotten password. A member manager copies the link and sends it to the member himself; a link asked from the sign-in screen is sent by the app, by email. Deleted once used.'
 }
 

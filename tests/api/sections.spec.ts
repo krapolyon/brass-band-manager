@@ -5,7 +5,14 @@ import { addMember, admin, deviceOf, install, memberId } from '../support/scenar
 // Sections and instruments after the install. Rules and access rights:
 // model/members.md, entry 2.
 
-type Section = { id: number; name: string; position: number; instruments: Section[] };
+type Section = {
+  id: number;
+  name: string;
+  position: number;
+  icon?: string | null;
+  memberCount?: number;
+  instruments: Section[];
+};
 
 // Installed with: Trompette (Trompette), Saxophone (Sax Alto, Sax Ténor), Souba (Souba).
 // Jibé the admin plays the Sax Ténor.
@@ -35,7 +42,41 @@ test('every signed-in member sees the sections and their instruments, in the ord
     'Souba: Souba',
   ]);
   expect(sections.map((section) => section.position)).toEqual([1, 2, 3]);
+  // The pictograms the install was given, and how many members play each instrument.
+  expect(sections.map((section) => section.icon)).toEqual(['trumpet', 'saxophone', null]);
+  // Jibé plays the Sax Ténor; Zaza was given the first instrument.
+  expect(sections.flatMap((s) => s.instruments.map((i) => `${i.name} ${i.memberCount}`))).toEqual([
+    'Trompette 1',
+    'Sax Alto 0',
+    'Sax Ténor 1',
+    'Souba 0',
+  ]);
   await zaza.dispose();
+});
+
+test('an admin gives a section one of the pictograms of the app, or none', async ({
+  playwright,
+}) => {
+  const jibe = await deviceOf(playwright, admin.email, admin.password);
+  const souba = id('section', 'Souba');
+
+  const set = await jibe.put(`/api/sections/${souba}`, {
+    data: { name: 'Souba', icon: 'sousaphone' },
+  });
+  expect(set.status()).toBe(200);
+  expect(sql(`SELECT icon FROM section WHERE id = ${souba}`)).toBe('sousaphone');
+
+  const unknown = await jibe.put(`/api/sections/${souba}`, {
+    data: { name: 'Souba', icon: 'kazoo' },
+  });
+  expect(unknown.status()).toBe(422);
+  expect(await unknown.json()).toEqual({ error: 'invalidInput', fields: { icon: 'invalid' } });
+  expect(sql(`SELECT icon FROM section WHERE id = ${souba}`)).toBe('sousaphone');
+
+  // Back to the generic pictogram.
+  await jibe.put(`/api/sections/${souba}`, { data: { name: 'Souba', icon: null } });
+  expect(sql(`SELECT icon IS NULL FROM section WHERE id = ${souba}`)).toBe('1');
+  await jibe.dispose();
 });
 
 test('an admin adds a section, renames it and moves it', async ({ playwright }) => {
