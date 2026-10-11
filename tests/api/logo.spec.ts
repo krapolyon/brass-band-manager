@@ -3,41 +3,14 @@ import { expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
 import { logoInput, png, svg } from '../support/images.ts';
 import { addMember, admin, install, installInput, signIn } from '../support/scenario.ts';
+import { emptyStorage, storedFiles } from '../support/storage.ts';
 
 // The logo of the band and the icons of the installed app. Rules:
 // model/band.md, "Rules" and "Access rights".
 
-/** The files kept by the test server, as paths relative to its storage folder. */
-function storedFiles(): string[] {
-  return execFileSync(
-    'docker',
-    [
-      'compose',
-      'exec',
-      '-T',
-      'web-test',
-      'sh',
-      '-c',
-      'cd /var/www/storage && find band -type f 2>/dev/null | sort',
-    ],
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
-  )
-    .trim()
-    .split('\n')
-    .filter(Boolean);
-}
-
 test.beforeEach(async ({ playwright, baseURL }) => {
   emptyDatabase();
-  execFileSync('docker', [
-    'compose',
-    'exec',
-    '-T',
-    'web-test',
-    'rm',
-    '-rf',
-    '/var/www/storage/band',
-  ]);
+  emptyStorage();
   const setup = await playwright.request.newContext({ baseURL });
   await install(setup);
   await setup.dispose();
@@ -84,7 +57,7 @@ test('an admin gives the band a logo; anyone can then see it and its icons', asy
   const path = sql('SELECT logoPath FROM band');
   expect(path).toMatch(/^band\/[0-9a-f]{16}\/logo\.svg$/);
   expect(sql('SELECT updatedByMemberId IS NOT NULL FROM band')).toBe('1');
-  expect(storedFiles()).toHaveLength(4);
+  expect(storedFiles('band')).toHaveLength(4);
 
   // Someone who is not signed in.
   const visitor = await playwright.request.newContext({ baseURL });
@@ -134,7 +107,7 @@ test('replacing the logo replaces its files, and removing it removes them', asyn
   const second = await (await request.put('/api/band/logo', { data: logoInput(png(32)) })).json();
 
   expect(second.logoUrl).not.toBe(first.logoUrl);
-  expect(storedFiles()).toHaveLength(4);
+  expect(storedFiles('band')).toHaveLength(4);
   // The old address gives the new logo, and is no longer kept by browsers.
   const old = await request.get(first.logoUrl);
   expect(old.headers()['content-type']).toBe('image/png');
@@ -143,7 +116,7 @@ test('replacing the logo replaces its files, and removing it removes them', asyn
   const removed = await request.delete('/api/band/logo');
   expect(await removed.json()).toEqual({ logoUrl: null, icons: null });
   expect(sql('SELECT logoPath IS NULL FROM band')).toBe('1');
-  expect(storedFiles()).toEqual([]);
+  expect(storedFiles('band')).toEqual([]);
   expect((await request.get(second.logoUrl)).status()).toBe(404);
 });
 
@@ -173,7 +146,7 @@ test('only who manages the band changes or removes its logo', async ({ playwrigh
   }
 
   expect(sql('SELECT logoPath FROM band')).toBe(path);
-  expect(storedFiles()).toHaveLength(4);
+  expect(storedFiles('band')).toHaveLength(4);
 });
 
 test('what is not a logo is refused, and nothing is kept', async ({ request }) => {
@@ -242,7 +215,7 @@ test('what is not a logo is refused, and nothing is kept', async ({ request }) =
   ).toBe(422);
 
   expect(sql('SELECT logoPath IS NULL FROM band')).toBe('1');
-  expect(storedFiles()).toEqual([]);
+  expect(storedFiles('band')).toEqual([]);
 });
 
 test('install takes the logo with the rest', async ({ request }) => {
@@ -253,7 +226,7 @@ test('install takes the logo with the rest', async ({ request }) => {
 
   expect(response.status()).toBe(201);
   expect(sql('SELECT logoPath FROM band')).toMatch(/^band\/[0-9a-f]{16}\/logo\.svg$/);
-  expect(storedFiles()).toHaveLength(4);
+  expect(storedFiles('band')).toHaveLength(4);
 });
 
 test('an install that is refused keeps no file of its logo', async ({ request }) => {
@@ -274,7 +247,7 @@ test('an install that is refused keeps no file of its logo', async ({ request })
   expect(duplicate.status()).toBe(422);
 
   expect(sql('SELECT COUNT(*) FROM band')).toBe('0');
-  expect(storedFiles()).toEqual([]);
+  expect(storedFiles('band')).toEqual([]);
 });
 
 test('logos sent at the same instant leave the files of one logo only', async ({ request }) => {
@@ -284,8 +257,8 @@ test('logos sent at the same instant leave the files of one logo only', async ({
   );
 
   expect(answers.map((answer) => answer.status())).toEqual(Array(8).fill(200));
-  expect(storedFiles()).toHaveLength(4);
-  expect(storedFiles()[0]).toContain(sql('SELECT logoPath FROM band').split('/')[1]);
+  expect(storedFiles('band')).toHaveLength(4);
+  expect(storedFiles('band')[0]).toContain(sql('SELECT logoPath FROM band').split('/')[1]);
 });
 
 test('a logo sent from another site, or not as JSON, is refused', async ({ request }) => {
@@ -303,7 +276,7 @@ test('a logo sent from another site, or not as JSON, is refused', async ({ reque
   const form = await request.put('/api/band/logo', { form: logoInput() });
   expect(form.status()).toBe(400);
 
-  expect(storedFiles()).toEqual([]);
+  expect(storedFiles('band')).toEqual([]);
 });
 
 test('an install with a wrong key keeps no file of its logo', async ({ request }) => {
@@ -313,7 +286,7 @@ test('an install with a wrong key keeps no file of its logo', async ({ request }
   });
 
   expect(response.status()).toBe(403);
-  expect(storedFiles()).toEqual([]);
+  expect(storedFiles('band')).toEqual([]);
 });
 
 test('a body larger than anything the app receives is refused before it is read', async ({

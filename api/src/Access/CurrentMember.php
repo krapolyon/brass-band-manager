@@ -31,6 +31,25 @@ final class CurrentMember
     }
 
     /**
+     * True when this member may do everything that someone holding these
+     * roles may do. Acting on the access of another member (their email,
+     * their password link, their status) asks for it: otherwise, someone who
+     * manages members could take over the account of an admin and become one.
+     *
+     * @param list<Role> $roles
+     */
+    public function covers(array $roles): bool
+    {
+        foreach (Permission::cases() as $permission) {
+            if ($permission->isGrantedTo($roles) && !$this->can($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @return list<string> Values of the permissions this member holds, for the front
      */
     public function permissions(): array

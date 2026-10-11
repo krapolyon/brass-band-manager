@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace BrassBand\Band;
 
 use BrassBand\Http\FieldErrors;
+use BrassBand\Storage\Files;
+use BrassBand\Storage\Images;
 use Doctrine\DBAL\Connection;
 
 // The logo of the band and the icons of the installed app: checking what is
 // received, keeping the files, finding them again. Rules: model/band.md.
 //
-// The files live in the storage folder of the app, which is never served by
-// the web server: they only leave through ShowLogoAction. Each logo has a
-// folder of its own, under a name drawn at random:
+// The files are written together in the storage folder (see Files):
 //
-//   <storage>/band/3f9c0a1b2c4d5e6f/logo.svg
-//   <storage>/band/3f9c0a1b2c4d5e6f/icon-180.png   (icon-192.png, icon-512.png)
+//   band/3f9c0a1b2c4d5e6f/logo.svg
+//   band/3f9c0a1b2c4d5e6f/icon-180.png   (icon-192.png, icon-512.png)
 //
-// band.logoPath holds the path of the logo, relative to the storage folder.
-// Nothing in a path comes from what was sent: not the name, not the extension.
+// band.logoPath holds the path of the logo.
 //
 // The icons are drawn by the browser of the admin, which can read the four
 // formats, and checked here. The server therefore needs no image library, and
@@ -32,27 +31,12 @@ final class LogoStore
     // The largest side of a logo, in pixels: beyond it, a file of a few bytes
     // could ask a browser to draw an image of gigabytes.
     private const MAX_SIDE = 4096;
-    // The last bytes of every PNG file: its closing chunk.
-    private const PNG_END = "IEND\xAE\x42\x60\x82";
     // 180 is the icon of an iPhone home screen, 192 and 512 those of the manifest.
     public const ICON_SIZES = [180, 192, 512];
 
-    private const EXTENSIONS = [
-        IMAGETYPE_PNG => 'png',
-        IMAGETYPE_JPEG => 'jpg',
-        IMAGETYPE_WEBP => 'webp',
-    ];
-
-    private const CONTENT_TYPES = [
-        'png' => 'image/png',
-        'jpg' => 'image/jpeg',
-        'webp' => 'image/webp',
-        'svg' => 'image/svg+xml',
-    ];
-
     public function __construct(
         private readonly Connection $database,
-        private readonly string $folder,
+        private readonly Files $files,
     ) {
     }
 
@@ -75,8 +59,9 @@ final class LogoStore
         }
 
         // What the file is comes from its content, whatever its name said.
-        $extension = self::rasterExtension($image) ?? (self::isSvg($image) ? 'svg' : null);
-        if ($extension === null) {
+        $raster = Images::read($image);
+        $extension = $raster['extension'] ?? (Images::isSvg($image) ? 'svg' : null);
+        if ($extension === null || ($raster !== null && max($raster['width'], $raster['height']) > self::MAX_SIDE)) {
             $errors->add($field, 'invalid');
             return null;
         }
@@ -84,7 +69,7 @@ final class LogoStore
         $icons = [];
         foreach ([180 => $input->icon180, 192 => $input->icon192, 512 => $input->icon512] as $size => $encoded) {
             $icon = base64_decode($encoded, true);
-            if ($icon === false || strlen($icon) > self::ICON_MAX_BYTES || !self::isSquarePng($icon, $size)) {
+            if ($icon === false || strlen($icon) > self::ICON_MAX_BYTES || !self::isIcon($icon, $size)) {
                 $errors->add($field, 'invalid');
                 return null;
             }
@@ -102,24 +87,12 @@ final class LogoStore
      */
     public function write(array $files): string
     {
-        $version = bin2hex(random_bytes(8));
-        $folder = "{$this->folder}/band/{$version}";
-        $this->forbidDirectAccess();
-        if (!mkdir($folder, 0o750, true)) {
-            throw new \RuntimeException('The storage folder cannot be written to');
-        }
-
-        $written = [];
-        $written[] = file_put_contents("{$folder}/logo.{$files['extension']}", $files['image']);
+        $written = ["logo.{$files['extension']}" => $files['image']];
         foreach ($files['icons'] as $size => $icon) {
-            $written[] = file_put_contents("{$folder}/icon-{$size}.png", $icon);
-        }
-        if (in_array(false, $written, true)) {
-            $this->delete("band/{$version}/logo.{$files['extension']}");
-            throw new \RuntimeException('The storage folder cannot be written to');
+            $written["icon-{$size}.png"] = $icon;
         }
 
-        return "band/{$version}/logo.{$files['extension']}";
+        return $this->files->write('band', $written) . "/logo.{$files['extension']}";
     }
 
     /**
@@ -152,30 +125,10 @@ final class LogoStore
         }
     }
 
-    // The storage folder is meant to sit outside what the web server serves.
-    // Should a host be set up otherwise, this file tells Apache to serve
-    // nothing from it: an SVG read straight from the folder would arrive
-    // without the protections ShowLogoAction gives it.
-    private function forbidDirectAccess(): void
-    {
-        $rule = "{$this->folder}/.htaccess";
-        if (!is_file($rule) && (is_dir($this->folder) || mkdir($this->folder, 0o750, true))) {
-            file_put_contents($rule, "Require all denied\n");
-        }
-    }
-
     // Deletes the files of a logo, given the path that was in band.logoPath.
     public function delete(?string $logoPath): void
     {
-        $version = self::version($logoPath);
-        if ($version === null) {
-            return;
-        }
-        $folder = "{$this->folder}/band/{$version}";
-        foreach (glob("{$folder}/*") ?: [] as $file) {
-            @unlink($file);
-        }
-        @rmdir($folder);
+        $this->files->delete($logoPath);
     }
 
     // The path of the logo of the band, or null when it has none.
@@ -195,7 +148,7 @@ final class LogoStore
      */
     public function urls(): ?array
     {
-        $version = self::version($this->current());
+        $version = Files::version($this->current());
         if ($version === null) {
             return null;
         }
@@ -210,84 +163,24 @@ final class LogoStore
     /**
      * The file to serve: the logo, or its icon of a given size.
      *
-     * @return array{file: string, contentType: string, version: string}|null
+     * @return array{file: string, version: string}|null
      */
     public function file(?int $iconSize): ?array
     {
         $logoPath = $this->current();
-        $version = self::version($logoPath);
+        $version = Files::version($logoPath);
         if ($logoPath === null || $version === null) {
             return null;
         }
+        $file = $this->files->find($iconSize === null ? $logoPath : dirname($logoPath) . "/icon-{$iconSize}.png");
 
-        $path = $iconSize === null ? $logoPath : "band/{$version}/icon-{$iconSize}.png";
-        $file = "{$this->folder}/{$path}";
-        $contentType = self::CONTENT_TYPES[pathinfo($path, PATHINFO_EXTENSION)] ?? null;
-        if ($contentType === null || !is_file($file)) {
-            return null;
-        }
-
-        return ['file' => $file, 'contentType' => $contentType, 'version' => $version];
+        return $file === null ? null : ['file' => $file, 'version' => $version];
     }
 
-    // The folder of a logo, read from its path. Null for anything that is not
-    // a path this class wrote.
-    private static function version(?string $logoPath): ?string
+    private static function isIcon(string $image, int $side): bool
     {
-        if ($logoPath === null || preg_match('#^band/([0-9a-f]{16})/logo\.(png|jpg|webp|svg)\z#', $logoPath, $found) !== 1) {
-            return null;
-        }
+        $read = Images::read($image);
 
-        return $found[1];
-    }
-
-    private static function rasterExtension(string $image): ?string
-    {
-        $size = @getimagesizefromstring($image);
-        if ($size === false || max($size[0], $size[1]) > self::MAX_SIDE) {
-            return null;
-        }
-        $extension = self::EXTENSIONS[$size[2]] ?? null;
-
-        // Only the first bytes say what a file is. A PNG must also end as one.
-        return $extension === 'png' && !str_ends_with($image, self::PNG_END) ? null : $extension;
-    }
-
-    private static function isSquarePng(string $image, int $side): bool
-    {
-        $size = @getimagesizefromstring($image);
-
-        return $size !== false
-            && $size[2] === IMAGETYPE_PNG
-            && $size[0] === $side
-            && $size[1] === $side
-            && str_ends_with($image, self::PNG_END);
-    }
-
-    // An SVG is an XML document whose root is <svg>. One that declares a
-    // document type is refused: that is where the known attacks on XML
-    // readers are written, and a drawing has no use for it. So is one that is
-    // not written in UTF-8: another encoding hides such a declaration from
-    // the first test below, and the second one is then the only guard.
-    private static function isSvg(string $image): bool
-    {
-        if (stripos($image, '<!DOCTYPE') !== false || stripos($image, '<!ENTITY') !== false) {
-            return false;
-        }
-
-        $previous = libxml_use_internal_errors(true);
-        $document = new \DOMDocument();
-        $isXml = $document->loadXML($image, LIBXML_NONET);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-
-        $root = $document->documentElement;
-
-        return $isXml
-            && $document->doctype === null
-            && in_array(strtoupper($document->encoding ?? 'UTF-8'), ['UTF-8', 'US-ASCII'], true)
-            && $root !== null
-            && $root->localName === 'svg'
-            && $root->namespaceURI === 'http://www.w3.org/2000/svg';
+        return $read !== null && $read['extension'] === 'png' && $read['width'] === $side && $read['height'] === $side;
     }
 }

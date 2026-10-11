@@ -25,6 +25,9 @@ final class AccessRules
     // password is refused rather than silently cut.
     public const PASSWORD_MAX_BYTES = 72;
 
+    // A password link (invitation, forgotten password) can be used this long.
+    public const PASSWORD_LINK_DAYS = 7;
+
     // The statuses of a member who can sign in ("current member" in the model).
     public const SIGN_IN_STATUSES = ['ACTIVE', 'POWER_MEMBER'];
 }

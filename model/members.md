@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.9 — 2026-10-11 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`
+> v1.11 — 2026-10-11 · Model: `members.dbml` · To validate: v1.9 is validated; what v1.10 and v1.11 add is listed in "Open questions" · Migrations: `001_members.sql`, `003_memberPhoto.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -12,7 +12,7 @@ A person who plays or has played in the band, and their account in the app: the 
 ### Fields
 | Field | Label (en) | Label (fr) | Required | Example | Realistic length | Rules |
 |---|---|---|---|---|---|---|
-| `nickname` | Nickname | Surnom | Yes | Jibé · Marilou la Tornade | 3 to 20 | The name shown everywhere. Unique in the band, compared without regard to case |
+| `nickname` | Nickname | Surnom | Yes | Jibé · Marilou la Tornade | 3 to 20 | The name shown everywhere. Unique in the band, compared without regard to case. Like the two other names, it holds at least one letter or digit |
 | `firstName` | First name | Prénom | Yes | Jean-Baptiste · Marie-Lou | 3 to 20 | |
 | `lastName` | Last name | Nom | Yes | Morel-Dubois · Fontaine | 3 to 25 | |
 | `email` | Email address | Adresse email | Yes | jb.morel@example.org | 15 to 40 | Unique. Stored in lowercase. Is the sign-in identifier |
@@ -48,7 +48,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo and the roles are erased. Names, nickname, email and instrument are kept |
 | `LEFT` | Has left the band | `INVITED` | A member manager brings the member back | A new password link is created; the old password is not reused |
 
-The status labels in French are "Invité", "Actif", "Power member" and "Parti". No status changes by itself: `POWER_MEMBER` in particular is never deduced from how often a member answers or plays.
+The status labels in French are "Invité", "Actif", "Power member" and "Parti". For those who manage members, an `INVITED` member whose password link is no longer valid is shown as "Invitation expirée": this is a display, not a status. No status changes by itself: `POWER_MEMBER` in particular is never deduced from how often a member answers or plays.
 
 In every rule below, **a current member** is a member whose status is `ACTIVE` or `POWER_MEMBER`. The two differ on one point only, reminders, which belongs to the Gigs domain.
 
@@ -59,7 +59,7 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 - **Formats**: JPEG, PNG or WebP. No SVG: a photo is never a drawing, and an SVG can carry scripts.
 - **Stored as a file, not in the database.** `photoPath` holds the path of the file in the storage folder of the app, under a name chosen by the app. The reasons: a list of thirty members must not carry thirty images in its answer; a browser can keep a file it already has; and the backup of the database stays small. The cost is that a backup is the database and the storage folder together, which is already true for the logo.
 - **Made small before it is sent.** The browser crops the photo to a centred square and reduces it to 512 pixels a side; there is no tool to choose the crop for now: a photo straight from a phone, of several megabytes, is accepted, and what is kept weighs a few tens of kilobytes. Redrawing the photo also removes what a phone writes inside it, the place where it was taken in particular. The server accepts a square image of that size at most, and decides what the file is from its content.
-- **Never public.** Unlike the logo of the band, a photo is served to signed-in members only, under the same rule as the other fields of the directory.
+- **Never public.** Unlike the logo of the band, a photo is served to signed-in members only, under the same rule as the other fields of the directory. A browser asks for it again each time it shows it: a photo is not shown from the memory of a device after a sign-out, or after its member has left.
 - **Replaced or removed at any time** by the member or by someone who manages members; the old file is deleted.
 - **Erased when the member leaves**, with the phone and the address.
 
@@ -75,9 +75,13 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 
   The key is asked on the first screen and checked at once, before the three steps: nobody fills them in to learn at the end that the key is wrong. The first screen cannot be left without the right key. The key is checked again when the last step is confirmed: that second check is the one that protects the instance, the first one is a comfort. A wrong key gets its own answer, unlike a wrong password at sign-in: there is no member yet whose existence could leak.
 - **Always one admin.** The last current member holding `ADMIN` can neither lose that role nor become `LEFT`.
+- **Nobody acts on the access of someone who may do more than them.** Changing the email of another member, creating their password link, changing their status or cancelling their invitation asks to hold every permission that member holds. Without this rule, someone who manages members could create the password link of an admin, choose a password with it, and be admin. In practice: a `MEMBER_MANAGER` does all this for members without a role, or with the same role; for the others, an admin does it. For the same reason, changing the roles of a member cancels their pending password link: whoever created it was allowed to for the roles of then.
+- **A member who left is not edited.** Their record, their photo and their roles stay as the departure left them until they are brought back. Their password is erased with the rest: a member who comes back chooses a new one.
 - **Sign-in.** Email and password, for current members only (`ACTIVE` and `POWER_MEMBER`). Every refusal gets the same answer, in the same time: wrong email, wrong password, member who cannot sign in, sign-in locked. The screen therefore says both things at once: wrong email or password, and wait a while after several tries. Signing in again on a device replaces its session.
 - **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
-- **Password change.** Deletes every other session of the member.
+- **Password change.** Asks for the current password. Deletes every other session of the member, and their pending password link. A wrong current password counts like a wrong password at sign-in: at the fifth, sign-in is locked and the device is signed out.
+- **Forgotten password.** On the sign-in screen, a person gives an email address. If it is the address of a current member, the app creates a password link and sends it to that address (entry 3). Whatever the address, the screen answers the same thing, in the same time: nothing tells whether an address belongs to a member. A member still `INVITED` gets nothing: their link comes from the person who invited them.
+- **Reading comfort before sign-in.** The screens shown before sign-in (sign-in, forgotten password, the screen a password link opens) offer the accessibility options. Chosen there, they are kept on the device only, in the storage of the browser, and are sent to no one. They apply on that device until a member signs in on it: from then on the options of the account apply. A member who arrives from an invitation sets the options first; they are saved to the account when the invitation is completed.
 
 ### Roles and permissions
 A member holds zero, one or several roles. The list of roles is fixed by the app.
@@ -95,6 +99,8 @@ A role is a named set of **permissions**. The code never asks "is this member a 
 | Manage gigs | `GIG_MANAGER`, `ADMIN` |
 | Manage setlists (later feature) | `SETLIST_MANAGER`, `ADMIN` |
 | Manage quotes (later feature) | `QUOTE_MANAGER`, `ADMIN` |
+
+The role labels are "Admin" (`ADMIN`, the same in French), "Manages members" / "Gère les fanfarons" (`MEMBER_MANAGER`), "Manages songs" / "Gère les morceaux" (`SONG_MANAGER`) and "Manages gigs" / "Gère les plans" (`GIG_MANAGER`). The roles of later features are not offered before their feature exists.
 
 The permissions of the other domains are detailed in their own dictionaries. There is no table of permissions in the database: bands do not define their own roles. If that need appears, the checks in the code stay as they are and only the source of the table changes.
 
@@ -115,7 +121,7 @@ Exporting the list of members asks for the password again.
 
 ### Instance settings
 - Default language of new members (`band.defaultLanguage`).
-- Default accent theme (Band domain).
+- Default accent theme (`band.defaultAccentTheme`, Band domain).
 - Session durations, the number of wrong passwords tolerated and the validity of a password link are fixed in the code for now, with the defaults written in the model.
 
 ### Personal data
@@ -130,7 +136,8 @@ Exporting the list of members asks for the password again.
 - The nickname is the name shown in every representation. First and last names appear on the member's own screen and in the directory.
 - Missing phone or address: the line is not shown.
 - Missing photo: a placeholder defined by the design.
-- Representations in the design library: none exists yet. Expected: mention, row, header.
+- **Directory.** The directory lists members as cards, in alphabetical order of the nickname (the name shown; to confirm against the first name). By default it shows `ACTIVE` members only. Two options, both off when the directory opens: one adds the `POWER_MEMBER` members, each of them marked as such; the other keeps the members of the section of the signed-in member ("Mon pupitre" in French). `INVITED` and `LEFT` members never appear in it.
+- Representations in the design library: none exists yet. Being explored on the `Members` page of the Figma file: tile (the directory), row, header (the member's sheet), and the base component `Avatar` (photo, or initials when there is none). Expected as well: mention.
 
 ### Accessibility options
 The default design is not required to reach the highest level of the accessibility guidelines (WCAG AAA). The options below must let a member bring the app to level AA at least, and to AAA wherever that is feasible.
@@ -159,6 +166,7 @@ An instrument is what a member plays. A section groups the instruments that play
 |---|---|---|---|---|---|---|
 | `section.name` | Section | Pupitre | Yes | P'tites basses | 5 to 15 | Unique. In the band's own words, never translated |
 | `section.position` | Order | Ordre | Yes | 4 | — | Order of the sections in every list |
+| `section.icon` | Pictogram | Pictogramme | No | trumpet | — | One of the section pictograms shipped with the app. Empty: the generic pictogram |
 | `instrument.name` | Instrument | Instrument | Yes | Trombone Sib | 5 to 15 | Unique across the band. Never translated |
 | `instrument.sectionId` | Section | Pupitre | Yes | Trombone | — | An instrument belongs to exactly one section |
 | `instrument.position` | Order | Ordre | Yes | 2 | — | Order inside the section |
@@ -179,12 +187,16 @@ The library is a file of the app, not a table. French library:
 | Flûte | Flûte, Piccolo |
 | Clarinette | Clarinette |
 
+Each section of a library comes with its pictogram: in the French library, in the order of the table, `trumpet`, `saxophone`, `trombone`, `tuba`, `sousaphone`, `drum`, `flute` and `clarinet`. These eight keys are the pictograms shipped with the app; a section added by the band starts with the generic one.
+
 The first six lines are the organisation of the band that started the project. Their instruments are the ones preselected at install, except the Sax Baryton: a band unticks what it does not play and ticks the rest. Each library says, instrument by instrument, which ones are preselected.
 
 ### Rules
 - A section with instruments cannot be deleted. An instrument played by a member, or used by a part of a song, cannot be deleted. Both can be renamed and moved.
 - Moving an instrument to another section moves its members with it: the section of a member is always the one of their instrument.
 - After install, an admin can add sections and instruments at any time.
+- The pictogram of a section is chosen by an admin, at install or in the band settings. It is shown beside the nickname of each member of the section, in the directory and wherever a member is listed with their instrument.
+- A refused deletion says why, with the numbers: how many instruments the section still has, how many members play the instrument.
 
 ### Relations
 - A section holds one to several instruments; an instrument belongs to one section.
@@ -211,15 +223,18 @@ A session is a device on which a member is signed in. A password link is a singl
 - The device holds a random token in a cookie that page code cannot read and that is sent over HTTPS only. The database holds only the SHA-256 of the token, so that a copy of the database does not let anyone sign in.
 - A session ends when it has not been used for 90 days, or one year after sign-in, whichever comes first.
 - A member can sign out the current device, or all their devices at once.
-- **The member manager sends the link himself.** The app shows the link once, when it is created; the member manager copies it and sends it by the means of his choice. The app sends no email for now. Sending it by email from the app is expected later: the model does not change, only the way the link travels.
-- A password link is valid 7 days and once. Creating a new one for the same member cancels the previous one.
+- **A link created by a member manager is sent by him.** The app shows the link once, when it is created; the member manager copies it and sends it by the means of his choice. It is valid 7 days and once.
+- **A link asked from the sign-in screen is sent by the app**, by email, to the address of the member (rule "Forgotten password"). It is valid 1 hour and once. The email is written in the language of the member and holds the name of the band and the link, nothing else about the member. No new email is sent to the same member within 5 minutes of the previous one (`emailedAt`): a request made sooner changes nothing, and gets the same answer on screen.
+- **Sending email.** The address the app writes from and the access to the mail server are in the configuration of the server, never in the database. An instance without them has no forgotten password by email: the sign-in screen then sends the member to those who manage members.
+- **The link carries its secret after a `#`.** That part of an address is never sent to a server: the secret does not end in the log of the host. The page reads it and sends it in the body of its requests.
+- Creating a new link for a member, by either way, cancels the previous one. So does changing their roles or their password (entry 1, "Rules").
 - Using a password link sets the password, moves an `INVITED` member to `ACTIVE`, deletes the link and every existing session of the member, and signs the member in.
 
 ### Access rights
 | Who | View | Create | Delete |
 |---|---|---|---|
 | A member | Nothing is listed | A session, by signing in | Their own sessions, by signing out |
-| `MEMBER_MANAGER`, `ADMIN` | Whether a link is pending for a member; the link itself only at the moment it is created | A password link for any member | A pending link; all sessions of a member, by marking them `LEFT` |
+| `MEMBER_MANAGER`, `ADMIN` | Whether a link is pending for a member, and until when it is valid; the link itself only at the moment it is created | A password link for any member they may act on (entry 1, rule "Nobody acts on the access of someone who may do more than them") | A pending link; all sessions of a member, by marking them `LEFT` |
 
 ### Personal data
 - No IP address and no device name is stored.
@@ -234,9 +249,34 @@ These apply to every table of the app and are not repeated in the DBML.
 
 ## 5. Open questions
 
-None blocking.
+None blocking for v1.9. What v1.10 and v1.11 add is to validate; each point comes with the default applied.
 
-To confirm:
+From the design of the `Members` and `Band settings` pages (the version of the dictionary written by the design conversation, merged here in v1.11):
+
+1. `section.icon`: a key among the eight pictograms shipped with the app, empty for the generic one. The pictograms themselves are a proposal of the design (Figma, `Design system` page). In the DBML as a draft; no migration yet.
+2. Forgotten password by email: only current members get a link; a member still `INVITED` asks the person who invited them. Default: yes.
+3. Validity of a link asked by email: 1 hour (7 days for a link created by a member manager). Default: 1 hour.
+4. Time between two emails to the same member: 5 minutes (`memberPasswordLink.emailedAt`, in the DBML as a draft; no migration yet). Default: 5 minutes.
+5. Decided on 2026-10-11: in the first version the invitation link is copied and sent by the member manager, and stays valid 7 days. Sending it by email from the app comes later; its validity will be settled then.
+6. An instance whose server cannot send email: the sign-in screen sends the member to those who manage members. Default: yes.
+7. `band.defaultAccentTheme` is named here but belongs to the Band domain: `band.md` and `band.dbml` do not hold it yet.
+
+From writing the API of members (v1.10 of the repository). These rules are stricter than what was validated; they are applied, say so if one should be relaxed:
+
+8. "Nobody acts on the access of someone who may do more than them", and its consequence: changing the roles of a member cancels their pending password link.
+9. "A member who left is not edited."
+10. The current password is asked to change a password, and a wrong one counts like a wrong password at sign-in.
+11. A name holds at least one letter or digit. A nickname can still imitate another one with letters of another alphabet that look the same (a Cyrillic "А" for a Latin "A"). Default: accept it; members know each other, and refusing mixed alphabets would refuse real names.
+12. A member who edits their own record learns that an email or a nickname is taken, even by an invited member or one who left, whom they cannot see. Default: accept it; the two must be unique.
+13. A member changes their own email without being asked their password. Default: keep it so; the password is asked only to change the password.
+
+Not built yet, on the server:
+
+- Forgotten password by email (points 2 to 4 and 6): it needs a way to send email, which is a dependency to choose.
+- The pictogram of a section (point 1) and the default accent theme of the band (point 7).
+- Exporting the list of members, which asks for the password again.
+
+To confirm, from earlier versions:
 
 - Wrong install keys are not counted: no member exists yet to carry a count, and the app stores no IP address. Instead, the key must be 16 characters at least (a shorter one counts as no key, and install stays closed), and a wrong key is answered after one second. With a long random text, as the configuration file asks, guessing leads nowhere.
 - A server whose install key is still empty answers like a wrong key. Default: keep one answer; the screen sends the person to the configuration of the server in both cases.
@@ -246,4 +286,5 @@ Noted for later domains:
 - How presence per section makes a gig slot playable: Gigs domain. `POWER_MEMBER` members count in it like `ACTIVE` ones.
 - Reminders to answer for a gig are sent to `ACTIVE` members only, never to `POWER_MEMBER` ones: Gigs domain.
 - Push subscriptions (`pushSubscription` in the overview model): later.
-- The default accent theme of the band: Band domain. The list of accent themes: design system.
+- The list of accent themes and of section pictograms: design system.
+- The Discord account of a member (`discordUserId`), so that the directory can open their Discord profile: Discord feature. The directory screens reserve the button; it is not to be built before.

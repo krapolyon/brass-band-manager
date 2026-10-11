@@ -293,9 +293,10 @@ Decided in [api/routes.php](../api/routes.php), by the block a route is written 
 
 | Block | Who | How |
 |---|---|---|
-| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in. Adding a route here is a decision to justify |
+| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in, checking and using a password link. Adding a route here is a decision to justify |
 | 2. Signed in | Any current member (`ACTIVE` or `POWER_MEMBER`) | Inside the group that carries `RequireSession` |
-| 3. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
+| 3. Oneself, or a permission | The member the address names, or a member holding a permission | A route of block 2 with `->add(new RequireSelfOrPermission(Permission::...))` |
+| 4. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
 
 A new route goes in block 2 unless there is a reason. An action behind `RequireSession` gets the member with `CurrentMember::of($request)`: its `id`, and `can(Permission::...)` for a finer check inside the action.
 
@@ -354,6 +355,39 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - **Not done: where the last screen leads.** Its two buttons go to the home address until the members feature (inviting) and the home screen exist.
 - [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
 
+### Members
+
+`api/src/Members/`, `api/src/Sections/` and, for what touches sign-in, `api/src/Access/`. Rules: [model/members.md](../model/members.md). Every line of its tables of rights is a test in `tests/api/`.
+
+| Address | Who | What |
+|---|---|---|
+| `GET /api/members`, `GET /api/members/{id}` | Signed in | The directory. Current members for everyone; invited members and those who left for who manages members |
+| `GET /api/members/{id}/photo` | Signed in | The profile photo, for the members the viewer may see |
+| `PUT /api/members/{id}` | Oneself, or `MANAGE_MEMBERS` | The whole record (names, email, contact details, instrument) |
+| `PUT`, `DELETE /api/members/{id}/photo` | Oneself, or `MANAGE_MEMBERS` | Gives, replaces or removes the photo |
+| `POST /api/members` | `MANAGE_MEMBERS` | Invites: creates the member and their password link |
+| `DELETE /api/members/{id}` | `MANAGE_MEMBERS` | Cancels an invitation |
+| `PUT /api/members/{id}/status` | `MANAGE_MEMBERS` | Moves a member along the life cycle |
+| `POST`, `DELETE /api/members/{id}/passwordLink` | `MANAGE_MEMBERS` | Creates or cancels a password link |
+| `PUT /api/members/{id}/roles` | `MANAGE_ROLES` | Sets the roles, all at once |
+| `GET /api/sections` | Signed in | Sections and their instruments |
+| `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes |
+| `PUT /api/me/preferences`, `PUT /api/me/password` | Oneself | Preferences; password, with the current one |
+| `POST /api/passwordLink/check`, `/use` | Anyone holding a link | Says who a link is for; chooses a password with it and signs in |
+
+- **[Members](../api/src/Members/Members.php)** holds what the actions share: who sees whom, the columns that are sent (listed one by one, so that the password hash, the sign-in counters and the preferences never leave by accident), and the two rules that protect accounts.
+- **"Oneself, or a permission"** is the middleware [RequireSelfOrPermission](../api/src/Access/RequireSelfOrPermission.php), declared on the route like `RequirePermission`.
+- **Nobody acts on the access of someone who may do more than them** (`Members::mustCover`, `CurrentMember::covers`): the email of another member, their password link and their status. Without it, who manages members could take the password link of an admin and become one.
+- **Changing the roles of a member cancels their pending password link**: the link was created by someone allowed to for the roles of then.
+- **Requests that cross each other.** An action that changes a member first holds their row (`Members::target(lock: true)`), and every action takes its locks in the same order: the current admins, then the member, then their link. A record, a photo or a link sent at the instant a member leaves is then handled wholly before or wholly after the departure.
+- **Always one admin**: status and roles are changed inside a transaction that first holds the rows of the current admins (`Members::lockCurrentAdmins`), so that two changes sent together cannot both remove "the other" admin.
+- **A record is sent whole** (`PUT`): a contact field left out is erased. So are the preferences and the roles. No route patches one field.
+- **A password link** ([PasswordLinks](../api/src/Access/PasswordLinks.php)) is a random token of which the database holds only the SHA-256, like a session. The token is in the answer that creates it, once. The front builds the address with the token after a `#`, a part of an address that browsers never send: it does not end in the log of the host. A link that opens nothing gets one answer, whatever the reason.
+- **Profile photos** ([PhotoStore](../api/src/Members/PhotoStore.php)) follow the logo: the browser makes the photo a small square, the server checks it and keeps the file in `storage/members/`. Unlike the logo, a photo is served to signed-in members only, browsers are told not to share it and to ask again each time (`Cache-Control: private, no-cache`, with an `ETag` so that an unchanged photo is not sent twice).
+- **Storage** is shared by the logo and the photos: [Files](../api/src/Storage/Files.php) writes and deletes, [Images](../api/src/Storage/Images.php) says what a file really is, [ServeFile](../api/src/Storage/ServeFile.php) sends it with protective headers.
+- **Order of sections and instruments**: a place is asked as a number (1 is the first) and the whole list is numbered again (`Sections::place`).
+- Not written: forgotten password by email (it needs a way to send email, a dependency to choose), the pictogram of a section, the default accent theme of the band, the export of the directory, and every screen.
+
 ### The logo of the band and the icons of the app
 
 `api/src/Band/`. Rules: [model/band.md](../model/band.md).
@@ -379,7 +413,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 
 ### Not written yet
 
-- **Password links** (invitation, forgotten password), **member management** and **changing one's own record**: with the Members feature.
+- **The export of the directory**, which asks for the password again: with the screens of the Members feature.
 - **Serving files** (recordings, scores) to signed-in members only.
 
 ## The front

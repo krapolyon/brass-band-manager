@@ -1,4 +1,6 @@
 // Domain: Members
+// v1.11 — 2026-10-11 — DRAFT for two fields, no migration yet: merges the version written by the design conversation (section.icon, memberPasswordLink.emailedAt, forgotten password by email) with v1.10
+// v1.10 — 2026-10-11 — no change to the tables: rules found while writing the API of members, to confirm (dictionary, "Open questions")
 // v1.9 — 2026-10-11 — validated: profile photo of a member (photoPath), migration 003
 // v1.8 — 2026-10-11 — no change to the tables: the starting library preselects instrument by instrument, and the saxophones are capitalised (dictionary)
 // v1.7 — 2026-10-10 — no change to the tables: the install key has a minimum length and a wrong one is slowed down (dictionary)
@@ -29,6 +31,7 @@ Table section {
   id integer [pk]
   name varchar [not null, unique, note: 'In the band\'s own words, for instance "P\'tites basses". Never translated.']
   position integer [not null, note: 'Order in which sections are listed, starting at 1. Two sections with the same position are ordered by name.']
+  icon varchar [note: 'TODO: draft, to validate. Key of one of the section pictograms shipped with the app, for instance trumpet. Empty means the generic pictogram. The list of keys is the one of the design system; the API refuses any other value.']
   Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is.'
 }
 
@@ -131,8 +134,9 @@ Table memberPasswordLink {
   id integer [pk]
   memberId integer [not null, unique, ref: - member.id, note: 'One pending link per member at most: a new one replaces the previous one.']
   tokenHash varchar [not null, unique, note: 'SHA-256 of the random token carried by the link. The token itself is never stored.']
-  expiresAt timestamp [not null, note: 'The link is refused after this instant (7 days by default)']
-  Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a reset asked from an admin. The admin copies the link and sends it to the member himself. Deleted once used.'
+  expiresAt timestamp [not null, note: 'The link is refused after this instant: 7 days after a member manager created it, 1 hour after the app sent it by email']
+  emailedAt timestamp [note: 'TODO: draft, to validate. Instant the app sent this link by email, for a forgotten password. Empty for a link created by a member manager. No new email is sent to the member within 5 minutes of it.']
+  Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a forgotten password. A member manager copies the link and sends it to the member himself; a link asked from the sign-in screen is sent by the app, by email. Deleted once used.'
 }
 
 // ---------------------------------------------------------------
