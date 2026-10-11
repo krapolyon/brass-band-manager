@@ -3,6 +3,9 @@ import { ForgotPasswordScreen } from './screens/access/ForgotPasswordScreen.tsx'
 import { MembersOnly, VisitorsOnly } from './screens/access/Guards.tsx';
 import { PasswordLinkScreen } from './screens/access/PasswordLinkScreen.tsx';
 import { SignInScreen } from './screens/access/SignInScreen.tsx';
+import { BandAppearanceScreen } from './screens/band/BandAppearanceScreen.tsx';
+import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
+import { BandSettingsScreen } from './screens/band/BandSettingsScreen.tsx';
 import { ComingSoonScreen } from './screens/ComingSoonScreen.tsx';
 import { BandScreen } from './screens/install/BandScreen.tsx';
 import { DoneScreen } from './screens/install/DoneScreen.tsx';
@@ -34,6 +37,9 @@ export const router = createBrowserRouter([
       { path: '/members/manage', element: <ManageListScreen /> },
       { path: '/members/manage/invite', element: <InviteScreen /> },
       { path: '/members/manage/:id', element: <ManageMemberScreen /> },
+      { path: '/band', element: <BandSettingsScreen /> },
+      { path: '/band/appearance', element: <BandAppearanceScreen /> },
+      { path: '/band/sections', element: <BandSectionsScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/settings/profile', element: <ProfileScreen /> },
       { path: '/settings/password', element: <PasswordScreen /> },

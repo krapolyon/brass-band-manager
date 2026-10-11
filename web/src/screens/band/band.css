@@ -1,0 +1,58 @@
+/* Layout of the settings of the band. */
+
+/* Cards one under the other on a phone, in columns from the tablet width. */
+.band-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.band-start {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .band-sections {
+    display: block;
+    columns: 2;
+    column-gap: var(--spaceMd);
+  }
+
+  .band-sections > * {
+    break-inside: avoid;
+  }
+
+  .band-sections > * + * {
+    margin-top: var(--spaceMd);
+  }
+}
+
+@media (min-width: 1024px) {
+  .band-start {
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 1920px) {
+  .band-sections {
+    columns: 3;
+  }
+}
+
+/* A group of a sheet that is not a TextField: its label, its control, its hint. */
+.band-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.band-pictograms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.band-muted {
+  color: var(--textMuted);
+}

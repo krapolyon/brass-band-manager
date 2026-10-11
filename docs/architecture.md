@@ -429,7 +429,7 @@ The app sends one email so far: the link of a forgotten password ([ForgotPasswor
 
 ### Not written yet
 
-- **The export of the directory**, which asks for the password again: with the screens of the Members feature.
+- **The export of the directory**, which asks for the password again: not drawn, not built.
 - **Serving files** (recordings, scores) to signed-in members only.
 
 ## The front
@@ -452,6 +452,7 @@ The session is a cookie the page cannot read. The front learns who is signed in 
 - **[AppearanceOf](../web/src/AppearanceOf.tsx)** decides the look and the language: the choices of the account when someone is signed in; otherwise the scheme of the device, the theme and the language of the band, and the accessibility options chosen before sign-in. Those are kept in the storage of the browser, on the device only ([deviceAccessibility.ts](../web/src/deviceAccessibility.ts)); the options of an account are never written there.
 - **The record of a member is one form**, [MemberRecordFields](../web/src/screens/members/MemberRecordFields.tsx), used by an invitation, the profile and those who manage members; [record.ts](../web/src/screens/members/record.ts) turns what is typed into what the API receives. A phone number is typed the local way and stored in the international one ([phone.ts](../web/src/screens/members/phone.ts), with libphonenumber-js): a number without a prefix belongs to the country of the member, or to the one of the band. A photo is cropped to a square and redrawn by the browser before it is sent ([photo.ts](../web/src/screens/members/photo.ts)).
 - **Managing members** ([screens/members/](../web/src/screens/members/)): the list is a `Sheet` of `MemberRow` below 1024 px and a `MemberTable` from there; each exists once on the screen, the other is not drawn. A screen offers only what the member may do (`permissions` of `GET /api/me`, and `covers()` in [manage.ts](../web/src/screens/members/manage.ts) for the access of someone who may do more), and an action that cannot be done stays visible, disabled, with its reason. This is a comfort: the API decides. A password link is shown once, in [LinkPanel](../web/src/screens/members/LinkPanel.tsx), as `/invitation#<secret>` or `/password#<secret>`, and is kept nowhere.
+- **The settings of the band** ([screens/band/](../web/src/screens/band/)), for admins: the appearance (name, logo, accent colour, default language) is saved with its button, since it changes what everyone sees; a section or an instrument is saved at once, from its sheet, and the API answers with the whole list. What is still used cannot be deleted: the button stays, disabled, with the numbers that explain it (`memberCount` of `GET /api/sections`).
 - **A preference applies at once** ([preferences.ts](../web/src/screens/settings/preferences.ts)): appearance and accessibility have no save button. The choice is shown in the same instant as the press, then saved, and put back if the server refuses. A form that changes what others see or how the member signs in (profile, password) keeps its button.
 - **The screens of a flow** (install, sign-in, forgotten password, invitation) share one frame, [FlowLayout](../web/src/screens/FlowLayout.tsx). **The screens of the app**, once signed in, share another, [AppLayout](../web/src/screens/AppLayout.tsx): the `TabBar` floating at the bottom below 1024 px, the `SideNav` on the left from there, with the title of the page and its actions on one line. A screen opened from a tab (a form, a record) gives `back`: the TabBar leaves and a way back shows. The five entries are written once, in [nav.ts](../web/src/components/nav.ts). The tabs of the features that do not exist yet open [ComingSoonScreen](../web/src/screens/ComingSoonScreen.tsx); after sign-in a member lands on the directory (`HOME` in `session.ts`) until the home screen is designed.
 
@@ -535,7 +536,7 @@ Rules that keep it true:
 - **Typefaces are served by the app**, never by a font service: no visitor is reported to a third party. A test checks that the install screen asks nothing of another site.
 - A component that Figma does not have is not created here.
 
-The components written so far. Base layer: `Icon`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `ListRow`, `Chip`, `Sheet`, `Message`, `StepIndicator`, `ScreenTop`, `BottomBar`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`.
+The components written so far. Base layer: `Icon`, `Pictogram`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `SliderRow`, `AccessibilityOptions`, `Chip`, `Sheet`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `StepIndicator`, `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`, `SectionBadge`, `PictogramChoice`, `BandMention`, `MemberCard`, `MemberRow`, `MemberHeader`, `MemberMention`, `MemberTable` (the header and the rows of Figma). Every control is the browser's own (checkbox, radio, range), drawn as in the design: it keeps the keyboard, the focus and what screen readers say.
 
 - **`TextField` has three forms**, as in Figma where the select is a `TextField` with a chevron: `TextField` (an input), `SelectField` (the browser's own `<select>`, for a short list) and `PickerField` (a button that opens a panel, for a choice made in a list of rows).
 - **A row with a checkbox** is `ListRow` with `checked` and `onCheck`: the label and the checkbox are one target. `Checkbox` is the browser's own, drawn as in Figma.
@@ -742,7 +743,14 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. The sign-in screen, which is not designed yet.
-2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
-3. The design system in CSS and the first real screens: wait for the Figma file.
-4. Every feature (members, songs, gigs, and the later ones).
+1. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
+2. What the Members feature leaves for later: the export of the directory, the Discord action of a member's sheet, sending an invitation by email, a prettier email, and the screens Figma has not drawn (see below).
+3. The next features: songs, gigs, and the later ones. Their tabs say "coming soon" until then.
+
+Screens that were deduced from the phone screens, because Figma does not draw them yet. Each follows the rules of the design skill (a larger screen derives from the phone screen, a sheet becomes a dialog from 1024 px, a flow takes the floating panel), and is to be checked when it is drawn:
+
+- the whole app on a tablet and at 1920 px;
+- on a desktop: the sheet of a member, the settings, sign-in, forgotten password, the invitation, the record of a member and the invite form, the settings of the band;
+- what a line of the desktop table opens (the record of the member);
+- loading and server error states (a line of text, and a `Message`);
+- the page opened without the right in the settings of the band, and the list of countries (the list of the device).
