@@ -1,6 +1,5 @@
 /* Widths drawn in Figma are written in rem (pixels / 16) and used as maximums.
-   The width of the panes and the height of the halo stay in pixels: they are
-   the frame of the screen, not its content. */
+   The height of the halo stays in pixels: it is a light, not content. */
 
 .InstallLayout {
   --haloHeight: 440px;
@@ -15,34 +14,9 @@
   width: 100%;
 }
 
-.InstallLayout-column {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spaceXl);
-  /* Figma leaves 60 px at the top of a phone frame for the safe area. Here
-     the device gives its own, and never less than the padding of the sides. */
-  padding: max(env(safe-area-inset-top), var(--spaceXl)) var(--spaceXl) 0;
-}
-
-.InstallLayout-nav {
-  display: flex;
-  /* At a large text size the step goes under the way back. */
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--spaceSm);
-  min-height: var(--controlHeightSm);
-}
-
-.InstallLayout-nav[data-at-end="true"] {
-  justify-content: flex-end;
-}
-
-.InstallLayout-heading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spaceSm);
-  overflow-wrap: anywhere;
+/* The glass of the floating panel: on a desktop only. */
+.InstallLayout-glass {
+  display: none;
 }
 
 /* Above the halo, which spreads below the title on a phone. */
@@ -70,12 +44,6 @@
     --haloHeight: 600px;
   }
 
-  .InstallLayout-column {
-    max-width: 40rem;
-    margin-inline: auto;
-    padding: var(--spaceXxxl) 0 0;
-  }
-
   .InstallLayout-content {
     max-width: 40rem;
     padding-inline: 0;
@@ -87,39 +55,54 @@
   }
 }
 
-/* Small desktop: two panes, separated by a hairline. Drawn at 1280, used
-   from 1024: a laptop window that is not full screen is still a desktop. */
+/* Small desktop: a floating glass panel on the left, the content on the
+   right. Drawn at 1280, used from 1024: a laptop window that is not full
+   screen is still a desktop. */
 @media (min-width: 1024px) {
   .InstallLayout {
-    --haloHeight: 540px;
     --contentWidth: 44rem; /* 704 */
     flex-direction: row;
-    align-items: stretch;
-  }
-
-  .InstallLayout-left {
-    display: flex;
-    flex: none;
-    flex-direction: column;
     align-items: flex-start;
-    /* 480 at the 1280 of Figma, the same share of a narrower window. */
-    width: clamp(384px, 37.5vw, 480px);
-    padding: var(--spaceXxxl);
-    border-right: var(--borderWidth) solid var(--border);
-    /* The halo stays in this pane. */
-    overflow: hidden;
+    padding: var(--spaceMd);
   }
 
-  .InstallLayout-column {
-    width: 100%;
+  /* 16 from the edges, as tall as the window, and in place while the right
+     side scrolls. The halo lives inside it, behind the glass. */
+  .InstallLayout-left {
+    position: sticky;
+    top: var(--spaceMd);
+    flex: none;
+    /* 448 at the 1280 of Figma, the same share of a narrower window. */
+    width: clamp(22rem, 35vw, 28rem);
+    height: calc(100dvh - 2 * var(--spaceMd));
+    padding: var(--spaceXxl);
+    border-radius: var(--radiusLg);
+    overflow: hidden;
+    /* Figma: the halo takes 504 of the 768 of the panel. */
+    --haloHeight: 65.6%;
+  }
+
+  /* Figma gives a background blur of 48; CSS counts the same blur as half of it. */
+  .InstallLayout-glass {
+    position: absolute;
+    inset: 0;
+    display: block;
+    border: var(--borderWidth) solid var(--glassBorder);
+    border-radius: inherit;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  .InstallLayout-left > .ScreenTop {
     max-width: 24rem; /* 384 */
     margin: 0;
     padding: 0;
   }
 
-  /* On a desktop the nav always starts the line. */
-  .InstallLayout-nav[data-at-end="true"] {
-    justify-content: flex-start;
+  /* In the panel the action starts the line. */
+  .InstallLayout-left .ScreenTop-action {
+    margin-left: 0;
   }
 
   /* The content and its actions are centred in the pane, from the top. */
@@ -127,6 +110,7 @@
     align-items: center;
     gap: var(--spaceXl);
     min-width: 0;
+    min-height: calc(100dvh - 2 * var(--spaceMd));
     padding: var(--spaceXxxl);
   }
 
@@ -145,10 +129,9 @@
   }
 }
 
-/* Large desktop: the left pane grows, a form stops at 736, cards at 1032. */
+/* Large desktop: the panel grows to 648, a form stops at 736, cards at 1032. */
 @media (min-width: 1920px) {
   .InstallLayout {
-    --haloHeight: 720px;
     --contentWidth: 46rem; /* 736 */
   }
 
@@ -157,10 +140,10 @@
   }
 
   .InstallLayout-left {
-    width: 680px;
+    width: 40.5rem; /* 648 */
   }
 
-  .InstallLayout-column {
+  .InstallLayout-left > .ScreenTop {
     max-width: 26.5rem; /* 424 */
   }
 }

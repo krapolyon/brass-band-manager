@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from 'react';
 import { Halo } from '../../components/Halo.tsx';
+import { ScreenTop } from '../../components/ScreenTop.tsx';
 import './InstallLayout.css';
 
 type Props = {
@@ -31,15 +32,16 @@ export function focusFirstError() {
   });
 }
 
-// The frame of every screen of the install, at the four widths of the design.
-// It is layout only (Figma: "plain frames remain only for layout: the panes,
-// the columns"):
+// The frame of every screen of the install, and of every flow in steps, at
+// the four widths of the design. It is layout only (Figma: "plain frames
+// remain only for layout: the panes, the columns"):
 //
 //   below 768    one column, the halo at the top, the actions at the bottom
 //   from 768     the same column, centred, 640 wide
-//   from 1024    two panes: on the left the halo, the nav and the title; on
-//                the right, on plain ground, the content then its actions
-//   from 1920    the same, with a wider left pane
+//   from 1024    on the left, a floating glass panel over the halo, as tall
+//                as the window: the nav and the title. On the right, on plain
+//                ground, the content then its actions
+//   from 1920    the same, with a wider panel
 export function InstallLayout({
   nav,
   navAtEnd,
@@ -60,17 +62,13 @@ export function InstallLayout({
     <main className="InstallLayout" data-width={width}>
       <div className="InstallLayout-left">
         <Halo />
-        <div className="InstallLayout-column">
-          {nav && (
-            <div className="InstallLayout-nav" data-at-end={navAtEnd}>
-              {nav}
-            </div>
-          )}
-          <div className="InstallLayout-heading">
-            <h1 className="textDisplay">{title}</h1>
-            <p className="textBodyLarge">{lead}</p>
-          </div>
-        </div>
+        <div className="InstallLayout-glass" />
+        <ScreenTop
+          leading={navAtEnd ? undefined : nav}
+          action={navAtEnd ? nav : undefined}
+          title={title}
+          subtitle={lead}
+        />
       </div>
       <Right className="InstallLayout-right" onSubmit={onSubmit ? submit : undefined} noValidate>
         <div className="InstallLayout-content">{children}</div>

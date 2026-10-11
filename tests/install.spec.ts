@@ -72,7 +72,7 @@ test('the language panel opens, lists the languages and closes', async ({ page }
   const panel = page.getByRole('dialog');
   await expect(panel).toBeHidden();
 
-  await page.locator('.InstallLayout-nav button').click();
+  await page.locator('.ScreenTop-navigation button').click();
   await expect(panel).toBeVisible();
   // French is the only language shipped, and it is the current one.
   await expect(panel.locator('[aria-current="true"]')).toHaveCount(1);
@@ -101,7 +101,9 @@ test('the welcome screen says so when the server does not answer', async ({ page
 
 test('at the largest text size, nothing spills out of the screen', async ({ page }) => {
   await page.goto('/install');
-  await page.evaluate(() => document.documentElement.style.setProperty('--textSizePercent', '200'));
+  await page.evaluate(() => {
+    document.documentElement.dataset.textSize = '200';
+  });
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

@@ -1,4 +1,4 @@
-/* biome-ignore-all lint/complexity/noImportantStyles: the reduced motion option must win over the animation of any component */
+/* biome-ignore-all lint/complexity/noImportantStyles: an accessibility option must win over the styles of any component */
 /* What every screen starts from. Colours, sizes and typefaces come from
    tokens.css; text styles from text.css. */
 
@@ -9,9 +9,6 @@
 }
 
 html {
-  /* The text size option of a member, 100 to 200 %: set on the root as
-     --textSizePercent. Everything written in rem follows. */
-  font-size: calc(var(--textSizePercent, 100) * 1%);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -63,10 +60,23 @@ input {
   white-space: nowrap;
 }
 
+/* The increased spacing option of a member. It has no mode in Figma: these
+   are the four measures of the accessibility guidelines (WCAG 1.4.12), which
+   must win over the letter spacing and the line height of every text style. */
+:root[data-spacing="increased"] * {
+  letter-spacing: 0.12em !important;
+  word-spacing: 0.16em !important;
+  line-height: 1.5 !important;
+}
+
+:root[data-spacing="increased"] p + p {
+  margin-top: 2em;
+}
+
 /* The reduced motion option of a member, and the same wish from the device. */
-:root[data-reduced-motion="true"] *,
-:root[data-reduced-motion="true"] *::before,
-:root[data-reduced-motion="true"] *::after {
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
   animation: none !important;
   transition: none !important;
 }

@@ -50,7 +50,9 @@ async function fillMember(page: Page) {
 }
 
 const noOverflow = async (page: Page) => {
-  await page.evaluate(() => document.documentElement.style.setProperty('--textSizePercent', '200'));
+  await page.evaluate(() => {
+    document.documentElement.dataset.textSize = '200';
+  });
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
@@ -130,7 +132,7 @@ test.describe('step 1, the band', () => {
 
   test('going back keeps what was entered', async ({ page }) => {
     await toSections(page);
-    await page.locator('.InstallLayout-nav button').click();
+    await page.locator('.ScreenTop-navigation button').click();
 
     await expect(page).toHaveURL('/install/band');
     await expect(field(page, 'bandName')).toHaveValue('La Fanfare des Cuivres Déchaînés');
@@ -309,7 +311,7 @@ test.describe('step 3, the first member', () => {
   }) => {
     await toMember(page);
     await fillMember(page);
-    await page.locator('.InstallLayout-nav button').click();
+    await page.locator('.ScreenTop-navigation button').click();
     await expect(page).toHaveURL('/install/sections');
     await card(page, 'Saxophone').getByLabel(admin.instrument, { exact: true }).uncheck();
     await next(page).click();
