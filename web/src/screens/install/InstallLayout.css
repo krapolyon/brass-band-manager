@@ -61,20 +61,26 @@
 @media (min-width: 1024px) {
   .InstallLayout {
     --contentWidth: 44rem; /* 704 */
+    /* 16 from the edges, or the safe area of the device when that is more. */
+    --edgeTop: max(var(--spaceMd), env(safe-area-inset-top));
+    --edgeBottom: max(var(--spaceMd), env(safe-area-inset-bottom));
     flex-direction: row;
     align-items: flex-start;
-    padding: var(--spaceMd);
+    padding: var(--edgeTop) max(var(--spaceMd), env(safe-area-inset-right)) var(--edgeBottom)
+      max(var(--spaceMd), env(safe-area-inset-left));
   }
 
   /* 16 from the edges, as tall as the window, and in place while the right
      side scrolls. The halo lives inside it, behind the glass. */
   .InstallLayout-left {
     position: sticky;
-    top: var(--spaceMd);
+    top: var(--edgeTop);
+    display: flex;
     flex: none;
+    flex-direction: column;
     /* 448 at the 1280 of Figma, the same share of a narrower window. */
     width: clamp(22rem, 35vw, 28rem);
-    height: calc(100dvh - 2 * var(--spaceMd));
+    height: calc(100dvh - var(--edgeTop) - var(--edgeBottom));
     padding: var(--spaceXxl);
     border-radius: var(--radiusLg);
     overflow: hidden;
@@ -94,10 +100,14 @@
     backdrop-filter: blur(24px);
   }
 
+  /* The panel has the height of the window: at a large text size, a long
+     title scrolls inside it instead of being cut. */
   .InstallLayout-left > .ScreenTop {
     max-width: 24rem; /* 384 */
+    min-height: 0;
     margin: 0;
     padding: 0;
+    overflow-y: auto;
   }
 
   /* In the panel the action starts the line. */
@@ -110,7 +120,7 @@
     align-items: center;
     gap: var(--spaceXl);
     min-width: 0;
-    min-height: calc(100dvh - 2 * var(--spaceMd));
+    min-height: calc(100dvh - var(--edgeTop) - var(--edgeBottom));
     padding: var(--spaceXxxl);
   }
 

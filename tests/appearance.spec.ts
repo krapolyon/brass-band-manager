@@ -110,15 +110,67 @@ test('increased spacing sets the four measures of the guidelines on every text',
   expect(measures.line).toBeCloseTo(1.5);
 });
 
+test.describe('a light device that asks for more contrast', () => {
+  test.use({ contrast: 'more', colorScheme: 'light' });
+
+  test('gets the light high contrast mode, not the dark one', async ({ page }) => {
+    await page.goto('/install');
+
+    expect(await variable(page, '--ground')).toBe(await variable(page, '--neutral100'));
+    expect(await variable(page, '--text')).toBe(await variable(page, '--neutral1000'));
+    expect(await variable(page, '--glass')).toBe(await variable(page, '--neutral0'));
+    for (const field of ['--haloAccent', '--haloCool', '--haloDeep']) {
+      expect(await variable(page, field), field).toBe(await variable(page, '--ground'));
+    }
+  });
+});
+
+test.describe('a device that asks for less motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('gets no animation and no transition', async ({ page }) => {
+    await page.goto('/install');
+
+    await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduced');
+  });
+});
+
 test('on a desktop the title sits in a floating panel that stays while the page scrolls', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1280, height: 600 });
+  // A window lower than the content, so that the page scrolls for good.
+  await page.setViewportSize({ width: 1280, height: 400 });
   await page.goto('/install');
   const panel = page.locator('.InstallLayout-left');
-
   const box = async () => panel.evaluate((element) => element.getBoundingClientRect().toJSON());
-  expect(await box()).toMatchObject({ x: 16, y: 16, width: 448, height: 568 });
-  await page.evaluate(() => window.scrollTo(0, 400));
+
+  expect(await box()).toMatchObject({ x: 16, y: 16, width: 448, height: 368 });
+  await page.evaluate(() => window.scrollTo(0, 150));
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
   expect((await box()).y).toBeCloseTo(16, 0);
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  expect((await box()).width).toBe(648);
+});
+
+test('in a low desktop window at the largest text size, the whole title can still be read', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1024, height: 500 });
+  await page.goto('/install');
+  await page.evaluate(() => {
+    document.documentElement.dataset.textSize = '200';
+    document.documentElement.dataset.spacing = 'increased';
+  });
+  const top = page.locator('.InstallLayout-left .ScreenTop');
+
+  // The text is taller than the panel: it scrolls inside it, down to its last line.
+  expect(await top.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await top.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  const hidden = await page.evaluate(() => {
+    const lead = document.querySelector('.InstallLayout-left h1 + p') as Element;
+    const panel = document.querySelector('.InstallLayout-left') as Element;
+    return lead.getBoundingClientRect().bottom - panel.getBoundingClientRect().bottom;
+  });
+  expect(hidden).toBeLessThanOrEqual(0);
 });
