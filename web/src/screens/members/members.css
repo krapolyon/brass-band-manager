@@ -12,3 +12,33 @@
   align-items: start;
   gap: var(--spaceMd) var(--spaceSm);
 }
+
+/* The directory: cards in two columns on a phone, more as the screen
+   widens (four at 1280). A card never gets narrower than its photo needs. */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--spaceSm);
+}
+
+.members-grid > li {
+  display: grid;
+}
+
+@media (min-width: 1024px) {
+  .members-grid {
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  }
+}
+
+/* The sheet of a member. */
+.members-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.members-actions {
+  display: flex;
+  gap: var(--spaceXs);
+}

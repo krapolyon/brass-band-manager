@@ -13,7 +13,7 @@ import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { StepIndicator } from '../../components/StepIndicator.tsx';
 import { previewAccessibility, useAccessibilityBeforeSignIn } from '../../deviceAccessibility.ts';
-import { type Me, useSetMe } from '../../session.ts';
+import { HOME, type Me, useSetMe } from '../../session.ts';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { MemberRecordFields, type PhotoDraft } from '../members/MemberRecordFields.tsx';
 import { draftOf, type MemberRecord, recordOf, useRecordErrors } from '../members/record.ts';
@@ -96,7 +96,7 @@ export function OnboardingScreen({ token, invitation }: Props) {
       }),
     onSuccess: (me) => {
       setMe(me);
-      navigate('/', { replace: true });
+      navigate(HOME, { replace: true });
     },
     onError: (error) => {
       // A record refused at the last moment (a nickname taken meanwhile) is fixed at step 1.

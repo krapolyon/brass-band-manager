@@ -1,0 +1,83 @@
+/* On a desktop only: below, the navigation is the TabBar. */
+.SideNav {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  /* 264 wide, 16 from the edges, as tall as the window, and in place while
+     the page scrolls. */
+  .SideNav {
+    --edgeTop: max(var(--spaceMd), env(safe-area-inset-top));
+    --edgeBottom: max(var(--spaceMd), env(safe-area-inset-bottom));
+    /* Figma: the halo takes 298 of the 768 of the menu. */
+    --haloHeight: 38.8%;
+    position: sticky;
+    top: var(--edgeTop);
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--spaceXl);
+    width: 16.5rem;
+    height: calc(100dvh - var(--edgeTop) - var(--edgeBottom));
+    padding: var(--spaceMd);
+    border-radius: var(--radiusLg);
+    overflow: hidden auto;
+  }
+
+  .SideNav-glass {
+    position: absolute;
+    inset: 0;
+    border: var(--borderWidth) solid var(--glassBorder);
+    border-radius: inherit;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+  }
+
+  .SideNav-top,
+  .SideNav > .MemberMention {
+    position: relative;
+  }
+
+  .SideNav-top {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spaceXl);
+  }
+
+  .SideNav-top > .BandMention {
+    min-height: 6.25rem;
+  }
+
+  .SideNav-entries {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spaceXxs);
+  }
+
+  .SideNav-entries a {
+    display: flex;
+    align-items: center;
+    gap: var(--spaceSm);
+    min-height: var(--controlHeight);
+    padding: var(--spaceXxs) var(--spaceMd);
+    border-radius: var(--radiusLg);
+    color: var(--text);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+
+  .SideNav-entries a .Icon {
+    color: var(--textMuted);
+  }
+
+  .SideNav-entries a[aria-current="page"] {
+    background: var(--control);
+    color: var(--accentText);
+  }
+
+  .SideNav-entries a[aria-current="page"] .Icon {
+    color: var(--accentText);
+  }
+}

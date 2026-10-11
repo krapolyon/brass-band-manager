@@ -1,0 +1,166 @@
+/* Widths drawn in Figma are written in rem (pixels / 16) and used as maximums. */
+
+.AppLayout {
+  --haloHeight: 440px;
+  /* What the content keeps free above and below itself, and how wide it goes. */
+  --contentTop: var(--spaceXl);
+  /* 126 stay free at the end of a screen that scrolls under the TabBar: its
+     68, the 34 under it and 24 of air. */
+  --contentBottom: calc(5.75rem + max(var(--spaceSm), env(safe-area-inset-bottom)));
+  --contentWidth: none;
+  min-height: 100dvh;
+}
+
+/* Filters already separate the content from the top. */
+.AppLayout[data-has-toolbar="true"] {
+  --contentTop: var(--spaceMd);
+}
+
+/* A screen with a way back has no TabBar. */
+.AppLayout[data-has-back="true"] {
+  --contentBottom: var(--spaceXl);
+}
+
+.AppLayout[data-width="form"] {
+  --contentWidth: 44rem; /* 704, as in a flow */
+}
+
+.AppLayout-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.AppLayout-header {
+  position: relative;
+}
+
+/* The filters: 24 under the top, in the gutters of the content. */
+.AppLayout-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+  padding: var(--spaceXl) var(--spaceMd) 0;
+}
+
+.AppLayout-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.AppLayout-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--contentTop) var(--spaceMd) var(--contentBottom);
+}
+
+/* Tablet: the column of 640, centred, as in a flow. */
+@media (min-width: 768px) {
+  .AppLayout {
+    --haloHeight: 600px;
+  }
+
+  .AppLayout-toolbar,
+  .AppLayout-content {
+    width: 100%;
+    max-width: 40rem;
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+
+  .AppLayout-body > .BottomBar > * {
+    max-width: 40rem;
+  }
+}
+
+/* Desktop: the menu on the left, the page on the right. */
+@media (min-width: 1024px) {
+  .AppLayout {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spaceXl);
+    padding: max(var(--spaceMd), env(safe-area-inset-top))
+      max(var(--spaceMd), env(safe-area-inset-right))
+      max(var(--spaceMd), env(safe-area-inset-bottom))
+      max(var(--spaceMd), env(safe-area-inset-left));
+  }
+
+  .AppLayout-main {
+    flex: 1;
+    gap: var(--spaceXl);
+    min-width: 0;
+    min-height: 0;
+    padding: var(--spaceMd);
+  }
+
+  /* The halo lives in the menu: the page is plain ground. */
+  .AppLayout-main > .Halo {
+    display: none;
+  }
+
+  /* The title on the left, the filters and the action of the page at its
+     right: the two lines of ScreenTop become the two ends of one line. */
+  .AppLayout-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--spaceXs) var(--spaceXl);
+  }
+
+  .AppLayout-header > .ScreenTop {
+    display: contents;
+  }
+
+  .AppLayout-header .ScreenTop-heading {
+    flex: 1;
+    gap: var(--spaceXs);
+    order: 1;
+    min-width: 12rem;
+  }
+
+  .AppLayout-header .ScreenTop-heading > p {
+    color: var(--textMuted);
+    font-size: var(--fontSizeBody);
+  }
+
+  .AppLayout-header .ScreenTop-navigation {
+    order: 3;
+  }
+
+  /* A way back is the first thing of the line. */
+  .AppLayout[data-has-back="true"] .ScreenTop-navigation {
+    order: 0;
+  }
+
+  .AppLayout-toolbar {
+    order: 2;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .AppLayout-body {
+    gap: var(--spaceXl);
+  }
+
+  .AppLayout-content {
+    flex: none;
+    max-width: var(--contentWidth);
+    margin: 0;
+    padding: 0;
+  }
+
+  .AppLayout-body > .BottomBar {
+    max-width: var(--contentWidth);
+  }
+
+  .AppLayout-body > .BottomBar > * {
+    max-width: none;
+  }
+}

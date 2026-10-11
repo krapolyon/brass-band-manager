@@ -66,7 +66,7 @@ test('an invited member checks their details, chooses a password and is in', asy
   await password(page).fill('helicon-en-fa-diese-9');
   await enter(page).click();
 
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/members');
   // The phone number typed the local way is stored in the international form.
   expect(
     kiki(
@@ -131,7 +131,7 @@ test('the options chosen during an invitation are saved with the account, not on
   await expect(page.locator('html')).toHaveAttribute('data-typeface', 'legible');
   await password(page).fill('helicon-en-fa-diese-9');
   await enter(page).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/members');
 
   expect(kiki('textSizePercent, hasLegibleFont, hasHighContrast')).toBe('120\t1\t0');
   await expect(page.locator('html')).toHaveAttribute('data-text-size', '120');
@@ -162,7 +162,7 @@ test('the photo given by whoever invited can be replaced, or removed', async ({
   await next(page).click();
   await password(page).fill('helicon-en-fa-diese-9');
   await enter(page).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/members');
 
   // One file, and not the one that was given.
   const kept = storedFiles('members');
@@ -185,7 +185,7 @@ test('an invited member who wants no photo has none', async ({ page, playwright 
   expect(storedFiles('members')).toHaveLength(1);
   await password(page).fill('helicon-en-fa-diese-9');
   await enter(page).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/members');
 
   expect(storedFiles('members')).toEqual([]);
 });

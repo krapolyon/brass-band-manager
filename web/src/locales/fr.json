@@ -352,6 +352,13 @@
         "invalid": "Ce numéro n’a pas l’air complet. Pour un numéro étranger, commence par + et l’indicatif du pays."
       },
       "tooLong": "Ce texte est trop long."
+    },
+    "status": {
+      "INVITED": "Invité",
+      "ACTIVE": "Actif",
+      "POWER_MEMBER": "Power member",
+      "LEFT": "Parti",
+      "EXPIRED": "Invitation expirée"
     }
   },
   "onboarding": {
@@ -363,5 +370,34 @@
       "lead": "Avec ton adresse email, c’est lui qui t’ouvre l’app sur tous tes appareils.",
       "submit": "Entrer dans l’app"
     }
+  },
+  "nav": {
+    "label": "Navigation",
+    "home": "Accueil",
+    "songs": "Morceaux",
+    "gigs": "Plans",
+    "members": "Fanfarons",
+    "settings": "Réglages"
+  },
+  "comingSoon": {
+    "home": "L’accueil arrive bientôt. En attendant, va voir du côté des fanfarons.",
+    "songs": "Les morceaux arrivent bientôt : enregistrements, partitions et tout le reste.",
+    "gigs": "Les plans arrivent bientôt. Garde tes dimanches libres, on ne sait jamais."
+  },
+  "directory": {
+    "all_one": "1 fanfaron. Touche une tête pour l’appeler, lui écrire ou passer la voir.",
+    "all_other": "{{count}} fanfarons, de A à Z. Touche une tête pour l’appeler, lui écrire ou passer la voir.",
+    "withPowerMembers_one": "1 fanfaron, power members compris.",
+    "withPowerMembers_other": "{{count}} fanfarons, power members compris.",
+    "mySection_one": "Ton pupitre, {{section}} : toi, et c’est tout.",
+    "mySection_other": "Ton pupitre, {{section}} : {{count}} fanfarons, toi compris.",
+    "filterMySection": "Mon pupitre",
+    "filterPowerMembers": "Power members",
+    "manage": "Gérer",
+    "call": "Appeler",
+    "write": "Écrire",
+    "goThere": "Y aller",
+    "allWithPointer_one": "1 fanfaron. Clique sur une tête pour l’appeler, lui écrire ou passer la voir.",
+    "allWithPointer_other": "{{count}} fanfarons, de A à Z. Clique sur une tête pour l’appeler, lui écrire ou passer la voir."
   }
 }

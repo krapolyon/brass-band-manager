@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet } from 'react-router';
 import { useBand } from '../../band.ts';
-import { useMe } from '../../session.ts';
+import { HOME, useMe } from '../../session.ts';
 
 // While the app does not know yet who is in front of it, or when the server
 // does not answer. No loading screen is designed: this says it in words.
@@ -41,7 +41,7 @@ export function VisitorsOnly() {
 
   if (me.isPending || band.isPending) return <Waiting isError={false} />;
   if (band.data === null) return <Navigate to="/install" replace />;
-  if (me.data) return <Navigate to="/" replace />;
+  if (me.data) return <Navigate to={HOME} replace />;
 
   return <Outlet />;
 }

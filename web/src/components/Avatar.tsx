@@ -11,12 +11,12 @@ type Props = {
 
 const textStyle = { small: 'textLabel', medium: 'textHeading', large: 'textTitle' };
 
-/** The initials of a nickname: the first letter of its first two words ("Le Grand Jacques" gives "LG"). */
+/** The initials of a nickname: the first letter of its first and of its last word ("Le Grand Jacques" gives "LJ"). */
 export function initialsOf(nickname: string): string {
   const words = nickname.trim().split(/\s+/).filter(Boolean);
-  return words
-    .slice(0, 2)
-    .map((word) => [...word][0] ?? '')
+  const ends = words.length > 1 ? [words[0], words[words.length - 1]] : words;
+  return ends
+    .map((word) => [...(word ?? '')][0] ?? '')
     .join('')
     .toUpperCase();
 }
