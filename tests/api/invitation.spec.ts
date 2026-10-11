@@ -1,15 +1,7 @@
 import { expect, type PlaywrightWorkerArgs, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
 import { png } from '../support/images.ts';
-import {
-  addMember,
-  admin,
-  deviceOf,
-  install,
-  memberId,
-  memberPassword,
-  signIn,
-} from '../support/scenario.ts';
+import { addMember, admin, deviceOf, install, memberId, signIn } from '../support/scenario.ts';
 import { emptyStorage, storedFiles } from '../support/storage.ts';
 
 // An invitation completed in one request: the invited member checks their
@@ -258,7 +250,6 @@ test('the link of a forgotten password cannot rewrite a record', async ({
   expect(
     (await request.post('/api/passwordLink/use', { data: { token, password } })).status(),
   ).toBe(200);
-  expect(memberPassword).not.toBe(password);
 });
 
 test('a link that opens nothing validates nothing', async ({ request }) => {

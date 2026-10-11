@@ -52,10 +52,6 @@ export const emptyDraft: RecordDraft = {
   addressInstructions: '',
 };
 
-/** The country a phone number typed without a prefix belongs to. */
-const phoneCountry = (draft: { countryCode: string | null }, bandCountry: string) =>
-  draft.countryCode || bandCountry;
-
 export function draftOf(member: MemberRecord, bandCountry: string): RecordDraft {
   return {
     nickname: member.nickname,
@@ -63,7 +59,7 @@ export function draftOf(member: MemberRecord, bandCountry: string): RecordDraft 
     lastName: member.lastName,
     email: member.email,
     instrumentId: member.instrumentId,
-    mobilePhone: phoneForDisplay(member.mobilePhone, phoneCountry(member, bandCountry)),
+    mobilePhone: phoneForDisplay(member.mobilePhone, bandCountry),
     streetAddress: member.streetAddress ?? '',
     postalCode: member.postalCode ?? '',
     city: member.city ?? '',
@@ -81,7 +77,7 @@ export function recordOf(draft: RecordDraft, bandCountry: string): MemberRecord 
     lastName: draft.lastName.trim(),
     email: draft.email.trim(),
     instrumentId: draft.instrumentId ?? 0,
-    mobilePhone: toInternational(draft.mobilePhone, phoneCountry(draft, bandCountry)) || null,
+    mobilePhone: toInternational(draft.mobilePhone, bandCountry) || null,
     streetAddress: text(draft.streetAddress),
     postalCode: text(draft.postalCode),
     city: text(draft.city),
@@ -116,10 +112,7 @@ export function useRecordErrors() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim()) || refused.email) {
       errors.email = t('member.errors.email.invalid');
     }
-    if (
-      toInternational(draft.mobilePhone, phoneCountry(draft, bandCountry)) === null ||
-      refused.mobilePhone
-    ) {
+    if (toInternational(draft.mobilePhone, bandCountry) === null || refused.mobilePhone) {
       errors.mobilePhone = t('member.errors.mobilePhone.invalid');
     }
     for (const name of ['streetAddress', 'postalCode', 'city', 'addressInstructions'] as const) {

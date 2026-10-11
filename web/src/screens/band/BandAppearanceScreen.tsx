@@ -90,22 +90,31 @@ function AppearanceForm({ band }: { band: Band }) {
         body: { name, defaultAccentTheme: theme, defaultLanguage: language },
       });
       if (logoInput) {
-        await api('/api/band/logo', { method: 'PUT', body: logoInput });
+        try {
+          await api('/api/band/logo', { method: 'PUT', body: logoInput });
+        } catch (error) {
+          // The name and the colour are saved: only the logo is to choose again.
+          if (error instanceof ApiError && error.status === 422) {
+            setLogoError(t('band.appearance.logoRefused'));
+            setLogoFile(null);
+            setLogoInput(null);
+          }
+          throw error;
+        }
       } else if (isLogoRemoved && band.logoUrl) {
         await api('/api/band/logo', { method: 'DELETE' });
       }
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['band'] });
-      navigate('/band');
-    },
+    onSuccess: () => navigate('/band'),
+    // Whatever happened, the band is asked again: a save can stop halfway.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['band'] }),
     onError: focusFirstFieldError,
   });
 
   const refused = save.error instanceof ApiError ? save.error.fields : {};
   const nameError =
     wasSent && (name.trim() === '' || refused.name) ? t('install.band.name.missing') : undefined;
-  const isUnreachable = save.isError && !nameError;
+  const isUnreachable = save.isError && !nameError && !logoError;
 
   return (
     <AppLayout

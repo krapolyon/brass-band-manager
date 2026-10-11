@@ -11,7 +11,7 @@ import { instrumentsOf, type Member, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { focusFirstFieldError } from '../settings/ProfileScreen.tsx';
-import type { CreatedLink } from './LinkPanel.tsx';
+import { handOver } from './LinkPanel.tsx';
 import { NoRightScreen } from './ManageListScreen.tsx';
 import { MemberRecordFields, noPhoto, type PhotoDraft } from './MemberRecordFields.tsx';
 import { emptyDraft, recordOf, useRecordErrors } from './record.ts';
@@ -48,12 +48,12 @@ export function InviteScreen() {
     },
     onSuccess: async (created) => {
       await queryClient.invalidateQueries({ queryKey: ['members'] });
-      const link: CreatedLink = {
+      handOver({
         token: created.passwordLinkToken,
         nickname: created.nickname,
         isInvitation: true,
-      };
-      navigate('/members/manage', { state: { link } });
+      });
+      navigate('/members/manage');
     },
     onError: focusFirstFieldError,
   });

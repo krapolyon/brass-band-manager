@@ -11,8 +11,9 @@ import { PictogramChoice } from '../../components/PictogramChoice.tsx';
 import { SectionCard } from '../../components/SectionCard.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
 import { type Instrument, type Section, useSections } from '../../members.ts';
+import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
-import { AdminsOnlyScreen, useCanManageBand } from './BandSettingsScreen.tsx';
+import { AdminsOnlyScreen } from './BandSettingsScreen.tsx';
 import './band.css';
 
 const NAME_MAX_LENGTH = 50;
@@ -26,7 +27,9 @@ type Opened =
 // from its sheet (model/members.md, entry 2).
 export function BandSectionsScreen() {
   const { t } = useTranslation();
-  const canManage = useCanManageBand();
+  // The permission the API asks for on these routes.
+  const me = useMe().data;
+  const canManage = me ? me.permissions.includes('manageSections') : null;
   const sections = useSections();
   const [opened, setOpened] = useState<Opened | null>(null);
   const [isOpen, setOpen] = useState(false);

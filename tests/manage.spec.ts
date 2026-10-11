@@ -67,6 +67,13 @@ test.describe('the list', () => {
     const choice = (name: string) => page.getByRole('radio', { name });
     await expect(choice('Tous')).toBeChecked();
 
+    // A group of radio buttons: the arrows move the choice.
+    await choice('Tous').press('ArrowRight');
+    await expect(choice('Power members')).toBeChecked();
+    await expect(choice('Power members')).toBeFocused();
+    await choice('Power members').press('ArrowLeft');
+    await expect(choice('Tous')).toBeChecked();
+
     await choice('Power members').click();
     await expect(nicknames(page)).toHaveText(['Tonton']);
     await choice('Invités').click();
@@ -156,6 +163,12 @@ test.describe('an invitation', () => {
 
     await panel.getByRole('button', { name: 'Fermer' }).click();
     await expect(rows(page).filter({ hasText: 'Riton' })).toContainText('Invité');
+
+    // Shown once: neither a reload nor the history of the browser brings it back.
+    await page.reload();
+    await expect(rows(page).filter({ hasText: 'Riton' })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => JSON.stringify(history.state))).not.toMatch(/[0-9a-f]{64}/);
   });
 
   test('says until when its link works, and can get a new one or be cancelled', async ({
@@ -270,11 +283,12 @@ test.describe('the record of a member', () => {
     await expect(leave).toBeDisabled();
     await expect(leave).toContainText('Impossible tant qu’il est le seul admin');
 
-    // Unticking the role is refused by the server, in words.
-    await page.getByLabel('Admin').uncheck();
-    await page.getByRole('button', { name: 'Enregistrer' }).click();
-    await expect(page.getByText('Il faut toujours un admin.')).toBeVisible();
-    expect(sql(`SELECT role FROM memberRole WHERE memberId = ${memberId('Jibé')}`)).toBe('ADMIN');
+    // The role itself cannot be unticked: its line says why, with no box.
+    await expect(
+      page.getByText('Dernier admin\u00a0: ce rôle ne peut pas lui être retiré'),
+    ).toBeVisible();
+    await expect(page.getByLabel('Admin', { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel('Gère les plans')).toBeVisible();
   });
 
   test('who manages members acts on nobody who may do more than them', async ({ page }) => {
@@ -290,6 +304,9 @@ test.describe('the record of a member', () => {
       await expect(action).toBeDisabled();
       await expect(action).toContainText('Réservé aux admins');
     }
+    // The email is what the admin signs in with: Momo reads it, and cannot change it.
+    await expect(page.getByLabel('Adresse email')).toHaveAttribute('readonly', '');
+    await expect(page.getByText('Réservé aux admins\u00a0: c’est son identifiant')).toBeVisible();
     // Roles are read, not changed: no box to tick.
     await expect(page.getByText('Tout, rôles et réglages compris')).toBeVisible();
     await expect(page.getByRole('checkbox')).toHaveCount(0);
@@ -299,6 +316,21 @@ test.describe('the record of a member', () => {
     await expect(page.getByRole('button', { name: /Passer en power member/ })).toBeEnabled();
     await expect(page.getByRole('heading', { name: 'Rôles' })).toHaveCount(0);
   });
+});
+
+test('a member whose session ended elsewhere is sent to the sign-in screen at their next action', async ({
+  page,
+}) => {
+  await signIn(page);
+  await record(page, 'Zaza');
+  await expect(title(page)).toHaveText('Zaza');
+  // Signed out from another device, or marked as gone.
+  sql('DELETE FROM memberSession');
+
+  await page.getByRole('button', { name: /Passer en power member/ }).click();
+
+  await expect(page).toHaveURL('/sign-in');
+  expect(status('Zaza')).toBe('ACTIVE');
 });
 
 test('a member without the right is told so, on every address of the management', async ({
@@ -323,8 +355,8 @@ test('a member without the right is told so, on every address of the management'
 test('at the largest text size with every option on, managing members can still be done', async ({
   page,
 }) => {
-  sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1
-       WHERE email = '${admin.email}'`);
+  sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
+         hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE email = '${admin.email}'`);
   await signIn(page);
   const overflow = () =>
     page.evaluate(

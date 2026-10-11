@@ -73,8 +73,10 @@ export function NavRow({
         className="NavRow"
         aria-haspopup={opensPanel ? 'dialog' : undefined}
         data-tone={tone}
-        onClick={onClick}
-        disabled={disabled}
+        // Not the `disabled` attribute: the row would leave the keyboard, and
+        // its reason, written in its detail, could not be reached.
+        aria-disabled={disabled ? true : undefined}
+        onClick={disabled ? undefined : onClick}
       >
         {content}
       </button>

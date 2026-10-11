@@ -19,8 +19,8 @@ export type MemberTableRow = {
   roles: string;
   /** The record of the member. */
   to: string;
-  /** What the link of the row is called: "Ouvrir la fiche de Marilou la Tornade". */
-  openLabel: string;
+  /** Read before the name by a screen reader: "Ouvrir la fiche de". */
+  openVerb: string;
   muted?: boolean;
 };
 
@@ -47,14 +47,15 @@ export function MemberTable({ caption, columns, rows }: Props) {
               {column}
             </th>
           ))}
-          <td />
+          <td aria-hidden="true" />
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
           <tr key={row.id} data-muted={row.muted ? 'true' : undefined}>
             <th scope="row">
-              <Link className="MemberTable-member" to={row.to} aria-label={row.openLabel}>
+              <Link className="MemberTable-member" to={row.to}>
+                <span className="visuallyHidden">{row.openVerb} </span>
                 <Avatar photoUrl={row.photoUrl} initials={initialsOf(row.nickname)} />
                 <span className="MemberTable-texts">
                   <span className="MemberTable-nickname textBodyStrong">{row.nickname}</span>

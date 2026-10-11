@@ -37,6 +37,8 @@ type Props = {
   instruments: { id: number; name: string }[];
   photo: PhotoDraft;
   onPhoto: (photo: PhotoDraft) => void;
+  /** Why the email cannot be changed here: shown under the field, which is then read-only. */
+  emailLocked?: string;
 };
 
 const NAME_MAX_LENGTH = 50;
@@ -53,6 +55,7 @@ export function MemberRecordFields({
   instruments,
   photo,
   onPhoto,
+  emailLocked,
 }: Props) {
   const { t, i18n } = useTranslation();
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -79,7 +82,8 @@ export function MemberRecordFields({
     <>
       <TextField
         label={t('member.email.label')}
-        hint={t(`member.email.hint.${voice}`)}
+        hint={emailLocked ?? t(`member.email.hint.${voice}`)}
+        readOnly={emailLocked !== undefined}
         error={errors.email}
         type="email"
         name="email"

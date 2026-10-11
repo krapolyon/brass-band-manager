@@ -1,5 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SESSION_ENDED } from './api.ts';
 import { applyAppearance } from './appearance.ts';
 import { useBand } from './band.ts';
 import { useAccessibilityBeforeSignIn } from './deviceAccessibility.ts';
@@ -23,6 +25,15 @@ export function AppearanceOf() {
       applyAppearance({ colorScheme: 'AUTO', accentTheme: null, ...beforeSignIn });
     }
   }, [me, beforeSignIn]);
+
+  // A request refused because the session is over: the app asks again who is
+  // signed in, and its guard then leads to the sign-in screen.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const ask = () => queryClient.invalidateQueries({ queryKey: ['me'] });
+    window.addEventListener(SESSION_ENDED, ask);
+    return () => window.removeEventListener(SESSION_ENDED, ask);
+  }, [queryClient]);
 
   const language = me?.language ?? band?.defaultLanguage;
   useEffect(() => {

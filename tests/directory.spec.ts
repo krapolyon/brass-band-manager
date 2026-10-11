@@ -218,7 +218,8 @@ test.describe('the directory', () => {
     page,
   }) => {
     sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1,
-         hasHighContrast = 1 WHERE email = '${admin.email}'`);
+         hasHighContrast = 1,
+         hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE email = '${admin.email}'`);
     await signIn(page);
     await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
 

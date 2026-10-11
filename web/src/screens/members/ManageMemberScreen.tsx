@@ -153,17 +153,18 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
   });
   const save = useMutation({
     mutationFn: async () => {
-      await saveMember(member.id, draft, photo, bandCountry);
+      // The roles first: a change of roles that is refused (the last admin)
+      // then saves nothing at all.
       const changed =
         held.length !== member.roles.length || held.some((role) => !member.roles.includes(role));
       if (canManageRoles && changed) {
         await api(`/api/members/${member.id}/roles`, { method: 'PUT', body: { roles: held } });
       }
+      await saveMember(member.id, draft, photo, bandCountry);
     },
-    onSuccess: async () => {
-      await Promise.all([refresh(), mine()]);
-      navigate('/members/manage');
-    },
+    onSuccess: () => navigate('/members/manage'),
+    // Whatever happened, the list is asked again: a save can stop halfway.
+    onSettled: () => Promise.all([refresh(), mine()]),
     onError: focusFirstFieldError,
   });
 
@@ -328,8 +329,13 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
                     key={role}
                     role={role}
                     // Only an admin changes roles; who manages members reads them.
+                    locked={
+                      canManageRoles && role === 'ADMIN' && isLastAdmin
+                        ? t('manage.member.lastAdminRole')
+                        : undefined
+                    }
                     onCheck={
-                      canManageRoles
+                      canManageRoles && !(role === 'ADMIN' && isLastAdmin)
                         ? (checked) =>
                             setHeld(
                               checked ? [...held, role] : held.filter((other) => other !== role),
@@ -346,6 +352,7 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
         {isCurrent && (
           <MemberRecordFields
             voice="other"
+            emailLocked={mayAct ? undefined : t('manage.member.emailReserved')}
             draft={draft}
             onChange={(changes) => setDraft({ ...draft, ...changes })}
             errors={errors}
@@ -375,21 +382,22 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
   );
 }
 
-function RoleRow({
-  role,
-  checked,
-  onCheck,
-}: {
+type RoleRowProps = {
   role: RoleName;
   checked: boolean;
+  /** Left out: the role is read, not changed. */
   onCheck?: (checked: boolean) => void;
-}) {
+  /** Why this role cannot be changed, in place of what it allows. */
+  locked?: string;
+};
+
+function RoleRow({ role, checked, onCheck, locked }: RoleRowProps) {
   const { t } = useTranslation();
 
   return (
     <ListRow
       label={t(`manage.roles.${role}.label`)}
-      detail={t(`manage.roles.${role}.detail`)}
+      detail={locked ?? t(`manage.roles.${role}.detail`)}
       checked={onCheck ? checked : undefined}
       onCheck={onCheck}
     />

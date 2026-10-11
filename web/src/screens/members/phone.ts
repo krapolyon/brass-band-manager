@@ -2,8 +2,9 @@ import { type CountryCode, parsePhoneNumberFromString } from 'libphonenumber-js/
 
 // Phone numbers are stored in international format ("+33612345678") and
 // shown in the local one ("06 12 34 56 78") (model/members.md). A number
-// typed without its country prefix is read as a number of a country: the one
-// of the member when they gave it, otherwise the one of the band.
+// typed without its country prefix is read as a number of the country of the
+// band (band.defaultCountryCode), whatever the address of the member: a
+// member who moves abroad keeps their number.
 
 /** The international form of what was typed; null when it is not a possible number. Empty stays empty. */
 export function toInternational(typed: string, country: string): string | null {

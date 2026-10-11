@@ -6,6 +6,9 @@
 // A refusal of the API ({"error": "<key>"}) or a server that does not answer
 // becomes an ApiError, which the calling screen shows through its key.
 
+/** Sent on the window when the API says that nobody is signed in any more. */
+export const SESSION_ENDED = 'sessionEnded';
+
 export class ApiError extends Error {
   constructor(
     /** HTTP status, or 0 when the server could not be reached. */
@@ -37,6 +40,10 @@ export async function api<T>(path: string, { method = 'GET', body }: Options = {
   }
 
   const data = await response.json().catch(() => null);
+  if (response.status === 401 && path !== '/api/me' && path !== '/api/session') {
+    // The session ended elsewhere: the app is told, and asks who is signed in.
+    window.dispatchEvent(new Event(SESSION_ENDED));
+  }
   if (!response.ok) {
     throw new ApiError(response.status, data?.error ?? 'serverError', data?.fields);
   }

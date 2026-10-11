@@ -102,6 +102,23 @@ test.describe('the profile', () => {
     await expect(page.getByLabel('Téléphone mobile')).toHaveValue('06 12 34 56 78');
   });
 
+  test('a phone number stays what it is when the country of the address changes', async ({
+    page,
+  }) => {
+    sql(`UPDATE member SET mobilePhone = '+33612345678' WHERE id = ${memberId('Zaza')}`);
+    await signIn(page);
+    await page.goto('/settings/profile');
+    await expect(page.getByLabel('Téléphone mobile')).toHaveValue('06 12 34 56 78');
+
+    // The member moves abroad and keeps their number: it is a number of the
+    // country of the band, whatever the address.
+    await page.getByLabel('Pays').selectOption({ label: 'Belgique' });
+    await save(page).click();
+
+    await expect(page).toHaveURL('/settings');
+    expect(zaza('mobilePhone, countryCode')).toBe('+33612345678\tBE');
+  });
+
   test('a nickname or an email someone else has is refused, on its field', async ({ page }) => {
     await signIn(page);
     await page.goto('/settings/profile');
@@ -256,8 +273,8 @@ test.describe('appearance and accessibility', () => {
   test('at the largest text size with every option on, the settings can still be used', async ({
     page,
   }) => {
-    sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1
-         WHERE id = ${memberId('Zaza')}`);
+    sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
+         hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE id = ${memberId('Zaza')}`);
     await signIn(page);
     const overflow = () =>
       page.evaluate(

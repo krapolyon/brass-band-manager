@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { useBand } from '../../band.ts';
 import { Button } from '../../components/Button.tsx';
 import { Chip } from '../../components/Chip.tsx';
 import { FilterChip } from '../../components/FilterChip.tsx';
@@ -139,12 +140,12 @@ type SheetProps = { member: Member; instrument: string; sectionIcon: string | nu
 // Discord feature.)
 function MemberSheet({ member, instrument, sectionIcon }: SheetProps) {
   const { t, i18n } = useTranslation();
-  const bandCountry = member.countryCode ?? '';
-  const phone = phoneForDisplay(member.mobilePhone, bandCountry || 'FR');
+  const bandCountry = useBand().data?.defaultCountryCode ?? '';
+  const phone = phoneForDisplay(member.mobilePhone, bandCountry);
 
   const cityLine = [member.postalCode, member.city].filter(Boolean).join(' ');
   const country =
-    member.countryCode && member.countryCode !== 'FR'
+    member.countryCode && member.countryCode !== bandCountry
       ? countryName(member.countryCode, i18n.language)
       : '';
   const address = [member.streetAddress, cityLine, country].filter(Boolean).join(', ');
@@ -173,7 +174,11 @@ function MemberSheet({ member, instrument, sectionIcon }: SheetProps) {
             href={`tel:${member.mobilePhone}`}
           />
         )}
-        <QuickAction icon="Mail" label={t('directory.write')} href={`mailto:${member.email}`} />
+        <QuickAction
+          icon="Mail"
+          label={t('directory.write')}
+          href={`mailto:${encodeURIComponent(member.email).replace('%40', '@')}`}
+        />
       </div>
       <div>
         {member.mobilePhone && <NavRow icon="Phone" label={phone} />}

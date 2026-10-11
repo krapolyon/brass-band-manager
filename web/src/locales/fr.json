@@ -502,7 +502,7 @@
       "member": "Fanfaron",
       "status": "Statut",
       "roles": "Rôles",
-      "open": "Ouvrir la fiche de {{nickname}}"
+      "open": "Ouvrir la fiche de"
     },
     "status": {
       "ACTIVE": "Joue régulièrement, reçoit les rappels pour les plans",
@@ -552,7 +552,9 @@
       "lastAdmin": "{{nickname}} est le dernier admin. Nomme quelqu’un d’autre avant de lui retirer ce rôle ou de le marquer comme parti.",
       "lastAdminRefused": "Il faut toujours un admin. Nomme quelqu’un d’autre avant de retirer ce rôle.",
       "reserved": "Réservé aux admins : ce fanfaron a plus de droits que toi.",
-      "notFound": "Cette fiche n’existe pas, ou plus."
+      "notFound": "Cette fiche n’existe pas, ou plus.",
+      "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
+      "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter."
     },
     "leave": {
       "title": "Marquer {{nickname}} comme parti ?",
@@ -601,7 +603,8 @@
       "logoHint": "PNG, SVG, JPEG ou WebP, 2 Mo maximum. Il sert aussi d’icône à l’app installée.",
       "accentNote": "Celle de la fanfare. Chaque fanfaron peut en choisir une autre pour lui, dans ses réglages.",
       "language": "Langue par défaut",
-      "languageNote": "Celle des nouveaux fanfarons. Chacun peut changer la sienne."
+      "languageNote": "Celle des nouveaux fanfarons. Chacun peut changer la sienne.",
+      "logoRefused": "Ce logo a été refusé. Le reste est enregistré : choisis une autre image."
     },
     "sections": {
       "title": "Pupitres et instruments",

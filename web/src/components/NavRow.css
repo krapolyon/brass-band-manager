@@ -39,12 +39,12 @@ a.NavRow {
 }
 
 /* An action that cannot be done stays visible; the reason is its detail. */
-.NavRow:disabled {
+.NavRow[aria-disabled="true"] {
   cursor: default;
 }
 
-.NavRow:disabled .NavRow-label,
-.NavRow:disabled > .Icon:first-child {
+.NavRow[aria-disabled="true"] .NavRow-label,
+.NavRow[aria-disabled="true"] > .Icon:first-child {
   color: var(--textMuted);
   opacity: 0.6;
 }
