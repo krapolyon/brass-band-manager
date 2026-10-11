@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.8 — 2026-10-11 · Model: `members.dbml` · Validated · Migration: `001_members.sql`
+> v1.9 — 2026-10-11 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -22,6 +22,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `city` | City | Ville | No | Lyon | 3 to 30 | |
 | `countryCode` | Country | Pays | No | FR | 2 | Chosen in a list. Stored as a two-letter ISO code, displayed as a name in the member's language |
 | `addressInstructions` | Access instructions | Instructions d'accès | No | Code 4812B, 3e étage gauche | 0 to 200 | Door code, floor, parking |
+| `photoPath` | Photo | Photo | No | — | — | An image file: JPEG, PNG or WebP. See "Profile photo" |
 | `instrumentId` | Instrument | Instrument | Yes | Sax Ténor | — | One instrument per member. Gives the section |
 | `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. The password has 10 characters at least and no composition rule. Two technical limits: 72 bytes at most (what the hashing keeps), and no NUL character |
 | `status` | Status | Statut | Yes | ACTIVE | — | See life cycle |
@@ -44,7 +45,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `INVITED` | | deleted | A member manager cancels the invitation | The row is deleted: nothing refers to it yet |
 | `ACTIVE` | Plays regularly, can sign in | `POWER_MEMBER` | A member manager sets it by hand | Nothing is erased; roles, sessions and password are kept. The member is no longer reminded to answer for gigs |
 | `POWER_MEMBER` | Was active and plays less: comes to help out on some gigs. Can sign in, answers for gigs, counts in whether a gig is playable | `ACTIVE` | A member manager sets it by hand | Reminders resume |
-| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields and the roles are erased. Names, nickname, email and instrument are kept |
+| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo and the roles are erased. Names, nickname, email and instrument are kept |
 | `LEFT` | Has left the band | `INVITED` | A member manager brings the member back | A new password link is created; the old password is not reused |
 
 The status labels in French are "Invité", "Actif", "Power member" and "Parti". No status changes by itself: `POWER_MEMBER` in particular is never deduced from how often a member answers or plays.
@@ -52,6 +53,15 @@ The status labels in French are "Invité", "Actif", "Power member" and "Parti". 
 In every rule below, **a current member** is a member whose status is `ACTIVE` or `POWER_MEMBER`. The two differ on one point only, reminders, which belongs to the Gigs domain.
 
 A member is never deleted once `ACTIVE`: their answers to past gigs stay. The email of a member who left is kept so that they can be invited again.
+
+### Profile photo
+- **Optional**, and given by the member or by someone who manages members, who can also give one to a member still `INVITED`. It serves one purpose: recognising each other in the band.
+- **Formats**: JPEG, PNG or WebP. No SVG: a photo is never a drawing, and an SVG can carry scripts.
+- **Stored as a file, not in the database.** `photoPath` holds the path of the file in the storage folder of the app, under a name chosen by the app. The reasons: a list of thirty members must not carry thirty images in its answer; a browser can keep a file it already has; and the backup of the database stays small. The cost is that a backup is the database and the storage folder together, which is already true for the logo.
+- **Made small before it is sent.** The browser crops the photo to a centred square and reduces it to 512 pixels a side; there is no tool to choose the crop for now: a photo straight from a phone, of several megabytes, is accepted, and what is kept weighs a few tens of kilobytes. Redrawing the photo also removes what a phone writes inside it, the place where it was taken in particular. The server accepts a square image of that size at most, and decides what the file is from its content.
+- **Never public.** Unlike the logo of the band, a photo is served to signed-in members only, under the same rule as the other fields of the directory.
+- **Replaced or removed at any time** by the member or by someone who manages members; the old file is deleted.
+- **Erased when the member leaves**, with the phone and the address.
 
 ### Rules
 - **Install.** Installing the app is only possible while the `member` table is empty. A first screen presents the steps, lets the person choose the language (Band domain, `band.md`) and asks for the install key (below). It then goes in three steps:
@@ -97,7 +107,7 @@ The permissions of the other domains are detailed in their own dictionaries. The
 ### Access rights
 | Who | View | Create | Edit | Change status |
 |---|---|---|---|---|
-| Any signed-in member | Every field of current members (`ACTIVE` and `POWER_MEMBER`) except those about the password and the preferences: the member list is the directory of the band | No | Their own record, except roles and status | No |
+| Any signed-in member | Every field of current members (`ACTIVE` and `POWER_MEMBER`), photo included, except those about the password and the preferences: the member list is the directory of the band | No | Their own record, photo included, except roles and status | No |
 | `MEMBER_MANAGER` | The same, plus `INVITED` and `LEFT` members | Yes | Any record, except roles | Yes |
 | `ADMIN` | The same | Yes | Any record, and roles | Yes |
 
@@ -112,12 +122,14 @@ Exporting the list of members asks for the password again.
 - `nickname`, `firstName`, `lastName`: identification. Seen by every signed-in member.
 - `email`: sign-in and directory of the band. Seen by every signed-in member.
 - `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode`, `addressInstructions`: directory of the band, so that members can reach and visit each other. Given by the member, optional, seen by every signed-in member, erased when the member leaves.
+- `photoPath`: recognising each other in the band. Given by the member or by someone who manages members, optional, seen by signed-in members only, never public, never in an export, erased when the member leaves.
 - Preferences (language, appearance, theme, accessibility options) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export.
 - None of these fields is ever written to a log.
 
 ### Display
 - The nickname is the name shown in every representation. First and last names appear on the member's own screen and in the directory.
 - Missing phone or address: the line is not shown.
+- Missing photo: a placeholder defined by the design.
 - Representations in the design library: none exists yet. Expected: mention, row, header.
 
 ### Accessibility options

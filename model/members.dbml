@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.9 — 2026-10-11 — validated: profile photo of a member (photoPath), migration 003
 // v1.8 — 2026-10-11 — no change to the tables: the starting library preselects instrument by instrument, and the saxophones are capitalised (dictionary)
 // v1.7 — 2026-10-10 — no change to the tables: the install key has a minimum length and a wrong one is slowed down (dictionary)
 // v1.6 — 2026-10-10 — no change to the tables: the install key is asked on the first screen and checked at once (dictionary)
@@ -68,6 +69,7 @@ Table member {
   city varchar [note: '🔒 Personal data — purpose: directory of the band']
   countryCode varchar [note: '🔒 Personal data — purpose: directory of the band. Two-letter ISO 3166-1 code, for instance FR. The country name is displayed by the app in the member\'s language.']
   addressInstructions varchar [note: '🔒 Personal data — purpose: directory of the band. How to get in: door code, floor, where to park.']
+  photoPath varchar [note: '🔒 Personal data — purpose: recognising each other in the band. File of the profile photo, relative to the storage folder of the app; the file is on the disk, not in the database. Empty when the member has no photo. Erased when the member leaves.']
   instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member.']
   passwordHash varchar [note: 'Result of PHP password_hash(). Required when the status is ACTIVE or POWER_MEMBER, empty while it is INVITED. Never sent to the front.']
   failedSignInCount integer [not null, default: 0, note: 'Wrong passwords in a row. Back to 0 after a successful sign-in.']
