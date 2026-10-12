@@ -1,11 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError, api } from './api.ts';
+import { applyBandTheme } from './appearance.ts';
+import type { AccentTheme } from './themes.ts';
 
-// What GET /api/band answers (api/src/Band/ShowBandAction.php): the only
-// things of the app that are shown without signing in.
+// What GET /api/band answers (api/src/Band/Bands.php): what the app shows
+// without signing in.
 export type Band = {
   name: string;
+  /** The language of the screens shown before sign-in, and of new members. */
+  defaultLanguage: string;
+  /** The accent theme shown before sign-in, and to members who have chosen none. */
+  defaultAccentTheme: AccentTheme;
+  /** The country a phone number typed without its prefix belongs to. */
+  defaultCountryCode: string;
+  /** False on an instance without a mail server: no forgotten password by email. */
+  canSendEmail: boolean;
   /** Null when the band has no logo. */
   logoUrl: string | null;
   /** The square icons made from the logo, by size in pixels. */
@@ -27,7 +37,7 @@ export function useBand() {
   });
 }
 
-// Gives the page the name and the icon of the band: the title of the tab, the
+// Gives the page the name, the accent theme and the icon of the band: the title of the tab, the
 // icon of the tab, and the icon an iPhone takes when the app is added to its
 // home screen. Without a band, or without a logo, index.html keeps its own.
 export function BandIdentity() {
@@ -36,6 +46,7 @@ export function BandIdentity() {
   useEffect(() => {
     if (!band) return;
     document.title = band.name;
+    applyBandTheme(band.defaultAccentTheme);
     if (!band.icons) return;
     document.querySelector('link[rel="icon"]')?.setAttribute('href', band.icons['192']);
     document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', band.icons['180']);

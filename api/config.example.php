@@ -20,6 +20,26 @@ return [
     // It is of no use once the app is installed.
     'installKey' => '',
 
+    // The public address of the app, as members type it, without a slash at
+    // the end: 'https://app.example.org'. The links written in emails start
+    // with it.
+    'appUrl' => '',
+
+    // The mail server the app sends its emails through (today: the link of a
+    // forgotten password). Use a mailbox of your own domain. While "from" or
+    // "host" is empty, the app sends nothing, and the forgotten password
+    // screen sends members to those who manage members.
+    'mail' => [
+        // The address the emails come from, for instance 'app@example.org'.
+        'from' => '',
+        'host' => '',
+        'port' => 587,
+        // 'tls' (port 587) or 'ssl' (port 465). Nothing else is accepted.
+        'encryption' => 'tls',
+        'user' => '',
+        'password' => '',
+    ],
+
     // There is deliberately no "session" setting here: without one, the
     // session cookie only travels over HTTPS, which is what the host must do.
 ];

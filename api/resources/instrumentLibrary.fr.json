@@ -1,12 +1,12 @@
 {
   "sections": [
-    {"name": "Trompette", "instruments": [{"name": "Trompette", "preselected": true}]},
-    {"name": "Saxophone", "instruments": [{"name": "Sax Alto", "preselected": true}, {"name": "Sax Ténor", "preselected": true}, {"name": "Sax Baryton", "preselected": false}, {"name": "Sax C Melody", "preselected": true}]},
-    {"name": "Trombone", "instruments": [{"name": "Trombone Ut", "preselected": true}, {"name": "Trombone Sib", "preselected": true}]},
-    {"name": "P’tites basses", "instruments": [{"name": "P’tite basse", "preselected": true}]},
-    {"name": "Souba", "instruments": [{"name": "Souba", "preselected": true}]},
-    {"name": "Percu", "instruments": [{"name": "Batterie", "preselected": true}, {"name": "Percus", "preselected": true}]},
-    {"name": "Flûte", "instruments": [{"name": "Flûte", "preselected": false}, {"name": "Piccolo", "preselected": false}]},
-    {"name": "Clarinette", "instruments": [{"name": "Clarinette", "preselected": false}]}
+    {"name": "Trompette", "icon": "trumpet", "instruments": [{"name": "Trompette", "preselected": true}]},
+    {"name": "Saxophone", "icon": "saxophone", "instruments": [{"name": "Sax Alto", "preselected": true}, {"name": "Sax Ténor", "preselected": true}, {"name": "Sax Baryton", "preselected": false}, {"name": "Sax C Melody", "preselected": true}]},
+    {"name": "Trombone", "icon": "trombone", "instruments": [{"name": "Trombone Ut", "preselected": true}, {"name": "Trombone Sib", "preselected": true}]},
+    {"name": "P’tites basses", "icon": "tuba", "instruments": [{"name": "P’tite basse", "preselected": true}]},
+    {"name": "Souba", "icon": "sousaphone", "instruments": [{"name": "Souba", "preselected": true}]},
+    {"name": "Percu", "icon": "drum", "instruments": [{"name": "Batterie", "preselected": true}, {"name": "Percus", "preselected": true}]},
+    {"name": "Flûte", "icon": "flute", "instruments": [{"name": "Flûte", "preselected": false}, {"name": "Piccolo", "preselected": false}]},
+    {"name": "Clarinette", "icon": "clarinet", "instruments": [{"name": "Clarinette", "preselected": false}]}
   ]
 }

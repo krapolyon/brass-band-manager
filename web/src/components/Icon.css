@@ -4,7 +4,7 @@
   height: var(--iconSize);
 }
 
-/* Sizes relative to the 24 of --iconSize, so that they follow the text size option. */
+/* Sizes relative to the 24 of --iconSize. */
 .Icon[data-size="20"] {
   width: calc(var(--iconSize) * 20 / 24);
   height: calc(var(--iconSize) * 20 / 24);

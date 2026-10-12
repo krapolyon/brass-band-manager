@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 use BrassBand\Access\SameSiteOnly;
 use BrassBand\Database;
+use BrassBand\Http\AfterResponse;
 use BrassBand\Http\BodyLimit;
 use BrassBand\Http\ErrorHandler;
 use Slim\Factory\AppFactory;
@@ -47,3 +48,6 @@ $app->addErrorMiddleware(false, false, false)
 (require __DIR__ . '/../routes.php')($app, $database, $config);
 
 $app->run();
+
+// What was put aside to be done once the answer has left: sending an email.
+AfterResponse::run();

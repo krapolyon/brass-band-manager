@@ -21,6 +21,8 @@ export type DraftInstrument = {
 export type DraftSection = {
   id: number;
   name: string;
+  /** The pictogram the starting library gives; null for a section the band adds. */
+  icon: string | null;
   instruments: DraftInstrument[];
 };
 

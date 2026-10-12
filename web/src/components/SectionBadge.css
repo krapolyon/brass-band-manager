@@ -1,0 +1,14 @@
+/* 36 in Figma, with a ring of 2 in the colour of the surface it sits on. */
+.SectionBadge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 2px solid var(--badgeRing, var(--sheet));
+  border-radius: var(--radiusFull);
+  background: var(--accent);
+  /* On the accent a pictogram takes onAccent, never text. */
+  color: var(--onAccent);
+}

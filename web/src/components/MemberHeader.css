@@ -1,0 +1,26 @@
+.MemberHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceMd);
+  min-width: 0;
+}
+
+.MemberHeader-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.MemberHeader-muted,
+.MemberHeader-instrument {
+  color: var(--textMuted);
+}
+
+.MemberHeader-instrument {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXxs);
+}

@@ -1,0 +1,36 @@
+.MemberRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: 3.5rem; /* 56 */
+  padding: var(--spaceXxs) 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.MemberRow-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.MemberRow-detail,
+.MemberRow[data-muted="true"] .MemberRow-nickname,
+.MemberRow > .Icon {
+  color: var(--textMuted);
+}
+
+.MemberRow-mark {
+  display: inline-flex;
+  color: var(--textMuted);
+}
+
+.MemberRow-mark[data-kind="power"] {
+  color: var(--accentText);
+}
+
+.MemberRow > .Chip {
+  flex: none;
+}

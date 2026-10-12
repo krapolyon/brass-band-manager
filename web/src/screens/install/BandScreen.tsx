@@ -7,8 +7,8 @@ import { ImageField } from '../../components/ImageField.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { TextField } from '../../components/TextField.tsx';
+import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
-import { focusFirstError, InstallLayout } from './InstallLayout.tsx';
 import { prepareLogo } from './logo.ts';
 import { StepNav } from './StepNav.tsx';
 
@@ -65,7 +65,7 @@ export function BandScreen() {
   };
 
   return (
-    <InstallLayout
+    <FlowLayout
       nav={<StepNav step={1} back="/install" />}
       title={t('install.band.title')}
       lead={t('install.band.lead')}
@@ -99,6 +99,6 @@ export function BandScreen() {
           onChange={chooseLogo}
         />
       </Sheet>
-    </InstallLayout>
+    </FlowLayout>
   );
 }

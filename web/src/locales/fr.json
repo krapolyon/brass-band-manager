@@ -180,5 +180,461 @@
     "choose": "Choisir une image",
     "change": "Changer",
     "remove": "Retirer"
+  },
+  "accessibility": {
+    "title": "Accessibilité",
+    "textSize": {
+      "label": "Taille du texte",
+      "value": "{{percent}} %",
+      "description": "Agrandit les textes sans modifier la mise en page."
+    },
+    "highContrast": {
+      "label": "Contraste élevé",
+      "description": "Renforce le contraste entre le texte et le fond. Utile en cas de basse vision, de fatigue visuelle ou de forte luminosité ambiante."
+    },
+    "increasedSpacing": {
+      "label": "Espacement augmenté",
+      "description": "Aère le texte : espace entre les lettres, entre les mots et entre les lignes."
+    },
+    "legibleFont": {
+      "label": "Police plus lisible",
+      "description": "Distingue plus nettement les caractères qui se ressemblent (I / l / 1, O / 0)."
+    },
+    "reducedMotion": {
+      "label": "Mouvement réduit",
+      "description": "Supprime les animations et les transitions de grande amplitude. Utile en cas de troubles vestibulaires, de migraines ou de sensibilité au mouvement."
+    },
+    "extendedTimeouts": {
+      "label": "Délais augmentés",
+      "description": "Les notifications et les infobulles restent affichées jusqu’à ce que tu les fermes."
+    },
+    "forDevice": "Réglé pour cet appareil. Une fois la connexion faite, ce sont les réglages de ton compte qui s’appliquent.",
+    "forAccount": "Ces réglages seront enregistrés avec ton compte. Tu pourras les changer à tout moment dans tes réglages."
+  },
+  "password": {
+    "hint": "{{min}} caractères minimum.",
+    "tooShort_one": "Encore {{count}} caractère : il en faut {{min}} au minimum.",
+    "tooShort_other": "Encore {{count}} caractères : il en faut {{min}} au minimum.",
+    "invalid": "Ce mot de passe ne convient pas. Choisis-en un autre.",
+    "show": "Afficher le mot de passe",
+    "hide": "Masquer le mot de passe"
+  },
+  "signIn": {
+    "title": "Te revoilà !",
+    "lead": "Connecte-toi pour retrouver les morceaux, les plans et les fanfarons.",
+    "email": "Adresse email",
+    "password": "Mot de passe",
+    "forgot": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "refused": "Adresse email ou mot de passe incorrect. Après plusieurs essais ratés, la connexion se bloque un quart d’heure : dans ce cas, patiente un peu."
+  },
+  "forgotPassword": {
+    "title": "Mot de passe oublié ?",
+    "lead": "Ça arrive aux meilleurs. Donne ton adresse email : si c’est celle d’un fanfaron, on y envoie un lien pour en choisir un nouveau.",
+    "submit": "Envoyer le lien",
+    "backToSignIn": "Retour à la connexion",
+    "sent": {
+      "title": "Regarde tes mails",
+      "lead": "Si cette adresse est celle d’un fanfaron, le lien vient de partir. Il marche une fois, pendant une heure.",
+      "nothing": "Rien reçu ? Regarde dans les indésirables, ou demande un lien à quelqu’un qui gère les fanfarons."
+    },
+    "noEmail": {
+      "lead": "Ça arrive aux meilleurs. Demande un lien à quelqu’un qui gère les fanfarons : il te permettra d’en choisir un nouveau.",
+      "who": "Tu ne sais pas à qui demander ? N’importe quel admin de la fanfare peut te le créer."
+    },
+    "emailMissing": "Il manque ton adresse email.",
+    "emailInvalid": "Cette adresse n’a pas l’air complète. Vérifie ce qui suit le @."
+  },
+  "newPassword": {
+    "title": "Un nouveau mot de passe",
+    "lead": "Choisis-en un que tu retiendras. Ou que ton téléphone retiendra pour toi.",
+    "label": "Nouveau mot de passe",
+    "otherDevices": "Tes autres appareils seront déconnectés : il faudra t’y reconnecter avec le nouveau.",
+    "submit": "Enregistrer et me connecter"
+  },
+  "linkExpired": {
+    "title": "Ce lien ne marche plus",
+    "lead": "Il a déjà servi, ou il a dépassé sa date. Rien de grave : on t’en refait un.",
+    "invitation": "C’était une invitation ? Redemande le lien à la personne qui te l’a envoyé.",
+    "newLink": "Recevoir un nouveau lien",
+    "toSignIn": "Aller à la connexion"
+  },
+  "member": {
+    "inTheBand": "Dans la fanfare",
+    "toReachYou": "Pour te joindre",
+    "contact": "Coordonnées",
+    "optional": "Facultatif.",
+    "photo": {
+      "label": "Photo",
+      "unreadable": "Cette image ne peut pas être lue. Essaie avec un JPEG, un PNG ou un WebP.",
+      "hint": {
+        "self": "JPEG, PNG ou WebP. Elle est recadrée en carré.",
+        "other": "JPEG, PNG ou WebP. Elle est recadrée en carré.",
+        "invited": "Ajoutée par la personne qui t’a invité. Change-la ou retire-la si tu préfères.",
+        "invite": "Facultatif. La personne pourra la changer ou la retirer."
+      }
+    },
+    "nickname": {
+      "label": "Surnom",
+      "hint": "Le nom affiché partout dans l’app."
+    },
+    "firstName": {
+      "label": "Prénom"
+    },
+    "lastName": {
+      "label": "Nom"
+    },
+    "instrument": {
+      "label": "Instrument",
+      "placeholder": "Choisir un instrument"
+    },
+    "email": {
+      "label": "Adresse email",
+      "hint": {
+        "self": "C’est aussi ton identifiant pour te connecter.",
+        "invited": "C’est aussi ton identifiant pour te connecter.",
+        "other": "C’est son identifiant pour se connecter.",
+        "invite": "Ce sera son identifiant pour se connecter."
+      }
+    },
+    "mobilePhone": {
+      "label": "Téléphone mobile"
+    },
+    "home": {
+      "title": "Chez toi",
+      "hint": "Facultatif. Pratique pour les répètes à la maison et le covoiturage."
+    },
+    "streetAddress": {
+      "label": "Adresse",
+      "placeholder": "Numéro et rue"
+    },
+    "postalCode": {
+      "label": "Code postal"
+    },
+    "city": {
+      "label": "Ville"
+    },
+    "countryCode": {
+      "label": "Pays",
+      "none": "Non renseigné"
+    },
+    "addressInstructions": {
+      "label": "Instructions d’accès",
+      "placeholder": "Code, étage, où se garer"
+    },
+    "errors": {
+      "beforeContinuing_one": "Un champ est à corriger avant de continuer.",
+      "beforeContinuing_other": "{{count}} champs sont à corriger avant de continuer.",
+      "beforeSaving_one": "Un champ est à corriger avant d’enregistrer.",
+      "beforeSaving_other": "{{count}} champs sont à corriger avant d’enregistrer.",
+      "nickname": {
+        "missing": "Il manque le surnom.",
+        "invalid": "Ce surnom ne convient pas. Il lui faut au moins une lettre ou un chiffre.",
+        "duplicate": "Ce surnom est déjà pris. Essaie une variante."
+      },
+      "firstName": {
+        "missing": "Il manque le prénom.",
+        "invalid": "Ce prénom ne convient pas. Il lui faut au moins une lettre."
+      },
+      "lastName": {
+        "missing": "Il manque le nom.",
+        "invalid": "Ce nom ne convient pas. Il lui faut au moins une lettre."
+      },
+      "instrument": {
+        "missing": "Il manque l’instrument."
+      },
+      "email": {
+        "missing": "Il manque l’adresse email.",
+        "invalid": "Cette adresse n’a pas l’air complète. Vérifie ce qui suit le @.",
+        "duplicate": "Cette adresse est déjà celle d’un fanfaron."
+      },
+      "mobilePhone": {
+        "invalid": "Ce numéro n’a pas l’air complet. Pour un numéro étranger, commence par + et l’indicatif du pays."
+      },
+      "tooLong": "Ce texte est trop long."
+    },
+    "status": {
+      "INVITED": "Invité",
+      "ACTIVE": "Actif",
+      "POWER_MEMBER": "Power member",
+      "LEFT": "Parti",
+      "EXPIRED": "Invitation expirée"
+    }
+  },
+  "onboarding": {
+    "title": "Bienvenue, {{nickname}} !",
+    "lead": "On a rempli ce qu’on savait de toi. Vérifie, corrige, complète : seuls les fanfarons connectés voient ces infos.",
+    "continue": "Continuer",
+    "password": {
+      "title": "Plus qu’un mot de passe",
+      "lead": "Avec ton adresse email, c’est lui qui t’ouvre l’app sur tous tes appareils.",
+      "submit": "Entrer dans l’app"
+    }
+  },
+  "nav": {
+    "label": "Navigation",
+    "home": "Accueil",
+    "songs": "Morceaux",
+    "gigs": "Plans",
+    "members": "Fanfarons",
+    "settings": "Réglages"
+  },
+  "comingSoon": {
+    "home": "L’accueil arrive bientôt. En attendant, va voir du côté des fanfarons.",
+    "songs": "Les morceaux arrivent bientôt : enregistrements, partitions et tout le reste.",
+    "gigs": "Les plans arrivent bientôt. Garde tes dimanches libres, on ne sait jamais."
+  },
+  "directory": {
+    "all_one": "1 fanfaron. Touche une tête pour l’appeler, lui écrire ou passer la voir.",
+    "all_other": "{{count}} fanfarons, de A à Z. Touche une tête pour l’appeler, lui écrire ou passer la voir.",
+    "withPowerMembers_one": "1 fanfaron, power members compris.",
+    "withPowerMembers_other": "{{count}} fanfarons, power members compris.",
+    "mySection_one": "Ton pupitre, {{section}} : toi, et c’est tout.",
+    "mySection_other": "Ton pupitre, {{section}} : {{count}} fanfarons, toi compris.",
+    "filterMySection": "Mon pupitre",
+    "filterPowerMembers": "Power members",
+    "manage": "Gérer",
+    "call": "Appeler",
+    "write": "Écrire",
+    "goThere": "Y aller",
+    "allWithPointer_one": "1 fanfaron. Clique sur une tête pour l’appeler, lui écrire ou passer la voir.",
+    "allWithPointer_other": "{{count}} fanfarons, de A à Z. Clique sur une tête pour l’appeler, lui écrire ou passer la voir."
+  },
+  "theme": {
+    "copper": "Cuivre",
+    "coral": "Corail",
+    "mint": "Menthe",
+    "lilac": "Lilas"
+  },
+  "settings": {
+    "account": "Mon compte",
+    "band": "La fanfare",
+    "save": "Enregistrer",
+    "profile": {
+      "open": "Mon profil",
+      "title": "Mon profil",
+      "lead": "Ce que les autres fanfarons voient de toi."
+    },
+    "password": {
+      "title": "Mot de passe",
+      "current": "Mot de passe actuel",
+      "currentMissing": "Il manque ton mot de passe actuel.",
+      "currentWrong": "Ce n’est pas ton mot de passe actuel. Après plusieurs essais ratés, la connexion se bloque un quart d’heure.",
+      "otherDevices": "Changer de mot de passe déconnecte tes autres appareils.",
+      "submit": "Changer le mot de passe"
+    },
+    "appearance": {
+      "title": "Apparence",
+      "lead": "Ça s’applique tout de suite, et ça te suit d’un appareil à l’autre.",
+      "schemeTitle": "Clair ou sombre",
+      "scheme": {
+        "AUTO": "Auto",
+        "LIGHT": "Clair",
+        "DARK": "Sombre"
+      },
+      "schemeNote": "Auto suit le réglage de ton téléphone : clair le jour, sombre la nuit s’il est réglé comme ça.",
+      "accentTitle": "Couleur d’accent",
+      "band": "Fanfare",
+      "bandColour": "couleur de la fanfare",
+      "accentNote": "Fanfare, c’est la couleur choisie par ta fanfare : si elle en change, tu suis."
+    },
+    "accessibility": {
+      "lead": "Règle l’app à ta vue. Ces réglages ne regardent que toi : personne d’autre ne les voit.",
+      "none": "Aucune option activée",
+      "textSize": "texte à {{percent}} %",
+      "highContrast": "contraste élevé",
+      "increasedSpacing": "espacement augmenté",
+      "legibleFont": "police plus lisible",
+      "reducedMotion": "mouvement réduit",
+      "extendedTimeouts": "délais augmentés"
+    },
+    "language": {
+      "title": "Langue"
+    },
+    "manageMembers": "Gérer les fanfarons",
+    "invitations_one": "1 invitation en attente",
+    "invitations_other": "{{count}} invitations en attente",
+    "bandSettings": "Réglages de la fanfare",
+    "bandSettingsDetail": "Apparence, pupitres",
+    "signOut": "Me déconnecter",
+    "signOutDetail": "Sur cet appareil seulement",
+    "signOutEverywhere": "Déconnecter tous mes appareils",
+    "signOutEverywhereDetail": "Celui-ci compris",
+    "confirmSignOut": {
+      "title": "Tout déconnecter ?",
+      "text": "Tous tes appareils seront déconnectés, celui-ci compris. Il te faudra ton mot de passe pour revenir.",
+      "cancel": "Annuler"
+    }
+  },
+  "manage": {
+    "count": {
+      "members_one": "1 fanfaron",
+      "members_other": "{{count}} fanfarons",
+      "powerMembers_one": ", dont 1 power member",
+      "powerMembers_other": ", dont {{count}} power members",
+      "invited_one": "1 invitation en attente",
+      "invited_other": "{{count}} invitations en attente",
+      "former_one": "1 ancien",
+      "former_other": "{{count}} anciens"
+    },
+    "filter": {
+      "label": "Qui afficher",
+      "all": "Tous",
+      "powerMembers": "Power members",
+      "invited": "Invités"
+    },
+    "showFormer": "Afficher les anciens",
+    "empty": {
+      "all": {
+        "title": "Personne pour l’instant.",
+        "text": "Invite quelqu’un pour commencer."
+      },
+      "powerMembers": {
+        "title": "Pas de power member pour l’instant.",
+        "text": "Tout le monde joue à fond. Tu peux passer quelqu’un en power member depuis sa fiche."
+      },
+      "invited": {
+        "title": "Pas d’invitation en attente.",
+        "text": "Tout le monde est arrivé."
+      }
+    },
+    "table": {
+      "member": "Fanfaron",
+      "status": "Statut",
+      "roles": "Rôles",
+      "open": "Ouvrir la fiche de"
+    },
+    "status": {
+      "ACTIVE": "Joue régulièrement, reçoit les rappels pour les plans",
+      "POWER_MEMBER": "Joue moins souvent, ne reçoit pas les rappels",
+      "INVITED": "Le lien d’invitation marche jusqu’au {{date}}",
+      "EXPIRED": "Le lien d’invitation ne marche plus : crée-en un nouveau",
+      "LEFT": "Coordonnées, photo et rôles effacés à son départ",
+      "expiredShort": "Expirée"
+    },
+    "actions": {
+      "title": "Actions",
+      "toPowerMember": "Passer en power member",
+      "toPowerMemberDetail": "Joue moins souvent : plus de rappels pour les plans",
+      "toActive": "Repasser en actif",
+      "toActiveDetail": "Reprend les rappels pour les plans",
+      "passwordLink": "Créer un lien de mot de passe",
+      "passwordLinkDetail": "Si le sien est perdu",
+      "leave": "Marquer comme parti",
+      "leaveDetail": "Coupe son accès, efface ses coordonnées",
+      "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
+      "newLink": "Créer un nouveau lien",
+      "newLinkDetail": "L’ancien ne marchera plus",
+      "cancelInvitation": "Annuler l’invitation",
+      "cancelInvitationDetail": "Supprime cette fiche : rien d’autre n’en dépend",
+      "bringBack": "Faire revenir {{nickname}}",
+      "bringBackDetail": "Crée une nouvelle invitation : l’ancien mot de passe ne sert plus"
+    },
+    "roles": {
+      "ADMIN": {
+        "label": "Admin",
+        "detail": "Tout, rôles et réglages compris"
+      },
+      "MEMBER_MANAGER": {
+        "label": "Gère les fanfarons",
+        "detail": "Invite, modifie, change les statuts"
+      },
+      "SONG_MANAGER": {
+        "label": "Gère les morceaux",
+        "detail": "Ajoute, modifie, archive"
+      },
+      "GIG_MANAGER": {
+        "label": "Gère les plans",
+        "detail": "Crée, modifie, annule"
+      }
+    },
+    "member": {
+      "lastAdmin": "{{nickname}} est le dernier admin. Nomme quelqu’un d’autre avant de lui retirer ce rôle ou de le marquer comme parti.",
+      "lastAdminRefused": "Il faut toujours un admin. Nomme quelqu’un d’autre avant de retirer ce rôle.",
+      "reserved": "Réservé aux admins : ce fanfaron a plus de droits que toi.",
+      "notFound": "Cette fiche n’existe pas, ou plus.",
+      "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
+      "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter."
+    },
+    "leave": {
+      "title": "Marquer {{nickname}} comme parti ?",
+      "text": "Son accès est coupé tout de suite. Son téléphone, son adresse, sa photo et ses rôles sont effacés. Son nom et ses réponses aux plans passés restent, et une nouvelle invitation reste possible."
+    },
+    "invite": {
+      "open": "Inviter un fanfaron",
+      "lead": "Remplis ce que tu sais. La personne vérifiera et complétera le reste en arrivant.",
+      "submit": "Créer l’invitation"
+    },
+    "link": {
+      "once": "On ne te le montrera plus : copie-le maintenant.",
+      "copy": "Copier le lien",
+      "copied": "Lien copié",
+      "share": "Partager",
+      "invitation": {
+        "title": "Invitation prête",
+        "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours.",
+        "label": "Lien d’invitation"
+      },
+      "password": {
+        "title": "Lien prêt",
+        "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours, et lui permet de choisir un nouveau mot de passe.",
+        "label": "Lien de mot de passe"
+      }
+    },
+    "noRight": {
+      "title": "Pas par ici",
+      "text": "Cette page est réservée à celles et ceux qui gèrent les fanfarons. Tu penses devoir y être ? Vois ça avec un admin.",
+      "back": "Retour aux fanfarons"
+    }
+  },
+  "band": {
+    "title": "La fanfare",
+    "lead": "Ce qui fait que cette app est la vôtre. Réservé aux admins.",
+    "adminsOnly": "Cette page est réservée aux admins de la fanfare. Tu penses devoir y être ? Vois ça avec l’un d’eux.",
+    "backToSettings": "Retour aux réglages",
+    "connections": "Branchements",
+    "discord": "Les fils de discussion des morceaux",
+    "soon": "Bientôt",
+    "appearance": {
+      "title": "Apparence",
+      "detail": "Nom, logo, couleur, langue",
+      "lead": "Le nom, le logo, la couleur et la langue de votre app. Le nom et le logo se voient avant même la connexion.",
+      "nameAndLogo": "Nom et logo",
+      "logoHint": "PNG, SVG, JPEG ou WebP, 2 Mo maximum. Il sert aussi d’icône à l’app installée.",
+      "accentNote": "Celle de la fanfare. Chaque fanfaron peut en choisir une autre pour lui, dans ses réglages.",
+      "language": "Langue par défaut",
+      "languageNote": "Celle des nouveaux fanfarons. Chacun peut changer la sienne.",
+      "logoRefused": "Ce logo a été refusé. Le reste est enregistré : choisis une autre image."
+    },
+    "sections": {
+      "title": "Pupitres et instruments",
+      "lead": "Rangés comme dans vos arrangements. Un pupitre est présent à un plan dès qu’un de ses fanfarons l’est.",
+      "players_zero": "Personne n’en joue",
+      "players_one": "1 fanfaron",
+      "players_other": "{{count}} fanfarons",
+      "playerCount_zero": "aucun fanfaron",
+      "playerCount_one": "1 fanfaron",
+      "playerCount_other": "{{count}} fanfarons",
+      "moveNote_one": "Le changer de pupitre emmène son fanfaron avec lui.",
+      "moveNote_other": "Le changer de pupitre emmène ses {{count}} fanfarons avec lui.",
+      "instrumentInUse_one": "1 fanfaron en joue. Change son instrument avant de le retirer.",
+      "instrumentInUse_other": "{{count}} fanfarons en jouent. Change leur instrument avant de le retirer.",
+      "instrumentHeld_one": "Plus personne n’en joue, mais la fiche d’un invité ou d’un ancien fanfaron le porte encore. Il ne peut pas être retiré.",
+      "instrumentHeld_other": "Plus personne n’en joue, mais les fiches de {{count}} invités ou anciens fanfarons le portent encore. Il ne peut pas être retiré.",
+      "sectionNotEmpty": "{{name}} a encore {{instruments}} et {{players}}. Déplace ou retire ses instruments d’abord.",
+      "pictogram": {
+        "label": "Pictogramme",
+        "hint": "Il accompagne le surnom de chaque fanfaron du pupitre.",
+        "none": "Sans pictogramme",
+        "trumpet": "Trompette",
+        "saxophone": "Saxophone",
+        "trombone": "Trombone",
+        "tuba": "Tuba",
+        "sousaphone": "Soubassophone",
+        "drum": "Batterie",
+        "flute": "Flûte",
+        "clarinet": "Clarinette"
+      }
+    }
   }
 }

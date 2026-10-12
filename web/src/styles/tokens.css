@@ -1,18 +1,29 @@
 /* The variables of the Figma file "Brass band manager", one for one.
    A variable keeps its Figma name: `accent` there is `--accent` here.
 
-   Four collections, as in Figma:
+   Six collections, as in Figma:
      Primitives   raw colours. Used by Scheme only.
      Theme        what an accent theme sets. One block per theme. Used by Scheme only.
-     Scheme       the semantic colours, dark and light. This is what components use.
-     Size         spacing, radii, sizes of controls, type sizes, typefaces.
+     Scheme       the semantic colours: dark, light, and their two high
+                  contrast modes. This is what components use.
+     TextSize     the size of each text style at each step of the text size
+                  option. Used by Size only.
+     Typeface     the two families of the app, or the legible one. Used by Size only.
+     Size         spacing, radii, sizes of controls, and the type sizes and
+                  typefaces, which point to the two collections above.
 
    Scheme points to Theme and Primitives with var(), as it does in Figma with
    aliases: changing the scheme or the theme is one change at the root.
 
-   The root element carries the two choices of the member:
-     data-scheme="dark" | "light"     absent: follows the device (AUTO)
+   The root element carries the mode of each collection. They are written by
+   web/src/appearance.ts (and, before the app has loaded, by
+   web/public/appearance.js), from the choices of the member and from what
+   the device asks:
+     data-scheme="dark" | "light"         always set; AUTO is resolved there
+     data-contrast="more"                 the high contrast mode of the scheme
      data-theme="copper" | "coral" | "mint" | "lilac"     absent: the first theme
+     data-text-size="120" … "200"         absent: 100 %
+     data-typeface="legible"              absent: the two typefaces of the app
 
    WHEN FIGMA CHANGES, CHANGE THIS FILE THE SAME WAY, AND NOTHING ELSE:
    no component holds a colour, a spacing or a size of its own. */
@@ -25,7 +36,10 @@
   --neutral100: #f4f1ea;
   --neutral300: #b4c0ce;
   --neutral600: #566173;
+  --neutral700: #3a4455;
+  --neutral800: #252d3c;
   --neutral900: #141a26;
+  --neutral1000: #000000;
   --whiteA8: rgb(255 255 255 / 0.08);
   --whiteA14: rgb(255 255 255 / 0.14);
   --whiteA60: rgb(255 255 255 / 0.6);
@@ -35,6 +49,7 @@
   --inkA18: rgb(20 26 38 / 0.18);
   --inkA40: rgb(20 26 38 / 0.4);
   --blackA60: rgb(0 0 0 / 0.6);
+  --blackA80: rgb(0 0 0 / 0.8);
   --green300: #86e0c5;
   --green700: #0f6b50;
   --green400A16: rgb(86 196 160 / 0.16);
@@ -56,9 +71,11 @@
 /* ---------------------------------------------------------------
    Theme  (one block per mode of the Theme collection)
    The list of themes is also in web/src/themes.ts and in the API.
+   A block applies to the root element, and to a ThemeSwatch, which shows a
+   theme that is not the one in use.
    --------------------------------------------------------------- */
 :root,
-:root[data-theme="copper"] {
+[data-theme="copper"] {
   --themeAccent: #f4ad2a;
   --themeOnAccent: #1b1300;
   --themeAccentTextLight: #8a5200;
@@ -68,7 +85,7 @@
   --themeSheetLight: #ffffff;
 }
 
-:root[data-theme="coral"] {
+[data-theme="coral"] {
   --themeAccent: #ff6b5e;
   --themeOnAccent: #2a0704;
   --themeAccentTextLight: #b92d22;
@@ -78,7 +95,7 @@
   --themeSheetLight: #ffffff;
 }
 
-:root[data-theme="mint"] {
+[data-theme="mint"] {
   --themeAccent: #5bd9ae;
   --themeOnAccent: #052a1d;
   --themeAccentTextLight: #0b6e51;
@@ -88,7 +105,7 @@
   --themeSheetLight: #ffffff;
 }
 
-:root[data-theme="lilac"] {
+[data-theme="lilac"] {
   --themeAccent: #b3a4ff;
   --themeOnAccent: #150c40;
   --themeAccentTextLight: #5540c4;
@@ -99,10 +116,8 @@
 }
 
 /* ---------------------------------------------------------------
-   Scheme  (modes: Dark, Light)
-   The light values are written twice below: once for a member who chose
-   light, once for a member who follows a device set to light. CSS has no
-   older way to share them; keep the two light blocks identical.
+   Scheme  (modes: Dark, Light, Dark high contrast, Light high contrast)
+   One block per mode, every variable in each, in the order of Figma.
    --------------------------------------------------------------- */
 
 /* Dark: the default mode in Figma. */
@@ -125,12 +140,13 @@
   --warningSoft: var(--amber300A16);
   --danger: var(--red300);
   --dangerSoft: var(--red400A16);
+  --haloAccent: var(--themeAccent);
   --haloCool: var(--blue600);
   --haloDeep: var(--violet600);
   --scrim: var(--blackA60);
 }
 
-/* Light, chosen by the member. */
+/* Light. */
 :root[data-scheme="light"] {
   color-scheme: light;
   --ground: var(--themeGroundLight);
@@ -141,6 +157,8 @@
   --border: var(--inkA18);
   --text: var(--neutral900);
   --textMuted: var(--neutral600);
+  --accent: var(--themeAccent);
+  --onAccent: var(--themeOnAccent);
   --accentText: var(--themeAccentTextLight);
   --success: var(--green700);
   --successSoft: var(--green700A12);
@@ -148,43 +166,158 @@
   --warningSoft: var(--amber600A16);
   --danger: var(--red700);
   --dangerSoft: var(--red700A10);
+  --haloAccent: var(--themeAccent);
   --haloCool: var(--blue300);
   --haloDeep: var(--violet300);
   --scrim: var(--inkA40);
 }
 
-/* Light, because the member follows a device that is set to light. */
-@media (prefers-color-scheme: light) {
-  :root:not([data-scheme="dark"]) {
-    color-scheme: light;
-    --ground: var(--themeGroundLight);
-    --sheet: var(--themeSheetLight);
-    --glass: var(--whiteA60);
-    --glassBorder: var(--inkA8);
-    --control: var(--inkA6);
-    --border: var(--inkA18);
-    --text: var(--neutral900);
-    --textMuted: var(--neutral600);
-    --accentText: var(--themeAccentTextLight);
-    --success: var(--green700);
-    --successSoft: var(--green700A12);
-    --warning: var(--amber800);
-    --warningSoft: var(--amber600A16);
-    --danger: var(--red700);
-    --dangerSoft: var(--red700A10);
-    --haloCool: var(--blue300);
-    --haloDeep: var(--violet300);
-    --scrim: var(--inkA40);
-  }
+/* Dark high contrast. Glass and controls are opaque, and the three fields of
+   the halo take the colour of the ground: the halo disappears. */
+:root[data-contrast="more"] {
+  --ground: var(--neutral1000);
+  --sheet: var(--neutral900);
+  --glass: var(--neutral800);
+  --glassBorder: var(--neutral300);
+  --control: var(--neutral800);
+  --border: var(--neutral300);
+  --text: var(--neutral0);
+  --textMuted: var(--neutral300);
+  --accent: var(--themeAccent);
+  --onAccent: var(--neutral1000);
+  --accentText: var(--themeAccent);
+  --success: var(--green300);
+  --successSoft: var(--green400A16);
+  --warning: var(--amber300);
+  --warningSoft: var(--amber300A16);
+  --danger: var(--red300);
+  --dangerSoft: var(--red400A16);
+  --haloAccent: var(--neutral1000);
+  --haloCool: var(--neutral1000);
+  --haloDeep: var(--neutral1000);
+  --scrim: var(--blackA80);
+}
+
+/* Light high contrast. */
+:root[data-scheme="light"][data-contrast="more"] {
+  --ground: var(--neutral100);
+  --sheet: var(--neutral0);
+  --glass: var(--neutral0);
+  --glassBorder: var(--neutral700);
+  --control: var(--neutral100);
+  --border: var(--neutral700);
+  --text: var(--neutral1000);
+  --textMuted: var(--neutral700);
+  --accent: var(--themeAccent);
+  --onAccent: var(--neutral1000);
+  --accentText: var(--themeAccentTextLight);
+  --success: var(--green700);
+  --successSoft: var(--green700A12);
+  --warning: var(--amber800);
+  --warningSoft: var(--amber600A16);
+  --danger: var(--red700);
+  --dangerSoft: var(--red700A10);
+  --haloAccent: var(--neutral100);
+  --haloCool: var(--neutral100);
+  --haloDeep: var(--neutral100);
+  --scrim: var(--blackA60);
+}
+
+/* ---------------------------------------------------------------
+   TextSize  (modes: 100 %, 120 %, 140 %, 160 %, 180 %, 200 %)
+   The text size option of a member. Only text grows: spacing, radii, icons
+   and the height of controls keep their size. A size never grows beyond the
+   display size, and the display size does not grow.
+
+   Like every size of this file, these are in rem: the pixels of Figma
+   divided by 16. A browser whose own font size was changed therefore scales
+   the whole app, titles included.
+   --------------------------------------------------------------- */
+:root {
+  --textSizeDisplay: 2.5rem; /* 40 */
+  --textSizeTitle: 1.75rem; /* 28 */
+  --textSizeHeading: 1.3125rem; /* 21 */
+  --textSizeBodyLarge: 1.0625rem; /* 17 */
+  --textSizeBody: 0.9375rem; /* 15 */
+  --textSizeLabel: 0.875rem; /* 14 */
+  --textSizeButton: 1rem; /* 16 */
+  --textSizeCaption: 0.8125rem; /* 13 */
+  --textSizeMicro: 0.6875rem; /* 11 */
+}
+
+:root[data-text-size="120"] {
+  --textSizeTitle: 2.125rem; /* 34 */
+  --textSizeHeading: 1.5625rem; /* 25 */
+  --textSizeBodyLarge: 1.25rem; /* 20 */
+  --textSizeBody: 1.125rem; /* 18 */
+  --textSizeLabel: 1.0625rem; /* 17 */
+  --textSizeButton: 1.1875rem; /* 19 */
+  --textSizeCaption: 1rem; /* 16 */
+  --textSizeMicro: 0.8125rem; /* 13 */
+}
+
+:root[data-text-size="140"] {
+  --textSizeTitle: 2.4375rem; /* 39 */
+  --textSizeHeading: 1.8125rem; /* 29 */
+  --textSizeBodyLarge: 1.5rem; /* 24 */
+  --textSizeBody: 1.3125rem; /* 21 */
+  --textSizeLabel: 1.25rem; /* 20 */
+  --textSizeButton: 1.375rem; /* 22 */
+  --textSizeCaption: 1.125rem; /* 18 */
+  --textSizeMicro: 0.9375rem; /* 15 */
+}
+
+:root[data-text-size="160"] {
+  --textSizeTitle: 2.5rem; /* 40 */
+  --textSizeHeading: 2.125rem; /* 34 */
+  --textSizeBodyLarge: 1.6875rem; /* 27 */
+  --textSizeBody: 1.5rem; /* 24 */
+  --textSizeLabel: 1.375rem; /* 22 */
+  --textSizeButton: 1.625rem; /* 26 */
+  --textSizeCaption: 1.3125rem; /* 21 */
+  --textSizeMicro: 1.125rem; /* 18 */
+}
+
+:root[data-text-size="180"] {
+  --textSizeTitle: 2.5rem; /* 40 */
+  --textSizeHeading: 2.375rem; /* 38 */
+  --textSizeBodyLarge: 1.9375rem; /* 31 */
+  --textSizeBody: 1.6875rem; /* 27 */
+  --textSizeLabel: 1.5625rem; /* 25 */
+  --textSizeButton: 1.8125rem; /* 29 */
+  --textSizeCaption: 1.4375rem; /* 23 */
+  --textSizeMicro: 1.25rem; /* 20 */
+}
+
+:root[data-text-size="200"] {
+  --textSizeTitle: 2.5rem; /* 40 */
+  --textSizeHeading: 2.5rem; /* 40 */
+  --textSizeBodyLarge: 2.125rem; /* 34 */
+  --textSizeBody: 1.875rem; /* 30 */
+  --textSizeLabel: 1.75rem; /* 28 */
+  --textSizeButton: 2rem; /* 32 */
+  --textSizeCaption: 1.625rem; /* 26 */
+  --textSizeMicro: 1.375rem; /* 22 */
+}
+
+/* ---------------------------------------------------------------
+   Typeface  (modes: Default, Legible)
+   The legible font option of a member. The files are in web/public/fonts/.
+   --------------------------------------------------------------- */
+:root {
+  --typefaceDisplay: "Bricolage Grotesque", system-ui, sans-serif;
+  --typefaceText: "Instrument Sans", system-ui, sans-serif;
+}
+
+:root[data-typeface="legible"] {
+  --typefaceDisplay: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --typefaceText: "Atkinson Hyperlegible Next", system-ui, sans-serif;
 }
 
 /* ---------------------------------------------------------------
    Size
-   Figma gives pixels at a text size of 100 %. They are written in rem
-   (pixels / 16), so that the text size option of a member (100 to 200 %),
-   which sets the font size of the root, enlarges text, spacing and controls
-   together and nothing overflows. Lines stay in pixels: a hairline is a
-   hairline at any text size.
+   Figma gives pixels; they are written in rem (pixels / 16). Lines stay in
+   pixels: a hairline is a hairline everywhere.
    --------------------------------------------------------------- */
 :root {
   --spaceXxs: 0.25rem; /* 4 */
@@ -202,22 +335,24 @@
   --radiusLg: 1.75rem; /* 28 */
   --radiusFull: 999px;
 
+  /* The height of a control is a minimum, never a fixed height: its label
+     grows with the text size option and may wrap. */
   --controlHeight: 3.25rem; /* 52 */
   --controlHeightSm: 2.75rem; /* 44, the smallest touch target */
   --iconSize: 1.5rem; /* 24 */
   --borderWidth: 1px;
   --focusWidth: 2px;
 
-  --fontSizeDisplay: 2.5rem; /* 40 */
-  --fontSizeTitle: 1.75rem; /* 28 */
-  --fontSizeHeading: 1.3125rem; /* 21 */
-  --fontSizeBodyLarge: 1.0625rem; /* 17 */
-  --fontSizeBody: 0.9375rem; /* 15 */
-  --fontSizeLabel: 0.875rem; /* 14 */
-  --fontSizeCaption: 0.8125rem; /* 13 */
-  --fontSizeMicro: 0.6875rem; /* 11 */
-  --fontSizeButton: 1rem; /* 16 */
+  --fontSizeDisplay: var(--textSizeDisplay);
+  --fontSizeTitle: var(--textSizeTitle);
+  --fontSizeHeading: var(--textSizeHeading);
+  --fontSizeBodyLarge: var(--textSizeBodyLarge);
+  --fontSizeBody: var(--textSizeBody);
+  --fontSizeLabel: var(--textSizeLabel);
+  --fontSizeCaption: var(--textSizeCaption);
+  --fontSizeMicro: var(--textSizeMicro);
+  --fontSizeButton: var(--textSizeButton);
 
-  --fontDisplay: "Bricolage Grotesque", system-ui, sans-serif;
-  --fontText: "Instrument Sans", system-ui, sans-serif;
+  --fontDisplay: var(--typefaceDisplay);
+  --fontText: var(--typefaceText);
 }

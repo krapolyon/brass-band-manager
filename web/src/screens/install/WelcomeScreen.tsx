@@ -13,9 +13,9 @@ import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { TextField } from '../../components/TextField.tsx';
 import { languageName } from '../../i18n.ts';
+import { FlowLayout } from '../FlowLayout.tsx';
 import { AlreadyInstalledScreen } from './AlreadyInstalledScreen.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
-import { InstallLayout } from './InstallLayout.tsx';
 import { checkInstallKey, useInstallStatus } from './installApi.ts';
 
 // Figma: Install / Welcome, and its states: empty, language, key missing,
@@ -74,7 +74,7 @@ export function WelcomeScreen() {
 
   return (
     <>
-      <InstallLayout
+      <FlowLayout
         navAtEnd
         nav={
           <Button kind="secondary" size="small" icon="Globe" onClick={() => setLanguageOpen(true)}>
@@ -135,7 +135,7 @@ export function WelcomeScreen() {
             }
           />
         </Sheet>
-      </InstallLayout>
+      </FlowLayout>
 
       <Panel
         open={isLanguageOpen}

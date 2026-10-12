@@ -1,0 +1,61 @@
+/* 12 from the sides, above the bottom safe area; 68 high, each tab 60. */
+.TabBar {
+  position: fixed;
+  right: max(var(--spaceSm), env(safe-area-inset-right));
+  bottom: max(var(--spaceSm), env(safe-area-inset-bottom));
+  left: max(var(--spaceSm), env(safe-area-inset-left));
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 4.25rem;
+  padding: var(--spaceXxs);
+  border: var(--borderWidth) solid var(--glassBorder);
+  border-radius: 2.125rem;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+.TabBar a {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  min-width: 0;
+  min-height: 3.75rem;
+  border-radius: 1.875rem;
+  color: var(--textMuted);
+  text-align: center;
+  text-decoration: none;
+}
+
+.TabBar a[aria-current="page"] {
+  background: var(--control);
+  color: var(--accentText);
+}
+
+.TabBar span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Figma: "Show labels" off from a text size of 160 %. The name stays for
+   screen readers. */
+:root:is([data-text-size="160"], [data-text-size="180"], [data-text-size="200"]) .TabBar span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* On a desktop the navigation is the SideNav. */
+@media (min-width: 1024px) {
+  .TabBar {
+    display: none;
+  }
+}

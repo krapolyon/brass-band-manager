@@ -11,9 +11,9 @@ import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { PickerField, TextField } from '../../components/TextField.tsx';
+import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import type { DraftMember } from './InstallDraft.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
-import { focusFirstError, InstallLayout } from './InstallLayout.tsx';
 import { install } from './installApi.ts';
 import { StepNav } from './StepNav.tsx';
 import { countInstruments, keptSections, useSections } from './sections.ts';
@@ -72,6 +72,8 @@ export function MemberScreen() {
       queryClient.invalidateQueries({ queryKey: ['install'] });
       // The page takes the name and the icon of the band.
       queryClient.invalidateQueries({ queryKey: ['band'] });
+      // The install signed this device in: the app must not go on believing that nobody is.
+      queryClient.invalidateQueries({ queryKey: ['me'] });
       navigate('/install/done', { replace: true });
     },
     onError: (error) => {
@@ -158,6 +160,7 @@ export function MemberScreen() {
       bandName: draft.bandName,
       sections: kept.map((section) => ({
         name: section.name,
+        icon: section.icon,
         instruments: section.instruments.map((other) => other.name),
       })),
       admin: {
@@ -174,7 +177,7 @@ export function MemberScreen() {
 
   return (
     <>
-      <InstallLayout
+      <FlowLayout
         nav={<StepNav step={3} back="/install/sections" />}
         title={t('install.member.title')}
         lead={t('install.member.lead')}
@@ -193,7 +196,7 @@ export function MemberScreen() {
           </Message>
         )}
         <Sheet title={t('install.member.inTheBand')}>
-          <div className="InstallLayout-pair">
+          <div className="FlowLayout-pair">
             <TextField
               label={t('install.member.firstName.label')}
               error={errors.firstName}
@@ -213,7 +216,7 @@ export function MemberScreen() {
               onChange={(event) => set({ lastName: event.target.value })}
             />
           </div>
-          <div className="InstallLayout-pair">
+          <div className="FlowLayout-pair">
             <TextField
               label={t('install.member.nickname.label')}
               hint={t('install.member.nickname.hint')}
@@ -234,7 +237,7 @@ export function MemberScreen() {
           </div>
         </Sheet>
         <Sheet title={t('install.member.toSignIn')}>
-          <div className="InstallLayout-pair">
+          <div className="FlowLayout-pair">
             <TextField
               label={t('install.member.email.label')}
               hint={t('install.member.email.hint')}
@@ -276,7 +279,7 @@ export function MemberScreen() {
           </div>
         </Sheet>
         {failure && <Message kind="danger">{t(`install.member.${failure}`)}</Message>}
-      </InstallLayout>
+      </FlowLayout>
 
       <Panel
         open={isPickerOpen}

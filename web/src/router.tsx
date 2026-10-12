@@ -1,16 +1,64 @@
 import { createBrowserRouter } from 'react-router';
-import { HomeScreen } from './screens/HomeScreen.tsx';
+import { ForgotPasswordScreen } from './screens/access/ForgotPasswordScreen.tsx';
+import { MembersOnly, VisitorsOnly } from './screens/access/Guards.tsx';
+import { PasswordLinkScreen } from './screens/access/PasswordLinkScreen.tsx';
+import { SignInScreen } from './screens/access/SignInScreen.tsx';
+import { BandAppearanceScreen } from './screens/band/BandAppearanceScreen.tsx';
+import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
+import { BandSettingsScreen } from './screens/band/BandSettingsScreen.tsx';
+import { ComingSoonScreen } from './screens/ComingSoonScreen.tsx';
 import { BandScreen } from './screens/install/BandScreen.tsx';
 import { DoneScreen } from './screens/install/DoneScreen.tsx';
 import { InstallDraftProvider } from './screens/install/InstallDraft.tsx';
 import { MemberScreen } from './screens/install/MemberScreen.tsx';
 import { SectionsScreen } from './screens/install/SectionsScreen.tsx';
 import { WelcomeScreen } from './screens/install/WelcomeScreen.tsx';
+import { DirectoryScreen } from './screens/members/DirectoryScreen.tsx';
+import { InviteScreen } from './screens/members/InviteScreen.tsx';
+import { ManageListScreen } from './screens/members/ManageListScreen.tsx';
+import { ManageMemberScreen } from './screens/members/ManageMemberScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
+import { AccessibilityScreen } from './screens/settings/AccessibilityScreen.tsx';
+import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
+import { PasswordScreen } from './screens/settings/PasswordScreen.tsx';
+import { ProfileScreen } from './screens/settings/ProfileScreen.tsx';
+import { SettingsScreen } from './screens/settings/SettingsScreen.tsx';
 
 // Every address of the app and the screen it shows, in one place.
 export const router = createBrowserRouter([
-  { path: '/', element: <HomeScreen /> },
+  {
+    // The app itself: for signed-in members.
+    element: <MembersOnly />,
+    children: [
+      { path: '/', element: <ComingSoonScreen tab="home" /> },
+      { path: '/songs', element: <ComingSoonScreen tab="songs" /> },
+      { path: '/gigs', element: <ComingSoonScreen tab="gigs" /> },
+      { path: '/members', element: <DirectoryScreen /> },
+      { path: '/members/manage', element: <ManageListScreen /> },
+      { path: '/members/manage/invite', element: <InviteScreen /> },
+      { path: '/members/manage/:id', element: <ManageMemberScreen /> },
+      { path: '/band', element: <BandSettingsScreen /> },
+      { path: '/band/appearance', element: <BandAppearanceScreen /> },
+      { path: '/band/sections', element: <BandSectionsScreen /> },
+      { path: '/settings', element: <SettingsScreen /> },
+      { path: '/settings/profile', element: <ProfileScreen /> },
+      { path: '/settings/password', element: <PasswordScreen /> },
+      { path: '/settings/appearance', element: <AppearanceScreen /> },
+      { path: '/settings/accessibility', element: <AccessibilityScreen /> },
+    ],
+  },
+  {
+    // What is shown before sign-in.
+    element: <VisitorsOnly />,
+    children: [
+      { path: '/sign-in', element: <SignInScreen /> },
+      { path: '/forgot-password', element: <ForgotPasswordScreen /> },
+    ],
+  },
+  // What a password link opens: the link wins over a session already open
+  // on the device, which may be someone else's.
+  { path: '/password', element: <PasswordLinkScreen /> },
+  { path: '/invitation', element: <PasswordLinkScreen /> },
   {
     // The screens of the install share what has been entered so far.
     path: '/install',

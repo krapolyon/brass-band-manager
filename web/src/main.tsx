@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router/dom';
+import { AppearanceOf } from './AppearanceOf.tsx';
+import { followDevice } from './appearance.ts';
 import { BandIdentity } from './band.ts';
 import i18n from './i18n.ts';
 import { router } from './router.tsx';
@@ -14,6 +16,7 @@ import './styles/base.css';
 
 document.documentElement.lang = i18n.language;
 document.title = i18n.t('app.name');
+followDevice();
 
 // Keeps what the API answered, and asks again when the app comes back to the
 // foreground: this is how screens stay fresh without real time.
@@ -34,6 +37,7 @@ createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BandIdentity />
+      <AppearanceOf />
       <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,

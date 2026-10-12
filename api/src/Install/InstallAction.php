@@ -15,6 +15,8 @@ use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
 use BrassBand\Http\Text;
+use BrassBand\Access\AccentThemes;
+use BrassBand\Sections\SectionIcons;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Psr\Http\Message\ResponseInterface;
@@ -107,6 +109,9 @@ final class InstallAction
                 $errors->add("sections.$s.name", 'duplicate');
             }
             $sectionNames[] = self::key($section->name);
+            if ($section->icon !== null && !SectionIcons::exists($section->icon)) {
+                $errors->add("sections.$s.icon", 'invalid');
+            }
 
             if ($section->instruments === []) {
                 $errors->add("sections.$s.instruments", 'required');
@@ -145,11 +150,18 @@ final class InstallAction
             'name' => Text::clean($input->bandName),
             'logoPath' => $logoPath,
             'defaultLanguage' => $input->language,
+            // Not asked at install: the first theme, and the country of the language.
+            'defaultAccentTheme' => AccentThemes::AVAILABLE[0],
+            'defaultCountryCode' => Languages::COUNTRIES[$input->language],
         ]);
 
         $adminInstrumentId = null;
         foreach ($input->sections as $s => $section) {
-            $this->database->insert('section', ['name' => Text::clean($section->name), 'position' => $s + 1]);
+            $this->database->insert('section', [
+                'name' => Text::clean($section->name),
+                'position' => $s + 1,
+                'icon' => $section->icon,
+            ]);
             $sectionId = (int) $this->database->lastInsertId();
 
             foreach ($section->instruments as $i => $instrument) {

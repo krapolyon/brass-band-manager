@@ -1,0 +1,50 @@
+.NavRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  min-height: 3.5rem; /* 56 */
+  padding: var(--spaceXxs) 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  text-decoration: none;
+}
+
+button.NavRow,
+a.NavRow {
+  cursor: pointer;
+}
+
+.NavRow > .Icon {
+  color: var(--textMuted);
+}
+
+.NavRow-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.NavRow-detail {
+  color: var(--textMuted);
+}
+
+.NavRow[data-tone="danger"] .NavRow-label,
+.NavRow[data-tone="danger"] > .Icon:first-child {
+  color: var(--danger);
+}
+
+/* An action that cannot be done stays visible; the reason is its detail. */
+.NavRow[aria-disabled="true"] {
+  cursor: default;
+}
+
+.NavRow[aria-disabled="true"] .NavRow-label,
+.NavRow[aria-disabled="true"] > .Icon:first-child {
+  color: var(--textMuted);
+  opacity: 0.6;
+}

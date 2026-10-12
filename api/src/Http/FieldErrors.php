@@ -37,11 +37,28 @@ final class FieldErrors
         }
     }
 
+    // A text that may be left empty, of one line or several. Returns it as it
+    // will be saved: cleaned, and null when nothing is left.
+    public function optionalText(string $field, ?string $value, int $maxLength, bool $lines = false): ?string
+    {
+        $value = $value === null ? '' : ($lines ? Text::cleanLines($value) : Text::clean($value));
+        if (mb_strlen($value) > $maxLength) {
+            $this->add($field, 'tooLong');
+        }
+
+        return $value === '' ? null : $value;
+    }
+
     public function email(string $field, string $value): void
     {
         if (strlen($value) > 254 || filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
             $this->add($field, 'invalid');
         }
+    }
+
+    public function isEmpty(): bool
+    {
+        return $this->fields === [];
     }
 
     public function throwIfAny(): void

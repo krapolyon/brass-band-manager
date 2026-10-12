@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Access;
 
 use BrassBand\Http\ApiError;
+use BrassBand\Members\PhotoStore;
 use Doctrine\DBAL\Connection;
 
 // What a member receives about themself: their own record, their preferences,
@@ -34,7 +35,7 @@ final class Profile
     {
         $profile = $this->database->fetchAssociative(
             'SELECT id, nickname, firstName, lastName, email, mobilePhone,
-                    streetAddress, postalCode, city, countryCode, addressInstructions,
+                    streetAddress, postalCode, city, countryCode, addressInstructions, photoPath,
                     instrumentId, status, language, colorScheme, accentTheme, textSizePercent,
                     hasHighContrast, hasIncreasedSpacing, hasLegibleFont, hasReducedMotion, hasExtendedTimeouts
              FROM member
@@ -49,6 +50,8 @@ final class Profile
         foreach (self::BOOLEANS as $field) {
             $profile[$field] = (bool) $profile[$field];
         }
+        $profile['photoUrl'] = PhotoStore::url((int) $profile['id'], $profile['photoPath']);
+        unset($profile['photoPath']);
         $profile['roles'] = array_map(fn (Role $role) => $role->value, $member->roles);
         $profile['permissions'] = $member->permissions();
 

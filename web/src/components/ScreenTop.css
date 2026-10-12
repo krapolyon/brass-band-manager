@@ -1,0 +1,51 @@
+.ScreenTop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXl);
+  width: 100%;
+  padding: max(var(--spaceXxl), calc(env(safe-area-inset-top) + var(--spaceXs)))
+    max(var(--spaceXl), env(safe-area-inset-right)) 0 max(var(--spaceXl), env(safe-area-inset-left));
+}
+
+.ScreenTop-navigation {
+  display: flex;
+  /* At a large text size the action goes under the way back. */
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+}
+
+.ScreenTop-leading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.ScreenTop-action {
+  margin-left: auto;
+}
+
+.ScreenTop-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  overflow-wrap: anywhere;
+}
+
+/* Tablet: the column of 640 that the content uses, centred. */
+@media (min-width: 768px) {
+  .ScreenTop {
+    max-width: 40rem;
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+}
+
+/* The band keeps the 100 px Figma gives it above a title: room to breathe
+   between the line of the nav and the title. */
+.ScreenTop-heading > .BandMention {
+  min-height: 6.25rem;
+}

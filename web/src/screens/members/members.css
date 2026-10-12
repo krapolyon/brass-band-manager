@@ -1,0 +1,96 @@
+/* Layout of the screens about members. */
+
+.members-note {
+  color: var(--textMuted);
+}
+
+/* Two short fields side by side, on a phone too: the postal code and the
+   city. At a large text size each takes its own line. */
+.members-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  align-items: start;
+  gap: var(--spaceMd) var(--spaceSm);
+}
+
+/* The directory: cards in two columns on a phone, more as the screen
+   widens (four at 1280). A card never gets narrower than its photo needs. */
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--spaceSm);
+}
+
+.members-grid > li {
+  display: grid;
+}
+
+@media (min-width: 1024px) {
+  .members-grid {
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  }
+}
+
+/* The sheet of a member. */
+.members-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.members-actions {
+  display: flex;
+  gap: var(--spaceXs);
+}
+
+/* Managing members. */
+.members-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.members-former {
+  padding-inline: var(--spaceXxs);
+}
+
+.members-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+}
+
+/* A list on a phone and a tablet, a table on a desktop: each exists once on
+   the screen, the other is not drawn and is not read out. */
+.members-desktopOnly {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .members-desktopOnly {
+    display: block;
+  }
+
+  .members-belowDesktop {
+    display: none;
+  }
+}
+
+/* The choice and the switch: one under the other, on one line on a desktop. */
+.members-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+@media (min-width: 1024px) {
+  .members-controls {
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .members-former .SwitchRow {
+    gap: var(--spaceXxl);
+  }
+}

@@ -1,0 +1,47 @@
+.MemberCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-width: 0;
+  padding: var(--spaceMd) var(--spaceSm);
+  border: 0;
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+
+/* The badge sits on the lower right of the photo: 62 from its top and left. */
+.MemberCard-portrait {
+  position: relative;
+  display: inline-flex;
+}
+
+.MemberCard-portrait .SectionBadge {
+  position: absolute;
+  top: 3.875rem;
+  left: 3.875rem;
+}
+
+.MemberCard-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.MemberCard-nickname {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+}
+
+.MemberCard-nickname .Icon,
+.MemberCard-instrument {
+  color: var(--accentText);
+}

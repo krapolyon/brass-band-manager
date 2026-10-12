@@ -25,6 +25,17 @@ final class AccessRules
     // password is refused rather than silently cut.
     public const PASSWORD_MAX_BYTES = 72;
 
+    // A password link created by a member manager can be used this long.
+    public const PASSWORD_LINK_DAYS = 7;
+    // A link the app sends by email, for a forgotten password, lasts this long...
+    public const EMAILED_LINK_MINUTES = 60;
+    // ...and no new email is sent to the same member before this long.
+    public const EMAIL_INTERVAL_MINUTES = 5;
+
+    // An invitation whose record was refused this many times because a
+    // nickname or an email is taken is cancelled: its link says what is taken.
+    public const INVITATION_MAX_REFUSALS = 10;
+
     // The statuses of a member who can sign in ("current member" in the model).
     public const SIGN_IN_STATUSES = ['ACTIVE', 'POWER_MEMBER'];
 }

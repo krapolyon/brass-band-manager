@@ -1,4 +1,4 @@
-import type { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext, PlaywrightWorkerArgs } from '@playwright/test';
 import { passwordHash, sql } from './database.ts';
 
 // Made-up band and members shared by the tests. Nobody here is real.
@@ -19,8 +19,8 @@ export function installInput() {
     language: 'fr',
     bandName: 'La Fanfare des Cuivres Déchaînés',
     sections: [
-      { name: 'Trompette', instruments: ['Trompette'] },
-      { name: 'Saxophone', instruments: ['Sax Alto', 'Sax Ténor'] },
+      { name: 'Trompette', icon: 'trumpet', instruments: ['Trompette'] },
+      { name: 'Saxophone', icon: 'saxophone', instruments: ['Sax Alto', 'Sax Ténor'] },
       { name: 'Souba', instruments: ['Souba'] },
     ],
     admin: { ...admin },
@@ -60,4 +60,23 @@ export function addMember({ nickname, status = 'ACTIVE', roles = [] }: NewMember
 
 export async function signIn(request: APIRequestContext, email: string, password = memberPassword) {
   return request.post('/api/session', { data: { email, password } });
+}
+
+/** The id of a member, found by their nickname. */
+export function memberId(nickname: string): number {
+  return Number(sql(`SELECT id FROM member WHERE nickname = '${nickname}'`));
+}
+
+/** A request context of its own (another device), signed in as a member. */
+export async function deviceOf(
+  playwright: PlaywrightWorkerArgs['playwright'],
+  email: string,
+  password = memberPassword,
+) {
+  const context = await playwright.request.newContext({ baseURL: 'http://localhost:8081' });
+  const response = await signIn(context, email, password);
+  if (response.status() !== 200) {
+    throw new Error(`Sign-in failed for ${email}: ${response.status()}`);
+  }
+  return context;
 }

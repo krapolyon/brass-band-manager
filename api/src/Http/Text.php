@@ -13,6 +13,15 @@ namespace BrassBand\Http;
 //   $name = Text::clean($input->name);
 final class Text
 {
+    // The same for a text of several lines (an address): line breaks are kept,
+    // each line is tidied, and blank lines at both ends are dropped.
+    public static function cleanLines(string $text): string
+    {
+        $lines = array_map(self::clean(...), preg_split('/\R/u', $text) ?: []);
+
+        return trim(implode("\n", $lines), "\n");
+    }
+
     public static function clean(string $text): string
     {
         $text = preg_replace('/\p{C}+/u', '', $text) ?? '';

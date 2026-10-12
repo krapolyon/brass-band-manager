@@ -1,0 +1,11 @@
+/* Layout of the screens shown before sign-in. */
+
+/* A minor action under a sheet, in the middle. */
+.access-centred {
+  display: flex;
+  justify-content: center;
+}
+
+.AccessibilityButton-note {
+  color: var(--textMuted);
+}

@@ -12,6 +12,8 @@ type Props = {
   error?: string;
   /** The image chosen, or null. */
   value: File | null;
+  /** The address of the image already saved, shown while no other is chosen. Removing it calls onChange(null) too. */
+  current?: string | null;
   /** Called with the file the member chose, or null when they remove it. */
   onChange: (file: File | null) => void;
   /** The types offered by the file chooser, as in <input accept>. */
@@ -23,7 +25,7 @@ type Props = {
 // remove it; Error says what is wrong with the file.
 //
 // The image is only read on the device: showing it sends nothing anywhere.
-export function ImageField({ label, hint, error, value, onChange, accept }: Props) {
+export function ImageField({ label, hint, error, value, current, onChange, accept }: Props) {
   const { t } = useTranslation();
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -34,7 +36,10 @@ export function ImageField({ label, hint, error, value, onChange, accept }: Prop
     onChange(null);
     requestAnimationFrame(() => actions.current?.querySelector('button')?.focus());
   };
-  const [preview, setPreview] = useState<string | null>(null);
+  const [chosen, setPreview] = useState<string | null>(null);
+  // No file, no preview of a file: said at once, without waiting for the effect
+  // below, so that the button that removes is gone before the focus moves.
+  const preview = (value ? chosen : null) ?? current ?? null;
   const message = error ?? hint;
 
   useEffect(() => {
@@ -67,12 +72,12 @@ export function ImageField({ label, hint, error, value, onChange, accept }: Prop
           <Button
             kind="secondary"
             size="small"
-            icon={value ? undefined : 'Upload'}
+            icon={preview ? undefined : 'Upload'}
             onClick={() => input.current?.click()}
           >
-            {value ? t('imageField.change') : t('imageField.choose')}
+            {preview ? t('imageField.change') : t('imageField.choose')}
           </Button>
-          {value && (
+          {preview && (
             <Button kind="danger" size="small" icon="Trash" onClick={remove}>
               {t('imageField.remove')}
             </Button>

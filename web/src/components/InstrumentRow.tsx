@@ -15,6 +15,14 @@ type Props = {
       moreLabel: string;
     }
   | {
+      /** Listed, with its action (Figma: Choice=None): an instrument of the band, in its settings. */
+      choice: 'listed';
+      /** Under the name: how many members play it. */
+      detail?: string;
+      onMore: () => void;
+      moreLabel: string;
+    }
+  | {
       /** One of a list where a single one is chosen; `current` is the one chosen. */
       choice: 'none' | 'current';
       onPress: () => void;
@@ -29,6 +37,16 @@ export function InstrumentRow(props: Props) {
         label={props.name}
         checked={props.choice === 'ticked'}
         onCheck={props.onToggle}
+        trailing={<IconButton icon="More" label={props.moreLabel} onClick={props.onMore} />}
+      />
+    );
+  }
+
+  if (props.choice === 'listed') {
+    return (
+      <ListRow
+        label={props.name}
+        detail={props.detail}
         trailing={<IconButton icon="More" label={props.moreLabel} onClick={props.onMore} />}
       />
     );

@@ -7,9 +7,9 @@ import { InstrumentRow } from '../../components/InstrumentRow.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { SectionCard } from '../../components/SectionCard.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
+import { FlowLayout } from '../FlowLayout.tsx';
 import type { DraftInstrument, DraftSection } from './InstallDraft.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
-import { InstallLayout } from './InstallLayout.tsx';
 import { StepNav } from './StepNav.tsx';
 import { countInstruments, keptSections, nameKey, nextId, useSections } from './sections.ts';
 
@@ -78,7 +78,7 @@ export function SectionsScreen() {
 
   return (
     <>
-      <InstallLayout
+      <FlowLayout
         nav={<StepNav step={2} back="/install/band" />}
         title={t('install.sections.title')}
         lead={t('install.sections.lead')}
@@ -107,7 +107,7 @@ export function SectionsScreen() {
           </BottomBar>
         }
       >
-        <div className="InstallLayout-columns">
+        <div className="FlowLayout-columns">
           {sections.map((section) => (
             <SectionCard
               key={section.id}
@@ -135,7 +135,7 @@ export function SectionsScreen() {
             </SectionCard>
           ))}
         </div>
-        <div className="InstallLayout-start">
+        <div className="FlowLayout-start">
           <Button
             kind="secondary"
             icon="Plus"
@@ -144,7 +144,7 @@ export function SectionsScreen() {
             {t('install.sections.section.add')}
           </Button>
         </div>
-      </InstallLayout>
+      </FlowLayout>
 
       <Panel open={isOpen} onClose={close} title={panelTitle}>
         {opened?.kind === 'instrument' && (
@@ -220,7 +220,7 @@ function InstrumentForm({ opened, sections, onChange }: FormProps<'instrument'>)
   };
 
   return (
-    <form className="InstallLayout-panelForm" onSubmit={save} noValidate>
+    <form className="FlowLayout-panelForm" onSubmit={save} noValidate>
       <TextField
         label={t('install.sections.name.label')}
         hint={instrument ? undefined : t('install.sections.name.hint')}
@@ -238,7 +238,7 @@ function InstrumentForm({ opened, sections, onChange }: FormProps<'instrument'>)
         onChange={(value) => setSectionId(Number(value))}
         options={sections.map((section) => ({ value: String(section.id), label: section.name }))}
       />
-      <div className="InstallLayout-panelActions">
+      <div className="FlowLayout-panelActions">
         <Button type="submit">
           {instrument ? t('install.sections.save') : t('install.sections.instrument.confirmNew')}
         </Button>
@@ -282,12 +282,15 @@ function SectionForm({ opened, sections, onChange }: FormProps<'section'>) {
       moved.splice(position, 0, { ...section, name: name.trim() });
       onChange(moved);
     } else {
-      onChange([...sections, { id: nextId(sections), name: name.trim(), instruments: [] }]);
+      onChange([
+        ...sections,
+        { id: nextId(sections), name: name.trim(), icon: null, instruments: [] },
+      ]);
     }
   };
 
   return (
-    <form className="InstallLayout-panelForm" onSubmit={save} noValidate>
+    <form className="FlowLayout-panelForm" onSubmit={save} noValidate>
       <TextField
         label={t('install.sections.name.label')}
         hint={t('install.sections.name.hint')}
@@ -301,7 +304,7 @@ function SectionForm({ opened, sections, onChange }: FormProps<'section'>) {
       />
       {section && (
         // biome-ignore lint/a11y/useSemanticElements: a fieldset cannot be laid out as this group is
-        <div className="InstallLayout-order" role="group" aria-labelledby="sectionOrder">
+        <div className="FlowLayout-order" role="group" aria-labelledby="sectionOrder">
           <span className="textLabel" id="sectionOrder">
             {t('install.sections.section.order')}
           </span>
@@ -333,7 +336,7 @@ function SectionForm({ opened, sections, onChange }: FormProps<'section'>) {
           </div>
         </div>
       )}
-      <div className="InstallLayout-panelActions">
+      <div className="FlowLayout-panelActions">
         <Button type="submit">{t('install.sections.save')}</Button>
         {section && (
           <>
@@ -342,7 +345,7 @@ function SectionForm({ opened, sections, onChange }: FormProps<'section'>) {
               icon="Trash"
               disabled={hasInstruments}
               aria-describedby={hasInstruments ? 'sectionDeleteNote' : undefined}
-              onClick={() => onChange(others, '.InstallLayout-start button')}
+              onClick={() => onChange(others, '.FlowLayout-start button')}
             >
               {t('install.sections.section.delete')}
             </Button>

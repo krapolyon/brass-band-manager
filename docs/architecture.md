@@ -64,7 +64,7 @@ Three addresses, three uses: **5173** to write front code comfortably, **8080** 
 web/                      The front
   index.html              The single page
   public/                 Files copied as they are: neutral icons, .htaccess
-    fonts/                The two typefaces of the design, and their licences
+    fonts/                The typefaces of the design and the legible one, with their licences
   src/
     main.tsx              Starting point
     router.tsx            Every address of the app and its screen
@@ -123,6 +123,8 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 | `web` | Apache with PHP 8.4. Serves `web/dist` at `/` and `api/public` at `/api` | http://localhost:8080 |
 | `web-test` | The same server, on the database `brassBandTest` | http://localhost:8081 |
 | `db` | MySQL 8.4 | `127.0.0.1`, port `3307`, databases `brassBand` and `brassBandTest`, user `brassBand`, password `local-only` |
+| `web-test-no-mail` | The test server again, without a mail server, to test an instance that cannot send email | http://localhost:8082 |
+| `mail` | Mailpit: the mailbox of the local stack. It receives every email the app sends and sends none further | http://localhost:8025 |
 | `php` | The same image, used for command-line tools only. Not started with the stack | `docker compose run --rm php <command>` |
 
 - The folders `web/dist`, `api` and `database` are shared with the `web` container, read-only: a change to a PHP file is live at once, no restart.
@@ -131,7 +133,7 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 - The database's data lives in the Docker volume `dbData`. It survives `stack:down`. `npm run db:reset` deletes it.
 - Port 3307 is used so that a MySQL installed on the Mac can keep 3306.
 - The passwords in `docker-compose.yml` and `config.local.php` are for this local stack only. They are not secrets, and must never reach the host.
-- `web-test` reads the same code and the same `config.php`; only the name of its database differs, through the `BRASS_BAND_DATABASE` variable set in `docker-compose.yml`.
+- `web-test` reads the same code and the same `config.php`; only the name of its database and its own address differ, through the `BRASS_BAND_DATABASE` and `BRASS_BAND_APP_URL` variables set in `docker-compose.yml`.
 - The PHP and MySQL versions must stay equal to those of the host. They are written in `docker/Dockerfile` (`FROM php:8.4-apache`) and `docker-compose.yml` (`image: mysql:8.4`).
 
 ## The API
@@ -285,7 +287,7 @@ Every JSON answer carries `Cache-Control: no-store` (answers hold members' data,
 
 A new setting is added to both files. When the safe value and the convenient value differ, the code takes the safe one when the setting is missing, and only `config.local.php` says otherwise.
 
-Secrets (database password, later the Discord bot token and the push keys) go there and nowhere else. Settings of the band (name, logo, colours) are not configuration: they belong to the `band` table.
+Secrets (database password, password of the mail server, later the Discord bot token and the push keys) go there and nowhere else. So does `appUrl`, the public address of the app: the links written in emails start with it, never with the host a request claims. Settings of the band (name, logo, colours) are not configuration: they belong to the `band` table.
 
 ### Who can call a route
 
@@ -293,9 +295,10 @@ Decided in [api/routes.php](../api/routes.php), by the block a route is written 
 
 | Block | Who | How |
 |---|---|---|
-| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in. Adding a route here is a decision to justify |
+| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in, checking and using a password link. Adding a route here is a decision to justify |
 | 2. Signed in | Any current member (`ACTIVE` or `POWER_MEMBER`) | Inside the group that carries `RequireSession` |
-| 3. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
+| 3. Oneself, or a permission | The member the address names, or a member holding a permission | A route of block 2 with `->add(new RequireSelfOrPermission(Permission::...))` |
+| 4. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
 
 A new route goes in block 2 unless there is a reason. An action behind `RequireSession` gets the member with `CurrentMember::of($request)`: its `id`, and `can(Permission::...)` for a finer check inside the action.
 
@@ -349,10 +352,56 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - What the member enters is kept in memory by [InstallDraft](../web/src/screens/install/InstallDraft.tsx) and sent once, at the last step. Nothing is written on the device: reloading the page starts again from the welcome screen, and a step opened without the key sends back there. Once the install has succeeded, the key and the password are dropped from the memory.
 - [sections.ts](../web/src/screens/install/sections.ts) holds the sections of the draft. Until step 2 changes something they are the starting library; what is sent is the ticked instruments, in the sections that have some. Two names are the same when they differ only by case or accents, as for the database.
 - Each screen checks what it can before sending (required fields, the length of the password, the weight and the type of the logo), with the rules of the API copied as constants at the top of the file. The API checks everything again: the screens only save the member a round trip.
-- [InstallLayout](../web/src/screens/install/InstallLayout.tsx) is the frame shared by the five screens. Its CSS also holds the three layout helpers of the steps: `InstallLayout-pair` (two fields side by side from the tablet width), `InstallLayout-columns` (cards in two then three columns, filled one after the other as drawn) and `InstallLayout-start`.
+- [FlowLayout](../web/src/screens/FlowLayout.tsx) is the frame shared by the five screens. Its CSS also holds the three layout helpers of the steps: `FlowLayout-pair` (two fields side by side from the tablet width), `FlowLayout-columns` (cards in two then three columns, filled one after the other as drawn) and `FlowLayout-start`.
 - The logo chosen at step 1 is prepared for the API as soon as it is chosen ([logo.ts](../web/src/screens/install/logo.ts)) and sent with the rest at the last step.
 - **Not done: where the last screen leads.** Its two buttons go to the home address until the members feature (inviting) and the home screen exist.
 - [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
+
+### Members
+
+`api/src/Members/`, `api/src/Sections/` and, for what touches sign-in, `api/src/Access/`. Rules: [model/members.md](../model/members.md). Every line of its tables of rights is a test in `tests/api/`.
+
+| Address | Who | What |
+|---|---|---|
+| `GET /api/members`, `GET /api/members/{id}` | Signed in | The directory. Current members for everyone; invited members and those who left for who manages members |
+| `GET /api/members/{id}/photo` | Signed in | The profile photo, for the members the viewer may see |
+| `PUT /api/members/{id}` | Oneself, or `MANAGE_MEMBERS` | The whole record (names, email, contact details, instrument) |
+| `PUT`, `DELETE /api/members/{id}/photo` | Oneself, or `MANAGE_MEMBERS` | Gives, replaces or removes the photo |
+| `POST /api/members` | `MANAGE_MEMBERS` | Invites: creates the member and their password link |
+| `DELETE /api/members/{id}` | `MANAGE_MEMBERS` | Cancels an invitation |
+| `PUT /api/members/{id}/status` | `MANAGE_MEMBERS` | Moves a member along the life cycle |
+| `POST`, `DELETE /api/members/{id}/passwordLink` | `MANAGE_MEMBERS` | Creates or cancels a password link |
+| `PUT /api/members/{id}/roles` | `MANAGE_ROLES` | Sets the roles, all at once |
+| `GET /api/sections` | Signed in | Sections with their pictogram, and their instruments with the number of members who play each |
+| `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes; sets the pictogram of a section, one of `SectionIcons::AVAILABLE` |
+| `PUT /api/me/preferences`, `PUT /api/me/password` | Oneself | Preferences; password, with the current one |
+| `POST /api/passwordLink/check`, `/use` | Anyone holding a link | Says who a link is for; chooses a password with it and signs in. For an invitation, `check` gives the invited member their own record, their photo and the instruments of the band, and `use` takes the whole account (record, photo, accessibility options, password), saved together or not at all |
+| `POST /api/passwordLink/validate` | Anyone holding the link of an invitation | Says whether a record would be accepted, and saves nothing: the first step of an invitation asks it. A refusal for a nickname or an email already taken is counted on the link, here and in `use`: the tenth deletes the link (`PasswordLinks::checkRecord`) |
+| `POST /api/passwordLink/request` | Anyone | Forgotten password: sends a link, valid one hour, to the address given if it is the one of a current member. Always the same answer |
+
+- **[Members](../api/src/Members/Members.php)** holds what the actions share: who sees whom, the columns that are sent (listed one by one, so that the password hash, the sign-in counters and the preferences never leave by accident), and the two rules that protect accounts.
+- **"Oneself, or a permission"** is the middleware [RequireSelfOrPermission](../api/src/Access/RequireSelfOrPermission.php), declared on the route like `RequirePermission`.
+- **Nobody acts on the access of someone who may do more than them** (`Members::mustCover`, `CurrentMember::covers`): the email of another member, their password link and their status. Without it, who manages members could take the password link of an admin and become one.
+- **Changing the roles of a member cancels their pending password link**: the link was created by someone allowed to for the roles of then.
+- **Requests that cross each other.** An action that changes a member first holds their row (`Members::target(lock: true)`), and every action takes its locks in the same order: the current admins, then the member, then their link. A record, a photo or a link sent at the instant a member leaves is then handled wholly before or wholly after the departure.
+- **Always one admin**: status and roles are changed inside a transaction that first holds the rows of the current admins (`Members::lockCurrentAdmins`), so that two changes sent together cannot both remove "the other" admin.
+- **A record is sent whole** (`PUT`): a contact field left out is erased. So are the preferences and the roles. No route patches one field.
+- **A password link** ([PasswordLinks](../api/src/Access/PasswordLinks.php)) is a random token of which the database holds only the SHA-256, like a session. The token is in the answer that creates it, once. The front builds the address with the token after a `#`, a part of an address that browsers never send: it does not end in the log of the host. A link that opens nothing gets one answer, whatever the reason.
+- **Profile photos** ([PhotoStore](../api/src/Members/PhotoStore.php)) follow the logo: the browser makes the photo a small square, the server checks it and keeps the file in `storage/members/`. Unlike the logo, a photo is served to signed-in members only, browsers are told not to share it and to ask again each time (`Cache-Control: private, no-cache`, with an `ETag` so that an unchanged photo is not sent twice).
+- **Storage** is shared by the logo and the photos: [Files](../api/src/Storage/Files.php) writes and deletes, [Images](../api/src/Storage/Images.php) says what a file really is, [ServeFile](../api/src/Storage/ServeFile.php) sends it with protective headers.
+- **Order of sections and instruments**: a place is asked as a number (1 is the first) and the whole list is numbered again (`Sections::place`).
+- Not written: the export of the directory, and every screen.
+
+### Emails
+
+The app sends one email so far: the link of a forgotten password ([ForgotPasswordAction](../api/src/Access/ForgotPasswordAction.php)).
+
+- **[Mailer](../api/src/Mail/Mailer.php)** sends through the mail server written in `config.php` (`mail`), with PHPMailer. The exchange is encrypted (`tls` or `ssl`); a configuration that says anything else, or a password without encryption, counts as no mail server at all. Without that configuration, or without `appUrl`, it sends nothing and `GET /api/band` answers `canSendEmail: false`: the forgotten password screen then sends the member to those who manage members.
+- **The texts are in `api/resources/emails.<language>.json`**, in the language of the member. An email is the one text the server writes; everything else is translated by the front. Emails are plain text for now.
+- **An email leaves after the answer** ([AfterResponse](../api/src/Http/AfterResponse.php), run by `index.php` once the answer was handed over). Sending takes a second or two: the time of the answer must not tell whether an address is the one of a member. The host has no background process, so this is the end of the same request: with PHP-FPM the answer is closed first; elsewhere the `Content-Length` of the answer tells the browser that it has everything.
+- **An email goes to the address the database holds**, never to the one that was typed: the database compares addresses without regard to accents, so a look-alike address finds a member, and must not receive their link. The forgotten password route also asks that the two be equal character for character.
+- **Nothing about an email is logged**: when sending fails, the log holds the kind of failure only.
+- Locally the emails land in Mailpit (http://localhost:8025); the tests read them there ([mail.ts](../tests/support/mail.ts)).
 
 ### The logo of the band and the icons of the app
 
@@ -360,9 +409,10 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 
 | Address | Who | What |
 |---|---|---|
-| `GET /api/band` | Anyone | The name, and the addresses of the logo and of the icons (null without a logo) |
+| `GET /api/band` | Anyone | The name, the three defaults (language, accent theme, country), and the addresses of the logo and of the icons (null without a logo). The table holds nothing private |
 | `GET /api/band/logo`, `GET /api/band/icon/{180, 192 or 512}` | Anyone | The files |
 | `GET /api/manifest` | Anyone | What a phone reads to install the app: the name and the icons of the band |
+| `PATCH /api/band` | `MANAGE_BAND` | Changes what is sent among the name, the accent theme, the default language and the country |
 | `PUT /api/band/logo`, `DELETE /api/band/logo` | `MANAGE_BAND` | Gives, replaces or removes the logo |
 
 - **The icons are drawn by the browser, not by the server.** A phone wants square PNG icons whatever the format of the logo, and the logo may be an SVG, which PHP cannot draw without an image extension that a shared host may not have. The browser of the admin reads the four formats: [logo.ts](../web/src/screens/install/logo.ts) fits the logo in a white square at the three sizes and sends the icons with the file. The server needs no image library, and nothing here depends on the host.
@@ -379,7 +429,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 
 ### Not written yet
 
-- **Password links** (invitation, forgotten password), **member management** and **changing one's own record**: with the Members feature.
+- **The export of the directory**, which asks for the password again: not drawn, not built.
 - **Serving files** (recordings, scores) to signed-in members only.
 
 ## The front
@@ -391,6 +441,20 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - **translations** ([i18n.ts](../web/src/i18n.ts));
 - **the query client** of TanStack Query, which keeps what the API answered;
 - **the router** ([router.tsx](../web/src/router.tsx)), which picks the screen for the current address.
+
+### Who is in front of the app
+
+The session is a cookie the page cannot read. The front learns who is signed in by asking `GET /api/me` ([session.ts](../web/src/session.ts), `useMe()`): a member, or nobody.
+
+- **Every address is under one of two guards** ([Guards.tsx](../web/src/screens/access/Guards.tsx)), set in `router.tsx`: `MembersOnly` around the app (anyone else goes to `/sign-in`, or to `/install` when no band exists), `VisitorsOnly` around the screens shown before sign-in. The guards are a comfort: what protects the data is the API, which refuses every request without a session.
+- **A password link opens `/password#<secret>`.** What follows the `#` is never sent to a server; the page reads it and sends it in the body of its requests ([PasswordLinkScreen.tsx](../web/src/screens/access/PasswordLinkScreen.tsx)).
+- **Signing out empties the memory of the page** (`useSetMe(null)` clears every answer kept by TanStack Query): nothing a member saw stays for the next person on the device.
+- **[AppearanceOf](../web/src/AppearanceOf.tsx)** decides the look and the language: the choices of the account when someone is signed in; otherwise the scheme of the device, the theme and the language of the band, and the accessibility options chosen before sign-in. Those are kept in the storage of the browser, on the device only ([deviceAccessibility.ts](../web/src/deviceAccessibility.ts)); the options of an account are never written there.
+- **The record of a member is one form**, [MemberRecordFields](../web/src/screens/members/MemberRecordFields.tsx), used by an invitation, the profile and those who manage members; [record.ts](../web/src/screens/members/record.ts) turns what is typed into what the API receives. A phone number is typed the local way and stored in the international one ([phone.ts](../web/src/screens/members/phone.ts), with libphonenumber-js): a number without a prefix belongs to the country of the member, or to the one of the band. A photo is cropped to a square and redrawn by the browser before it is sent ([photo.ts](../web/src/screens/members/photo.ts)).
+- **Managing members** ([screens/members/](../web/src/screens/members/)): the list is a `Sheet` of `MemberRow` below 1024 px and a `MemberTable` from there; each exists once on the screen, the other is not drawn. A screen offers only what the member may do (`permissions` of `GET /api/me`, and `covers()` in [manage.ts](../web/src/screens/members/manage.ts) for the access of someone who may do more), and an action that cannot be done stays visible, disabled, with its reason. This is a comfort: the API decides. A password link is shown once, in [LinkPanel](../web/src/screens/members/LinkPanel.tsx), as `/invitation#<secret>` or `/password#<secret>`, and is kept nowhere.
+- **The settings of the band** ([screens/band/](../web/src/screens/band/)), for admins: the appearance (name, logo, accent colour, default language) is saved with its button, since it changes what everyone sees; a section or an instrument is saved at once, from its sheet, and the API answers with the whole list. What is still used cannot be deleted: the button stays, disabled, with the numbers that explain it: `memberCount` of `GET /api/sections` counts the current members who play an instrument, and `otherMemberCount`, given to admins only, the invited and former members whose record still holds it.
+- **A preference applies at once** ([preferences.ts](../web/src/screens/settings/preferences.ts)): appearance and accessibility have no save button. The choice is shown in the same instant as the press, then saved, and put back if the server refuses. A form that changes what others see or how the member signs in (profile, password) keeps its button.
+- **The screens of a flow** (install, sign-in, forgotten password, invitation) share one frame, [FlowLayout](../web/src/screens/FlowLayout.tsx). **The screens of the app**, once signed in, share another, [AppLayout](../web/src/screens/AppLayout.tsx): the `TabBar` floating at the bottom below 1024 px, the `SideNav` on the left from there, with the title of the page and its actions on one line. A screen opened from a tab (a form, a record) gives `back`: the TabBar leaves and a way back shows. The five entries are written once, in [nav.ts](../web/src/components/nav.ts). The tabs of the features that do not exist yet open [ComingSoonScreen](../web/src/screens/ComingSoonScreen.tsx); after sign-in a member lands on the directory (`HOME` in `session.ts`) until the home screen is designed.
 
 ### Adding a screen
 
@@ -465,14 +529,14 @@ The design is made in Figma and read from there ([CLAUDE.md](../CLAUDE.md), "Rea
 Rules that keep it true:
 
 - **No component holds a value of its own.** Colours, spacing, radii and sizes come from `tokens.css`; typefaces, sizes and weights of text come from the classes of `text.css`.
-- **The alias chain of Figma is kept**: `Scheme` variables point to `Theme` and `Primitives` with `var()`. Changing the scheme or the theme is one attribute on the root element: `data-scheme="light"` or `"dark"` (absent: follows the device), `data-theme="coral"` (absent: the first theme). The list of themes is in [themes.ts](../web/src/themes.ts).
-- **Sizes are in rem.** Figma gives pixels at a text size of 100 %; `tokens.css` writes them as pixels divided by 16. The text size option of a member sets `--textSizePercent` on the root (100 to 200), and text, spacing and controls grow together. Lines (1 and 2 px) and the halo stay in pixels.
+- **The alias chain of Figma is kept**: `Scheme` variables point to `Theme` and `Primitives` with `var()`, and the type sizes and typefaces of `Size` point to `TextSize` and `Typeface`. Each collection has one block per mode in `tokens.css`, and the mode is one attribute on the root element: `data-scheme` (`dark` or `light`), `data-contrast="more"` (the two high contrast modes), `data-theme="coral"` (absent: the first theme), `data-text-size="140"` (absent: 100 %), `data-typeface="legible"`. The list of themes is in [themes.ts](../web/src/themes.ts).
+- **Sizes are in rem.** Figma gives pixels; `tokens.css` writes them as pixels divided by 16, text and spacing alike. The app never changes the size of the root: the text size option of a member changes the type sizes only (the modes of `TextSize`), so spacing, radii, icons and controls keep their size, and the height of a control is always a `min-height`. A browser whose own font size was changed scales everything, page titles included: this is accepted. Lines (1 and 2 px) and the halo stay in pixels.
 - **Blur.** Figma counts a blur twice as large as CSS does: a blur of 40 in Figma is `blur(20px)`.
 - **Bricolage Grotesque has an optical size axis**, which the browser applies by itself as Figma does: big titles are drawn tighter. Its font files must keep that axis, or titles come out wider than drawn and wrap differently.
 - **Typefaces are served by the app**, never by a font service: no visitor is reported to a third party. A test checks that the install screen asks nothing of another site.
 - A component that Figma does not have is not created here.
 
-The components written so far. Base layer: `Icon`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `ListRow`, `Chip`, `Sheet`, `Message`, `StepIndicator`, `BottomBar`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`.
+The components written so far. Base layer: `Icon`, `Pictogram`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `SliderRow`, `AccessibilityOptions`, `Chip`, `Sheet`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `StepIndicator`, `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`, `SectionBadge`, `PictogramChoice`, `BandMention`, `MemberCard`, `MemberRow`, `MemberHeader`, `MemberMention`, `MemberTable` (the header and the rows of Figma). Every control is the browser's own (checkbox, radio, range), drawn as in the design: it keeps the keyboard, the focus and what screen readers say.
 
 - **`TextField` has three forms**, as in Figma where the select is a `TextField` with a chevron: `TextField` (an input), `SelectField` (the browser's own `<select>`, for a short list) and `PickerField` (a button that opens a panel, for a choice made in a list of rows).
 - **A row with a checkbox** is `ListRow` with `checked` and `onCheck`: the label and the checkbox are one target. `Checkbox` is the browser's own, drawn as in Figma.
@@ -483,9 +547,9 @@ The components written so far. Base layer: `Icon`, `Button`, `IconButton`, `Text
 
 **Panels.** `BottomSheet` and `Dialog` are the browser's own `<dialog>` element ([Panel.tsx](../web/src/components/Panel.tsx)): the browser keeps the focus inside, closes on Escape and makes the rest of the page inert. A screen uses `Panel`, which is a bottom sheet below 1024 px and a dialog from there. Three things in it are there for a reason: it opens once the event that asked for it is over (a panel opened with the Enter key would otherwise be confirmed by the same key press); a press closes it only when it started and ended on the scrim (a selection dragged out of a field must not); and when a change removes the control that opened it, the screen says which control takes the focus instead (see `SectionsScreen`).
 
-**The four widths.** Figma draws 390, 768, 1280 and 1920. The layouts change at 768 (tablet), 1024 (two panes) and 1920 (wide). The two panes start below the width they are drawn at, so that a laptop window that is not full screen keeps the desktop layout; `Panel` and `BottomBar` change at the same 1024. The frame of the install screens, [InstallLayout](../web/src/screens/install/InstallLayout.tsx), is the example to follow. Safe areas come from `env(safe-area-inset-*)`, never from the 60 and 34 px that Figma leaves in its phone frames; where a device has none, the padding of the sides applies instead.
+**The four widths.** Figma draws 390, 768, 1280 and 1920. The layouts change at 768 (tablet), 1024 (desktop) and 1920 (wide). The desktop layout starts below the width it is drawn at, so that a laptop window that is not full screen keeps it; `Panel` and `BottomBar` change at the same 1024. On a desktop the left of the window is a floating glass panel, 16 px from the edges, as tall as the window and in place while the right side scrolls: in a flow it carries the step and the title (448 px wide at 1280, 648 at 1920), in the app it is the menu. The frame of the install screens, [FlowLayout](../web/src/screens/FlowLayout.tsx), is the example to follow for a flow. The top of every screen is [ScreenTop](../web/src/components/ScreenTop.tsx), the only place where the top margin is set: 32 px, or the safe area of the device plus 8 px when that is more. The other safe areas come from `env(safe-area-inset-*)` too, never from the 34 px that Figma leaves in its phone frames.
 
-**Accessibility options.** The six options of a member (`model/members.md`) are attributes and variables on the root element. Two are honoured so far, by every component: the text size (`--textSizePercent`) and reduced motion (`data-reduced-motion`, and the same wish from the device). High contrast already removes the halo. The others, and what each option looks like, wait for their definition in Figma.
+**Appearance and accessibility options.** [appearance.ts](../web/src/appearance.ts) is the only place that writes on the root element. It takes the scheme, the accent theme and the six options of whoever uses the app (`model/members.md`), adds what the device asks (a light scheme, more contrast, less motion) and follows the device when it changes. A small script, [appearance.js](../web/public/appearance.js), sets the scheme and the contrast of the device before the page is drawn, so that nobody sees a flash of the dark scheme. What each option does: text size, the legible font and high contrast are modes of the variables (`tokens.css`); increased spacing (`data-spacing`) and reduced motion (`data-motion`) are rules of [base.css](../web/src/styles/base.css), which win over every component; extended timeouts (`data-timeouts`) is read by what shows a notification, when the app has some. In the high contrast modes the three fields of the halo take the colour of the ground: no rule hides it. The legible font, Atkinson Hyperlegible Next, is served by the app like the two others and downloaded only by who turns the option on.
 
 ### Installable app (PWA)
 
@@ -581,6 +645,7 @@ Each one was validated by the owner. The rule ([CLAUDE.md](../CLAUDE.md), "Guidi
 | `slim/slim` | 4.15.3 | Routing, middleware, error handling | A micro-framework that stops there. On the same major version since 2019, still maintained |
 | `slim/psr7` | 1.8.0 | The request and response objects Slim works with | Slim's own |
 | `doctrine/dbal` | 4.5.0 | Database access: prepared statements, insert and update helpers, transactions | The most widely used database layer in PHP. Doctrine ORM is built on it and can be added later without a rewrite |
+| `phpmailer/phpmailer` | 7.1.1 | Sends emails through a mail server (SMTP) | No dependency of its own, maintained for more than twenty years, the most used mail library in PHP. LGPL 2.1 |
 | `cuyz/valinor` | 2.6.0 | Turns incoming JSON into typed objects, or refuses it | No dependency of its own, strict by default, works with PHP enums |
 
 To come: `minishlink/web-push` for push notifications, with the gigs feature.
@@ -597,6 +662,7 @@ To come: `minishlink/web-push` for push notifications, with the gigs feature.
 |---|---|---|---|
 | `react`, `react-dom` | 19.3.0 | The interface | Settled in the scoping |
 | `react-router` | 8.4.0 | Addresses and screens | The standard router of React |
+| `libphonenumber-js` | 1.13.14 | Reads a phone number typed the local way and writes it in the international form, and back | Google's own rules for every country, without a dependency. Writing them here would only work for one country |
 | `@tanstack/react-query` | 5.104.1 | API calls: loading, error, keeping and refreshing data | Fits an app without real time |
 | `i18next`, `react-i18next` | 26.4.3, 17.0.16 | Translations, variables, plurals | The standard; its file format is known to contributors |
 
@@ -609,6 +675,17 @@ To come: `minishlink/web-push` for push notifications, with the gigs feature.
 | `@types/react`, `@types/react-dom`, `@types/node` | 19.3.0, 19.3.0, 24.19.2 | Types of React and Node for TypeScript |
 | `@biomejs/biome` | 2.5.15 | Formatting and linting |
 | `@playwright/test` | 1.64.0 | End-to-end tests |
+
+### Files taken from other projects
+
+Not installed by a package manager: copied into the repository, with their licence beside them.
+
+| What | Where | Licence |
+|---|---|---|
+| The typefaces Bricolage Grotesque, Instrument Sans and Atkinson Hyperlegible Next | `web/public/fonts/` | SIL Open Font License 1.1, one `…-OFL.txt` per family |
+| The paths of the icons that come from Lucide | [Icon.tsx](../web/src/components/Icon.tsx), from the comment that names them | ISC, [Lucide-LICENSE.txt](../web/src/components/Lucide-LICENSE.txt) |
+
+Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: the mailbox the tests read. Nothing of it reaches the host.
 
 ### Written here on purpose
 
@@ -647,7 +724,8 @@ To check on the real host, because it cannot be checked locally:
 - every address is redirected to HTTPS (a rule to add to the `.htaccess` files);
 - the session cookie arrives as `__Host-session` with `Secure`, and sign-in works on an iPhone and an Android phone;
 - a write sent by an older browser, which announces itself with `Origin` only, is accepted (see `SameSiteOnly`);
-- PHP errors are not displayed.
+- PHP errors are not displayed;
+- the answer to a forgotten password request comes back at once, before the email is sent (it relies on PHP-FPM, see "Emails"), and the email arrives from the mailbox of the domain.
 
 ## Traps
 
@@ -665,7 +743,14 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. The sign-in screen, which is not designed yet.
-2. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
-3. The design system in CSS and the first real screens: wait for the Figma file.
-4. Every feature (members, songs, gigs, and the later ones).
+1. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
+2. What the Members feature leaves for later: the export of the directory, the Discord action of a member's sheet, sending an invitation by email, a prettier email, and the screens Figma has not drawn (see below).
+3. The next features: songs, gigs, and the later ones. Their tabs say "coming soon" until then.
+
+Screens that were deduced from the phone screens, because Figma does not draw them yet. Each follows the rules of the design skill (a larger screen derives from the phone screen, a sheet becomes a dialog from 1024 px, a flow takes the floating panel), and is to be checked when it is drawn:
+
+- the whole app on a tablet and at 1920 px;
+- on a desktop: the sheet of a member, the settings, sign-in, forgotten password, the invitation, the record of a member and the invite form, the settings of the band;
+- what a line of the desktop table opens (the record of the member);
+- loading and server error states (a line of text, and a `Message`);
+- the page opened without the right in the settings of the band, and the list of countries (the list of the device).

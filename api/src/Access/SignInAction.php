@@ -93,7 +93,7 @@ final class SignInAction
             }
 
             if (!$isRight) {
-                $this->countFailure((int) $member['id']);
+                (new SignInFailures($this->database))->count((int) $member['id']);
 
                 return null;
             }
@@ -106,25 +106,5 @@ final class SignInAction
 
             return (int) $member['id'];
         });
-    }
-
-    // One more wrong password. At the limit, sign-in is locked for a while and
-    // the count starts again from zero.
-    private function countFailure(int $memberId): void
-    {
-        // MySQL applies the assignments from left to right, each one seeing the
-        // result of the previous: the lock is decided on the count before it changes.
-        $this->database->executeStatement(
-            'UPDATE member
-             SET signInLockedUntil = IF(failedSignInCount + 1 >= ?, NOW() + INTERVAL ? MINUTE, signInLockedUntil),
-                 failedSignInCount = IF(failedSignInCount + 1 >= ?, 0, failedSignInCount + 1)
-             WHERE id = ?',
-            [
-                AccessRules::SIGN_IN_MAX_FAILURES,
-                AccessRules::SIGN_IN_LOCK_MINUTES,
-                AccessRules::SIGN_IN_MAX_FAILURES,
-                $memberId,
-            ],
-        );
     }
 }

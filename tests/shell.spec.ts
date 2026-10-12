@@ -7,22 +7,26 @@ type Manifest = {
   icons: { src: string; sizes: string; type: string }[];
 };
 
-// The home screen is still a placeholder. These tests need an installed app:
-// one that is not installed sends its visitor to the install.
+// These tests need an installed app: one that is not installed sends its
+// visitor to the install. Nobody is signed in on the page.
 test.describe('on an installed app', () => {
   test.beforeEach(async ({ request }) => {
     emptyDatabase();
     await install(request);
   });
 
-  test('the app loads and reaches the API and the database', async ({ page }) => {
+  test('the app loads, reaches the API and the database, and asks who is there', async ({
+    page,
+  }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('status')).toHaveAttribute('data-state', 'ready');
+    await expect(page).toHaveURL('/sign-in');
+    // The name of the band comes from the database.
+    await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
   });
 
   test('the app says so when the server does not answer', async ({ page }) => {
-    await page.route('**/api/install*', (route) => route.abort());
+    await page.route('**/api/**', (route) => route.abort());
     await page.goto('/');
 
     await expect(page.getByRole('status')).toHaveAttribute('data-state', 'unreachable');
@@ -34,7 +38,7 @@ test.describe('on an installed app', () => {
     // No screen exists there yet: the app itself says so, with a way back.
     expect(response?.status()).toBe(200);
     await page.getByRole('link').click();
-    await expect(page.getByRole('status')).toBeVisible();
+    await expect(page).toHaveURL('/sign-in');
   });
 });
 
