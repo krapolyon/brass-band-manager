@@ -1,0 +1,114 @@
+// Domain: Songs
+// v1.0 — 2026-10-12 — validated, migration 006
+// v0.3 — 2026-10-12 — DRAFT: YouTube clips only, thumbnail of the clip kept by the app (clipThumbnailPath), no NoteWorthy file, rule of aliases confirmed
+// v0.2 — 2026-10-12 — DRAFT: answers of the owner (PROPOSED status, clip played in the app, recording of the band, purpose of the levels); an alias is a set of words, as the import of the earlier app read file names
+// v0.1 — 2026-10-12 — DRAFT: song and its files, one PDF part per instrument, known spellings of an instrument, mastery and enjoyment levels of a member
+
+Project brassBand {
+  database_type: 'MySQL'
+  Note: 'Brass band app — Songs domain'
+}
+
+// ---------------------------------------------------------------
+// Song
+// The files of a song are on the disk, in the storage folder of the
+// app. The database holds their path only, as for the photo of a
+// member. A song has one file of each kind at most, so each kind is
+// a field of the song and not a row of a table of files.
+// ---------------------------------------------------------------
+
+Enum songStatus {
+  PROPOSED [note: 'Proposed for the repertoire, not started']
+  IN_PROGRESS [note: 'Being arranged and learned ("montage en cours" in the French locale)']
+  IN_REPERTOIRE [note: 'Played by the band ("au répertoire" in the French locale)']
+  TEMPORARY [note: 'Learned for one occasion and playable, but not meant to stay in the repertoire']
+  ABANDONED [note: 'No longer played, or given up before it was ready. Kept for history.']
+}
+
+Table song {
+  id integer [pk]
+  name varchar [not null, unique, note: 'The name the band gives to the song, shown everywhere in the app. Often shorter than the original title. Never translated.']
+  originalTitle varchar [not null, note: 'Title of the song as its original artist released it. Never translated.']
+  originalArtist varchar [not null, note: 'Who released the song the band covers. Never translated.']
+  bpm integer [note: 'Tempo the band plays the song at, in beats per minute, from 20 to 400. Filled only when it differs from the tempo written in the MuseScore file: empty means the tempo of the file.']
+  status songStatus [not null, default: 'PROPOSED']
+  versionOn date [note: 'Day the arrangement was last changed, typed by whoever manages songs. Not the technical date of the last change of the row. Only the current version is kept.']
+  versionNote varchar [note: 'What changed in the current version of the arrangement, for instance a new ending. Can hold several lines.']
+  clipUrl varchar [note: 'Address of the video clip of the original song. The address of a YouTube video, the only site played for now. The clip is played inside the app, once the member asks for it.']
+  clipThumbnailPath varchar [note: 'Thumbnail of the clip, relative to the storage folder of the app. Fetched once from the video site by the server when clipUrl is saved, so that showing it reports no member to that site. Empty when there is no clip or when it could not be fetched. Never typed by anyone.']
+  discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this song: digits only. Empty for a band without Discord. Stored, and shown by no screen before the Discord feature.']
+  coverPath varchar [note: 'File of the cover art of the original song (JPEG, PNG or WebP, square), relative to the storage folder of the app. Empty when the song has none.']
+  museScorePath varchar [note: 'MuseScore file of the arrangement (.mscz), relative to the storage folder of the app. The source of the score.']
+  midiPath varchar [note: 'MIDI file of the arrangement, relative to the storage folder of the app.']
+  audioPath varchar [note: 'Recording of the song played by the band (mp3 or m4a), relative to the storage folder of the app.']
+  Note: 'A piece the band plays, is learning or considers learning. Every song is a cover: it has an original title, an original artist and the cover art of the original.'
+}
+
+// ---------------------------------------------------------------
+// Parts
+// ---------------------------------------------------------------
+
+Table songPart {
+  id integer [pk]
+  songId integer [not null, ref: > song.id]
+  instrumentId integer [not null, ref: > instrument.id, note: 'The instrument this part is written for']
+  pdfPath varchar [not null, note: 'PDF score of the part, relative to the storage folder of the app']
+  Note: 'The part of one instrument in a song: its score as a PDF. One part per instrument and per song at most; a full score is printed from the MuseScore file. The track of the part in the MuseScore and MIDI files is added with the MIDI player and the reading mode.'
+
+  indexes {
+    (songId, instrumentId) [unique]
+  }
+}
+
+Table instrumentAlias {
+  id integer [pk]
+  instrumentId integer [not null, ref: > instrument.id]
+  alias varchar [not null, unique, note: 'One or several words that name the instrument in file names, for instance "sax mib", "sxm" or "trombone". Stored in lowercase, without accents, words separated by one space. The rule that reads a file name is in the dictionary, entry 2.']
+  Note: 'A known spelling of an instrument in the names of files. Lets the import attach each PDF to its instrument. Filled at install from the starting library, then managed by the band.'
+}
+
+// ---------------------------------------------------------------
+// What a member says of a song
+// ---------------------------------------------------------------
+
+Table memberSong {
+  memberId integer [not null, ref: > member.id]
+  songId integer [not null, ref: > song.id]
+  masteryLevel integer [note: '🔒 Personal data — purpose: knowing which songs the band masters least, to decide which ones leave the repertoire. How well the member plays the song, from 1 to 5. Empty: not said.']
+  enjoymentLevel integer [note: '🔒 Personal data — purpose: knowing which songs the band enjoys least, to decide which ones leave the repertoire. How much the member likes playing the song, from 1 to 5 (the "kif" in the French locale). Empty: not said.']
+  Note: 'What a member says of a song: how well they play it and how much they like playing it. No row, or two empty levels, means the member has said nothing. Seen by the member only; the others see the average of the band. Deleted when the member leaves.'
+
+  indexes {
+    (memberId, songId) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Tables of other domains
+// ---------------------------------------------------------------
+
+Table member {
+  id integer [pk]
+  Note: 'Members domain: see members.dbml'
+}
+
+Table instrument {
+  id integer [pk]
+  Note: 'Members domain: see members.dbml'
+}
+
+// ---------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------
+
+TableGroup songs {
+  song
+  songPart
+  instrumentAlias
+  memberSong
+}
+
+TableGroup external {
+  member
+  instrument
+}

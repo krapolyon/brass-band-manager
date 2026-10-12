@@ -74,8 +74,8 @@ The first version covers three objects: members, songs and gigs.
 
 Between 40 and 50 songs, each with a MuseScore file. Every song is a cover, so each has the cover art of the original.
 
-- **Record**: title, original artist, link to the video clip, status (proposed, in progress, in the repertoire, archived).
-- **Files**: mp3, MIDI, MuseScore (.mscz), PDF scores.
+- **Record**: internal name, original title, original artist, video clip (YouTube, played inside the app), status (proposed, in progress, in the repertoire, temporary, abandoned). Each member says how well they play a song and how much they like it; the band sees the averages, to decide which songs leave the repertoire.
+- **Files**: cover art, recording of the band (mp3 or m4a), MIDI, MuseScore (.mscz), one PDF score per instrument.
 - **mp3 playback**: built-in player.
 - **Scores**: access to every PDF.
 - **MIDI player**: playback with tempo control and choice of active tracks, with a viewer. The sound is a synthesiser's.
@@ -124,7 +124,7 @@ The MuseScore file is the source of each song: it holds what makes a score reada
 | MusicXML, one per track | Generated from the .mscz, for the reading mode |
 | MIDI | Generated from the .mscz, so that its tracks match those of the reading mode |
 
-- **Alias table**: each instrument has its known spellings ("Sax alto", "Saxophone alto", "Sax Mib", "sax-m"). Tracks are attached automatically at import; an unknown name is asked once, then remembered. Old files are not modified.
+- **Alias table**: each instrument has its known spellings ("sax alto", "sax mib", "sxm"). At import the files of a song are dropped together and the app puts each one in its place, from its kind and, for a PDF, from the instrument its name tells; what it understood is shown and corrected before anything is saved (decided on 2026-10-12, `model/songs.md`). Old files are not modified.
 - **Initial import**: a command on the owner's Mac processes the whole repertoire at once. MuseScore cannot run on shared hosting, so conversion is done locally.
 - **New songs**: the app also accepts files exported by hand from MuseScore, so that adding a song does not depend on one person.
 - **Existing code**: a bulk upload with file analysis was written during earlier trials. It will serve as a starting point.

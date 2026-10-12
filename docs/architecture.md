@@ -167,7 +167,7 @@ An address that is not in `routes.php` does not exist: Slim answers 404 through 
 
        public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
        {
-           $songs = $this->database->fetchAllAssociative('SELECT id, title, status FROM song ORDER BY title');
+           $songs = $this->database->fetchAllAssociative('SELECT id, name, status FROM song ORDER BY name');
 
            return Json::write($response, $songs);
        }
