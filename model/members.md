@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.14 — 2026-10-11 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`
+> v1.15 — 2026-10-12 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -193,10 +193,11 @@ The first six lines are the organisation of the band that started the project. T
 
 ### Rules
 - A section with instruments cannot be deleted. An instrument played by a member, or used by a part of a song, cannot be deleted. Both can be renamed and moved.
+- **The members counted on an instrument are the current ones.** An invited member and a member who left are not counted as playing it. Their record still holds the instrument, so it cannot be deleted either: an admin is told so, apart from the count, and the others are told nothing about them.
 - Moving an instrument to another section moves its members with it: the section of a member is always the one of their instrument.
 - After install, an admin can add sections and instruments at any time.
 - The pictogram of a section is chosen by an admin, at install or in the band settings. It is shown beside the nickname of each member of the section, in the directory and wherever a member is listed with their instrument.
-- A refused deletion says why, with the numbers: how many instruments the section still has, how many members play the instrument.
+- A refused deletion says why, with the numbers: how many instruments the section still has, how many current members play the instrument, or how many invited or former members still hold it.
 
 ### Relations
 - A section holds one to several instruments; an instrument belongs to one section.
@@ -230,6 +231,7 @@ A session is a device on which a member is signed in. A password link is a singl
 - Creating a new link for a member, by either way, cancels the previous one. So does changing their roles or their password (entry 1, "Rules").
 - Using a password link sets the password, moves an `INVITED` member to `ACTIVE`, deletes the link and every existing session of the member, and signs the member in.
 - **An invitation is completed in one request.** The link of a member still `INVITED` shows them their own record, as whoever invited them filled it in, so that they can check and complete it. Their details, their photo, their accessibility options and their password are then sent together and saved together, or not at all: an invitation that is abandoned changes nothing. Whoever holds the link reads that record; the link already lets them take the account, so it gives away nothing more. The link of a current member (a forgotten password) shows the nickname only.
+- **An invitation tolerates ten refusals.** A record sent with the link of an invitation is refused when its nickname or its email is already taken, which tells whoever holds the link that someone of the band has it. These refusals are counted on the link (`refusedCount`), at the first step as at the last: at the tenth the link is deleted, the invitation shows as expired, and a member manager creates a new link.
 
 ### Access rights
 | Who | View | Create | Delete |

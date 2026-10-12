@@ -11,9 +11,10 @@ use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-// DELETE /api/instruments/{id}: deletes an instrument nobody plays. Asks for
-// MANAGE_SECTIONS. A member who left still counts: their instrument is kept
-// with their name (model/members.md, "Life cycle").
+// DELETE /api/instruments/{id}: deletes an instrument no record holds. Asks
+// for MANAGE_SECTIONS. The record of an invited member, or of a member who
+// left, holds its instrument too: it is kept with their name
+// (model/members.md, "Life cycle").
 final class DeleteInstrumentAction
 {
     public function __construct(
@@ -36,6 +37,6 @@ final class DeleteInstrumentAction
             throw new ApiError(409, 'instrumentInUse');
         }
 
-        return Json::write($response, $this->sections->all());
+        return Json::write($response, $this->sections->all(forManaging: true));
     }
 }

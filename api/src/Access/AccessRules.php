@@ -32,6 +32,10 @@ final class AccessRules
     // ...and no new email is sent to the same member before this long.
     public const EMAIL_INTERVAL_MINUTES = 5;
 
+    // An invitation whose record was refused this many times because a
+    // nickname or an email is taken is cancelled: its link says what is taken.
+    public const INVITATION_MAX_REFUSALS = 10;
+
     // The statuses of a member who can sign in ("current member" in the model).
     public const SIGN_IN_STATUSES = ['ACTIVE', 'POWER_MEMBER'];
 }

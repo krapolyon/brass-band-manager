@@ -619,6 +619,8 @@
       "moveNote_other": "Le changer de pupitre emmène ses {{count}} fanfarons avec lui.",
       "instrumentInUse_one": "1 fanfaron en joue. Change son instrument avant de le retirer.",
       "instrumentInUse_other": "{{count}} fanfarons en jouent. Change leur instrument avant de le retirer.",
+      "instrumentHeld_one": "Plus personne n’en joue, mais la fiche d’un invité ou d’un ancien fanfaron le porte encore. Il ne peut pas être retiré.",
+      "instrumentHeld_other": "Plus personne n’en joue, mais les fiches de {{count}} invités ou anciens fanfarons le portent encore. Il ne peut pas être retiré.",
       "sectionNotEmpty": "{{name}} a encore {{instruments}} et {{players}}. Déplace ou retire ses instruments d’abord.",
       "pictogram": {
         "label": "Pictogramme",

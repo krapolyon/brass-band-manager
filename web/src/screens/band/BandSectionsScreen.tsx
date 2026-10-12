@@ -165,6 +165,9 @@ function InstrumentForm({ opened, sections, onDone }: FormProps<'instrument'>) {
   const [wasSent, setSent] = useState(false);
   const noteId = useId();
   const players = instrument?.memberCount ?? 0;
+  // Invited and former members are not players, but their record holds the instrument.
+  const others = instrument?.otherMemberCount ?? 0;
+  const isHeld = players > 0 || others > 0;
   const problem = wasSent ? nameProblem(name, change.error) : null;
 
   const save = (event: FormEvent) => {
@@ -209,17 +212,19 @@ function InstrumentForm({ opened, sections, onDone }: FormProps<'instrument'>) {
             <Button
               kind="danger"
               icon="Trash"
-              disabled={players > 0 || change.isPending}
-              aria-describedby={players > 0 ? noteId : undefined}
+              disabled={isHeld || change.isPending}
+              aria-describedby={isHeld ? noteId : undefined}
               onClick={() =>
                 change.mutate({ path: `/api/instruments/${instrument.id}`, method: 'DELETE' })
               }
             >
               {t('install.sections.instrument.remove')}
             </Button>
-            {players > 0 && (
+            {isHeld && (
               <p className="textCaption" id={noteId}>
-                {t('band.sections.instrumentInUse', { count: players })}
+                {players > 0
+                  ? t('band.sections.instrumentInUse', { count: players })
+                  : t('band.sections.instrumentHeld', { count: others })}
               </p>
             )}
           </>

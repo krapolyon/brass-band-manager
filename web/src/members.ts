@@ -17,7 +17,15 @@ export type Member = MemberRecord & {
   passwordLinkExpiresAt?: string | null;
 };
 
-export type Instrument = { id: number; name: string; position: number; memberCount: number };
+export type Instrument = {
+  id: number;
+  name: string;
+  position: number;
+  /** The current members who play it. */
+  memberCount: number;
+  /** Invited and former members whose record holds it; told to those who manage sections only. */
+  otherMemberCount?: number;
+};
 export type Section = {
   id: number;
   name: string;

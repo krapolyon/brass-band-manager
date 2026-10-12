@@ -66,6 +66,6 @@ final class SaveSectionAction
             throw new ApiError(422, 'invalidInput', ['name' => 'duplicate']);
         }
 
-        return Json::write($response, $this->sections->all(), $id === null ? 201 : 200);
+        return Json::write($response, $this->sections->all(forManaging: true), $id === null ? 201 : 200);
     }
 }

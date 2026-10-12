@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.15 — 2026-10-12 — memberPasswordLink.refusedCount (migration 005): an invitation tolerates ten refusals; the members counted on an instrument are the current ones (dictionary)
 // v1.14 — 2026-10-11 — validated: section.icon and memberPasswordLink.emailedAt (migration 004); an invitation is completed in one request (dictionary)
 // v1.13 — 2026-10-11 — no change to the tables: the text size has six steps, 100 to 200 by 20 (decided); a field label corrected (dictionary)
 // v1.12 — 2026-10-11 — no change to the tables: accessibility before sign-in is a button, never a step; the directory is ordered by nickname; a link sent by email lasts 1 hour (decided) (dictionary)
@@ -139,6 +140,7 @@ Table memberPasswordLink {
   tokenHash varchar [not null, unique, note: 'SHA-256 of the random token carried by the link. The token itself is never stored.']
   expiresAt timestamp [not null, note: 'The link is refused after this instant: 7 days after a member manager created it, 1 hour after the app sent it by email']
   emailedAt timestamp [note: 'Instant the app sent this link by email, for a forgotten password. Empty for a link created by a member manager. No new email is sent to the member within 5 minutes of it.']
+  refusedCount integer [not null, default: 0, note: 'How many times the record sent with this link was refused because a nickname or an email is taken. At ten, the link is deleted.']
   Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a forgotten password. A member manager copies the link and sends it to the member himself; a link asked from the sign-in screen is sent by the app, by email. Deleted once used.'
 }
 

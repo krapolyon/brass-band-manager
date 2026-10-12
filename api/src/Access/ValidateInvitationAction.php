@@ -17,7 +17,8 @@ use Psr\Http\Message\ServerRequestInterface;
 // nickname already taken is said where it is typed.
 //
 // Public: whoever holds the link of an invitation. It tells them what the
-// record form tells any member: that a nickname or an email is taken.
+// record form tells any member: that a nickname or an email is taken. These
+// refusals are counted, and too many cancel the link (PasswordLinks).
 final class ValidateInvitationAction
 {
     public function __construct(
@@ -37,7 +38,7 @@ final class ValidateInvitationAction
         if ($link['status'] !== 'INVITED') {
             throw new ApiError(409, 'notInvited');
         }
-        $this->record->check($input->member, $link['memberId']);
+        $this->links->checkRecord($this->record, $input->member, $link['memberId']);
 
         return Json::write($response, ['valid' => true]);
     }

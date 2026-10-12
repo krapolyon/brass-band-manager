@@ -35,6 +35,6 @@ final class DeleteSectionAction
             throw new ApiError(409, 'sectionNotEmpty');
         }
 
-        return Json::write($response, $this->sections->all());
+        return Json::write($response, $this->sections->all(forManaging: true));
     }
 }

@@ -232,6 +232,29 @@ test('an instrument stays as long as a member who left played it', async ({ play
   await jibe.dispose();
 });
 
+test('invited and former members are not counted as players, and only an admin is told of them', async ({
+  playwright,
+}) => {
+  const souba = id('instrument', 'Souba');
+  const zaza = await deviceOf(playwright, addMember({ nickname: 'Zaza' }));
+  addMember({ nickname: 'Lolo', status: 'LEFT' });
+  addMember({ nickname: 'Kiki', status: 'INVITED' });
+  addMember({ nickname: 'Momo', status: 'POWER_MEMBER' });
+  sql(`UPDATE member SET instrumentId = ${souba} WHERE nickname IN ('Lolo', 'Kiki', 'Momo')`);
+  const soubaOf = async (device: typeof zaza) =>
+    ((await (await device.get('/api/sections')).json()) as Section[])
+      .flatMap((section) => section.instruments)
+      .find((instrument) => instrument.id === souba);
+
+  // A power member is a current member: Momo alone is counted.
+  expect(await soubaOf(zaza)).toEqual({ id: souba, name: 'Souba', position: 1, memberCount: 1 });
+
+  const jibe = await deviceOf(playwright, admin.email, admin.password);
+  expect(await soubaOf(jibe)).toMatchObject({ memberCount: 1, otherMemberCount: 2 });
+  await zaza.dispose();
+  await jibe.dispose();
+});
+
 test('only an admin changes sections and instruments', async ({ playwright, request }) => {
   const others = [
     addMember({ nickname: 'Zaza' }),

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace BrassBand\Access;
 
+use BrassBand\Http\ApiError;
+use BrassBand\Members\MemberInput;
+use BrassBand\Members\MemberRecord;
 use Doctrine\DBAL\Connection;
 
 // Password links (memberPasswordLink table): a single-use address that lets a
@@ -90,6 +93,33 @@ final class PasswordLinks
             'nickname' => (string) $found['nickname'],
             'status' => (string) $found['status'],
         ];
+    }
+
+    /**
+     * Checks the record an invited member sends with their link. A refusal
+     * tells whoever holds the link that a nickname or an email is taken, so
+     * these refusals are counted: at the limit the link is cancelled, and a
+     * member manager has to create another.
+     *
+     * @return array<string, int|string|null> Column => value
+     */
+    public function checkRecord(MemberRecord $record, MemberInput $input, int $memberId): array
+    {
+        try {
+            return $record->check($input, $memberId);
+        } catch (ApiError $refusal) {
+            if (in_array('duplicate', $refusal->fields, true)) {
+                $this->database->executeStatement(
+                    'UPDATE memberPasswordLink SET refusedCount = refusedCount + 1 WHERE memberId = ?',
+                    [$memberId],
+                );
+                $this->database->executeStatement(
+                    'DELETE FROM memberPasswordLink WHERE memberId = ? AND refusedCount >= ?',
+                    [$memberId, AccessRules::INVITATION_MAX_REFUSALS],
+                );
+            }
+            throw $refusal;
+        }
     }
 
     // Removes the links that can no longer be used.

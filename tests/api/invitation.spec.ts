@@ -224,6 +224,39 @@ test('the first step asks whether the record would be accepted, and saves nothin
   );
 });
 
+test('an invitation tolerates ten refusals for a name already taken, then its link is dead', async ({
+  playwright,
+  request,
+}) => {
+  const token = await linkFor(playwright, 'Kiki');
+  const validate = (member: object) =>
+    request.post('/api/passwordLink/validate', { data: { token, member } });
+
+  // A record refused for another reason, or accepted, is not counted.
+  expect((await validate(record({ mobilePhone: 'abc' }))).status()).toBe(422);
+  expect((await validate(record())).status()).toBe(200);
+
+  // The last step tells as much as the first: both count.
+  const used = await request.post('/api/passwordLink/use', {
+    data: { token, password, member: record({ nickname: 'Zaza' }) },
+  });
+  expect(used.status()).toBe(422);
+  for (let refusal = 2; refusal <= 10; refusal++) {
+    const taken = await validate(record({ email: 'zaza@example.org' }));
+    expect(await taken.json()).toEqual({ error: 'invalidInput', fields: { email: 'duplicate' } });
+  }
+
+  expect((await validate(record())).status()).toBe(404);
+  expect(sql('SELECT COUNT(*) FROM memberPasswordLink')).toBe('0');
+  // Still invited: a member manager creates another link, which starts from zero.
+  expect(sql("SELECT status FROM member WHERE nickname = 'Kiki'")).toBe('INVITED');
+  const again = await linkFor(playwright, 'Kiki');
+  const fine = await request.post('/api/passwordLink/validate', {
+    data: { token: again, member: record() },
+  });
+  expect(fine.status()).toBe(200);
+});
+
 test('the link of a forgotten password cannot rewrite a record', async ({
   playwright,
   request,

@@ -206,6 +206,26 @@ test.describe('sections and instruments', () => {
     expect(sql("SELECT COUNT(*) FROM section WHERE name = 'Souba'")).toBe('0');
   });
 
+  test('an instrument only an invited or a former member holds counts no player, and stays', async ({
+    page,
+  }) => {
+    addMember({ nickname: 'Lolo', status: 'LEFT' });
+    addMember({ nickname: 'Kiki', status: 'INVITED' });
+    sql(
+      "UPDATE member SET instrumentId = (SELECT id FROM instrument WHERE name = 'Souba') WHERE nickname IN ('Lolo', 'Kiki')",
+    );
+    await signIn(page);
+    await page.goto('/band/sections');
+
+    await expect(card(page, 'Souba')).toContainText('Personne n’en joue');
+    await page.getByRole('button', { name: 'Modifier Souba', exact: true }).click();
+    const remove = sheet(page).getByRole('button', { name: 'Retirer cet instrument' });
+    await expect(remove).toBeDisabled();
+    await expect(remove).toHaveAccessibleDescription(
+      'Plus personne n’en joue, mais les fiches de 2 invités ou anciens fanfarons le portent encore. Il ne peut pas être retiré.',
+    );
+  });
+
   test('moving an instrument to another section takes its members with it, and says so', async ({
     page,
   }) => {

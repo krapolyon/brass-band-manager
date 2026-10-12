@@ -60,8 +60,9 @@ final class UsePasswordLinkAction
         $errors->throwIfAny();
         // The record is checked once here, so that its faults are said before
         // anything is held, and again below, with the member held.
+        // Counted like the check of the first step: it tells as much.
         if ($input->member !== null) {
-            $this->record->check($input->member, $found['memberId']);
+            $this->links->checkRecord($this->record, $input->member, $found['memberId']);
         }
 
         // A device signed in as someone else is signed out of that account.

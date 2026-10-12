@@ -67,6 +67,6 @@ final class SaveInstrumentAction
             throw new ApiError(422, 'invalidInput', ['name' => 'duplicate']);
         }
 
-        return Json::write($response, $this->sections->all(), isset($arguments['id']) ? 200 : 201);
+        return Json::write($response, $this->sections->all(forManaging: true), isset($arguments['id']) ? 200 : 201);
     }
 }

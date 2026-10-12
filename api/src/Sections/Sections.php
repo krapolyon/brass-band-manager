@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Sections;
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Text;
@@ -22,18 +23,22 @@ final class Sections
     /**
      * The sections of the band with their instruments, in the order of the band.
      *
-     * memberCount is the number of members whose instrument it is, whatever
-     * their status: it is what keeps an instrument from being deleted.
+     * memberCount is the number of current members who play the instrument.
+     * Invited members and members who left are not counted, but their record
+     * still holds the instrument, which keeps it from being deleted: whoever
+     * manages sections ($forManaging) is told how many they are.
      *
-     * @return list<array{id: int, name: string, position: int, icon: string|null, instruments: list<array{id: int, name: string, position: int, memberCount: int}>}>
+     * @return list<array{id: int, name: string, position: int, icon: string|null, instruments: list<array{id: int, name: string, position: int, memberCount: int, otherMemberCount?: int}>}>
      */
-    public function all(): array
+    public function all(bool $forManaging = false): array
     {
+        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
         $instruments = [];
         $rows = $this->database->fetchAllAssociative(
-            'SELECT i.id, i.sectionId, i.name, i.position,
-                    (SELECT COUNT(*) FROM member m WHERE m.instrumentId = i.id) AS memberCount
-             FROM instrument i ORDER BY i.position, i.name',
+            "SELECT i.id, i.sectionId, i.name, i.position,
+                    (SELECT COUNT(*) FROM member m WHERE m.instrumentId = i.id AND m.status IN ({$current})) AS memberCount,
+                    (SELECT COUNT(*) FROM member m WHERE m.instrumentId = i.id AND m.status NOT IN ({$current})) AS otherMemberCount
+             FROM instrument i ORDER BY i.position, i.name",
         );
         foreach ($rows as $instrument) {
             $instruments[(int) $instrument['sectionId']][] = [
@@ -41,6 +46,7 @@ final class Sections
                 'name' => (string) $instrument['name'],
                 'position' => (int) $instrument['position'],
                 'memberCount' => (int) $instrument['memberCount'],
+                ...($forManaging ? ['otherMemberCount' => (int) $instrument['otherMemberCount']] : []),
             ];
         }
 
