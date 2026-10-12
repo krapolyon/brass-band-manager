@@ -705,9 +705,9 @@ Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: 
 
 ## Deployment
 
-Not set up yet. The owner has decided to take the cheapest OVH shared hosting plan that can run the app (decision of 2026-10-10); the exact plan is still to be picked against what it offers: PHP 8.4, one MySQL database, scheduled tasks, and the kind of access (FTP, SFTP or SSH).
+Not set up yet. The hosting is the OVH Perso plan (decision of 2026-10-12; what it gives is in `docs/scoping.md`): PHP 8.4 in PHP-FPM, MySQL, scheduled tasks once per hour at most, and no command line (SSH).
 
-Expect the cheapest plans to have no command line (SSH). Deployment must therefore work by copying files, and migrations must be runnable without a terminal.
+Deployment goes through OVH's Git integration, which copies one branch of the GitHub repository to the host on each push and builds nothing. That branch is a dedicated `release` branch: a GitHub Action builds the front end, installs the PHP dependencies and pushes the result to it. `main` is never deployed directly. The action is still to write. Migrations must be runnable without a terminal: through a protected admin page (admin role, explicit confirmation) or through phpMyAdmin.
 
 What is already decided:
 
@@ -743,7 +743,7 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. Deployment to OVH: the cheapest plan that fits, still to be picked and ordered.
+1. Deployment to OVH Perso: the GitHub Action that fills the `release` branch, and the way to run a migration without a command line.
 2. What the Members feature leaves for later: the export of the directory, the Discord action of a member's sheet, sending an invitation by email, a prettier email, and the screens Figma has not drawn (see below).
 3. The next features: songs, gigs, and the later ones. Their tabs say "coming soon" until then.
 

@@ -13,6 +13,7 @@ A decision recorded in this document is settled. If one looks wrong, say so once
 | Kind of app | A single PWA, for phone and web | One codebase, no Apple account or review, updates are immediate |
 | Native app | Set aside for now, possible later by wrapping the PWA | It needs upkeep even when nothing changes. The owner has a Mac and the association is a registered entity, so this exit stays easy ([Apple's conditions](https://developer.apple.com/support/web-distribution-eu/)) |
 | Hosting | OVH shared hosting | Small budget, no server administration |
+| Hosting plan | OVH Perso | Enough for one band: 5 × 1 GB MySQL, PHP 8.4 (FPM), Git deployment. Trade-offs: no SSH, hourly cron at most, PHP mail limited to 100/hour. 2.99 € excl. VAT/month the first year, then 5.99 € |
 | Back end | PHP without a full framework, with targeted libraries. Slim, a micro-framework limited to routing and error handling, is accepted | Avoid forced upgrades: a framework such as Laravel is only patched for 2 years per version ([support policy](https://laravel.com/docs/12.x/releases)). Slim has stayed on the same major version since 2019 |
 | Front end | React with Vite, built to static files | React is already familiar to the owner, and built files do not age |
 | Database | MySQL, included in the hosting | Nothing more to install or pay for |
@@ -32,7 +33,7 @@ Guiding principle: what is frozen must not age. The app will be changed rarely o
 - **Database**: MySQL, evolved through numbered SQL scripts.
 - **Hosting**: OVH shared hosting. OVH maintains PHP and keeps old versions available for a long time ([PHP versions at OVH](https://docs.ovhcloud.com/fr/guides/web-cloud/web-hosting/web-hosting-main-info)).
 - **Notifications**: web push, with reminders triggered by OVH's scheduled tasks.
-- **Deployment**: files copied from GitHub for each validated version.
+- **Deployment**: OVH's Git integration deploys a dedicated `release` branch. A GitHub Action builds the front end, installs the PHP dependencies and pushes the result to `release`. Nothing is built on the host, and `main` is never deployed directly.
 - **End-to-end tests**: Playwright.
 
 **Interface**: no component library such as MUI, which would make the app look like many others. Components are written for the app, in plain CSS, with variables for colours and typography. The same variables let other bands restyle it. A behaviour-only library (dialogs, menus, accessibility, no styling) may be added to the base layer.
@@ -40,6 +41,10 @@ Guiding principle: what is frozen must not age. The app will be changed rarely o
 **Languages**: interface text goes through a translation library (i18next), French first. Dates and numbers rely on the browser's native functions.
 
 What shared hosting rules out: real time and permanent background processes. No planned feature needs them.
+
+Without SSH, migrations run through a protected admin page (admin role, explicit confirmation) or through phpMyAdmin. The app is served from a subdomain (e.g. `app.<band-domain>`) next to the existing website.
+
+What the OVH Perso plan gives, as read on OVH's product page on 2026-10-12: 5 MySQL databases of 1 GB, 15 sites, 100 GB of storage, 10 email addresses; PHP up to 8.4 in PHP-FPM (`memory_limit` 512M, `max_execution_time` 165 s); PHP `mail()` limited to 100 sendings per hour; scheduled tasks once per hour at most, each running 60 minutes at most; no SSH; a Git integration for GitHub only, one repository, deployed by a webhook on push, from a branch of one's choice, into a target folder that starts empty, with no build step.
 
 ## Sign-in and data protection
 
@@ -188,9 +193,11 @@ Skills first, agents later.
 
 | Point | To settle during |
 | --- | --- |
-| OVH plan to order: the cheapest one that fits (decided). To check on it: PHP version, MySQL database, scheduled tasks, and whether deployment and migrations work without a command line | Base |
+| Outbound HTTPS calls from PHP (web push, Discord API) work on OVH Perso: test with a throwaway script before building on them | Base |
+| The existing band website does not already use the plan's single Git deployment slot | Base |
 | Whether a 90-day session really holds on a PWA installed on an iPhone | Base |
 | Push notifications on iPhone, once the app is on the home screen | Base, then gigs |
+| Many mail providers no longer accept mail sent by PHP `mail()` unless the domain has SPF and DKIM set up (not verified). The app sends through the mailbox of the domain, by SMTP: check that its emails arrive, and what the domain needs | Notifications |
 | MySQL treats table names as case-sensitive on OVH (Linux) but not on a Mac. With camelCase names, the development database must behave like OVH's | Base |
 | Command-line MuseScore conversion on the oldest files | Prototype |
 | Smoothness of a long scrolling score on a phone | Prototype |
@@ -203,4 +210,4 @@ Skills first, agents later.
 
 - Two or three .mscz files from different periods, including one of the oldest, with their PDFs.
 - The bulk upload and file analysis code written during the first trials.
-- The OVH hosting and the domain name, once the plan is chosen.
+- The OVH Perso hosting, to order, and the subdomain of the app.

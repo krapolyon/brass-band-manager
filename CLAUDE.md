@@ -38,11 +38,11 @@ These are decided when a feature is modelled and designed, not added after it wo
 | Interface | Components written for this app, plain CSS with custom properties | No component kit. A headless behaviour library is acceptable |
 | Back | PHP with Slim (routing and error handling), Doctrine DBAL (data access, no ORM) and Valinor (input validation) | Runs on shared hosting. No full framework |
 | Database | MySQL | Table names are case-sensitive on the Linux host and not on macOS |
-| Hosting | OVH shared hosting | No Node at runtime, no long-running process, no websockets. Scheduled work goes through the host's scheduled tasks |
+| Hosting | OVH Perso shared hosting | No Node at runtime, no long-running process, no websockets. No SSH: no command line on the host. Scheduled tasks at most hourly. PHP mail limited to 100 per hour |
 | Sign-in | Email and password, long server-side sessions that can be revoked | No magic link |
 | Tests | Playwright, end to end | Each feature ships with its tests |
 | Code checks | TypeScript, Biome, PHPStan | `npm run check` passes before a commit |
-| Deploy | Files copied to the host from GitHub | No build step on the host |
+| Deploy | OVH Git deployment of a `release` branch built by a GitHub Action | No build step on the host. Never deploy from `main` directly |
 
 The reasons behind these choices are in the scoping document, `docs/scoping.md`. A choice recorded there is settled: if one looks wrong, say so once with the reason, and do not work around it.
 
@@ -124,7 +124,7 @@ Features are built one at a time, in the order set by the scoping document.
 | Empty the local database | `npm run db:reset`. Deletes local data: ask first |
 | Add a PHP library | `docker compose run --rm php composer require vendor/name:1.2.3` |
 
-Deployment is not set up yet. The hosting will be the cheapest OVH shared plan that fits, so plan for no command line on the host.
+Deployment is not set up yet. The hosting is OVH Perso: there is no command line on the host.
 
 ## Shared layer
 
@@ -153,4 +153,6 @@ A route is public only by decision: the list is short and written at the top of 
 ## Still to fill in
 
 - Deployment commands.
-- The PHP and MySQL versions of the host, to keep `docker/Dockerfile` and `docker-compose.yml` equal to them (PHP 8.4 and MySQL 8.4 for now).
+- GitHub Action that builds the front end, installs `vendor/` and pushes to `release`.
+- How a migration is run on the live database without SSH.
+- The MySQL version of the host, to keep `docker-compose.yml` equal to it (MySQL 8.4 for now). PHP is 8.4 on the host, as in `docker/Dockerfile`.
