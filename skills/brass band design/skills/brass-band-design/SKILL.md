@@ -28,7 +28,7 @@ The art direction was settled in a study canvas, "Les Krapos — étude de style
 ## The Figma file
 
 - **`Design system` page.** One frame, three groups: Foundations (colour, accent themes, typography, space and sizes, surfaces), Components — base, Components — business objects. Every component sits in a card with its name and one line on when to use it. A new component gets its card; a business object gets its card with its first representation.
-- **One page per feature**, named after the feature in English: `Install`, `Members` (sign-in, forgotten password, onboarding, directory, the member's own settings, managing members), `Band settings`.
+- **One page per feature**, named after the feature in English: `Install`, `Members` (sign-in, forgotten password, onboarding, directory, the member's own settings, managing members), `Band settings`, `Songs` (the list, the song in its five modes, the import, the management of songs).
 - **While a feature is explored**, two layouts that are both plausible sit side by side in the same section, named `option A`, `option B`, and the section title says there is a choice to make. The "Read me" note lists the choices under "To validate".
 - **On a feature page**: numbered sections (the flow on a phone, then its states, then one section per larger width, then the schemes and accent themes), and a "Read me" note at the left. The note carries the status (exploration, to validate or validated), the source in the model with its version, what is decided, the components the screens are built from, and the open points. Keep it true: it is what the owner and Claude in VS Code read first.
 - **Screen frames** are named `<Feature> / <Screen> — <state>`: `Install / First member — errors`.
@@ -87,7 +87,7 @@ A design conversation often settles things that belong to the model (a default v
 
 **Light by day, dark by night.** The app follows the time of day or the device setting, so every colour exists in both schemes from the start. The dark scheme comes from the study; the light one was first drawn in Figma.
 
-**Two kinds of surface.** Floating controls (the mode bar of a song, the tab bar, the buttons over the halo, the bar that holds the main action of a long screen) are glass: translucent, blurred, with a hairline border. Content sits on plain, opaque sheets. Keeping the two apart tells the member what is navigation and what is content.
+**Two kinds of surface.** Floating controls (the mode bar of a song, the tab bar, the buttons over the halo, the bar that holds the main action of a long screen) are glass. Content sits on plain, opaque sheets. Keeping the two apart tells the member what is navigation and what is content. In Figma the glass is Figma's native glass effect, the effect style `glass`, over the fill `glass` (black at 20 % in the dark scheme, as in the owner's earlier design): no hand-made stroke, background blur or highlight is added to it. Anything that floats over the cover of a song is set to the dark scheme, whatever the scheme of the screen, and to dark high contrast when high contrast is on.
 
 **Round and generous.** Large radii, pill-shaped controls, big titles, room between blocks. The band's logo is a chunky, rounded lettering; the interface echoes its generosity, not its colours.
 
@@ -102,10 +102,11 @@ A design conversation often settles things that belong to the model (a default v
 | Typefaces | Bricolage Grotesque for titles, Instrument Sans for text, as in the study. In Figma: `fontDisplay` and `fontText` |
 | Accent themes: number, names, values | Four in Figma: Copper, Coral, Mint, Lilac. The owner tunes them himself in the `Theme` collection |
 | The light scheme | Proposed in Figma, not validated. The owner finds that the halo works less well in light: to rework |
-| The larger screens | The widths are decided (see "Larger screens"), and so is the navigation of the app on a desktop (floating menu). The tablet layout drawn for Install is a first proposal; the app itself is not drawn on a tablet or on a large desktop yet |
+| The larger screens | The widths are decided (see "Larger screens"), and so is the navigation of the app on a desktop (floating menu). The tablet layout drawn for Install is a first proposal. The `Songs` page draws the app at 768 (tab bar 480 wide, centred: a proposal) and 1920 (content capped and centred) |
 | The accessibility options | Set up in Figma in October 2026 (see "Accessibility modes" under "Variables and themes"); the values of the two high contrast modes and the sizes of `TextSize` are validated by the owner. Still to settle, seen on the clones of the `Members` page: a chip can be cut in a column of fixed width when the text grows; in high contrast the status colours and the accent used as text keep their ordinary values, and the soft status backgrounds stay translucent |
-| The names of the representations | The starting vocabulary above |
-| The Live mode of a song | Drawn in the study, not validated; to be redone with the feature |
+| The names of the representations | The starting vocabulary above, plus `Track` (one instrument in the MIDI player, `SongPart/Track`) |
+| The Live mode of a song | Redrawn on the `Songs` page (option B: the page rises line by line, no cursor); to finalise after the prototype of the reading mode |
+| Icons | Iconsax, chosen by the owner. Its free licence forbids redistributing the files: the owner arranges a licence before the code is published |
 
 Do not treat a line of this table as decided. Ask, or read what the owner has set in Figma, then move it into the sections above.
 
@@ -120,7 +121,7 @@ The app is used standing up, often outdoors, sometimes with an instrument in the
 - Touch targets are at least 44 px. In the modes used while playing, go well beyond: a control hit with a free finger between two phrases has to be hard to miss.
 - Nothing depends on hover. A gesture always has a visible control that does the same thing.
 - Navigation is a floating tab bar with five entries: home, songs, gigs, members, settings (`TabBar`). It sits 12px from the sides and above the bottom safe area; a screen that scrolls under it keeps 126px free at its end. A screen opened from a tab (a form, a record) hides it and shows a back button. From a text size of 160 % it shows its icons alone (`Show labels` off): five labels no longer fit, and each entry keeps its name for screen readers.
-- A song is organised by modes, switched from one bar: MP3, MIDI, PDF, Clip, Live. The artwork is large when one arrives on the song, and shrinks to a thumbnail beside the title when a mode needs the room.
+- A song is organised by modes, switched from one bar (`ModeBar`): MP3, MIDI, PDF, Clip, Live. On a phone the top of the song is `Song/Header` Large in every mode but Live and MIDI landscape: the cover fills the width, the back and more buttons and the mode bar float over it in glass, and the content sits on a panel whose rounded top corners overlap the cover. The PDF is read full screen from its own button. On a tablet and a desktop the header is Compact: the cover beside the name, over the halo.
 - The app is a PWA: do not draw a fake status bar or a fake keyboard. A phone frame does not reserve the top safe area: the content starts 32 px from the top (`spaceXxl`), in `ScreenTop`. In code the top padding is the larger of 32 px and `env(safe-area-inset-top)` plus 8 px, so that a notch never covers the back button. 34 px stay free at the bottom of a phone frame, under the bars. Safe areas are not variables: in code they come from `env(safe-area-inset-*)`.
 
 ### Larger screens
@@ -189,17 +190,19 @@ The six accessibility options of a member (`model/members.md`) combine freely. T
 - A component that contains another one keeps it as an exposed nested instance (the buttons of a `BottomBar`, the `ListRow` of an `Instrument/Row`): its label and its state are set on the nested instance.
 - A component uses only semantic variables.
 
-The base layer today: `Button`, `IconButton`, `TextField` (also the select, with a chevron as trailing icon), `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `Chip`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `SliderRow`, `AccessibilityOptions`, `Sheet`, `StepIndicator` (two or three steps), `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `BottomSheet`, `Dialog`, `Halo`, and the icons. The business objects today: `Instrument/Row`, `Section/Card`, `Section/Badge`, `PictogramChoice`, `Band/Mention`, `Member/Card`, `Member/Row`, `Member/Header`, `Member/Mention`, `Member/TableHeader`, `Member/TableRow`. The library in Figma is the reference, not this list.
+The base layer today: `Button`, `IconButton`, `TextField` (also the select, with a chevron as trailing icon), `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `Chip`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `SliderRow`, `AccessibilityOptions`, `Sheet`, `StepIndicator` (two or three steps), `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `BottomSheet`, `Dialog`, `Halo`, `ModeBar`, `DropZone`, `Waveform`, `LevelScale`, `Rating` (with `RatingStar`), `Gauge`, and the icons. The business objects today: `Instrument/Row`, `Section/Card`, `Section/Badge`, `PictogramChoice`, `Band/Mention`, `Member/Card`, `Member/Row`, `Member/Header`, `Member/Mention`, `Member/TableHeader`, `Member/TableRow`, `Song/Tile`, `Song/Row`, `Song/Card`, `Song/Header`, `Song/Mention`, `Song/TableHeader`, `Song/TableRow`, `SongFile/Row`, `SongPart/Row`, `SongPart/Track`. The library in Figma is the reference, not this list.
 
-**Icons** are named `Icon/<Name>`: 24 px, a 2 px stroke with round caps, one single vector whose stroke is bound to `text`. Inside a component an icon is a swappable property, never a variant per icon. To recolour an icon in an instance, set the stroke of its vector. After swapping an icon, set that stroke again and look at the result: the override does not always follow the swap.
+**Icons** come from Iconsax and are named `Icon/<Name>`: 24 px, each a component set with two variants. `Style=Outline` (Iconsax Linear: a 1.5 px stroke with round caps, its stroke bound to `text`) is the icon at rest; `Style=Filled` (Iconsax Bold, its fill bound to `text`) marks the current item. Inside a component an icon is a swappable property, never a variant per icon. To recolour an icon in an instance, set the stroke and the fill of its vectors. After swapping an icon, set them again and look at the result: the override does not always follow the swap.
 
-New icons come from Lucide (ISC licence, to credit in the repository) when it has the icon, flattened to one vector with its stroke bound to `text`.
+New icons come from the free set of Iconsax, Linear and Bold, each flattened to its vectors. An icon the free set lacks is drawn in its style and says so in its description (Close, Accessibility, Contrast, Biceps, Check). The free licence of Iconsax forbids redistributing its files: the owner arranges a licence before the code is published, and until then the repository does not hold them as a set.
+
+**The current item** of a `TabBar` or a `ModeBar` shows its filled icon, and its icon and label take the accent (`accent` on the icon, `accentText` on the label). No pill behind it: the shape changes, so the state never rests on colour alone.
 
 **Section pictograms** (`Icon/Trumpet`, `Icon/Saxophone`, `Icon/Trombone`, `Icon/Tuba`, `Icon/Sousaphone`, `Icon/Drum`, `Icon/Flute`, `Icon/Clarinet`) are filled silhouettes drawn by the owner (flute and clarinet were drawn after his): one vector, its fill bound to `text`. `Icon/Music` is the fallback of a section without one. To recolour a pictogram in an instance, set the fill of its vector, not its stroke.
 
 On the accent colour, an icon or a pictogram takes `onAccent`, never `text`: light on accent gives 1.6 to 2.5:1, `onAccent` gives 6.6 to 9.5:1 across the four themes.
 
-**Patterns**, settled with the Install and Members features. Reuse them before inventing another way:
+**Patterns**, settled with the Install, Members and Songs features. Reuse them before inventing another way:
 
 - Choosing in a list: rows with a checkbox, each row keeping its own actions at the end. The line that adds an item is the last row of the list (`ListRow`, `Leading=Add`).
 - Editing one item of a list, or choosing one value among many: a `BottomSheet` over the `scrim` on a phone or a tablet, a `Dialog` on a desktop. Not another screen.
@@ -209,7 +212,11 @@ On the accent colour, an icon or a pictogram takes `onAccent`, never `text`: lig
 - A group of fields, a list or a summary sits on a `Sheet`.
 - A form in error says how many fields are wrong in one `Message` at the top, and what is wrong under each field.
 - A setting that has no consequence beyond itself (appearance, accessibility) applies at once, through a `Switch`, a `SegmentedControl` or a `Slider`, with no save button. A form that changes what others see or how the member signs in (profile, password, name of the band) keeps a `BottomBar` with its button.
-- A status in a list is a `Chip`, shown only when it is not the ordinary one: an active member has none. The chip and any mark sit at the end of the row: a status never moves the content, and every row keeps the same height.
+- A status in a list is a `Chip`, shown only when it is not the ordinary one: an active member has none. The chip and any mark sit at the end of the row: a status never moves the content, and every row keeps the same height. From a text size of 160 % the chip goes under the second line of the row, so that the name keeps its room.
+- Files come in through a `DropZone`: dropped in bulk or chosen, sorted by the rules of the model, with as few questions as possible. Large at the top of an import, Compact in a sheet. Editing the files of an object is the same drop zone, never a field per file: the files about to be replaced are listed, each with an undo, and saved with the form.
+- A destructive action always asks first, in a `BottomSheet` (a `Dialog` on a desktop): what goes with it, that it cannot be undone, and the gentler way when there is one ("Le passer en Abandonné"). The destructive button is `Danger` and names exactly what it does.
+- An empty list or a search with no result is a `Sheet` with an icon, a title and one line that says what to do; the action, if any, is a button under it. A loading list shows grey rows of the shape of its rows. An error says what happened and what to do, in a `Message`, with a way to retry.
+- An average the band gives is a `Rating` (stars, rounded to the half, with the value and the number of answers); a share of a whole is a `Gauge` with the numbers in words. A member gives a level with `LevelScale`.
 - An action that cannot be done stays visible, disabled, with the reason written under it and the numbers that explain it (a section that still has three instruments).
 - Photos of members in the file are stand-ins, blurred on purpose (`Design system` page, `Avatar` card). No real person appears in the file.
 - A list of members is a grid of `Member/Card` in alphabetical order of the nickname: a round photo with the pictogram of the section as a badge, the nickname, the instrument. Two columns on a phone, four on a small desktop. The card has the radius of a group of controls (`radiusMd`), less round than a sheet. A power member is marked with `Icon/Biceps` beside the nickname, never with an emoji.
@@ -257,6 +264,8 @@ For an exploration, the first, third and fifth lines are enough. For a rebuilt s
 - A script can create an image from bytes (`figma.createImage(figma.base64Decode(…))`): PNG and JPEG only, WebP is refused. Compare the hash it returns with the SHA-1 of the file to be sure the bytes arrived whole.
 - A swatch that shows another accent theme is a `ThemeSwatch` with that mode of `Theme` set on the instance: no colour is typed.
 - An icon made from an SVG is flattened to one vector (`figma.flatten`) before it goes into its component. `flatten` keeps the absolute position: set `x` and `y` again afterwards.
+- Resizing a layer nested in an instance by script does not hold: a size that changes from one instance to the next (the fill of a `Gauge`) is a variant.
+- A frame cloned from a screen can carry a child set to fill vertically inside a container that hugs: check the heights after a clone, and set such children to hug.
 - A paint set on a vector nested in an instance must carry the resolved colour as well as the variable: read it with `variable.resolveForConsumer(node)`, then bind. A paint built with a placeholder colour is drawn with the placeholder, although the binding is there.
 - A nested instance whose component was swapped is not found by its layer name reliably: look for it by its main component (`mainComponent.name.startsWith('Icon/')`).
 - After the children of a slot are replaced, the slot can keep its old height and the old positions: put the new children in one frame, and check the height in a screenshot. Inside a slot, `children.indexOf(node)` fails: compare ids.

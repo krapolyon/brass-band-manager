@@ -1,0 +1,143 @@
+.SongHeader {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* The Dark scheme is set on these two (data-scheme): the colour of the text
+   has to be read again from it. */
+.SongHeader-hero,
+.SongHeader-top {
+  color: var(--text);
+}
+
+.SongHeader-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+}
+
+/* Alone on its line, the more button stays at the end. */
+.SongHeader-bar > button {
+  margin-left: auto;
+}
+
+.SongHeader-titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.SongHeader-titles p {
+  color: var(--textMuted);
+}
+
+/* ---------------------------------------------------------------
+   Large. 390 by 372 in Figma for the cover; the panel covers its last 28.
+   --------------------------------------------------------------- */
+.SongHeader-hero {
+  position: relative;
+  aspect-ratio: 390 / 372;
+  overflow: hidden;
+  /* Dark under the cover, and when there is none: what floats over it is
+     drawn for a dark ground. */
+  background: var(--ground);
+}
+
+.SongHeader-hero > .SongTile {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+/* The same top margin as ScreenTop, which this screen does not have: 32, or
+   the safe area of the device plus 8 when that is more. */
+.SongHeader-hero > .SongHeader-bar {
+  position: absolute;
+  inset: 0 0 auto;
+  padding: max(var(--spaceXxl), calc(env(safe-area-inset-top) + var(--spaceXs)))
+    max(var(--spaceXl), env(safe-area-inset-right)) 0 max(var(--spaceXl), env(safe-area-inset-left));
+}
+
+/* The mode bar ends 30 above the panel in Figma. It is held by its bottom:
+   at a large text size it grows upwards, never under the panel. */
+.SongHeader-modes {
+  position: absolute;
+  right: max(var(--spaceMd), env(safe-area-inset-right));
+  bottom: calc(var(--radiusLg) + 1.875rem);
+  left: max(var(--spaceMd), env(safe-area-inset-left));
+}
+
+/* Figma: a gap of -28 between the cover and the panel, the radius of the
+   panel. */
+.SongHeader-panel {
+  position: relative;
+  margin-top: calc(-1 * var(--radiusLg));
+  border-radius: var(--radiusLg) var(--radiusLg) 0 0;
+  background: var(--ground);
+}
+
+.SongHeader[data-size="large"] .SongHeader-titles {
+  gap: var(--spaceXs);
+  padding: var(--spaceXl) max(var(--spaceXl), env(safe-area-inset-right)) var(--spaceMd)
+    max(var(--spaceXl), env(safe-area-inset-left));
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------
+   Compact. The cover is 120, the name sits at its foot.
+   --------------------------------------------------------------- */
+.SongHeader[data-size="compact"],
+.SongHeader-top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+/* The top is dark whatever the scheme of the app: its ground is the dark
+   one, lit by the blurred cover. */
+.SongHeader-top {
+  position: relative;
+  padding: var(--spaceLg);
+  overflow: hidden;
+  background: var(--ground);
+}
+
+.SongHeader-top > * {
+  position: relative;
+}
+
+/* Figma counts a blur twice as large as CSS does. */
+.SongHeader-top > .SongHeader-halo {
+  position: absolute;
+  inset: -25%;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.7;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+:root[data-contrast="more"] .SongHeader-halo {
+  display: none;
+}
+
+.SongHeader-identity {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spaceLg);
+  min-width: 0;
+}
+
+.SongHeader-identity > .SongTile {
+  width: 7.5rem; /* 120 */
+}
+
+.SongHeader[data-size="compact"] .SongHeader-titles {
+  flex: 1;
+  gap: var(--spaceXxs);
+}

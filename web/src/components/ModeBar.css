@@ -1,0 +1,58 @@
+/* 80 high in Figma: each mode 64, 8 around. The height is a minimum: the
+   labels grow with the text size option. */
+.ModeBar {
+  display: flex;
+  gap: var(--spaceXxs);
+  width: 100%;
+  padding: var(--spaceXs);
+  border-radius: var(--radiusLg);
+  background: var(--glass);
+  /* The Dark scheme is set on the element (data-scheme): the colour of the
+     text has to be read again from it. */
+  color: var(--text);
+  /* Figma: the effect style "glass", its native glass, 60. CSS has no such
+     effect: a blur of the backdrop stands in for it, counted as half of the
+     value of Figma. No stroke. */
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+}
+
+.ModeBar button {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  min-width: 0;
+  min-height: 4rem; /* 64 */
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusMd);
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+
+/* Figma: the current mode has no pill. Its icon is the filled one, in the
+   accent; its label takes the accent of texts. */
+.ModeBar button[aria-current="true"] {
+  color: var(--accentText);
+}
+
+.ModeBar button[aria-current="true"] .Icon {
+  color: var(--accent);
+}
+
+/* Not drawn in Figma, where every mode opens: a mode that cannot be opened
+   is muted, and says so to screen readers with aria-disabled. */
+.ModeBar button[aria-disabled="true"] {
+  color: var(--textMuted);
+  cursor: default;
+}
+
+.ModeBar span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}

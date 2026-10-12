@@ -246,7 +246,7 @@ $errors->throwIfAny();
 
 The problems a field can have are `required`, `tooLong`, `tooShort`, `invalid` and `duplicate`. A one-line text is saved after [Text::clean()](../api/src/Http/Text.php), which removes invisible characters and outer spaces of every kind; `FieldErrors::text()` judges it in that form.
 
-Only JSON is accepted. Form data is refused on purpose: a page of another site can send a form without the browser asking, but not JSON.
+Only JSON is accepted. Form data is refused on purpose: a page of another site can send a form without the browser asking, but not JSON. One exception: a file of a song, sent alone as the body of its request (see "Songs").
 
 Rules that are about meaning (this email is already used, this slot is in the past) are checked by the action, which throws an `ApiError`.
 
@@ -427,10 +427,36 @@ The app sends one email so far: the link of a forgotten password ([ForgotPasswor
 - **On the page**, [band.ts](../web/src/band.ts) gives the tab the name of the band and its icon, and the icon an iPhone takes when the app is added to its home screen.
 - No screen changes the logo after the install yet: that is the settings feature.
 
+### Songs
+
+`api/src/Songs/`. Rules: [model/songs.md](../model/songs.md). Every line of its tables of rights is a test in `tests/api/songs.spec.ts`.
+
+| Address | Who | What |
+|---|---|---|
+| `GET /api/songs`, `GET /api/songs/{id}` | Signed in | Every song, whatever its status. The list gives the weight of each file and the averages of the band; one song also gives its files, its parts and the levels of the member who asks |
+| `GET /api/songs/{id}/cover`, `/clipThumbnail`, `/audio`, `/midi`, `/museScore`, `/parts/{instrumentId}` | Signed in | A file. With `?download`, saved under a readable name |
+| `GET /api/songs/archive?kind=...&songs=1,2` | Signed in | "Download everything": a `.zip` of the parts of the member's instrument, the recordings, the MIDI or the MuseScore files of the songs given |
+| `PUT /api/songs/{id}/levels` | Oneself | The two levels the member gives the song. The address names no member: nobody sets the levels of someone else |
+| `POST /api/songs`, `PUT /api/songs/{id}` | `MANAGE_SONGS` | Creates a song; saves its whole record |
+| `PUT /api/songs/{id}/status`, `DELETE /api/songs/{id}` | `MANAGE_SONGS` | Sets the status; deletes the song with its files, its parts and its levels |
+| `PUT`, `DELETE /api/songs/{id}/cover`, `/museScore`, `/midi`, `/audio`, `/parts/{instrumentId}` | `MANAGE_SONGS` | Gives, replaces or removes a file |
+| `PUT /api/songs/{id}/audio/peaks` | `MANAGE_SONGS` | Keeps the outline of the recording, computed by the browser that sent it |
+| `POST /api/songs/fileNames` | `MANAGE_SONGS` | Says where each file of a list of names would go. Changes nothing |
+
+- **[Songs](../api/src/Songs/Songs.php)** builds what is answered about a song, from columns listed one by one. Two things are not for everyone: the Discord channel (who manages songs) and the levels of a member (that member only). The others get the average of the current members who answered and their number, rounded to one decimal, never the level of a named member.
+- **A file of a song is the one exception to "JSON and nothing else"**: it is sent alone, as the body of its request, announced as `application/octet-stream` ([FileBody](../api/src/Http/FileBody.php)). A recording of 10 MB written in base64 would weigh a third more and be decoded twice in memory. Like JSON, this type cannot be sent by a page of another site without the browser asking first. [BodyLimit](../api/src/Http/BodyLimit.php) lets these addresses, and only them, receive 10 MB; it lists them, and must be kept in step with `routes.php`.
+- **[SongFiles](../api/src/Songs/SongFiles.php) is the only code that touches the files.** It decides what a file is from its content: a square PNG, JPEG or WebP of 1024 pixels at most for the cover (2 MB), a zip that holds a `.mscx` for MuseScore (10 MB), `MThd` for MIDI (1 MB), an mp3 or an m4a for the recording (10 MB), `%PDF-` for a part (5 MB). Each file has a folder of its own under `storage/songs/`, under a name of the app; replacing a file writes the new one, saves its path, then deletes the old one, with the row of the song held so that two requests cannot leave a file behind.
+- **Serving** ([ServeFile::privately](../api/src/Storage/ServeFile.php)): `private, no-cache` with an `ETag`, as for a photo, and ranges of bytes (`Range`), without which an iPhone plays no recording.
+- **The outline of a recording** (its "peaks") is `peaks.json` beside the recording, in the same folder: it goes when the recording goes. The server has nothing to read a recording with, so the browser that sends one computes it (Web Audio) and sends it right after, with the version of the recording it was computed from: an outline that arrives after another recording took the place is refused.
+- **The clip** ([ClipThumbnails](../api/src/Songs/ClipThumbnails.php)): an address is accepted when it is one YouTube gives for a video (`youtube.com/watch?v=`, `youtu.be/`). When the video changes, the server fetches its thumbnail once from YouTube's image server and keeps it like the other files: showing it then reports no member to YouTube. It only asks the addresses written in the class for an identifier it has checked, never the address that was typed; `clipThumbnailUrls` in `config.php` replaces them, which the test server uses to fetch a file of its own. If the host does not let PHP reach another site, or the fetch fails, the clip is saved all the same and the cover art stands in.
+- **Reading the name of a file** ([FileNames](../api/src/Songs/FileNames.php)): the kind from the extension, and for a PDF the instrument whose name or alias (`instrumentAlias`) has all its words in the name of the file, the spelling with the most words winning. It is written once, on the server, and the import screen asks it before sending anything. Aliases come from the starting library (`api/resources/instrumentLibrary.<language>.json`), copied at install with the instruments that are kept. No screen manages them yet.
+- **The archive** is refused above 600 MB of files, more than a whole repertoire. It is built with PHP's `ZipArchive` (the `zip` extension, added to the local image) in the temporary folder, files stored as they are, and removed from the folder as soon as it is opened for sending. Its name is given by the screen (`download` attribute): the server writes no sentence.
+- **A member who leaves** loses the levels they gave ([ChangeStatusAction](../api/src/Members/ChangeStatusAction.php)); an instrument that has a part cannot be deleted (the database refuses, `instrumentInUse`).
+
 ### Not written yet
 
 - **The export of the directory**, which asks for the password again: not drawn, not built.
-- **Serving files** (recordings, scores) to signed-in members only.
+- **The known spellings of an instrument** (aliases): no route adds or removes one.
 
 ## The front
 
@@ -454,6 +480,11 @@ The session is a cookie the page cannot read. The front learns who is signed in 
 - **Managing members** ([screens/members/](../web/src/screens/members/)): the list is a `Sheet` of `MemberRow` below 1024 px and a `MemberTable` from there; each exists once on the screen, the other is not drawn. A screen offers only what the member may do (`permissions` of `GET /api/me`, and `covers()` in [manage.ts](../web/src/screens/members/manage.ts) for the access of someone who may do more), and an action that cannot be done stays visible, disabled, with its reason. This is a comfort: the API decides. A password link is shown once, in [LinkPanel](../web/src/screens/members/LinkPanel.tsx), as `/invitation#<secret>` or `/password#<secret>`, and is kept nowhere.
 - **The settings of the band** ([screens/band/](../web/src/screens/band/)), for admins: the appearance (name, logo, accent colour, default language) is saved with its button, since it changes what everyone sees; a section or an instrument is saved at once, from its sheet, and the API answers with the whole list. What is still used cannot be deleted: the button stays, disabled, with the numbers that explain it: `memberCount` of `GET /api/sections` counts the current members who play an instrument, and `otherMemberCount`, given to admins only, the invited and former members whose record still holds it.
 - **A preference applies at once** ([preferences.ts](../web/src/screens/settings/preferences.ts)): appearance and accessibility have no save button. The choice is shown in the same instant as the press, then saved, and put back if the server refuses. A form that changes what others see or how the member signs in (profile, password) keeps its button.
+- **Songs** ([screens/songs/](../web/src/screens/songs/)). [SongsScreen](../web/src/screens/songs/SongsScreen.tsx) is the list, and from 1024 px the list beside the song; below that width a song takes the whole screen. [SongView](../web/src/screens/songs/SongView.tsx) is the song in its modes; the MIDI and Live modes are shown and cannot be opened yet (steps 7 and 8 of the scoping). The view of the list (rows or grid) and the mode last used are kept on the device ([device.ts](../web/src/screens/songs/device.ts)): comforts, nothing about the member.
+- **One recording plays for the whole app** ([Player.tsx](../web/src/screens/songs/Player.tsx)): the browser's own audio player, never shown, held by a provider around the screens of signed-in members ([Guards.tsx](../web/src/screens/access/Guards.tsx)), so that it goes on from a screen to another and stops with the session. The song draws it in its MP3 mode, every other screen in the mini-player (`SongMention`).
+- **A part is drawn by pdf.js** ([PdfView.tsx](../web/src/screens/songs/PdfView.tsx)), loaded only when a part is opened: a phone does not show a PDF inside a page by itself.
+- **The clip** loads nothing from YouTube before the member presses play; the player is then `youtube-nocookie.com`, for the identifier the server read from the address (`clipVideoId`), and the thumbnail is the one the server keeps.
+- **Files dropped on a song** ([files.ts](../web/src/screens/songs/files.ts)) are placed by the server from their names, shown, corrected, and only then sent one by one: the cover cropped to a square of 1024 pixels by the browser, the recording followed by its outline. Two files for the same place: the last one wins. A file that is refused does not stop the others, and is named with the reason. The import ([ImportScreen](../web/src/screens/songs/ImportScreen.tsx)) and the edit form ([SongEditScreen](../web/src/screens/songs/SongEditScreen.tsx)) share this, and the record of a song is one form ([SongForm.tsx](../web/src/screens/songs/SongForm.tsx)). Saving is the record first, then each file: a file that fails leaves the record saved, and says so.
 - **The screens of a flow** (install, sign-in, forgotten password, invitation) share one frame, [FlowLayout](../web/src/screens/FlowLayout.tsx). **The screens of the app**, once signed in, share another, [AppLayout](../web/src/screens/AppLayout.tsx): the `TabBar` floating at the bottom below 1024 px, the `SideNav` on the left from there, with the title of the page and its actions on one line. A screen opened from a tab (a form, a record) gives `back`: the TabBar leaves and a way back shows. The five entries are written once, in [nav.ts](../web/src/components/nav.ts). The tabs of the features that do not exist yet open [ComingSoonScreen](../web/src/screens/ComingSoonScreen.tsx); after sign-in a member lands on the directory (`HOME` in `session.ts`) until the home screen is designed.
 
 ### Adding a screen
@@ -524,23 +555,28 @@ The design is made in Figma and read from there ([CLAUDE.md](../CLAUDE.md), "Rea
 | A component (`Button`, `Section/Card`) | `web/src/components/Button.tsx` and `Button.css`, `SectionCard.tsx` |
 | A variant (`Kind=Primary`) | A prop with the same values (`kind="primary"`), written on the element as `data-kind` for the CSS |
 | A slot (`Content`) | `children` |
-| An icon (`Icon/Globe`) | `<Icon name="Globe" />`; the paths are in [Icon.tsx](../web/src/components/Icon.tsx), exported from Figma |
+| An icon (`Icon/Globe`) | `<Icon name="Globe" />` for `Style=Outline`, `<Icon name="Globe" filled />` for `Style=Filled`; the paths of both styles are in [iconPaths.ts](../web/src/components/iconPaths.ts), generated from Figma, and drawn by [Icon.tsx](../web/src/components/Icon.tsx) |
 
 Rules that keep it true:
 
 - **No component holds a value of its own.** Colours, spacing, radii and sizes come from `tokens.css`; typefaces, sizes and weights of text come from the classes of `text.css`.
 - **The alias chain of Figma is kept**: `Scheme` variables point to `Theme` and `Primitives` with `var()`, and the type sizes and typefaces of `Size` point to `TextSize` and `Typeface`. Each collection has one block per mode in `tokens.css`, and the mode is one attribute on the root element: `data-scheme` (`dark` or `light`), `data-contrast="more"` (the two high contrast modes), `data-theme="coral"` (absent: the first theme), `data-text-size="140"` (absent: 100 %), `data-typeface="legible"`. The list of themes is in [themes.ts](../web/src/themes.ts).
+- **A part of a screen can take a scheme of its own**, as a frame does in Figma when its mode is set by hand. An element that carries `data-scheme="dark"` (or `"light"`) gets the `Scheme` variables of that mode, whatever the scheme of the app: each block of `Scheme` in `tokens.css` applies to the root and to such an element, with the same `var()` chain. It follows the contrast of the root, so dark becomes dark high contrast when high contrast is on. Only what floats over the cover of a song uses it (`ModeBar`, and the cover and the compact form of `SongHeader`), because a cover can be of any colour. Such an element sets `color: var(--text)` itself: the colour of the text is inherited already computed. `appearance.ts` stays the only place that writes on the root.
+- **Glass.** A floating surface is the `glass` colour and a blur of what is behind it. Figma uses its native glass effect (the effect style `glass`), which CSS cannot copy: the blur stands in for it, with no stroke on the components of the songs.
 - **Sizes are in rem.** Figma gives pixels; `tokens.css` writes them as pixels divided by 16, text and spacing alike. The app never changes the size of the root: the text size option of a member changes the type sizes only (the modes of `TextSize`), so spacing, radii, icons and controls keep their size, and the height of a control is always a `min-height`. A browser whose own font size was changed scales everything, page titles included: this is accepted. Lines (1 and 2 px) and the halo stay in pixels.
 - **Blur.** Figma counts a blur twice as large as CSS does: a blur of 40 in Figma is `blur(20px)`.
 - **Bricolage Grotesque has an optical size axis**, which the browser applies by itself as Figma does: big titles are drawn tighter. Its font files must keep that axis, or titles come out wider than drawn and wrap differently.
 - **Typefaces are served by the app**, never by a font service: no visitor is reported to a third party. A test checks that the install screen asks nothing of another site.
 - A component that Figma does not have is not created here.
 
-The components written so far. Base layer: `Icon`, `Pictogram`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `SliderRow`, `AccessibilityOptions`, `Chip`, `Sheet`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `StepIndicator`, `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `Halo`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`, `SectionBadge`, `PictogramChoice`, `BandMention`, `MemberCard`, `MemberRow`, `MemberHeader`, `MemberMention`, `MemberTable` (the header and the rows of Figma). Every control is the browser's own (checkbox, radio, range), drawn as in the design: it keeps the keyboard, the focus and what screen readers say.
+The components written so far. Base layer: `Icon`, `Pictogram`, `Button`, `IconButton`, `TextField`, `ImageField`, `Checkbox`, `Switch`, `SegmentedControl`, `Slider`, `FilterChip`, `ListRow`, `NavRow`, `SwitchRow`, `SliderRow`, `AccessibilityOptions`, `Chip`, `Sheet`, `Message`, `Avatar`, `ThemeSwatch`, `QuickAction`, `StepIndicator`, `ScreenTop`, `BottomBar`, `TabBar`, `SideNav`, `Halo`, `ModeBar`, `DropZone`, `Waveform`, `LevelScale`, `Rating` (and its `RatingStar`), `Gauge`, and `Panel`, which gives `BottomSheet` and `Dialog`. Business objects: `InstrumentRow`, `SectionCard`, `SectionBadge`, `PictogramChoice`, `BandMention`, `MemberCard`, `MemberRow`, `MemberHeader`, `MemberMention`, `MemberTable` (the header and the rows of Figma), `SongTile`, `SongRow`, `SongCard`, `SongHeader`, `SongMention`, `SongTable` (the header and the rows of Figma), `SongFileRow`, `SongPartRow`. Every control is the browser's own (checkbox, radio, range), drawn as in the design: it keeps the keyboard, the focus and what screen readers say.
 
 - **`TextField` has three forms**, as in Figma where the select is a `TextField` with a chevron: `TextField` (an input), `SelectField` (the browser's own `<select>`, for a short list) and `PickerField` (a button that opens a panel, for a choice made in a list of rows).
 - **A row with a checkbox** is `ListRow` with `checked` and `onCheck`: the label and the checkbox are one target. `Checkbox` is the browser's own, drawn as in Figma.
 - **`BottomBar` takes its main button first.** On a phone it is on top; from the desktop width the buttons are shown in reverse, the main one on the right.
+- **`Waveform` is a slider**: the browser's own range input, laid over the bars and not drawn itself. It always draws the 54 bars of Figma, whatever the number of peaks it is given.
+- **`LevelScale` can be emptied**: pressing the level already chosen gives `null`, which a group of radio buttons cannot do alone.
+- **`SongHeader` replaces `ScreenTop` on the screen of a song**, whose top is the cover: in its large form it sets the same top margin (32 px, or the safe area plus 8 px) for the buttons that float over the cover.
 - **A panel made to type something** marks its field with `data-autofocus`: the focus goes there when the panel opens, instead of the close button.
 
 **Reading a component or a screen from Figma.** The Figma connector is used read-only. Besides `get_design_context` and `get_screenshot`, a short read-only script run with `use_figma` gives the exact names of the variables bound to each layer, which is what the CSS needs. Screenshots of Figma are the visual target: after building a screen, it is captured at the four widths and compared with them.
@@ -613,6 +649,7 @@ test('a member without the right cannot rename the band', async ({ request }) =>
 ```
 
 - [tests/support/scenario.ts](../tests/support/scenario.ts) holds the made-up band and members, `install()`, `addMember()` and `signIn()`. Nobody in it is real.
+- [tests/support/songFiles.ts](../tests/support/songFiles.ts) builds made-up files of a song (a PDF a reader can draw, the first bytes of an mp3, a MIDI, a MuseScore file) and sends them as the front does: no music file sits in the repository.
 - [tests/support/database.ts](../tests/support/database.ts) gives `emptyDatabase()` and `sql()`, to set up what the API cannot (a session that is 91 days old) and to look at what was saved.
 - Each `request` keeps its own cookies, like one device. A second device is `playwright.request.newContext({ baseURL })`.
 - **Tests are written from the dictionary, not from the code**: each line of an "Access rights" or "Roles and permissions" table in `model/` becomes a test, the refusals as much as the permissions.
@@ -662,6 +699,7 @@ To come: `minishlink/web-push` for push notifications, with the gigs feature.
 |---|---|---|---|
 | `react`, `react-dom` | 19.3.0 | The interface | Settled in the scoping |
 | `react-router` | 8.4.0 | Addresses and screens | The standard router of React |
+| `pdfjs-dist` | 6.4.299 | Draws the PDF of a part inside the screen of a song | Mozilla's own PDF reader, the one of Firefox; Apache 2.0. Android's browser shows no PDF inside a page, and writing a PDF reader is out of reach. About 1.7 MB with its worker, loaded only when a part is opened |
 | `libphonenumber-js` | 1.13.14 | Reads a phone number typed the local way and writes it in the international form, and back | Google's own rules for every country, without a dependency. Writing them here would only work for one country |
 | `@tanstack/react-query` | 5.104.1 | API calls: loading, error, keeping and refreshing data | Fits an app without real time |
 | `i18next`, `react-i18next` | 26.4.3, 17.0.16 | Translations, variables, plurals | The standard; its file format is known to contributors |
@@ -683,7 +721,7 @@ Not installed by a package manager: copied into the repository, with their licen
 | What | Where | Licence |
 |---|---|---|
 | The typefaces Bricolage Grotesque, Instrument Sans and Atkinson Hyperlegible Next | `web/public/fonts/` | SIL Open Font License 1.1, one `…-OFL.txt` per family |
-| The paths of the icons that come from Lucide | [Icon.tsx](../web/src/components/Icon.tsx), from the comment that names them | ISC, [Lucide-LICENSE.txt](../web/src/components/Lucide-LICENSE.txt) |
+| The paths of the icons, which come from Iconsax (Linear for the outline style, Bold for the filled one) | [iconPaths.ts](../web/src/components/iconPaths.ts) | Iconsax free licence: use integrated in the source code is allowed, with the notice kept at the top of [Icon.tsx](../web/src/components/Icon.tsx); redistributing the icons as loose files or as an icon set is not |
 
 Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: the mailbox the tests read. Nothing of it reaches the host.
 
@@ -745,7 +783,8 @@ In the order of the scoping document:
 
 1. Deployment to OVH Perso: the GitHub Action that fills the `release` branch, and the way to run a migration without a command line.
 2. What the Members feature leaves for later: the export of the directory, the Discord action of a member's sheet, sending an invitation by email, a prettier email, and the screens Figma has not drawn (see below).
-3. The next features: songs, gigs, and the later ones. Their tabs say "coming soon" until then.
+3. What the Songs feature leaves for later: the MIDI player and the Live mode (their modes are shown, and cannot be opened), the Discord place on the song, the screen of the known spellings and remembering a name during the import (the model has to say so first), reading the tempo and the name of a song inside the MuseScore file, and what Figma does not draw: the empty PDF and Clip modes (their wording is provisional), the desktop list with its actions (add, manage, download, filters are kept from the phone screen), the management table below the desktop width.
+4. The next features: gigs, and the later ones. Their tabs say "coming soon" until then.
 
 Screens that were deduced from the phone screens, because Figma does not draw them yet. Each follows the rules of the design skill (a larger screen derives from the phone screen, a sheet becomes a dialog from 1024 px, a flow takes the floating panel), and is to be checked when it is drawn:
 

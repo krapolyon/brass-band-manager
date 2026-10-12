@@ -35,6 +35,10 @@ return [
         'password' => '',
     ],
 
+    // Where the thumbnail of a clip is fetched. Left out, it is YouTube. The
+    // test server fetches a file of its own instead (docker-compose.yml).
+    ...(getenv('BRASS_BAND_CLIP_THUMBNAIL_URL') ? ['clipThumbnailUrls' => [getenv('BRASS_BAND_CLIP_THUMBNAIL_URL')]] : []),
+
     'session' => [
         // The local stack has no HTTPS, and a browser refuses a secure cookie without it.
         'secureCookie' => false,

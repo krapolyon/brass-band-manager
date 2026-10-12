@@ -25,6 +25,14 @@
      data-text-size="120" … "200"         absent: 100 %
      data-typeface="legible"              absent: the two typefaces of the app
 
+   One mode can also be set on a part of a screen: an element that carries
+   data-scheme="dark" (or "light") takes that mode of Scheme whatever the
+   scheme of the app, as a frame does in Figma when its mode is set by hand.
+   It follows the contrast of the root: dark becomes dark high contrast when
+   high contrast is on. Used by what floats over the cover of a song
+   (ModeBar, SongHeader). Such an element sets `color: var(--text)` itself,
+   since the colour of the text is inherited already computed.
+
    WHEN FIGMA CHANGES, CHANGE THIS FILE THE SAME WAY, AND NOTHING ELSE:
    no component holds a colour, a spacing or a size of its own. */
 
@@ -48,6 +56,7 @@
   --inkA8: rgb(20 26 38 / 0.08);
   --inkA18: rgb(20 26 38 / 0.18);
   --inkA40: rgb(20 26 38 / 0.4);
+  --blackA20: rgb(0 0 0 / 0.2);
   --blackA60: rgb(0 0 0 / 0.6);
   --blackA80: rgb(0 0 0 / 0.8);
   --green300: #86e0c5;
@@ -118,14 +127,20 @@
 /* ---------------------------------------------------------------
    Scheme  (modes: Dark, Light, Dark high contrast, Light high contrast)
    One block per mode, every variable in each, in the order of Figma.
+
+   Each block applies to the root element and to an element that sets the
+   scheme of its own sub-tree with data-scheme. The values are var() of Theme
+   and Primitives, read where the block applies: the alias chain is the same
+   on such an element as on the root.
    --------------------------------------------------------------- */
 
 /* Dark: the default mode in Figma. */
-:root {
+:root,
+[data-scheme="dark"] {
   color-scheme: dark;
   --ground: var(--themeGroundDark);
   --sheet: var(--themeSheetDark);
-  --glass: var(--whiteA8);
+  --glass: var(--blackA20);
   --glassBorder: var(--whiteA14);
   --control: var(--whiteA8);
   --border: var(--creamA20);
@@ -147,7 +162,7 @@
 }
 
 /* Light. */
-:root[data-scheme="light"] {
+[data-scheme="light"] {
   color-scheme: light;
   --ground: var(--themeGroundLight);
   --sheet: var(--themeSheetLight);
@@ -174,7 +189,8 @@
 
 /* Dark high contrast. Glass and controls are opaque, and the three fields of
    the halo take the colour of the ground: the halo disappears. */
-:root[data-contrast="more"] {
+:root[data-contrast="more"],
+:root[data-contrast="more"] [data-scheme="dark"] {
   --ground: var(--neutral1000);
   --sheet: var(--neutral900);
   --glass: var(--neutral800);
@@ -199,7 +215,8 @@
 }
 
 /* Light high contrast. */
-:root[data-scheme="light"][data-contrast="more"] {
+:root[data-scheme="light"][data-contrast="more"],
+:root[data-contrast="more"] [data-scheme="light"] {
   --ground: var(--neutral100);
   --sheet: var(--neutral0);
   --glass: var(--neutral0);

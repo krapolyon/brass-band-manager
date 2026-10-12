@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.1 — 2026-10-12 — rules from the design of the screens (dictionary only, no schema change), validated for the simple version of songs; bpm counts the beat of the time signature (proposed, with the MIDI player)
 // v1.0 — 2026-10-12 — validated, migration 006
 // v0.3 — 2026-10-12 — DRAFT: YouTube clips only, thumbnail of the clip kept by the app (clipThumbnailPath), no NoteWorthy file, rule of aliases confirmed
 // v0.2 — 2026-10-12 — DRAFT: answers of the owner (PROPOSED status, clip played in the app, recording of the band, purpose of the levels); an alias is a set of words, as the import of the earlier app read file names
@@ -30,7 +31,7 @@ Table song {
   name varchar [not null, unique, note: 'The name the band gives to the song, shown everywhere in the app. Often shorter than the original title. Never translated.']
   originalTitle varchar [not null, note: 'Title of the song as its original artist released it. Never translated.']
   originalArtist varchar [not null, note: 'Who released the song the band covers. Never translated.']
-  bpm integer [note: 'Tempo the band plays the song at, in beats per minute, from 20 to 400. Filled only when it differs from the tempo written in the MuseScore file: empty means the tempo of the file.']
+  bpm integer [note: 'Tempo the band plays the song at, in beats per minute, from 20 to 400, counted on the beat of the time signature (the dotted quarter in compound time). Filled only when it differs from the tempo written in the MuseScore file: empty means the tempo of the file.']
   status songStatus [not null, default: 'PROPOSED']
   versionOn date [note: 'Day the arrangement was last changed, typed by whoever manages songs. Not the technical date of the last change of the row. Only the current version is kept.']
   versionNote varchar [note: 'What changed in the current version of the arrangement, for instance a new ending. Can hold several lines.']

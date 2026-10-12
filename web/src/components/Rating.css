@@ -1,0 +1,15 @@
+.Rating {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  min-width: 0;
+}
+
+.Rating-stars {
+  display: flex;
+  gap: 0.125rem; /* 2 */
+}
+
+.Rating-value {
+  color: var(--textMuted);
+}

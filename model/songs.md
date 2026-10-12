@@ -1,6 +1,7 @@
 # Business dictionary — Songs domain
 
-> v1.0 — 2026-10-12 · Model: `songs.dbml` · Validated · Migrations: `006_songs.sql`
+> v1.1 — 2026-10-12 · Model: `songs.dbml` · Rules settled with the design of the screens, no change to the schema. Validated by the owner on 2026-10-12 for what the simple version of songs uses (last file wins, files changed by dropping, download everything, peaks computed once by the browser, deletion asks first); the two rules about the tempo and the rehearsal marks wait for the MIDI player and the reading mode · Migrations: `006_songs.sql`
+> v1.0 — 2026-10-12 · Validated
 
 The songs named in this document are well-known ones, taken as examples: they are not the repertoire of a band. The names of members are made up.
 
@@ -46,8 +47,10 @@ The status labels in French are "Proposé", "Montage en cours", "Au répertoire"
 - **What a file is is decided from its content**, and its extension has to agree.
 - **Cover art.** JPEG, PNG or WebP, no SVG. Always square: the browser crops the image to a centred square and reduces it to 1024 pixels a side before sending it, as for the photo of a member, and the server accepts a square image of that size at most.
 - **Recording.** A recording of the band itself, not the original: mp3 or m4a.
-- **Size limits** of the MuseScore, MIDI, recording and PDF files are settled with real files (open questions).
+- **Size limits** (decided on 2026-10-12): 10 MB for the MuseScore file and for the recording, 5 MB for a part, 1 MB for the MIDI file, 2 MB for the cover art once reduced.
 - **Downloading.** A file is offered under a readable name built by the app from the name of the song, and the instrument for a part.
+- **Downloading everything.** From the list of songs, a member downloads in one `.zip` archive the parts of their own instrument, every recording, every MIDI file or every MuseScore file, for the songs the list shows (search and filters included). The server builds the archive on demand; nothing is stored.
+- **The waveform of a recording.** The MP3 mode draws the recording as bars the member touches or drags. Its peaks are computed once per recording, not each time it is played: by the browser that sends the recording, and kept in a small file beside it, which goes when the recording goes.
 - **Generated files.** The MuseScore file is the source of the score. Whether the MIDI file, and later the MusicXML of each part, are produced from it by the app or sent beside it is settled by the prototype of the reading mode (scoping document, "Points to verify"). MuseScore cannot run on the host.
 
 ### Import
@@ -64,9 +67,10 @@ Whoever manages songs drops the files of a song together, in any number and any 
 A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them: every song has a MuseScore file.
 
 - **Nothing is saved before it is shown.** The app shows where each file goes, and whoever manages songs corrects or confirms. A PDF whose name tells no instrument, or two instruments, is shown without one and is given one by hand.
-- **Two files for the same place** (two images, two PDFs of one instrument) are shown as such: one is kept.
+- **Two files for the same place** (two images, two PDFs of one instrument) ask nothing: the last one dropped wins. The case is rare, and a question would cost more than it saves.
 - **A file of another kind is refused**, with its name and the reason. The other files are kept.
 - **A file that takes the place of an existing one is announced** before it replaces it.
+- **The files of an existing song are changed the same way.** There is no field per part: files dropped on a song take the place of the file of the same role, by the rules above, and the rest stays. The files about to be replaced are listed, each can be withdrawn, and nothing changes before the form is saved.
 - This is what the import of the earlier app of the band did. Two things differ: a file is no longer renamed after the song, and it is no longer found by its name but by the path the database holds.
 
 ### Clip
@@ -79,8 +83,11 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 ### Rules
 - **Two songs cannot have the same internal name.** Two songs can have the same original title: two arrangements of one original.
 - **The tempo of the band wins.** Where a tempo is used (MIDI player, reading mode), it is `bpm` when filled, the tempo of the file otherwise.
+- **A tempo counts the beat of the time signature**: the quarter note in 4/4, the dotted quarter in compound time (6/8, 12/8). A member who taps the tempo in compound time taps the eighth notes, and the app shows the tempo converted (186 to the eighth is 62 to the dotted quarter).
+- **Rehearsal marks and time signature come from the MuseScore file**, through what the reading mode reads of it. The reading mode offers the marks (A, B, Coda…) as starting points only when the file has some.
 - **The version is typed, not deduced.** Replacing a file does not change `versionOn`: whoever manages songs says when the arrangement really changed, and what changed. Only the current version is kept: there is no history of versions.
 - **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. Once setlists exist, a song used by a setlist cannot be deleted.
+- **Deleting always asks first**, says what goes with the song and that it cannot be undone, and offers to set the status to `ABANDONED` instead.
 
 ### Relations
 - Part: a song has zero to several parts, one per instrument at most (entry 2).
@@ -101,9 +108,9 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 
 ### Display
 - The internal name is the name shown in every representation. The original title and the original artist appear on the sheet of the song.
-- Missing cover art: a placeholder defined by the design.
+- Missing cover art: the placeholder of `Song/Tile` (the music icon on a plain square).
 - Missing tempo, version, clip or file: the line is not shown.
-- Representations in the design library: not checked against Figma for this draft. Expected: row, card, tile, header, mention.
+- Representations in the design library (Figma, checked on 2026-10-12): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import). Missing: none needed yet.
 
 ## 2. Part and alias (`songPart`, `instrumentAlias`)
 
@@ -161,6 +168,7 @@ The starting library of sections and instruments (Members domain, entry 2) comes
 
 ### Display
 - Parts are listed in the order of sections and instruments (Members domain, entry 2).
+- Representations in the design library: `SongPart/Row` (the part picker: available, shown, missing) and `SongPart/Track` (one instrument in the MIDI player: own or not, muted or not).
 
 ## 3. Levels of a member on a song (`memberSong`)
 
@@ -196,10 +204,19 @@ None blocking. Validated by the owner on 2026-10-12 (v1.0).
 
 To settle while the feature is built:
 
-- Size limits of the MuseScore, MIDI, recording and PDF files: settled with real files.
-- Whether the host lets the server fetch an image from another site: to check on the OVH plan. Without it, the cover art stands in for the thumbnail.
+- The app does not keep the name a file had on the device, by design ("Files"). The edit screen of Figma writes "Freed_tb_v3.pdf · remplace Freed_tb.pdf": the built screen says that the new file replaces the one in place, without naming it.
+- The tempo of the MuseScore file is shown by Figma on the song and under the tempo field ("124"). Nothing reads it yet: the line of the tempo is shown only when the band has its own, until the MIDI player reads the file.
+- The gauge of parts of the management table counts against every instrument of the band, those nobody plays included (confirmed on 2026-10-12).
+- Figma offers to remember the name of a file as an alias during the import ("Retenir ce nom pour la prochaine fois"), and draws a screen of the known spellings in the band settings. The model says an instrument chosen by hand adds no alias: not built, to decide here first.
 
-- The screens of the domain, the import first, are to be drawn in Figma: none is built before.
+- Whether the host lets the server fetch an image from another site: to check on the OVH plan. Without it, the cover art stands in for the thumbnail.
+- The `.zip` of "Download everything": its size and the time to build it on the shared hosting, checked with the real repertoire.
+- Rehearsal marks and time signature read from the oldest MuseScore files: checked with the prototype of the reading mode. Many files may have no marks.
+- Offline: not a priority (scoping document). The screens show a message when the network is missing; whether the list of the last visit stays readable depends on what the front keeps.
+
+- The screens of the domain are drawn in Figma, page `Songs` (2026-10-12).
 - The aliases of the starting library are written here; the library file of the app (`api/resources/instrumentLibrary.fr.json`) receives them with the feature. An instance installed before has none: whoever manages songs adds them.
 
 Decided by the owner on 2026-10-12: the five statuses and the meaning of `TEMPORARY`; the recording is one of the band, optional; one PDF per instrument, no full score; levels seen as averages only, to decide which songs leave the repertoire; only the current version is kept; the Discord channel is stored and not shown before the Discord feature; a song can be deleted; the cover art is cropped to a square of 1024 pixels; the clip is played inside the app, YouTube only for now, and its thumbnail is fetched and kept by the server; every song has a MuseScore file and NoteWorthy files are not kept; the rule that reads the name of a file and the starting aliases; an instrument chosen by hand during an import adds no alias by itself.
+
+Proposed with the design of the screens on 2026-10-12 (v1.1, to validate): two files for the same place, the last one wins; the files of a song are changed by dropping, never one field per part; download everything as a `.zip`; the peaks of a recording computed once; a tempo counts the beat of the time signature; rehearsal marks and time signature read from the MuseScore file; deleting asks first and offers `ABANDONED` instead.

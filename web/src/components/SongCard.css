@@ -1,0 +1,30 @@
+.SongCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 0;
+  /* The focus follows the corners of the cover. */
+  border-radius: var(--radiusMd);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.SongCard-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem; /* 2 */
+  min-width: 0;
+  padding-inline: var(--spaceXxs);
+}
+
+/* Figma: one line each, cut with an ellipsis. */
+.SongCard-name,
+.SongCard-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.SongCard-artist {
+  color: var(--textMuted);
+}

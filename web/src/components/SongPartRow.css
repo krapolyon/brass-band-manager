@@ -1,0 +1,10 @@
+/* The row itself is the ListRow (ListRow.css). */
+.SongPartRow[data-state="shown"] .ListRow-detail {
+  color: var(--accentText);
+}
+
+/* Figma: Missing is the muted colour of texts, not an opacity. */
+.SongPartRow[data-state="missing"] {
+  color: var(--textMuted);
+  cursor: default;
+}

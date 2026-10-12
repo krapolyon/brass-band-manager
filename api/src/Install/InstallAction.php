@@ -155,6 +155,7 @@ final class InstallAction
             'defaultCountryCode' => Languages::COUNTRIES[$input->language],
         ]);
 
+        $aliases = self::libraryAliases($input->language);
         $adminInstrumentId = null;
         foreach ($input->sections as $s => $section) {
             $this->database->insert('section', [
@@ -170,8 +171,15 @@ final class InstallAction
                     'name' => Text::clean($instrument),
                     'position' => $i + 1,
                 ]);
+                $instrumentId = (int) $this->database->lastInsertId();
                 if (self::key($instrument) === self::key($input->admin->instrument)) {
-                    $adminInstrumentId = (int) $this->database->lastInsertId();
+                    $adminInstrumentId = $instrumentId;
+                }
+                // An instrument kept from the starting library comes with the
+                // spellings that name it in the files of songs
+                // (model/songs.md, "Starting aliases").
+                foreach ($aliases[self::key($instrument)] ?? [] as $alias) {
+                    $this->database->insert('instrumentAlias', ['instrumentId' => $instrumentId, 'alias' => $alias]);
                 }
             }
         }
@@ -192,6 +200,24 @@ final class InstallAction
         $this->database->insert('memberRole', ['memberId' => $memberId, 'role' => Role::ADMIN->value]);
 
         return $memberId;
+    }
+
+    /**
+     * The aliases of the instruments of the starting library, by the name of
+     * the instrument. An instrument the band renamed has none.
+     *
+     * @return array<string, list<string>>
+     */
+    private static function libraryAliases(string $language): array
+    {
+        $aliases = [];
+        foreach ((array) (Languages::instrumentLibrary($language)['sections'] ?? []) as $section) {
+            foreach ((array) ($section['instruments'] ?? []) as $instrument) {
+                $aliases[self::key((string) $instrument['name'])] = array_values(array_filter((array) ($instrument['aliases'] ?? []), is_string(...)));
+            }
+        }
+
+        return $aliases;
     }
 
     // The form of a name used to tell whether two names are the same.

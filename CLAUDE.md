@@ -137,6 +137,7 @@ Written once, used by every feature. A feature never does these things by itself
 | Restrict an action | `->add(new RequirePermission(Permission::...))` on the route. Never test a role; the table of who gets what is in `Permission.php` |
 | Read or write data | The DBAL connection given to the action, with placeholders and the values passed apart |
 | Receive data from the front | `Input::from($request, SomeInput::class)`: a typed class, filled and checked by Valinor. Then `FieldErrors` for lengths and formats, and `Text::clean()` before saving a text |
+| Receive a file of a song | `FileBody::from($request, maxBytes)`: the file alone, as the body. The one exception to JSON; its addresses are listed in `BodyLimit` |
 | Answer | `Json::write()` |
 | Refuse | `throw new ApiError(status, 'errorKey')`. The front translates the key; the server writes no sentence |
 | Call the API from the front | `api()` of `web/src/api.ts`, through TanStack Query |

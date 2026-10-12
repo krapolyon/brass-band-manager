@@ -20,6 +20,7 @@ A decision recorded in this document is settled. If one looks wrong, say so once
 | Sign-in | Identifier and password, long session | Magic links were rejected: too tedious in use |
 | Offline | Not a priority | Members are rarely offline, and scores are not used during gigs |
 | PDF scores | Provided as they are, not generated | Fitting a part on one page is adjusted by hand |
+| Icons | Iconsax, outline at rest and filled for the current item | Chosen by the owner for its style; its two styles mark the current tab or mode without relying on colour. Its free licence forbids redistributing the files: a licence is arranged before the code is published |
 | Go-live | After members, the simple version of songs, and gigs | At that stage the app already replaces the old tools |
 
 ## Technical stack
@@ -204,6 +205,7 @@ Skills first, agents later.
 | Repeats, codas and open solos: controls to follow the band live | Prototype |
 | Audio playback on iPhone, including in silent mode | MIDI player |
 | Discord's rules on a bot reading messages | Discord |
+| A licence of Iconsax that allows its icons in an open-source repository | Before the code is published |
 | Apple's fee waiver for an app distributed outside the App Store | Only if the app goes native |
 
 ## Still to provide

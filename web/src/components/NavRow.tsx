@@ -24,6 +24,8 @@ type Props = {
   opensPanel?: boolean;
   /** Figma: Trailing=Chevron on a row that is not a link: it leads to a choice. */
   chevron?: boolean;
+  /** With `href`: the browser saves what the link leads to, under this name. */
+  download?: string;
 };
 
 // Figma: NavRow. A row that leads somewhere or does one thing. With neither
@@ -40,6 +42,7 @@ export function NavRow({
   disabled,
   opensPanel,
   chevron,
+  download,
 }: Props) {
   const content = (
     <>
@@ -61,7 +64,7 @@ export function NavRow({
   }
   if (href) {
     return (
-      <a className="NavRow" data-tone={tone} href={href}>
+      <a className="NavRow" data-tone={tone} href={href} download={download}>
         {content}
       </a>
     );

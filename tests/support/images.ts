@@ -12,16 +12,16 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, body, sum]);
 }
 
-/** A square PNG of one flat grey, of the side given. */
-export function png(side: number): Buffer {
+/** A PNG of one flat grey: a square of the side given, or a rectangle of that width. */
+export function png(side: number, height = side): Buffer {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(side, 0);
-  header.writeUInt32BE(side, 4);
+  header.writeUInt32BE(height, 4);
   header[8] = 8; // bits per channel
   header[9] = 0; // greyscale
   // One byte of filter then the pixels, for each line.
-  const lines = Buffer.alloc(side * (side + 1), 128);
-  for (let line = 0; line < side; line++) lines[line * (side + 1)] = 0;
+  const lines = Buffer.alloc(height * (side + 1), 128);
+  for (let line = 0; line < height; line++) lines[line * (side + 1)] = 0;
 
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),

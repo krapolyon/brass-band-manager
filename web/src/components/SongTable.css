@@ -1,0 +1,81 @@
+/* Columns of 156 for the status and 112 for the four others in Figma, 16
+   apart, on a table of 1152: the song takes what is left. */
+.SongTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.SongTable th,
+.SongTable td {
+  padding: var(--spaceSm) var(--spaceMd) var(--spaceSm) 0;
+  border-bottom: var(--borderWidth) solid var(--border);
+  font-weight: inherit;
+  vertical-align: middle;
+}
+
+.SongTable th:last-child,
+.SongTable td:last-child {
+  padding-right: 0;
+}
+
+.SongTable thead th {
+  /* The button of the title brings the height of the line. */
+  padding-block: 0;
+}
+
+.SongTable thead th[data-column="status"] {
+  width: 10.75rem; /* 156, and the 16 to the next column */
+}
+
+.SongTable thead th:is([data-column="parts"], [data-column="mastery"], [data-column="enjoyment"]) {
+  width: 8rem; /* 112, and the 16 to the next column */
+}
+
+.SongTable thead th[data-column="version"] {
+  width: 7rem; /* 112 */
+}
+
+/* A title: the whole cell is the button. */
+.SongTable thead button {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXxs);
+  width: 100%;
+  min-height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--textMuted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.SongTable-song {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-width: 0;
+  border-radius: var(--radiusSm);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.SongTable-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem; /* 2 */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.SongTable-artist,
+.SongTable-version {
+  color: var(--textMuted);
+}
+
+/* Figma: the gauge is 80 wide in its column. */
+.SongTable-parts {
+  display: block;
+  max-width: 5rem;
+}
