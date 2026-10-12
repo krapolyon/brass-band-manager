@@ -1,0 +1,64 @@
+/* Figma: SongPart/Track. 44 high; pictogram 28, name, lane 40 high, mute 44.
+   The width of the name is the same for every track, so that the lanes line
+   up and one playhead crosses them all (see .songs-midiLanes). */
+.SongPartTrack {
+  display: grid;
+  grid-template-columns: 1.75rem var(--trackName, 4.75rem) minmax(0, 1fr) var(--controlHeightSm);
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+}
+
+.SongPartTrack-pictogram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+}
+
+.SongPartTrack-name {
+  color: var(--text);
+  /* A long name goes on a second line: two trombones must be told apart. */
+  overflow-wrap: anywhere;
+}
+
+.SongPartTrack-lane {
+  display: block;
+  height: 2.5rem;
+  overflow: hidden;
+  border-radius: var(--radiusXs);
+}
+
+.SongPartTrack-lane > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A cut track stands back: its pictogram, its name and its notes. */
+.SongPartTrack[data-muted="true"] > :not(.SongPartTrack-mute) {
+  opacity: 0.45;
+}
+
+.SongPartTrack-mute {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.SongPartTrack-mute[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--onAccent);
+}

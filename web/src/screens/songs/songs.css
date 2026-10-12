@@ -670,3 +670,217 @@
   max-width: 80rem;
   overflow-x: auto;
 }
+
+/* Import: the box that keeps the name of a file as a known spelling. */
+.songs-remember {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  padding: var(--spaceXs) 0 var(--spaceSm);
+}
+
+.songs-remember > label {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+  cursor: pointer;
+}
+
+.songs-remember > p {
+  margin: 0;
+}
+
+/* ---- MIDI player (Figma: Songs / Song — MIDI) ---- */
+
+.songs-midi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.songs-midiTracks,
+.songs-midiSettings {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.songs-midiTracks {
+  gap: var(--spaceXxs);
+  padding: var(--spaceMd);
+}
+
+.songs-midiHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+}
+
+.songs-textButton {
+  min-height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accentText);
+  cursor: pointer;
+}
+
+.songs-accent {
+  color: var(--accentText);
+}
+
+/* The lanes share the width of the name, so that they line up, and one
+   playhead crosses them all: a little after the start of the lane. */
+.songs-midiLanes {
+  --trackName: 6rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.songs-midiPlayhead {
+  --laneStart: calc(1.75rem + var(--trackName) + 2 * var(--spaceSm));
+  --laneWidth: calc(100% - var(--laneStart) - var(--spaceSm) - var(--controlHeightSm));
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--laneStart) + var(--laneWidth) * 0.28);
+  width: 2px;
+  border-radius: var(--radiusFull);
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.songs-midiControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.songs-midiTransport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXl);
+}
+
+.songs-midiPlay:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.songs-midiLoop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.songs-midiLoop[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.songs-midiStatus {
+  margin: 0;
+  text-align: center;
+}
+
+.songs-midiSettings {
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+}
+
+.songs-midiTempo {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.songs-midiTempoTexts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.songs-midiTempoValue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.5rem;
+}
+
+.songs-midiVolume {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.songs-midiVolumeLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+}
+
+.songs-midiRange {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spaceSm);
+}
+
+/* From the tablet: the lanes above, the transport beside the settings. */
+@media (min-width: 768px) {
+  .songs-midiControls {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 20rem);
+    align-items: center;
+  }
+
+  .songs-midiStatus {
+    grid-column: 1 / -1;
+  }
+
+  .songs-midiSettings {
+    background: none;
+    padding: 0;
+  }
+}
+
+/* A phone on its side: the lanes on the left, everything else beside them. */
+@media (orientation: landscape) and (max-height: 32rem) {
+  .songs-midi {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    align-items: start;
+  }
+
+  .songs-midi > .Message {
+    grid-column: 1 / -1;
+  }
+
+  .songs-midiControls {
+    display: flex;
+  }
+
+  .songs-midiSettings {
+    padding: var(--spaceMd);
+    background: var(--sheet);
+  }
+}

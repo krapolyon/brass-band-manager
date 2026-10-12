@@ -10,6 +10,9 @@ use Doctrine\DBAL\Connection;
 // from its extension, and for a PDF the instrument its name tells. Rules:
 // model/songs.md, "Import" and "Reading the name of a file".
 //
+// The name of a track of a MIDI file is read by the same rule ("Reading the
+// name of a track"): the rule is written here once, in instruments().
+//
 // This only prepares what the member is shown before anything is sent. What
 // a file really is is judged from its content when it arrives (SongFiles).
 final class FileNames
@@ -22,6 +25,8 @@ final class FileNames
         'mscz' => 'museScore',
         'mid' => 'midi',
         'midi' => 'midi',
+        'musicxml' => 'musicXml',
+        'mxl' => 'musicXml',
         'mp3' => 'audio',
         'm4a' => 'audio',
         'pdf' => 'part',
@@ -45,7 +50,7 @@ final class FileNames
     /**
      * @param list<string> $names
      * @return list<array{name: string, role: string|null, instrumentId: int|null, problem: string|null}>
-     *         role: cover, museScore, midi, audio or part; null for a file of
+     *         role: cover, museScore, midi, musicXml, audio or part; null for a file of
      *         another kind. problem: unknownKind, noInstrument or
      *         severalInstruments.
      */
@@ -71,6 +76,25 @@ final class FileNames
                     default => 'severalInstruments',
                 },
             ];
+        }, $names);
+    }
+
+    /**
+     * The instrument each track of a MIDI file is, from its name: the whole
+     * name is read, a track has no extension.
+     *
+     * @param list<string> $names
+     * @return list<array{name: string, instrumentId: int|null}>
+     *         instrumentId: null when the name tells no instrument, or several.
+     */
+    public function tracks(array $names): array
+    {
+        $spellings = $this->spellings();
+
+        return array_map(function (string $name) use ($spellings): array {
+            $instruments = self::instruments(self::words($name), $spellings);
+
+            return ['name' => $name, 'instrumentId' => count($instruments) === 1 ? $instruments[0] : null];
         }, $names);
     }
 

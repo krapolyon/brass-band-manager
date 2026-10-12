@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 import type { APIRequestContext } from '@playwright/test';
 import { sql } from './database.ts';
 import { png } from './images.ts';
@@ -27,6 +29,37 @@ export const museScore = Buffer.concat([
   Buffer.from([0x50, 0x4b, 0x03, 0x04]),
   Buffer.alloc(22),
   Buffer.from('score.mscx'),
+  Buffer.alloc(20),
+]);
+
+let builtScore: Buffer | null = null;
+
+/**
+ * A MuseScore file the MuseScore engine can read: two staves, "Trompette" and
+ * "Tuba", four measures. Built on demand (makeScore.mjs), never kept.
+ */
+export function readableScore(): Buffer {
+  builtScore ??= Buffer.from(
+    execFileSync('node', [path.join(import.meta.dirname, 'makeScore.mjs')], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 20_000_000,
+    }),
+    'base64',
+  );
+  return builtScore;
+}
+
+// The start of a score written as MusicXML.
+export const musicXml = Buffer.from(
+  '<?xml version="1.0" encoding="UTF-8"?>\n<score-partwise version="3.1"><part-list/></score-partwise>\n',
+);
+
+// The start of a compressed MusicXML: a zip archive with its table of contents.
+export const mxl = Buffer.concat([
+  Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+  Buffer.alloc(22),
+  Buffer.from('META-INF/container.xml'),
   Buffer.alloc(20),
 ]);
 

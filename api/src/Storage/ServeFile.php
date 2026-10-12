@@ -20,6 +20,8 @@ final class ServeFile
         'm4a' => 'audio/mp4',
         'mid' => 'audio/midi',
         'mscz' => 'application/octet-stream',
+        'musicxml' => 'application/vnd.recordare.musicxml+xml',
+        'mxl' => 'application/vnd.recordare.musicxml',
     ];
 
     /**

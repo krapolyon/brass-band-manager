@@ -37,7 +37,9 @@ import './songs.css';
 /** Why a file was not taken, in a few words. */
 export function useRefusal() {
   const { t, i18n } = useTranslation();
-  return ({ file, error }: SendFailure) => {
+  return ({ file, error, produced }: SendFailure) => {
+    // A file the MuseScore file gave: the dropped file itself is saved.
+    if (produced) return t(`songs.import.producedRefused.${produced}`, { file: file.file.name });
     const reason =
       error.error === 'fileTooBig' || error.error === 'bodyTooLarge'
         ? t('songs.import.reason.fileTooBig', { size: weight(file.file.size, i18n.language) })
@@ -141,12 +143,17 @@ export function SongEditScreen() {
     setState('saving');
     try {
       await api<Song>(`/api/songs/${songId}`, { method: 'PUT', body: recordOf(draft) });
-      const failures = await sendFiles(songId, pending);
+      const { failures, scoreNotRead } = await sendFiles(songId, pending);
       await queryClient.invalidateQueries({ queryKey: ['songs'] });
-      if (failures.length > 0) {
+      if (failures.length > 0 || scoreNotRead) {
         // The record is saved; what did not leave stays listed, with why.
-        setDropped(failures.map((failure) => failure.file));
-        setRefused(failures.map(refusal));
+        setDropped([
+          ...new Set(failures.filter((failure) => !failure.produced).map(({ file }) => file)),
+        ]);
+        setRefused([
+          ...(scoreNotRead ? [t('songs.import.scoreNotRead')] : []),
+          ...new Set(failures.map(refusal)),
+        ]);
         setState('idle');
         return;
       }

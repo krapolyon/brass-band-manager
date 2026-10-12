@@ -34,6 +34,8 @@ export function SettingsScreen() {
 
   const canManageMembers = me?.permissions.includes('manageMembers') ?? false;
   const canManageBand = me?.permissions.includes('manageBand') ?? false;
+  // Whoever manages songs has one entry of the band settings: the known spellings.
+  const canManageSongs = me?.permissions.includes('manageSongs') ?? false;
   const instrument = instrumentsOf(useSections().data).find(
     (other) => other.id === me?.instrumentId,
   );
@@ -120,7 +122,7 @@ export function SettingsScreen() {
           </div>
         </Sheet>
 
-        {(canManageMembers || canManageBand) && (
+        {(canManageMembers || canManageBand || canManageSongs) && (
           <Sheet title={t('settings.band')}>
             <div className="settings-rows">
               {canManageMembers && (
@@ -133,11 +135,13 @@ export function SettingsScreen() {
                   to="/members/manage"
                 />
               )}
-              {canManageBand && (
+              {(canManageBand || canManageSongs) && (
                 <NavRow
                   icon="Settings"
                   label={t('settings.bandSettings')}
-                  detail={t('settings.bandSettingsDetail')}
+                  detail={
+                    canManageBand ? t('settings.bandSettingsDetail') : t('band.spellings.title')
+                  }
                   to="/band"
                 />
               )}

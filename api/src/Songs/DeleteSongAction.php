@@ -33,7 +33,7 @@ final class DeleteSongAction
             // The parts and the levels go with the row: the database deletes them.
             $this->database->delete('song', ['id' => $song['id']]);
 
-            return [$song['coverPath'], $song['museScorePath'], $song['midiPath'], $song['audioPath'], $song['clipThumbnailPath'], ...$parts];
+            return [$song['coverPath'], $song['museScorePath'], $song['midiPath'], $song['musicXmlPath'], $song['audioPath'], $song['clipThumbnailPath'], ...$parts];
         });
         // Once the song is gone for good: a file is never deleted for a song that stays.
         foreach ($paths as $path) {

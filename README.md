@@ -28,6 +28,24 @@ Deployment is not automated yet, but one thing is worth knowing from the start. 
 
 The app keeps the files it is given (the logo of the band, later the songs) in a `storage` folder next to `api`. It has to be writable by PHP, kept out of what the web server serves, and backed up with the database.
 
+## Songs: what the app reads in a MuseScore file
+
+A song is imported by dropping its files together. The MuseScore file (`.mscz`) is the source of the score: the browser of whoever imports the song reads it, and produces from it the MIDI file the MIDI player plays and the score the reading mode shows. Nothing has to be exported from MuseScore by hand.
+
+**The name of a staff decides which instrument a track is.** In the MIDI player each track is given to an instrument of the band by the name written on its staff in MuseScore (the "long instrument name", the one printed at the start of the first line), not by the sound chosen to play it. So a staff named `Basse` that plays with the sound of a euphonium is the track of the instrument the band calls "P’tite basse".
+
+The name is read the way the names of PDF files are:
+
+- it is cut into words, in lowercase and without accents;
+- each instrument is known by its own name and by its **known spellings** (in the app: Settings, Band settings, "Orthographes connues"), for instance `tp` and `trumpet` for the trumpet;
+- a spelling matches when all its words are in the name, and the spelling with the most words wins: `trombone` alone is one instrument, `trombone ut` another.
+
+A track whose name matches no instrument, or two, is still shown and played, under the name it has in the file. To have it recognised, either add its name to the known spellings of the instrument, or rename the staff in MuseScore and drop the file on the song again.
+
+A name cannot always tell: a staff named `Tuba` goes to the instrument that has the spelling `tuba`, whoever plays it. When two instruments share the same kind of staff, name each staff after its instrument of the band.
+
+If the app cannot read a MuseScore file (one saved by a version of MuseScore more recent than its engine, for instance), it says so and keeps the file. Export a MIDI file and a MusicXML file from MuseScore and drop them on the song: they are then used instead.
+
 ## Documentation
 
 | Document | What it tells |

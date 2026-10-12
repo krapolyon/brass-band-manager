@@ -1,7 +1,7 @@
 {
   "sections": [
     {"name": "Trompette", "icon": "trumpet", "instruments": [
-      {"name": "Trompette", "preselected": true, "aliases": ["trompettes", "tp"]}
+      {"name": "Trompette", "preselected": true, "aliases": ["trompettes", "tp", "trumpet", "cornet"]}
     ]},
     {"name": "Saxophone", "icon": "saxophone", "instruments": [
       {"name": "Sax Alto", "preselected": true, "aliases": ["sax", "saxo", "saxophone", "sax mib", "saxo alto", "saxo mib", "saxophone alto", "saxophone mib", "sxm"]},
@@ -14,13 +14,13 @@
       {"name": "Trombone Sib", "preselected": true, "aliases": ["trombone", "tb"]}
     ]},
     {"name": "P’tites basses", "icon": "tuba", "instruments": [
-      {"name": "P’tite basse", "preselected": true, "aliases": ["basse", "basses", "bs"]}
+      {"name": "P’tite basse", "preselected": true, "aliases": ["basse", "basses", "bs", "french horn"]}
     ]},
     {"name": "Souba", "icon": "sousaphone", "instruments": [
-      {"name": "Souba", "preselected": true, "aliases": ["soubassophone", "sb"]}
+      {"name": "Souba", "preselected": true, "aliases": ["soubassophone", "sb", "sousaphone", "tuba"]}
     ]},
     {"name": "Percu", "icon": "drum", "instruments": [
-      {"name": "Batterie", "preselected": true, "aliases": []},
+      {"name": "Batterie", "preselected": true, "aliases": ["drumset"]},
       {"name": "Percus", "preselected": true, "aliases": ["percu", "percussion", "percussions", "bongo"]}
     ]},
     {"name": "Flûte", "icon": "flute", "instruments": [

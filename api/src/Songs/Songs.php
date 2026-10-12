@@ -23,7 +23,7 @@ final class Songs
     // table is never sent by accident.
     private const COLUMNS = 's.id, s.name, s.originalTitle, s.originalArtist, s.bpm, s.status, s.versionOn,
         s.versionNote, s.clipUrl, s.clipThumbnailPath, s.discordChannelId,
-        s.coverPath, s.museScorePath, s.midiPath, s.audioPath';
+        s.coverPath, s.museScorePath, s.midiPath, s.musicXmlPath, s.audioPath';
 
     // The levels of the band on each song: the average of the current
     // members who answered, and how many did.
@@ -109,6 +109,7 @@ final class Songs
                 'peaks' => $this->files->peaks(is_string($song['audioPath']) ? $song['audioPath'] : null),
             ],
             'midi' => $this->files->view("{$address}/midi", $song['midiPath']),
+            'musicXml' => $this->files->view("{$address}/musicXml", $song['musicXmlPath']),
             'museScore' => $this->files->view("{$address}/museScore", $song['museScorePath']),
             'parts' => array_values(array_filter(array_map(function (array $part) use ($address): ?array {
                 $file = $this->files->view("{$address}/parts/{$part['instrumentId']}", $part['pdfPath']);

@@ -23,7 +23,7 @@ final class BodyLimit implements MiddlewareInterface
     public const MAX_FILE_BYTES = 10_000_000;
 
     // The addresses a file of a song is sent to (routes.php).
-    private const FILE_ADDRESS = '#\A/api/songs/[0-9]+/(cover|museScore|midi|audio|parts/[0-9]+)\z#';
+    private const FILE_ADDRESS = '#\A/api/songs/[0-9]+/(cover|museScore|midi|musicXml|audio|parts/[0-9]+)\z#';
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {

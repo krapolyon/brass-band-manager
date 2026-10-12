@@ -9,6 +9,7 @@ import {
   mp3,
   museScore,
   readablePdf,
+  readableScore,
   sendFile,
 } from './support/songFiles.ts';
 import { emptyStorage } from './support/storage.ts';
@@ -202,14 +203,14 @@ test.describe('a song', () => {
     await expect(page.getByText('Seven Nation Army')).toBeVisible();
     await expect(page.getByText('124 bpm')).toBeVisible();
 
-    // The five modes are always there; the two that are not built cannot be opened.
+    // The five modes are always there; the one that is not built cannot be opened.
     const modes = page.getByRole('group', { name: 'Modes du morceau' });
     await expect(modes.getByRole('button')).toHaveText(['MP3', 'MIDI', 'PDF', 'Clip', 'Live']);
     await expect(modes.getByRole('button', { name: 'MP3' })).toHaveAttribute(
       'aria-current',
       'true',
     );
-    await expect(modes.getByRole('button', { name: 'MIDI' })).toHaveAttribute(
+    await expect(modes.getByRole('button', { name: 'Live' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
@@ -427,6 +428,181 @@ test.describe('a song', () => {
   });
 });
 
+test.describe('the MIDI player', () => {
+  // A song imported with a MuseScore file the app can read: two staves,
+  // "Trompette" and "Tuba", four measures at 120.
+  async function withScore(playwright: Parameters<typeof deviceOf>[0], page: Page) {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page
+      .locator('input[type=file]')
+      .setInputFiles([
+        { name: 'Hey Ya.mscz', mimeType: 'application/octet-stream', buffer: readableScore() },
+      ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Hey Ya!');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+    void playwright;
+  }
+  const openMidi = (page: Page) =>
+    page
+      .getByRole('group', { name: 'Modes du morceau' })
+      .getByRole('button', { name: 'MIDI' })
+      .click();
+
+  test('without a MIDI file, a member is told so and who manages songs is offered to add the MuseScore file', async ({
+    page,
+  }) => {
+    const crazy = sql("SELECT id FROM song WHERE name = 'Crazy'");
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${crazy}`);
+    await openMidi(page);
+    await expect(page.getByRole('heading', { name: 'Pas encore de fichier MIDI' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ajouter le fichier MuseScore' })).toHaveCount(0);
+
+    await page.context().clearCookies();
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${crazy}`);
+    await openMidi(page);
+    await expect(page.getByRole('button', { name: 'Ajouter le fichier MuseScore' })).toBeVisible();
+  });
+
+  test('a MIDI file that cannot be read says so', async ({ page }) => {
+    // The song of the tests holds a MIDI file with no note.
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    await openMidi(page);
+    await expect(
+      page.getByText('Le fichier MIDI ne se charge pas.', { exact: false }),
+    ).toBeVisible();
+  });
+
+  test('one lane per staff, named after its instrument; a track is cut, the tempo slowed, a range looped', async ({
+    page,
+    playwright,
+  }) => {
+    await withScore(playwright, page);
+    await openMidi(page);
+
+    // "Trompette" is the instrument; "Tuba" is a known spelling of the Souba.
+    const tracks = page.getByRole('region', { name: 'Pistes' });
+    await expect(tracks.locator('.SongPartTrack-name')).toHaveText([/^Trompette/, 'Souba']);
+    await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+    // Sisi plays the trumpet: its track is her own.
+    await expect(tracks.locator('.SongPartTrack').first()).toHaveAttribute('data-own', 'true');
+    await expect(tracks.locator('.SongPartTrack').nth(1)).toHaveAttribute('data-own', 'false');
+
+    // Cutting a track: the button says it is pressed, and all can be put back.
+    const cut = page.getByRole('button', { name: 'Couper Souba' });
+    await expect(page.getByRole('button', { name: 'Tout réactiver' })).toHaveCount(0);
+    await cut.click();
+    await expect(cut).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'Tout réactiver' }).click();
+    await expect(cut).toHaveAttribute('aria-pressed', 'false');
+
+    // The member's own track is said, not only coloured.
+    await expect(tracks.locator('.SongPartTrack-name').first()).toContainText('ton instrument');
+
+    // The tempo starts at the one of the file, and moves by steps.
+    await expect(page.getByText('Celui de la fanfare : 120')).toBeVisible();
+    await page.getByRole('button', { name: 'Ralentir' }).click();
+    await expect(page.getByLabel('116 battements par minute')).toBeVisible();
+    await page.getByRole('button', { name: 'Accélérer' }).click();
+
+    // How loud the cut tracks stay.
+    const volume = page.getByRole('slider', { name: 'Volume des pistes coupées' });
+    await volume.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(volume).toHaveAttribute('aria-valuetext', /^5\s%$/);
+
+    // A range of measures, typed; one outside the song cannot be chosen.
+    await page
+      .getByRole('button', { name: /^En boucle/ })
+      .last()
+      .click();
+    const panel = page.getByRole('dialog', { name: 'Lecture en boucle' });
+    await panel.getByLabel('De la mesure').fill('3');
+    await panel.getByLabel('À la mesure').fill('9');
+    await expect(panel.getByRole('button', { name: 'Boucler' })).toBeDisabled();
+    await panel.getByLabel('À la mesure').fill('4');
+    await panel.getByRole('button', { name: 'Boucler les mesures 3 à 4' }).click();
+    await expect(page.getByText('Mesures 3 à 4')).toBeVisible();
+    await expect(page.getByText('Mesure 3 sur 4')).toBeVisible();
+
+    // Playing: the sounds of the app load, the song moves, and pause stops it.
+    await page.getByRole('button', { name: 'Lire' }).click();
+    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeVisible();
+    await expect(page.getByText('Mesure 4 sur 4')).toBeVisible({ timeout: 20_000 });
+    // The range is played again: the song comes back to its start.
+    await expect(page.getByText('Mesure 3 sur 4')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+    await expect(page.getByRole('button', { name: 'Lire' })).toBeVisible();
+
+    await noOverflow(page);
+  });
+
+  test('the tempo of the band is the one the player starts at, and stays within reach', async ({
+    page,
+    playwright,
+  }) => {
+    await withScore(playwright, page);
+    // Far above what the file says (120), and above one and a half times it.
+    sql("UPDATE song SET bpm = 200 WHERE name = 'Hey Ya'");
+    await page.reload();
+    await openMidi(page);
+
+    await expect(page.getByText('Celui de la fanfare : 200')).toBeVisible();
+    await expect(page.getByLabel('200 battements par minute')).toBeVisible();
+    await page.getByRole('button', { name: 'Accélérer' }).click();
+    await expect(page.getByLabel('200 battements par minute')).toBeVisible();
+    await page.getByRole('button', { name: 'Ralentir' }).click();
+    await expect(page.getByLabel('196 battements par minute')).toBeVisible();
+  });
+
+  test('with less motion asked, the lanes move once per measure', async ({ page, playwright }) => {
+    await withScore(playwright, page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openMidi(page);
+    const lane = page.locator('.SongPartTrack-lane canvas').first();
+    const drawn = () => lane.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+
+    await page.getByRole('button', { name: 'Lire' }).click();
+    await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 20_000 });
+    // Two looks within the same measure show the same lane.
+    const first = await drawn();
+    await page.waitForTimeout(300);
+    const second = await drawn();
+    if (await page.getByText('Mesure 2 sur 4').isVisible()) expect(second).toBe(first);
+  });
+
+  test('nothing is asked of another site: the engine and the sounds are files of the app', async ({
+    page,
+    playwright,
+    baseURL,
+  }) => {
+    const elsewhere: string[] = [];
+    page.on('request', (request) => {
+      if (
+        !request.url().startsWith(baseURL ?? '') &&
+        !request.url().startsWith('data:') &&
+        !request.url().startsWith('blob:')
+      ) {
+        elsewhere.push(request.url());
+      }
+    });
+    await withScore(playwright, page);
+    await openMidi(page);
+    await page.getByRole('button', { name: 'Lire' }).click();
+    await expect(page.getByText(/Mesure [2-4] sur 4/)).toBeVisible({ timeout: 20_000 });
+
+    expect(elsewhere).toEqual([]);
+  });
+});
+
 test.describe('who manages songs', () => {
   test('changes the status from the song: it changes at once', async ({ page }) => {
     await asMember(page, 'Sisi');
@@ -458,7 +634,11 @@ test.describe('who manages songs', () => {
 
     await page.locator('input[type=file]').setInputFiles([
       { name: 'freed-cover.png', mimeType: 'image/png', buffer: cover },
-      { name: 'Freed from Desire.mscz', mimeType: 'application/octet-stream', buffer: museScore },
+      {
+        name: 'Freed from Desire.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore(),
+      },
       { name: 'Freed_sxt.pdf', mimeType: 'application/pdf', buffer: readablePdf() },
       { name: 'Freed_tutti B.pdf', mimeType: 'application/pdf', buffer: readablePdf() },
       {
@@ -526,11 +706,169 @@ test.describe('who manages songs', () => {
         `SELECT status, coverPath IS NOT NULL, museScorePath IS NOT NULL FROM song WHERE id = ${songId}`,
       ),
     ).toBe('PROPOSED\t1\t1');
+    // The MuseScore file gave the MIDI file and the score as MusicXML.
+    expect(
+      sql(
+        `SELECT midiPath LIKE '%song.mid', musicXmlPath LIKE '%score.mxl' FROM song WHERE id = ${songId}`,
+      ),
+    ).toBe('1\t1');
     expect(
       sql(
         `SELECT i.name FROM songPart p JOIN instrument i ON i.id = p.instrumentId WHERE p.songId = ${songId} ORDER BY i.name`,
       ),
     ).toBe('Sax Ténor\nSouba');
+  });
+
+  test('a MuseScore file the app cannot read is kept, and the import says what is missing', async ({
+    page,
+  }) => {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page
+      .locator('input[type=file]')
+      .setInputFiles([
+        { name: 'Hey Ya.mscz', mimeType: 'application/octet-stream', buffer: museScore },
+      ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Hey Ya!');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+
+    await expect(page.getByText(/l’app n’a pas réussi à le lire/)).toBeVisible({ timeout: 30_000 });
+    expect(
+      sql(
+        "SELECT museScorePath IS NOT NULL, midiPath IS NULL, musicXmlPath IS NULL FROM song WHERE name = 'Hey Ya'",
+      ),
+    ).toBe('1\t1\t1');
+    await page.getByRole('button', { name: 'Voir le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible();
+  });
+
+  test('a MIDI file dropped by hand counts only when the MuseScore file gives none', async ({
+    page,
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    await asMember(page, 'Sisi');
+    const drop = async (name: string, score: Buffer) => {
+      await page.goto('/songs/new');
+      await page.locator('input[type=file]').setInputFiles([
+        { name: `${name}.mscz`, mimeType: 'application/octet-stream', buffer: score },
+        { name: `${name}.mid`, mimeType: 'audio/midi', buffer: midi },
+      ]);
+      await page.getByRole('button', { name: 'Continuer' }).click();
+      await page.getByLabel('Titre original').fill(name);
+      await page.getByLabel('Interprète original').fill('OutKast');
+      await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+      await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible({ timeout: 30_000 });
+      const id = sql(`SELECT id FROM song WHERE name = '${name}'`);
+      return (await (await sisi.get(`/api/songs/${id}`)).json()) as {
+        midi: { size: number } | null;
+        musicXml: object | null;
+      };
+    };
+
+    // A score the app reads: its own MIDI file is kept, not the one dropped.
+    const read = await drop('Hey Ya', readableScore());
+    expect(read.midi?.size).toBeGreaterThan(midi.length);
+    expect(read.musicXml).not.toBeNull();
+
+    // A score it cannot read: the MIDI file dropped by hand is the one of the
+    // song, and the import says the reading mode has nothing.
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      { name: 'Roses.mscz', mimeType: 'application/octet-stream', buffer: museScore },
+      { name: 'Roses.mid', mimeType: 'audio/midi', buffer: midi },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Roses');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByText(/l’app n’a pas réussi à le lire/)).toBeVisible({ timeout: 30_000 });
+    expect(
+      sql("SELECT midiPath IS NOT NULL, musicXmlPath IS NULL FROM song WHERE name = 'Roses'"),
+    ).toBe('1\t1');
+    await sisi.dispose();
+  });
+
+  test('a new MuseScore file the app cannot read takes away the MIDI file of the one it replaces', async ({
+    page,
+  }) => {
+    // The song of the tests holds a MIDI file.
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${seven}/edit`);
+    await page
+      .locator('input[type=file]')
+      .setInputFiles([
+        { name: 'Seven v2.mscz', mimeType: 'application/octet-stream', buffer: museScore },
+      ]);
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+
+    await expect(page.getByText(/l’app n’a pas réussi à le lire/)).toBeVisible({ timeout: 30_000 });
+    expect(
+      sql(`SELECT museScorePath IS NOT NULL, midiPath IS NULL FROM song WHERE id = ${seven}`),
+    ).toBe('1\t1');
+  });
+
+  test('a name that cannot be remembered is said, and the song is saved all the same', async ({
+    page,
+  }) => {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      // Once the name of the song is taken out, "tp" is left: the trumpet has it.
+      { name: 'Hey Ya tp.pdf', mimeType: 'application/pdf', buffer: readablePdf() },
+    ]);
+    // Placed by its name: corrected by hand to another instrument.
+    await page.getByRole('button', { name: 'Corriger où va Hey Ya tp.pdf' }).click();
+    await page.getByLabel('Instrument de Hey Ya tp.pdf').selectOption({ label: 'Souba' });
+    await page.getByRole('checkbox', { name: 'Retenir ce nom pour la prochaine fois' }).check();
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Nom interne').fill('Hey Ya');
+    await page.getByLabel('Titre original').fill('Hey Ya!');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+
+    await expect(
+      page.getByText('Le nom de « Hey Ya tp.pdf » n’a pas été retenu.', { exact: false }),
+    ).toBeVisible();
+    expect(sql("SELECT COUNT(*) FROM instrumentAlias WHERE alias = 'tp'")).toBe('1');
+    expect(
+      sql("SELECT COUNT(*) FROM songPart p JOIN song s ON s.id = p.songId WHERE s.name = 'Hey Ya'"),
+    ).toBe('1');
+  });
+
+  test('an instrument chosen by hand can be remembered: the words of the file become a known spelling', async ({
+    page,
+  }) => {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      { name: 'Hey Ya tutti B.pdf', mimeType: 'application/pdf', buffer: readablePdf() },
+      { name: 'Hey Ya grave.pdf', mimeType: 'application/pdf', buffer: readablePdf() },
+    ]);
+    await page.getByLabel('Instrument de Hey Ya tutti B.pdf').selectOption({ label: 'Souba' });
+    await page.getByLabel('Instrument de Hey Ya grave.pdf').selectOption({ label: 'Sax Ténor' });
+
+    // Off unless ticked; a file placed by its name is not offered the box.
+    const boxes = page.getByRole('checkbox', { name: /Retenir ce nom pour la prochaine fois/ });
+    await expect(boxes).toHaveCount(2);
+    await expect(boxes.first()).not.toBeChecked();
+    await boxes.first().check();
+
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Nom interne').fill('Hey Ya');
+    await page.getByLabel('Titre original').fill('Hey Ya!');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible();
+
+    // The words of the name of the song are left out; the box left empty adds nothing.
+    expect(
+      sql(
+        "SELECT i.name, a.alias FROM instrumentAlias a JOIN instrument i ON i.id = a.instrumentId WHERE a.alias IN ('tutti b', 'grave', 'hey ya tutti b')",
+      ),
+    ).toBe('Souba\ttutti b');
   });
 
   test('a name already taken is said under its field, and the files are not sent', async ({

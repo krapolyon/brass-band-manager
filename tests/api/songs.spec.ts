@@ -10,6 +10,8 @@ import {
   midi,
   mp3,
   museScore,
+  musicXml,
+  mxl,
   notSquare,
   pdf,
   sendFile,
@@ -43,7 +45,16 @@ test.describe('who may do what', () => {
     request,
   }) => {
     const songId = addSong('Crazy');
-    const addresses = ['', '/cover', '/audio', '/midi', '/museScore', '/clipThumbnail', '/parts/1'];
+    const addresses = [
+      '',
+      '/cover',
+      '/audio',
+      '/midi',
+      '/musicXml',
+      '/museScore',
+      '/clipThumbnail',
+      '/parts/1',
+    ];
     for (const address of ['/api/songs', ...addresses.map((end) => `/api/songs/${songId}${end}`)]) {
       expect((await request.get(address)).status(), address).toBe(401);
     }
@@ -373,6 +384,9 @@ test.describe('the files of a song', () => {
       ['cover', png(1025)],
       ['museScore', midi],
       ['midi', mp3],
+      // A MuseScore file is an archive too, and is not MusicXML.
+      ['musicXml', museScore],
+      ['musicXml', pdf],
       ['audio', pdf],
       [`parts/${trumpet}`, mp3],
     ] as const) {
@@ -577,6 +591,59 @@ test.describe('the files of a song', () => {
     // Only the file of the other song is left.
     expect(storedFiles('songs')).toEqual([sql('SELECT midiPath FROM song')]);
     expect((await sisi.delete(`/api/songs/${song.id}`)).status()).toBe(404);
+  });
+});
+
+test.describe('the score as MusicXML', () => {
+  test('is kept as it is or compressed, served to every member, and goes with the song', async ({
+    playwright,
+  }) => {
+    const songId = addSong('Crazy');
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    const zaza = await deviceOf(playwright, email('Zaza'));
+
+    // A member without the right sends none.
+    expect((await sendFile(zaza, `/api/songs/${songId}/musicXml`, musicXml)).status()).toBe(403);
+
+    expect((await sendFile(sisi, `/api/songs/${songId}/musicXml`, musicXml)).status()).toBe(200);
+    expect(sql('SELECT musicXmlPath FROM song')).toMatch(/^songs\/[0-9a-f]{16}\/score\.musicxml$/);
+    const song = await (await zaza.get(`/api/songs/${songId}`)).json();
+    expect(song.musicXml).toEqual({
+      url: expect.stringMatching(new RegExp(`^/api/songs/${songId}/musicXml\\?v=[0-9a-f]+$`)),
+      size: musicXml.length,
+    });
+    const served = await zaza.get(song.musicXml.url);
+    expect(served.status()).toBe(200);
+    expect(await served.body()).toEqual(musicXml);
+    // A document a browser could draw: always given as a file to save.
+    expect(served.headers()['content-disposition']).toContain('attachment');
+    expect(served.headers()['x-content-type-options']).toBe('nosniff');
+
+    // The compressed form takes its place, and the first file is deleted.
+    expect((await sendFile(sisi, `/api/songs/${songId}/musicXml`, mxl)).status()).toBe(200);
+    expect(sql('SELECT musicXmlPath FROM song')).toMatch(/score\.mxl$/);
+    expect(storedFiles('songs')).toHaveLength(1);
+
+    // Larger than 10 MB: refused before it is read.
+    const tooBig = Buffer.concat([musicXml, Buffer.alloc(10_000_001)]);
+    expect((await sendFile(sisi, `/api/songs/${songId}/musicXml`, tooBig)).status()).toBe(413);
+
+    expect((await sisi.delete(`/api/songs/${songId}`)).ok()).toBe(true);
+    expect(storedFiles('songs')).toEqual([]);
+  });
+
+  test('a file named .musicxml or .mxl is placed as the MusicXML of the song', async ({
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    const placed = await sisi.post('/api/songs/fileNames', {
+      data: { names: ['Crazy.musicxml', 'Crazy.MXL'] },
+    });
+
+    expect(await placed.json()).toEqual([
+      { name: 'Crazy.musicxml', role: 'musicXml', instrumentId: null, problem: null },
+      { name: 'Crazy.MXL', role: 'musicXml', instrumentId: null, problem: null },
+    ]);
   });
 });
 

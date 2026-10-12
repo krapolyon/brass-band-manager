@@ -27,14 +27,15 @@ import {
 } from '../../songs.ts';
 import { keep, kept, useIsTablet } from './device.ts';
 import { average, duration as clock, day } from './format.ts';
+import { MidiView } from './MidiView.tsx';
 import { PdfView } from './PdfView.tsx';
 import { usePlayer } from './Player.tsx';
 import '../../components/Checkbox.css';
 import './songs.css';
 
-// The MIDI player and the Live mode are steps 7 and 8 of the scoping
-// document: their modes are shown, and cannot be opened yet.
-const NOT_BUILT: SongMode[] = ['midi', 'live'];
+// The Live mode is step 8 of the scoping document: its mode is shown, and
+// cannot be opened yet.
+const NOT_BUILT: SongMode[] = ['live'];
 
 type Props = {
   songId: number;
@@ -166,6 +167,18 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
                 title={t('songs.song.noAudioTitle')}
                 text={t(canManage ? 'songs.song.noAudioManager' : 'songs.song.noAudioMember')}
                 action={canManage ? { label: t('songs.song.addAudio'), onPress: edit } : undefined}
+              />
+            ))}
+
+          {mode === 'midi' &&
+            (data.midi ? (
+              <MidiView song={data} />
+            ) : (
+              <NothingYet
+                icon="Piano"
+                title={t('songs.song.noMidiTitle')}
+                text={t(canManage ? 'songs.song.noMidiManager' : 'songs.song.noMidiMember')}
+                action={canManage ? { label: t('songs.song.addMidi'), onPress: edit } : undefined}
               />
             ))}
 

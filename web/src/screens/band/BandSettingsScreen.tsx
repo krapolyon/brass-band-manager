@@ -43,10 +43,13 @@ export function AdminsOnlyScreen() {
 }
 
 // Figma: Band settings / Summary. What makes the app the band's own, for
-// admins: short on purpose, related settings share one entry.
+// admins: short on purpose, related settings share one entry. One entry is not
+// theirs alone: the known spellings belong to whoever manages songs
+// (model/songs.md, entry 2), who sees this screen with that single row.
 export function BandSettingsScreen() {
   const { t } = useTranslation();
   const canManage = useCanManageBand();
+  const canManageSongs = useMe().data?.permissions.includes('manageSongs') ?? false;
   const sections = useSections().data ?? [];
   const instrumentCount = sections.reduce(
     (count, section) => count + section.instruments.length,
@@ -54,7 +57,33 @@ export function BandSettingsScreen() {
   );
 
   if (canManage === null) return null;
-  if (!canManage) return <AdminsOnlyScreen />;
+  if (!canManage && !canManageSongs) return <AdminsOnlyScreen />;
+
+  const spellings = (
+    <NavRow
+      icon="FileText"
+      label={t('band.spellings.title')}
+      detail={t('band.spellings.detail')}
+      to="/band/spellings"
+    />
+  );
+
+  if (!canManage) {
+    // Nothing else of the band settings, and not the sentence that reserves them to admins.
+    return (
+      <AppLayout
+        current="settings"
+        back="/settings"
+        backLabel={t('nav.settings')}
+        width="form"
+        title={t('band.title')}
+      >
+        <Sheet>
+          <div className="settings-rows">{spellings}</div>
+        </Sheet>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout
@@ -83,6 +112,7 @@ export function BandSettingsScreen() {
             }).replace(' · ', ', ')}
             to="/band/sections"
           />
+          {canManageSongs && spellings}
         </div>
       </Sheet>
       <Sheet title={t('band.connections')}>

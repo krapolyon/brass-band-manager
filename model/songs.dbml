@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.2 — 2026-10-13 — validated, migration 007: musicXmlPath, the score as MusicXML produced with the MIDI file from the MuseScore file by the browser that imports it; an instrument chosen by hand during an import can be remembered as an alias; aliases also read the names of the tracks of the MIDI file
 // v1.1 — 2026-10-12 — rules from the design of the screens (dictionary only, no schema change), validated for the simple version of songs; bpm counts the beat of the time signature (proposed, with the MIDI player)
 // v1.0 — 2026-10-12 — validated, migration 006
 // v0.3 — 2026-10-12 — DRAFT: YouTube clips only, thumbnail of the clip kept by the app (clipThumbnailPath), no NoteWorthy file, rule of aliases confirmed
@@ -40,7 +41,8 @@ Table song {
   discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this song: digits only. Empty for a band without Discord. Stored, and shown by no screen before the Discord feature.']
   coverPath varchar [note: 'File of the cover art of the original song (JPEG, PNG or WebP, square), relative to the storage folder of the app. Empty when the song has none.']
   museScorePath varchar [note: 'MuseScore file of the arrangement (.mscz), relative to the storage folder of the app. The source of the score.']
-  midiPath varchar [note: 'MIDI file of the arrangement, relative to the storage folder of the app.']
+  midiPath varchar [note: 'MIDI file of the arrangement, relative to the storage folder of the app. Produced from the MuseScore file by the browser that sends it, its tracks named after the staves; or exported by hand.']
+  musicXmlPath varchar [note: 'The score as MusicXML (.musicxml or .mxl), relative to the storage folder of the app. Produced from the MuseScore file by the browser that sends it, or exported by hand. What the reading mode shows.']
   audioPath varchar [note: 'Recording of the song played by the band (mp3 or m4a), relative to the storage folder of the app.']
   Note: 'A piece the band plays, is learning or considers learning. Every song is a cover: it has an original title, an original artist and the cover art of the original.'
 }
@@ -64,8 +66,8 @@ Table songPart {
 Table instrumentAlias {
   id integer [pk]
   instrumentId integer [not null, ref: > instrument.id]
-  alias varchar [not null, unique, note: 'One or several words that name the instrument in file names, for instance "sax mib", "sxm" or "trombone". Stored in lowercase, without accents, words separated by one space. The rule that reads a file name is in the dictionary, entry 2.']
-  Note: 'A known spelling of an instrument in the names of files. Lets the import attach each PDF to its instrument. Filled at install from the starting library, then managed by the band.'
+  alias varchar [not null, unique, note: 'One or several words that name the instrument in the names of files and of the tracks of a MIDI file, for instance "sax mib", "sxm" or "trombone". Stored in lowercase, without accents, words separated by one space. The rule that reads a file name is in the dictionary, entry 2.']
+  Note: 'A known spelling of an instrument in the names of files and of tracks. Lets the import attach each PDF to its instrument, and the MIDI player each track. Filled at install from the starting library, then managed by the band.'
 }
 
 // ---------------------------------------------------------------

@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from 'react-router';
 import { ApiError, api } from '../../api.ts';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
+import { Checkbox } from '../../components/Checkbox.tsx';
 import { DropZone } from '../../components/DropZone.tsx';
 import { Gauge } from '../../components/Gauge.tsx';
 import { Icon, type IconName } from '../../components/Icon.tsx';
@@ -62,7 +63,15 @@ export function ImportScreen() {
   const [state, setState] = useState<'idle' | 'sending' | 'failed'>('idle');
   const [progress, setProgress] = useState({ sent: 0, total: 0 });
   // Once the song exists: the files that did not leave, and why.
-  const [created, setCreated] = useState<{ songId: number; refused: string[] } | null>(null);
+  const [created, setCreated] = useState<{
+    songId: number;
+    hasRefusal: boolean;
+    notes: string[];
+    refused: string[];
+  } | null>(null);
+  // The files whose instrument was chosen by hand, and whether their name is
+  // to be remembered as a known spelling of it (off unless ticked).
+  const [byHand, setByHand] = useState<Record<number, boolean>>({});
 
   // A step that changes takes the member back to its top, and says so to a
   // screen reader: the title of the page receives the focus.
@@ -104,13 +113,49 @@ export function ImportScreen() {
     }
   };
   // Gives a part its instrument: asked by a question, or corrected by hand.
-  const setInstrument = (file: DroppedFile, instrumentId: number) =>
+  const setInstrument = (file: DroppedFile, instrumentId: number) => {
+    setByHand((current) => ({ ...current, [file.key]: current[file.key] ?? false }));
     setDropped((current) =>
       withDropped(
         current.filter((other) => other.key !== file.key),
         [{ ...file, role: 'part', instrumentId, problem: null }],
       ),
     );
+  };
+
+  // What would be remembered of the name of a file, as the member reads it:
+  // its words without those of the name of the song. The server cuts the
+  // words for good when the song is saved (FileNames::words).
+  const wordsOf = (text: string) =>
+    text
+      .normalize('NFD')
+      .replace(/\p{Mn}+/gu, '')
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter((word) => word !== '');
+  const spellingOf = (file: DroppedFile) => {
+    const score = placed.find((other) => other.role === 'museScore');
+    const songWords = wordsOf(draft?.name ?? score?.file.name.replace(/\.[^.]+$/, '') ?? '');
+    const words = wordsOf(file.file.name.replace(/\.[^.]+$/, ''));
+    const left = words.filter((word) => !songWords.includes(word));
+    return (left.length > 0 ? left : words).join(' ');
+  };
+
+  // Once the song is saved: the names to remember become known spellings.
+  // Returns the files whose name could not be kept (already the spelling of
+  // another instrument, or nothing left once the name of the song is taken
+  // out): the import says so, and nothing else changes.
+  const rememberNames = async (songName: string) => {
+    const notKept: string[] = [];
+    for (const file of placed) {
+      if (file.role !== 'part' || file.instrumentId === null || !byHand[file.key]) continue;
+      await api(`/api/instruments/${file.instrumentId}/aliases`, {
+        method: 'POST',
+        body: { alias: file.file.name.replace(/\.[^.]+$/, '').normalize('NFC'), songName },
+      }).catch(() => notKept.push(file.file.name));
+    }
+    return notKept;
+  };
   const remove = (file: DroppedFile) =>
     setDropped((current) => current.filter((other) => other.key !== file.key));
 
@@ -137,12 +182,21 @@ export function ImportScreen() {
     setState('sending');
     try {
       const song = await api<Song>('/api/songs', { method: 'POST', body: recordOf(draft) });
-      const failures = await sendFiles(song.id, placed, (sent, total) =>
+      const { failures, scoreNotRead } = await sendFiles(song.id, placed, (sent, total) =>
         setProgress({ sent, total }),
       );
+      const notRemembered = await rememberNames(song.name);
       await queryClient.invalidateQueries({ queryKey: ['songs'] });
-      if (failures.length > 0) {
-        setCreated({ songId: song.id, refused: failures.map(refusal) });
+      if (failures.length > 0 || scoreNotRead || notRemembered.length > 0) {
+        setCreated({
+          songId: song.id,
+          hasRefusal: failures.length > 0,
+          notes: [
+            ...(scoreNotRead ? [t('songs.import.scoreNotRead')] : []),
+            ...notRemembered.map((file) => t('songs.import.notRemembered', { file })),
+          ],
+          refused: [...new Set(failures.map(refusal))],
+        });
         setState('idle');
         return;
       }
@@ -182,7 +236,14 @@ export function ImportScreen() {
           </BottomBar>
         }
       >
-        <Message kind="warning">{t('songs.import.createdWithProblems')}</Message>
+        {created.hasRefusal && (
+          <Message kind="warning">{t('songs.import.createdWithProblems')}</Message>
+        )}
+        {created.notes.map((text) => (
+          <Message key={text} kind="warning">
+            {text}
+          </Message>
+        ))}
         {created.refused.map((text) => (
           <Message key={text} kind="danger">
             {text}
@@ -405,6 +466,27 @@ export function ImportScreen() {
                       onPress: () => setCorrecting(file),
                     }}
                   />
+                  {file.key in byHand && file.role === 'part' && (
+                    <div className="songs-remember">
+                      {/* biome-ignore lint/a11y/noLabelWithoutControl: Checkbox is the control, an input of the browser */}
+                      <label>
+                        <Checkbox
+                          checked={byHand[file.key] ?? false}
+                          aria-describedby={`remember-${file.key}`}
+                          onChange={(event) =>
+                            setByHand((current) => ({
+                              ...current,
+                              [file.key]: event.target.checked,
+                            }))
+                          }
+                        />
+                        <span className="textBody">{t('songs.import.remember')}</span>
+                      </label>
+                      <p id={`remember-${file.key}`} className="textCaption songs-muted">
+                        {t('songs.import.rememberHint', { name: spellingOf(file) })}
+                      </p>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

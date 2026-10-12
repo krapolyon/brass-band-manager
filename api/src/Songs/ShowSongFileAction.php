@@ -21,7 +21,7 @@ final class ShowSongFileAction
     private const COLUMNS = SongFiles::COLUMNS + ['clipThumbnail' => 'clipThumbnailPath'];
 
     /**
-     * @param string $kind cover, clipThumbnail, audio, midi, museScore or part
+     * @param string $kind cover, clipThumbnail, audio, midi, musicXml, museScore or part
      */
     public function __construct(
         private readonly Connection $database,
@@ -54,7 +54,9 @@ final class ShowSongFileAction
         if ($found === null) {
             throw new ApiError(404, 'notFound');
         }
-        $downloads = array_key_exists('download', $request->getQueryParams());
+        // MusicXML is a document a browser would open and draw: it is always
+        // handed over as a file to save, which the reading mode reads as data.
+        $downloads = $this->kind === 'musicXml' || array_key_exists('download', $request->getQueryParams());
 
         return ServeFile::privately(
             $request,

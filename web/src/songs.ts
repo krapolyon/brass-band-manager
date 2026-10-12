@@ -54,6 +54,8 @@ export type Song = SongSummary & {
   /** peaks: how loud each slice of the recording is, from 0 to 100; null until it was computed. */
   audio: (SongFile & { format: 'mp3' | 'm4a'; peaks: number[] | null }) | null;
   midi: SongFile | null;
+  /** The score as MusicXML, what the reading mode shows. */
+  musicXml: SongFile | null;
   museScore: SongFile | null;
   /** In the order of the sections and instruments of the band. */
   parts: (SongFile & { instrumentId: number })[];
@@ -77,7 +79,7 @@ export type SongRecord = {
 };
 
 /** The kinds of file a song holds itself; a part is one per instrument. */
-export type SongFileKind = 'cover' | 'museScore' | 'midi' | 'audio';
+export type SongFileKind = 'cover' | 'museScore' | 'midi' | 'musicXml' | 'audio';
 export type SongFileRole = SongFileKind | 'part';
 
 /** Where a dropped file would go, from its name (POST /api/songs/fileNames). */

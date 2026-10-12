@@ -1,5 +1,6 @@
 # Business dictionary — Songs domain
 
+> v1.2 — 2026-10-13 · Validated by the owner on 2026-10-13 · The MIDI file and the MusicXML of a song are produced from its MuseScore file by the browser that imports it (`song.musicXmlPath`); an instrument chosen by hand during an import can be remembered as an alias; the aliases are managed in the band settings by whoever manages songs; the tracks of the MIDI player are read with the same aliases · Migration: `007_songMusicXml.sql`
 > v1.1 — 2026-10-12 · Model: `songs.dbml` · Rules settled with the design of the screens, no change to the schema. Validated by the owner on 2026-10-12 for what the simple version of songs uses (last file wins, files changed by dropping, download everything, peaks computed once by the browser, deletion asks first); the two rules about the tempo and the rehearsal marks wait for the MIDI player and the reading mode · Migrations: `006_songs.sql`
 > v1.0 — 2026-10-12 · Validated
 
@@ -47,11 +48,12 @@ The status labels in French are "Proposé", "Montage en cours", "Au répertoire"
 - **What a file is is decided from its content**, and its extension has to agree.
 - **Cover art.** JPEG, PNG or WebP, no SVG. Always square: the browser crops the image to a centred square and reduces it to 1024 pixels a side before sending it, as for the photo of a member, and the server accepts a square image of that size at most.
 - **Recording.** A recording of the band itself, not the original: mp3 or m4a.
-- **Size limits** (decided on 2026-10-12): 10 MB for the MuseScore file and for the recording, 5 MB for a part, 1 MB for the MIDI file, 2 MB for the cover art once reduced.
+- **Size limits** (decided on 2026-10-12): 10 MB for the MuseScore file and for the recording, 5 MB for a part, 1 MB for the MIDI file, 10 MB for the MusicXML file, 2 MB for the cover art once reduced.
 - **Downloading.** A file is offered under a readable name built by the app from the name of the song, and the instrument for a part.
 - **Downloading everything.** From the list of songs, a member downloads in one `.zip` archive the parts of their own instrument, every recording, every MIDI file or every MuseScore file, for the songs the list shows (search and filters included). The server builds the archive on demand; nothing is stored.
 - **The waveform of a recording.** The MP3 mode draws the recording as bars the member touches or drags. Its peaks are computed once per recording, not each time it is played: by the browser that sends the recording, and kept in a small file beside it, which goes when the recording goes.
-- **Generated files.** The MuseScore file is the source of the score. Whether the MIDI file, and later the MusicXML of each part, are produced from it by the app or sent beside it is settled by the prototype of the reading mode (scoping document, "Points to verify"). MuseScore cannot run on the host.
+- **Generated files.** The MuseScore file is the source of the score. When one is sent, the browser of whoever sends it produces two files from it and sends them with it: the MIDI file, whose tracks are named after the staves of the score, and the score as MusicXML, which the reading mode shows. Both replace the ones in place. MuseScore cannot run on the host, so nothing is converted there.
+- **When the conversion fails**, the MuseScore file is kept and the import says that the MIDI player and the reading mode have nothing for this song. A `.mid` or a MusicXML file exported by hand from MuseScore and dropped with the others is then used: a file dropped by hand counts only when the MuseScore file gave none. Without one, the MIDI file and the MusicXML the song had from an earlier MuseScore file are removed: they are no longer those of its score.
 
 ### Import
 Whoever manages songs drops the files of a song together, in any number and any order, and the app puts each one in its place.
@@ -60,7 +62,8 @@ Whoever manages songs drops the files of a song together, in any number and any 
 |---|---|
 | A JPEG, PNG or WebP image | The cover art |
 | A `.mscz` file | The MuseScore file |
-| A `.mid` or `.midi` file | The MIDI file |
+| A `.mid` or `.midi` file | The MIDI file, when the MuseScore file gives none |
+| A `.musicxml` or `.mxl` file | The MusicXML file, when the MuseScore file gives none |
 | An mp3 or m4a file | The recording |
 | A PDF | The part of the instrument its name tells (entry 2, "Reading the name of a file") |
 
@@ -136,35 +139,53 @@ The earlier app of the band read file names with rules written in its code for t
 - **An alias matches when all its words are in the name**, in any order, as whole words: `tb` is not found in `tbut`.
 - **The alias with the most words wins.** `trombone` names the Trombone Sib and `trombone ut` the Trombone Ut: `Crazy trombone ut.pdf` is the Trombone Ut. This is how a default is written: the short alias goes to the instrument meant when nothing more is said.
 - **The name of an instrument is always an alias of it**, without being written in the table.
-- When the winning aliases name two instruments, or when no alias matches, the import asks (entry 1, "Import"). The instrument then chosen by hand adds no alias by itself: aliases are added in the list of the instrument.
+- When the winning aliases name two instruments, or when no alias matches, the import asks (entry 1, "Import"). The instrument is then chosen by hand.
+- **A choice made by hand can be remembered.** Beside the instrument chosen, a box "Remember this name for next time" ("Retenir ce nom pour la prochaine fois"), off by default. Ticked, the words of the name of the file that are not words of the name of the song become an alias of the instrument, saved with the song. When these words are already an alias of another instrument, or when none is left, nothing is added and the import says so.
 - A word of the name of the song can match an alias: the import shows what it understood before saving, and is corrected there.
 
+### Reading the name of a track
+The MIDI player shows one line per track of the MIDI file.
+
+- **A track is named after its staff.** A MuseScore file gives each part two names: the one printed on the staff (`Basse`, `Souba`) and the one of the sound chosen to play it (`Euphonium`, `Sousaphone`). A MIDI file exported by MuseScore carries the second. The MIDI file the app produces carries the first: the name the arranger wrote.
+- **The name of a track is read as the name of a file is**: cut into words, matched against the same aliases, the alias with the most words wins.
+- **The aliases are one list.** A spelling met only in tracks (`trumpet`, `drumset`) is added to the instrument like any other.
+- **A track that is recognised is shown under the name of its instrument**, with the pictogram of its section. The tracks of the instrument of the member are the ones drawn as their own.
+- **A track that is not recognised is still shown and played, under the name it has in the file.** It is nobody's own track. The same when its name tells two instruments.
+- **Two tracks can be the same instrument**: both are shown, in the order of the file.
+- **A name alone cannot always tell.** A staff named `Tuba` is the Souba in the starting library, whoever plays it: when it is the part of the P’tite basse, the staff is renamed in MuseScore (`Basse`) and the file sent again.
+- Any signed-in member may ask which instrument a name of track is: the MIDI player needs it. The answer gives the instrument, never the list of the aliases.
+- Nothing is saved: the tracks are read each time the file is opened, so adding an alias is enough to recognise a track of every song.
+
+### Managing the aliases
+- The aliases are listed in the band settings, one line per instrument in the order of the band ("Orthographes connues"). Whoever manages songs adds and deletes them there; a member who manages songs without being an admin sees this one entry of the band settings.
+- **An alias is cleaned before it is saved**: lowercase, accents removed, words separated by one space. An alias with no letter and no digit is refused.
+- **An alias names one instrument.** One that another instrument already has is refused, and the refusal names that instrument. The name of an instrument cannot be given as an alias to another one.
+
 ### Starting aliases
-The starting library of sections and instruments (Members domain, entry 2) comes with the aliases of its instruments, copied at install with the instruments that are kept. French library, from the rules of the earlier app:
+The starting library of sections and instruments (Members domain, entry 2) comes with the aliases of its instruments, copied at install with the instruments that are kept. French library, from the rules of the earlier app, and the names MuseScore gives to staves in English (owner, 2026-10-13):
 
 | Instrument | Aliases |
 |---|---|
-| Trompette | `trompette`, `trompettes`, `tp` |
+| Trompette | `trompette`, `trompettes`, `tp`, `trumpet`, `cornet` |
 | Sax Alto | `sax`, `saxo`, `saxophone`; each of the three with `alto` or `mib`; `sxm` |
 | Sax Ténor | `sax`, `saxo` or `saxophone`, each with `tenor` or `sib`; `sxt` |
 | Sax C Melody | `sax`, `saxo` or `saxophone`, each with `ut`, `melody` or `melodie`; `sxc` |
 | Trombone Sib | `trombone`, `trombone sib`, `tb` |
 | Trombone Ut | `trombone ut`, `tbut` |
-| P’tite basse | `basse`, `basses`, `bs` |
-| Souba | `souba`, `soubassophone`, `sb` |
-| Batterie | `batterie` |
+| P’tite basse | `basse`, `basses`, `bs`, `french horn` |
+| Souba | `souba`, `soubassophone`, `sb`, `sousaphone`, `tuba` |
+| Batterie | `batterie`, `drumset` |
 | Percus | `percu`, `percus`, `percussion`, `percussions`, `bongo` |
 
 ### Relations
 - A part belongs to one song and to one instrument.
 - An instrument has zero to several aliases; an alias names one instrument.
-- The names of the tracks of a MuseScore file will be read with the same aliases (MIDI player and reading mode).
 
 ### Access rights
 | Who | View | Create | Edit | Delete |
 |---|---|---|---|---|
 | Any signed-in member | Every part of every song | No | No | No |
-| `SONG_MANAGER`, `ADMIN` | The same, and the aliases | Parts and aliases | Parts and aliases | Parts and aliases |
+| `SONG_MANAGER`, `ADMIN` | The same, and the list of the aliases | Parts and aliases | Parts. An alias is not edited: it is deleted and added again | Parts and aliases |
 
 ### Display
 - Parts are listed in the order of sections and instruments (Members domain, entry 2).
@@ -207,16 +228,17 @@ To settle while the feature is built:
 - The app does not keep the name a file had on the device, by design ("Files"). The edit screen of Figma writes "Freed_tb_v3.pdf · remplace Freed_tb.pdf": the built screen says that the new file replaces the one in place, without naming it.
 - The tempo of the MuseScore file is shown by Figma on the song and under the tempo field ("124"). Nothing reads it yet: the line of the tempo is shown only when the band has its own, until the MIDI player reads the file.
 - The gauge of parts of the management table counts against every instrument of the band, those nobody plays included (confirmed on 2026-10-12).
-- Figma offers to remember the name of a file as an alias during the import ("Retenir ce nom pour la prochaine fois"), and draws a screen of the known spellings in the band settings. The model says an instrument chosen by hand adds no alias: not built, to decide here first.
+- The sound of the MIDI player comes from recorded samples of instruments, served by the app and never fetched from another site. The set of samples and its licence are validated with the dependency; it covers the instruments of a brass band, and another instrument is played with the nearest one.
+- The MIDI file is produced by a MuseScore engine of 2023 (`webmscore`): to listen to on a few real songs. A file saved by a later MuseScore may one day not open: the files exported by hand are the way out.
+- None of the four files of the band tried has rehearsal marks, and their titles are not reliable ("Titre"): the record of a new song is prefilled from the name of the file.
 
 - Whether the host lets the server fetch an image from another site: to check on the OVH plan. Without it, the cover art stands in for the thumbnail.
 - The `.zip` of "Download everything": its size and the time to build it on the shared hosting, checked with the real repertoire.
-- Rehearsal marks and time signature read from the oldest MuseScore files: checked with the prototype of the reading mode. Many files may have no marks.
 - Offline: not a priority (scoping document). The screens show a message when the network is missing; whether the list of the last visit stays readable depends on what the front keeps.
 
 - The screens of the domain are drawn in Figma, page `Songs` (2026-10-12).
 - The aliases of the starting library are written here; the library file of the app (`api/resources/instrumentLibrary.fr.json`) receives them with the feature. An instance installed before has none: whoever manages songs adds them.
 
-Decided by the owner on 2026-10-12: the five statuses and the meaning of `TEMPORARY`; the recording is one of the band, optional; one PDF per instrument, no full score; levels seen as averages only, to decide which songs leave the repertoire; only the current version is kept; the Discord channel is stored and not shown before the Discord feature; a song can be deleted; the cover art is cropped to a square of 1024 pixels; the clip is played inside the app, YouTube only for now, and its thumbnail is fetched and kept by the server; every song has a MuseScore file and NoteWorthy files are not kept; the rule that reads the name of a file and the starting aliases; an instrument chosen by hand during an import adds no alias by itself.
+Decided by the owner on 2026-10-12: the five statuses and the meaning of `TEMPORARY`; the recording is one of the band, optional; one PDF per instrument, no full score; levels seen as averages only, to decide which songs leave the repertoire; only the current version is kept; the Discord channel is stored and not shown before the Discord feature; a song can be deleted; the cover art is cropped to a square of 1024 pixels; the clip is played inside the app, YouTube only for now, and its thumbnail is fetched and kept by the server; every song has a MuseScore file and NoteWorthy files are not kept; the rule that reads the name of a file and the starting aliases; an instrument chosen by hand during an import adds no alias by itself (changed in v1.2: it can be remembered).
 
 Proposed with the design of the screens on 2026-10-12 (v1.1, to validate): two files for the same place, the last one wins; the files of a song are changed by dropping, never one field per part; download everything as a `.zip`; the peaks of a recording computed once; a tempo counts the beat of the time signature; rehearsal marks and time signature read from the MuseScore file; deleting asks first and offers `ABANDONED` instead.

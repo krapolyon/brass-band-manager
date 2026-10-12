@@ -84,7 +84,7 @@ Between 40 and 50 songs, each with a MuseScore file. Every song is a cover, so e
 - **Files**: cover art, recording of the band (mp3 or m4a), MIDI, MuseScore (.mscz), one PDF score per instrument.
 - **mp3 playback**: built-in player.
 - **Scores**: access to every PDF.
-- **MIDI player**: playback with tempo control and choice of active tracks, with a viewer. The sound is a synthesiser's.
+- **MIDI player**: playback with tempo control and choice of active tracks, with a viewer. The sound comes from recorded samples of instruments, served by the app (decided on 2026-10-13; a synthesiser was first planned).
 - **Reading mode**: the part of one instrument, large, on a single line that scrolls under a cursor. Song tempo by default, adjustable by tapping the beats. Choice of the starting measure, pause, jump to a measure.
 - **Discord**: read and write in the song's thread. Messages sent from the app carry the member's name. No real time: the thread reloads when opened.
 

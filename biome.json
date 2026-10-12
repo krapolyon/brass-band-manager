@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!api", "!skills", "!model", "!package-lock.json"]
+    "includes": ["**", "!api", "!skills", "!model", "!package-lock.json", "!web/public/soundfonts"]
   },
   "formatter": {
     "indentStyle": "space",

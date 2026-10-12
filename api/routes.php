@@ -67,11 +67,15 @@ use BrassBand\Sections\ListSectionsAction;
 use BrassBand\Sections\SaveInstrumentAction;
 use BrassBand\Sections\SaveSectionAction;
 use BrassBand\Sections\Sections;
+use BrassBand\Songs\AddAliasAction;
 use BrassBand\Songs\ChangeSongStatusAction;
 use BrassBand\Songs\ClipThumbnails;
+use BrassBand\Songs\DeleteAliasAction;
 use BrassBand\Songs\DeleteSongAction;
 use BrassBand\Songs\DownloadArchiveAction;
 use BrassBand\Songs\FileNames;
+use BrassBand\Songs\InstrumentAliases;
+use BrassBand\Songs\ListAliasesAction;
 use BrassBand\Songs\ListSongsAction;
 use BrassBand\Songs\PlaceFilesAction;
 use BrassBand\Songs\SavePeaksAction;
@@ -164,12 +168,14 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/songs', new ListSongsAction($songs));
         $group->get('/api/songs/archive', new DownloadArchiveAction($database, $songs, $songFiles));
         $group->get('/api/songs/{id:[0-9]+}', new ShowSongAction($songs));
-        foreach (['cover', 'clipThumbnail', 'audio', 'midi', 'museScore'] as $kind) {
+        foreach (['cover', 'clipThumbnail', 'audio', 'midi', 'musicXml', 'museScore'] as $kind) {
             $group->get("/api/songs/{id:[0-9]+}/{$kind}", new ShowSongFileAction($database, $songs, $songFiles, $kind));
         }
         $group->get('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new ShowSongFileAction($database, $songs, $songFiles, 'part'));
         // One's own levels on a song: the address names no member.
         $group->put('/api/songs/{id:[0-9]+}/levels', new SetLevelsAction($database, $songs));
+        // The instrument each track of a MIDI file is, for the MIDI player. Changes nothing.
+        $group->post('/api/songs/trackNames', new PlaceFilesAction(new FileNames($database), tracks: true));
 
         // ---------------------------------------------------------------
         // 3. One's own record, or a permission
@@ -223,6 +229,13 @@ return function (App $app, Connection $database, array $config): void {
         }
         $group->put('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, 'part', removes: false))->add($manageSongs);
         $group->delete('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, 'part', removes: true))->add($manageSongs);
+
+        // The known spellings of the instruments. They are listed in the band
+        // settings, but belong to whoever manages songs (model/songs.md, entry 2).
+        $aliases = new InstrumentAliases($database);
+        $group->get('/api/instrumentAliases', new ListAliasesAction($aliases))->add($manageSongs);
+        $group->post('/api/instruments/{id:[0-9]+}/aliases', new AddAliasAction($aliases))->add($manageSongs);
+        $group->delete('/api/instrumentAliases/{id:[0-9]+}', new DeleteAliasAction($database, $aliases))->add($manageSongs);
 
         $manageBand = new RequirePermission(Permission::MANAGE_BAND);
         $group->patch('/api/band', new UpdateBandAction($database, $bands))->add($manageBand);

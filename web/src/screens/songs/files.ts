@@ -6,6 +6,7 @@ import {
   sendSongFile,
   songFileAddress,
 } from '../../songs.ts';
+import type { ScoreAnswer, ScoreFiles } from './score.worker.ts';
 
 // The files dropped on a song, between the moment they are dropped and the
 // moment they are sent. Rules: model/songs.md, "Import".
@@ -157,27 +158,105 @@ async function peaksOf(file: Blob): Promise<number[] | null> {
   }
 }
 
-export type SendFailure = { file: DroppedFile; error: ApiError };
+// Reading a large score takes a few seconds; past this, something is wrong.
+const SCORE_TIMEOUT = 90_000;
+
+/**
+ * The MIDI file and the MusicXML of a MuseScore file, produced by the
+ * MuseScore engine in a worker (score.worker.ts). Null when the engine cannot
+ * read the file: the song then keeps its MuseScore file alone.
+ */
+export async function scoreFilesOf(file: Blob): Promise<ScoreFiles | null> {
+  let worker: Worker;
+  try {
+    worker = new Worker(new URL('./score.worker.ts', import.meta.url), { type: 'module' });
+  } catch {
+    return null;
+  }
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const answer = await new Promise<ScoreAnswer>((resolve) => {
+      const giveUp = window.setTimeout(() => resolve({ ok: false }), SCORE_TIMEOUT);
+      const settle = (result: ScoreAnswer) => {
+        window.clearTimeout(giveUp);
+        resolve(result);
+      };
+      worker.onmessage = (message: MessageEvent<ScoreAnswer>) => settle(message.data);
+      worker.onerror = () => settle({ ok: false });
+      worker.postMessage(bytes, [bytes.buffer]);
+    });
+    return answer.ok ? { midi: answer.midi, musicXml: answer.musicXml } : null;
+  } catch {
+    return null;
+  } finally {
+    worker.terminate();
+  }
+}
+
+export type SendFailure = {
+  file: DroppedFile;
+  error: ApiError;
+  /** The file that failed is one the MuseScore file gave, not the dropped file itself. */
+  produced?: 'midi' | 'musicXml';
+};
+export type SendResult = {
+  failures: SendFailure[];
+  /** A MuseScore file was sent and the app could not read it: no MIDI file or no MusicXML came with it. */
+  scoreNotRead: boolean;
+};
+
+type Sending = { dropped: DroppedFile; role: SongFileRole; content: Blob | null };
 
 /**
  * Sends the placed files of a song, one request each. A file that is refused
  * does not stop the others: what failed is returned, with the reason.
+ *
+ * A MuseScore file is first read by the MuseScore engine: the MIDI file and
+ * the MusicXML it gives are sent after it, in the place of the ones dropped by
+ * hand, which count only when the engine gives none. Both follow the score:
+ * they are not sent when it is refused, and when it cannot be read the ones
+ * the song had from an earlier score are removed.
  */
 export async function sendFiles(
   songId: number,
   files: DroppedFile[],
   onProgress: (sent: number, total: number) => void = () => {},
-): Promise<SendFailure[]> {
+): Promise<SendResult> {
   const placed = files.filter(isPlaced);
-  const failures: SendFailure[] = [];
-  let sent = 0;
-  onProgress(0, placed.length);
+  const score = placed.find((file) => file.role === 'museScore');
+  // Counted before the score is read: it gives two files when it can be read.
+  const total = placed.length + (score ? 2 : 0);
+  onProgress(0, total);
 
-  for (const dropped of placed) {
+  const read = score ? await scoreFilesOf(score.file) : null;
+  const byHand = (role: SongFileRole) => placed.some((file) => file.role === role);
+  // The score first: what it gives is sent only once it is saved.
+  const sending: Sending[] = [
+    ...placed.filter((file) => file === score),
+    ...placed.filter(
+      (file) =>
+        file !== score && (read === null || (file.role !== 'midi' && file.role !== 'musicXml')),
+    ),
+  ].map((dropped) => ({ dropped, role: dropped.role as SongFileRole, content: null }));
+  if (score && read) {
+    sending.push(
+      { dropped: score, role: 'midi', content: new Blob([read.midi as BlobPart]) },
+      { dropped: score, role: 'musicXml', content: new Blob([read.musicXml as BlobPart]) },
+    );
+  }
+
+  const failures: SendFailure[] = [];
+  let isScoreSaved = false;
+  let sent = 0;
+
+  for (const { dropped, role, content: produced } of sending) {
+    // What a refused score gave belongs to no file of the song.
+    if (produced && !isScoreSaved) continue;
     try {
-      const role = dropped.role as SongFileRole;
-      const content = role === 'cover' ? await preparedCover(dropped.file) : dropped.file;
+      const content =
+        produced ?? (role === 'cover' ? await preparedCover(dropped.file) : dropped.file);
       const song = await sendSongFile(songFileAddress(songId, role, dropped.instrumentId), content);
+      if (role === 'museScore') isScoreSaved = true;
       if (role === 'audio') {
         const peaks = await peaksOf(dropped.file);
         // Said for this recording, and no other: one sent meanwhile keeps its own.
@@ -195,11 +274,24 @@ export async function sendFiles(
       failures.push({
         file: dropped,
         error: error instanceof ApiError ? error : new ApiError(422, 'invalidFile'),
+        ...(produced ? { produced: role as 'midi' | 'musicXml' } : {}),
       });
     }
     sent += 1;
-    onProgress(sent, placed.length);
+    onProgress(sent, total);
   }
 
-  return failures;
+  // A new score the app cannot read: the MIDI file and the MusicXML of the
+  // score it replaces would no longer be those of the song.
+  const missing = (['midi', 'musicXml'] as const).filter((role) => !byHand(role));
+  if (score && isScoreSaved && read === null) {
+    for (const role of missing) {
+      await api(songFileAddress(songId, role), { method: 'DELETE' }).catch(() => {
+        // Nothing to remove, or the server is away: said with the rest.
+      });
+    }
+  }
+  onProgress(total, total);
+
+  return { failures, scoreNotRead: isScoreSaved && read === null && missing.length > 0 };
 }

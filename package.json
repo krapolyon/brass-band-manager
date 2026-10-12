@@ -28,11 +28,14 @@
     "@tanstack/react-query": "5.104.1",
     "i18next": "26.4.3",
     "libphonenumber-js": "1.13.14",
+    "midi-file": "1.2.4",
     "pdfjs-dist": "6.4.299",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-i18next": "17.0.16",
-    "react-router": "8.4.0"
+    "react-router": "8.4.0",
+    "smplr": "1.1.0",
+    "webmscore": "1.2.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -17,6 +17,7 @@ use Doctrine\DBAL\Connection;
 // path:
 //
 //   song.coverPath          songs/5d4c3b2a1f0e9d8c/cover.jpg
+//   song.musicXmlPath       songs/3c2b1a0f9e8d7c6b/score.musicxml
 //   song.audioPath          songs/0a1b2c3d4e5f6a7b/audio.mp3   (peaks.json beside it)
 //   songPart.pdfPath        songs/9f8e7d6c5b4a3f2e/part.pdf
 //
@@ -29,6 +30,7 @@ final class SongFiles
         'cover' => 'coverPath',
         'museScore' => 'museScorePath',
         'midi' => 'midiPath',
+        'musicXml' => 'musicXmlPath',
         'audio' => 'audioPath',
     ];
 
@@ -36,6 +38,7 @@ final class SongFiles
         'cover' => 2_000_000,
         'museScore' => 10_000_000,
         'midi' => 1_000_000,
+        'musicXml' => 10_000_000,
         'audio' => 10_000_000,
         'part' => 5_000_000,
     ];
@@ -60,7 +63,7 @@ final class SongFiles
      * returns the name it is kept under. Refuses a file that is not of the
      * kind expected.
      *
-     * @param string $kind cover, museScore, midi, audio or part
+     * @param string $kind cover, museScore, midi, musicXml, audio or part
      */
     public static function nameOf(string $kind, string $content): string
     {
@@ -71,6 +74,7 @@ final class SongFiles
             // in it as they are.
             'museScore' => str_starts_with($content, "PK\x03\x04") && str_contains($content, '.mscx') ? 'score.mscz' : null,
             'midi' => str_starts_with($content, "MThd\x00\x00\x00\x06") ? 'song.mid' : null,
+            'musicXml' => self::musicXmlName($content),
             'audio' => self::audioName($content),
             'part' => str_starts_with($content, '%PDF-') ? 'part.pdf' : null,
             default => null,
@@ -91,6 +95,19 @@ final class SongFiles
         }
 
         return "cover.{$read['extension']}";
+    }
+
+    // MusicXML comes as it is, or compressed: an archive that lists what it
+    // holds in "META-INF/container.xml". A MuseScore file has one too, and
+    // is told apart by its ".mscx".
+    private static function musicXmlName(string $content): ?string
+    {
+        if (str_starts_with($content, "PK\x03\x04")) {
+            return str_contains($content, 'META-INF/container.xml') && !str_contains($content, '.mscx') ? 'score.mxl' : null;
+        }
+        $start = substr($content, 0, 4000);
+
+        return str_contains($start, '<score-partwise') || str_contains($start, '<score-timewise') ? 'score.musicxml' : null;
     }
 
     private static function audioName(string $content): ?string
