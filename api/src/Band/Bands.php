@@ -7,6 +7,7 @@ namespace BrassBand\Band;
 use BrassBand\Http\ApiError;
 use BrassBand\Mail\Mailer;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 
 // The band as the API shows it. Everything here is public: it is what a
 // screen needs before sign-in (model/band.md, "Rules").
@@ -24,9 +25,14 @@ final class Bands
      */
     public function view(): array
     {
-        $band = $this->database->fetchAssociative(
-            'SELECT name, defaultLanguage, defaultAccentTheme, defaultCountryCode FROM band WHERE id = 1',
-        );
+        try {
+            $band = $this->database->fetchAssociative(
+                'SELECT name, defaultLanguage, defaultAccentTheme, defaultCountryCode FROM band WHERE id = 1',
+            );
+        } catch (TableNotFoundException) {
+            // An empty database: the install creates its tables.
+            $band = false;
+        }
         if ($band === false) {
             throw new ApiError(404, 'notInstalled');
         }

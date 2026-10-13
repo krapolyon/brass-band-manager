@@ -17,8 +17,10 @@ use BrassBand\Gigs\Reminders;
 use BrassBand\Http\AfterResponse;
 use BrassBand\Push\PushSetup;
 
-// Never from a browser: it is not an address of the app.
-if (PHP_SAPI !== 'cli') {
+// Never from a browser: it is not an address of the app. A request of the web
+// always says its method and where it comes from; the scheduled task of a
+// host says neither, whichever way the host starts PHP for it.
+if (PHP_SAPI !== 'cli' && (isset($_SERVER['REQUEST_METHOD']) || isset($_SERVER['REMOTE_ADDR']) || isset($_SERVER['HTTP_HOST']))) {
     http_response_code(404);
     exit;
 }
@@ -27,7 +29,7 @@ $config = require __DIR__ . '/../bootstrap.php';
 $database = Database::connect($config['database']);
 
 $now = new DateTimeImmutable();
-foreach (array_slice($argv, 1) as $argument) {
+foreach (array_slice($_SERVER['argv'] ?? [], 1) as $argument) {
     if (str_starts_with($argument, '--now=')) {
         $now = new DateTimeImmutable(substr($argument, 6));
     }

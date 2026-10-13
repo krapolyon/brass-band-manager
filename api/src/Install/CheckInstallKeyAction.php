@@ -7,6 +7,7 @@ namespace BrassBand\Install;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
+use BrassBand\Migrations\Migrations;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -14,13 +15,14 @@ use Psr\Http\Message\ServerRequestInterface;
 // POST /api/install/key: tells whether a text is the install key.
 //
 // The welcome screen of the install asks this before the first step, so that
-// a wrong key is found at once and not after three steps of typing. It changes
-// nothing: the key is checked again when the install is confirmed.
+// a wrong key is found at once and not after three steps of typing. The key is
+// checked again when the install is confirmed.
 final class CheckInstallKeyAction
 {
     public function __construct(
         private readonly Connection $database,
         private readonly InstallKey $installKey,
+        private readonly Migrations $migrations,
     ) {
     }
 
@@ -31,6 +33,10 @@ final class CheckInstallKeyAction
         }
 
         $this->installKey->check(Input::from($request, InstallKeyInput::class)->installKey);
+
+        // The right key on a database that is empty or late: the migrations
+        // are applied now, so that the steps that follow find their tables.
+        InstallMigrations::apply($this->migrations);
 
         return Json::write($response, ['valid' => true]);
     }

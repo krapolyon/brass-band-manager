@@ -1,0 +1,4 @@
+# The root of the deployed folder: nothing here is served. Only web/ is, by
+# its own .htaccess. The code of the API, its libraries and the migrations are
+# files a browser never reaches.
+Require all denied

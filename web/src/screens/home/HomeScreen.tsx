@@ -18,6 +18,7 @@ import { type Section, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { useSongs } from '../../songs.ts';
 import { AppLayout } from '../AppLayout.tsx';
+import { PendingMigrationsNotice } from '../band/BandMigrationsScreen.tsx';
 import { OwnAnswerChip, StatusChip } from '../gigs/chips.tsx';
 import { meetingText, shortPlace, whereText } from '../gigs/format.ts';
 import { mapsUrl, useAnswer } from '../gigs/GigView.tsx';
@@ -151,6 +152,9 @@ export function HomeScreen() {
     >
       <div className="home" data-playing={player.song ? 'true' : undefined}>
         <div className="home-main">
+          {/* For an admin, while the database is behind the code. Not drawn in Figma. */}
+          <PendingMigrationsNotice />
+
           {heroes.map((gig) => (
             <HomeHero key={gig.id} gig={gig} language={i18n.language} now={now} />
           ))}

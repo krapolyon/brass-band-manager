@@ -5,12 +5,13 @@ declare(strict_types=1);
 // Applies the migrations that have not run yet, in the order of their numbers.
 // Run from the command line: php database/migrate.php
 //
-// A script that has run is recorded in the schemaMigration table and is never
-// run again. This is why a migration is never edited once it has run: write a
-// new one instead.
+// On a host without a command line, the same work is asked through the API,
+// by the install or by the admin: see BrassBand\Migrations\Migrations.
 
 use BrassBand\Database;
+use BrassBand\Migrations\Migrations;
 
+// Never from a browser: it is not an address of the app.
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
     exit;
@@ -18,49 +19,22 @@ if (PHP_SAPI !== 'cli') {
 
 $config = require __DIR__ . '/../api/bootstrap.php';
 
-$database = Database::connect($config['database']);
+$migrations = new Migrations(Database::connect($config['database']), $config['migrationsFolder']);
+$result = $migrations->run();
 
-$database->executeStatement(
-    'CREATE TABLE IF NOT EXISTS schemaMigration (
-        name VARCHAR(190) NOT NULL PRIMARY KEY,
-        appliedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
-);
-
-// A migration file holds several statements. They are sent through the plain
-// PHP connection, with the setting that accepts several statements at once.
-$pdo = $database->getNativeConnection();
-assert($pdo instanceof PDO);
-$pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
-
-$applied = $database->fetchFirstColumn('SELECT name FROM schemaMigration');
-$files = glob(__DIR__ . '/migrations/*.sql') ?: [];
-sort($files);
-
-$count = 0;
-foreach ($files as $file) {
-    $name = basename($file);
-    if (in_array($name, $applied, true)) {
-        continue;
-    }
-
-    echo "Applying {$name}… ";
-    try {
-        // Walking through every result is what reports an error in any
-        // statement of the file, not only in the first one.
-        $statement = $pdo->query((string) file_get_contents($file));
-        assert($statement !== false);
-        while ($statement->nextRowset()) {
-        }
-    } catch (PDOException $exception) {
-        // MySQL does not undo table changes: what ran before the error stays.
-        echo "failed.\n" . $exception->getMessage() . "\n";
-        echo "Fix the database by hand, or restore it, before running migrations again.\n";
-        exit(1);
-    }
-    $database->insert('schemaMigration', ['name' => $name]);
-    echo "done.\n";
-    $count++;
+if ($result['busy']) {
+    echo "Migrations are already being applied.\n";
+    exit(1);
+}
+foreach ($result['applied'] as $name) {
+    echo "Applied {$name}.\n";
+}
+if ($result['failed'] !== null) {
+    // MySQL does not undo table changes: what ran before the error stays.
+    echo "{$result['failed']['name']} failed.\n{$result['failed']['message']}\n";
+    echo "Fix the database by hand, or restore it, before running migrations again.\n";
+    exit(1);
 }
 
-echo $count === 0 ? "Nothing to apply.\n" : "$count migration(s) applied.\n";
+$count = count($result['applied']);
+echo $count === 0 ? "Nothing to apply.\n" : "{$count} migration(s) applied.\n";

@@ -15,6 +15,7 @@ use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
 use BrassBand\Http\Text;
+use BrassBand\Migrations\Migrations;
 use BrassBand\Access\AccentThemes;
 use BrassBand\Sections\SectionIcons;
 use Doctrine\DBAL\Connection;
@@ -40,6 +41,7 @@ final class InstallAction
         private readonly Profile $profile,
         private readonly InstallKey $installKey,
         private readonly LogoStore $logos,
+        private readonly Migrations $migrations,
     ) {
     }
 
@@ -53,6 +55,9 @@ final class InstallAction
 
         // Already checked by the welcome screen; checked again here, where it counts.
         $this->installKey->check($input->installKey);
+
+        // Normally done when the welcome screen checked the key.
+        InstallMigrations::apply($this->migrations);
 
         $logo = $this->check($input);
 

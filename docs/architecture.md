@@ -55,6 +55,7 @@ The app is then at http://localhost:8080.
 | Apply the migrations | `npm run db:migrate` | |
 | Install the PHP libraries | `npm run api:install` | After `api/composer.lock` changed |
 | Empty the local database | `npm run db:reset` | Deletes all local data, then applies every migration again |
+| See what the host would receive | `npm run release:assemble` | After `npm run build`. Writes `build/release/`; see "Deployment" |
 
 Three addresses, three uses: **5173** to write front code comfortably, **8080** to see the app as the host will serve it, **8081** for the tests, which have a database of their own and empty it at will.
 
@@ -81,7 +82,7 @@ api/                      The back
   public/index.php        Single entry point: builds and runs the Slim app
   public/.htaccess        Sends every /api/... address to index.php
   routes.php              Every address the API answers
-  bootstrap.php           Loads the libraries and the configuration
+  bootstrap.php           Loads the libraries and the configuration, and says where the data folder is
   config.example.php      Model of the configuration for the host
   config.local.php        Configuration of the local stack
   config.php              The configuration in use (not committed)
@@ -93,20 +94,25 @@ api/                      The back
     Install/              First-time setup of an instance
     Band/                 The band and its settings
     Health/               GET /api/health
+    Migrations/           Applies the migrations: from the command line, at install, for the admin
+    Mail/                 Emails, and the addresses an instance may write to
+  tasks/                  Scripts run by the scheduled tasks of the host
   composer.json           PHP libraries, exact versions
   phpstan.neon            Settings of the PHP analysis
   vendor/                 The libraries themselves (not committed)
 
 database/
   migrations/             Numbered SQL scripts
-  migrate.php             Applies those that have not run yet
+  migrate.php             Applies those that have not run yet, from the command line
 
 tests/                    Playwright end-to-end tests
   api/                    The API alone, without a browser
   support/                Made-up band and members, access to the test database
 docker/                   Image of the local web server (Apache with PHP)
 docker-compose.yml        The local stack
-scripts/                  setup.mjs (npm run setup), prepare-test-database.mjs
+scripts/                  setup.mjs (npm run setup), prepare-test-database.mjs, assemble-release.mjs
+deploy/                   What only the host needs: its .htaccess files and the relay of /api
+.github/workflows/        beta.yml (builds beta from main), release.yml (beta to release, by hand)
 model/                    Data model (DBML and business dictionary)
 docs/                     This document and the scoping
 skills/                   Versioned copies of the project's Claude skills
@@ -124,6 +130,7 @@ Defined in [docker-compose.yml](../docker-compose.yml).
 | `web-test` | The same server, on the database `brassBandTest` | http://localhost:8081 |
 | `db` | MySQL 8.4 | `127.0.0.1`, port `3307`, databases `brassBand` and `brassBandTest`, user `brassBand`, password `local-only` |
 | `web-test-no-mail` | The test server again, without a mail server, to test an instance that cannot send email | http://localhost:8082 |
+| `web-test-allowed` | The test server again, allowed to write to one address only (`allowedRecipients`) | http://localhost:8083 |
 | `mail` | Mailpit: the mailbox of the local stack. It receives every email the app sends and sends none further | http://localhost:8025 |
 | `php` | The same image, used for command-line tools only. Not started with the stack | `docker compose run --rm php <command>` |
 
@@ -280,7 +287,7 @@ Every JSON answer carries `Cache-Control: no-store` (answers hold members' data,
 
 ### Configuration
 
-`api/config.php` returns an array and is never committed. It is a copy of one of two files:
+`config.php` returns an array and is never committed. Locally it is `api/config.php`; on a host it is in the data folder, beside the deployed folder (see "Deployment"). It is a copy of one of two files:
 
 - [config.local.php](../api/config.local.php) for the local stack, copied by `npm run setup`. Every value in it is public.
 - [config.example.php](../api/config.example.php) for the host, to fill in by hand. Its defaults are the safe ones: install is refused until an install key is written, and the session cookie only travels over HTTPS.
@@ -329,11 +336,11 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 `api/src/Install/`. Rules: "Install" in [model/members.md](../model/members.md) and [model/band.md](../model/band.md).
 
 - `GET /api/install` says whether the app is installed (it is as soon as one member exists). While it is not, it also gives the languages the install can be done in and the starting library of sections and instruments, read from `api/resources/instrumentLibrary.<language>.json`. Each instrument of the library says whether it is preselected.
-- `POST /api/install/key` tells whether a text is the install key. The welcome screen asks it before the first step, so that a wrong key is found at once. It changes nothing.
+- `POST /api/install/key` tells whether a text is the install key. The welcome screen asks it before the first step, so that a wrong key is found at once. With the right key, it applies the migrations a database still waits for: on a host the tables are created here (see "Deployment"). It changes nothing else.
 - `POST /api/install` receives everything at once (band name, language, sections and instruments, first member), saves it in one transaction, and signs the first member in as admin.
 - This route is public and creates an admin. It is protected twice: it works only while no member exists, and it asks for the **install key**.
 
-**The install key** ([InstallKey](../api/src/Install/InstallKey.php)) is a text that the person who puts the app online writes in `api/config.php`, the file where the database password already is. The install asks for it again: only someone who can read the files of the server knows it, so nobody else can install the app and become its admin while it sits online, not yet installed. Once the app is installed the key is of no use.
+**The install key** ([InstallKey](../api/src/Install/InstallKey.php)) is a text that the person who puts the app online writes in `config.php`, the file where the database password already is. The install asks for it again: only someone who can read the files of the server knows it, so nobody else can install the app and become its admin while it sits online, not yet installed. Once the app is installed the key is of no use.
 
 - A key shorter than 16 characters counts as no key: install stays closed until a real one is written.
 - A wrong key costs a second. With a long key, guessing leads nowhere, and the app does not need to remember who tried: no counter, no address stored.
@@ -418,7 +425,7 @@ The app sends one email so far: the link of a forgotten password ([ForgotPasswor
 - **The icons are drawn by the browser, not by the server.** A phone wants square PNG icons whatever the format of the logo, and the logo may be an SVG, which PHP cannot draw without an image extension that a shared host may not have. The browser of the admin reads the four formats: [logo.ts](../web/src/screens/install/logo.ts) fits the logo in a white square at the three sizes and sends the icons with the file. The server needs no image library, and nothing here depends on the host.
 - **A logo travels as JSON**, like everything the API receives: the content of the file and of the three icons in base64 ([LogoInput](../api/src/Band/LogoInput.php)). No form upload, so the rule "JSON and nothing else" of `Input` has no exception.
 - **[LogoStore](../api/src/Band/LogoStore.php) is the only code that touches the files.** It decides what a file is from its content (never from a name or a type that was sent), refuses what is not a PNG, a JPEG, a WebP or an SVG, refuses an SVG that declares a document type, and checks that each icon is a PNG of the exact size.
-- **The files are in `storage/`, next to `api/`**, a folder the web server does not serve. Each logo has a folder under a name drawn at random (`storage/band/<16 characters>/`); `band.logoPath` holds the path of the logo. Replacing a logo writes a new folder and deletes the old one.
+- **The files are in `storage/`**, a folder the web server does not serve: next to `api/` locally, in the data folder on a host (see "Deployment"; `bootstrap.php` gives its path as `storageFolder`). Each logo has a folder under a name drawn at random (`storage/band/<16 characters>/`); `band.logoPath` holds the path of the logo. Replacing a logo writes a new folder and deletes the old one.
 - **Serving** ([ShowLogoAction](../api/src/Band/ShowLogoAction.php)): the type comes from the stored extension, the browser is told not to guess another one, and a policy forbids the file to run or load anything, because an SVG can carry scripts. An address carries the version of the logo (`?v=...`): with the current version the browser may keep the file for good, otherwise it asks again.
 - **What is checked, and what is not.** A logo is at most 2 MB and 4096 pixels a side; a PNG must end as a PNG; an SVG must be written in UTF-8 and declare no document type. What an icon shows is not checked: only someone who manages the band can send one. Replacing a logo holds the row of the band until it is done, so that two replacements at the same instant leave the files of one logo only.
 - **`storage/.htaccess`** is written by `LogoStore` and tells Apache to serve nothing from the folder, should a host put it where it can be reached.
@@ -502,7 +509,7 @@ The app sends one email so far: the link of a forgotten password ([ForgotPasswor
 - **Push notifications** (`api/src/Push/`). A device is a session: [Push](../api/src/Push/Push.php) keeps one subscription per session (`pushSubscription`), deleted with it, and only accepts the address of a push service of a browser (the list is in that class), so that a member cannot make the server call an address of their choice. What the browser gave is never answered back. Sending is done once the answer has left (`AfterResponse`), through a [PushTransport](../api/src/Push/PushTransport.php): the Web Push library on the host ([WebPushTransport](../api/src/Push/WebPushTransport.php)), a file on the test server ([RecordedTransport](../api/src/Push/RecordedTransport.php)). A device the push service says is gone is forgotten. The keys of the instance (VAPID) are in `config.php` under `push`, made once with `npm run push:keys`; without them `GET /api/push` answers `publicKey: null` and the app offers no notification.
 - **The text of a notification is written by the server**, like an email, because the phone shows it while the app is closed: `api/resources/push.<language>.json`, read by [PushTexts](../api/src/Push/PushTexts.php) in the language of each member.
 - **The live setlist is announced at each change** ([LivePush](../api/src/Gigs/LivePush.php)): to the members who said yes to the slot of the setlist, the song being played and the two after it. The title starts with the position ("3/6 · Prochain : Toxic") because an iPhone cannot replace a notification: they pile up, and each one must read alone. On Android the tag makes it replace the one before, and who manages setlists gets the action "Suivant". Nothing is sent when nothing moved (the button pressed twice).
-- **Reminders** ([Reminders](../api/src/Gigs/Reminders.php)): one notification per member, with one line per gig, to the `ACTIVE` members who have not answered for one slot at least; never to a power member. The button of a gig sends it for that gig. The automatic ones are sent by [api/tasks/gigReminders.php](../api/tasks/gigReminders.php), a command-line script to run every hour as a scheduled task of the host: it reminds for the gigs in `PROPOSED` and `ACCEPTED` that start in exactly the first or the second number of days of the band, from the hour of the band, unless they were already reminded for that day. Running it twice changes nothing. The clock is the one of `timeZone` in `config.php`.
+- **Reminders** ([Reminders](../api/src/Gigs/Reminders.php)): one notification per member, with one line per gig, to the `ACTIVE` members who have not answered for one slot at least; never to a power member. The button of a gig sends it for that gig. The automatic ones are sent by [api/tasks/gigReminders.php](../api/tasks/gigReminders.php), a script to run every hour as a scheduled task of the host (see "Deployment"): it reminds for the gigs in `PROPOSED` and `ACCEPTED` that start in exactly the first or the second number of days of the band, from the hour of the band, unless they were already reminded for that day. Running it twice changes nothing. The clock is the one of `timeZone` in `config.php`.
 - **What the dictation learned** ([SpokenNames](../api/src/Songs/SpokenNames.php), `songSpokenName`): a phrase is cleaned the same way by the server and by the front (`cleanPhrase` in [dictation.ts](../web/src/screens/gigs/dictation.ts)): lowercase, no accents, letters said one by one joined. A phrase names one song: learned for another it moves; added by hand it is refused with the song that has it (`phraseTaken`, `takenBySongId`) until `moves` is sent. Beyond 20, the oldest phrase of the song leaves, learned or typed. The name of the song itself is never saved.
 - **The map of the meeting point** needs nothing from the server but its address: `mapTilesUrl` of `config.php` (the vector tiles of the OpenStreetMap Foundation when left out, no map when empty), answered with a gig that has coordinates.
 - **A member who leaves** no longer organises the gigs that are not over, and stays on those already played, with their answers ([ChangeStatusAction](../api/src/Members/ChangeStatusAction.php)). An organiser and an answer are sent with the nickname, so that they still read once the member is out of the directory.
@@ -678,13 +685,13 @@ The schema is described in `model/` (DBML, one file per domain), and created by 
 **The order is always: the model first, the migration second.** A migration is written only for a domain validated in `model/`. The rules for the model and for writing migrations are in the `brass-band-model` skill (`skills/`).
 
 - A script is named `001_members.sql`, `002_songs.sql`: a number, then what it does.
-- `npm run db:migrate` runs [database/migrate.php](../database/migrate.php), which applies, in order, the scripts that have not run yet.
+- `npm run db:migrate` runs [database/migrate.php](../database/migrate.php), which applies, in order, the scripts that have not run yet. On a host without a command line, the install and the admin ask the same work through the API (see "Deployment").
 - Scripts that have run are recorded in the `schemaMigration` table. It is technical: it is created by `migrate.php` itself and is not part of the model.
 - **A script that has run is never edited**, since it would not run again. A correction is a new script.
 - If a script fails halfway, the runner stops and says so. MySQL does not undo table changes: what ran before the error stays. Locally, fix the script and run `npm run db:reset`. On the host, the database must be repaired by hand before trying again, which is why a migration is always tried locally first.
 - A migration, the DBML and the dictionary change in the same commit.
 
-Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code (about 60 lines).
+Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code ([Migrations](../api/src/Migrations/Migrations.php), about 100 lines).
 
 The migrations are listed at the top of each dictionary of `model/`, with the version of the model they come from.
 
@@ -815,7 +822,7 @@ Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: 
 
 | What | Why not a library |
 |---|---|
-| The migration runner (`database/migrate.php`) | Migration libraries impose PHP classes; the project wants plain SQL scripts |
+| The migration runner (`api/src/Migrations/Migrations.php`) | Migration libraries impose PHP classes; the project wants plain SQL scripts |
 | Sessions and passwords (to come) | PHP provides password hashing natively, and authentication libraries impose their own tables, which would contradict the model |
 | `ApiError`, `Json`, `ErrorHandler`, `Input` | A few lines each, gluing the libraries to this app's error format |
 
@@ -829,27 +836,105 @@ Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: 
 
 ## Deployment
 
-Not set up yet. The hosting is the OVH Perso plan (decision of 2026-10-12; what it gives is in `docs/scoping.md`): PHP 8.4 in PHP-FPM, MySQL, scheduled tasks once per hour at most, and no command line (SSH).
+The hosting is the OVH Perso plan (decision of 2026-10-12; what it gives is in `docs/scoping.md`): PHP 8.4 in PHP-FPM, MySQL 8.4, scheduled tasks once per hour at most, and no command line (SSH). Nothing is built on the host: it receives files.
 
-Deployment goes through OVH's Git integration, which copies one branch of the GitHub repository to the host on each push and builds nothing. That branch is a dedicated `release` branch: a GitHub Action builds the front end, installs the PHP dependencies and pushes the result to it. `main` is never deployed directly. The action is still to write. Migrations must be runnable without a terminal: through a protected admin page (admin role, explicit confirmation) or through phpMyAdmin.
+Nothing below names the band or its domain. Another band follows the same steps with its own folders.
 
-What is already decided:
+### Two environments
 
-- The host receives files and builds nothing: the built front (`web/dist/`) and the API with its `vendor/` folder are copied as they are.
-- `api/config.php` is written once on the host, by hand, and is never part of what is copied.
-- `storage/`, next to `api/`, holds the uploaded files. It must exist on the host, be writable by PHP, stay outside the folder Apache serves, and never be emptied or replaced by a deployment. It is part of what a backup must keep, with the database.
-- Migrations are applied on the host by `database/migrate.php`, after having run locally.
-- The Apache rules the app needs are in the two `.htaccess` files, which travel with the code.
+| | Beta | Production |
+|---|---|---|
+| What it is for | Trying a version out before members get it | The app members use |
+| Branch the host copies | `beta` | `release` |
+| Deployed folder (example) | `bbm-beta` | `bbm-app` |
+| Data folder, beside it | `bbm-beta-data` | `bbm-app-data` |
+| Site of the app, root folder | `beta.<domain>` → `bbm-beta/web` | `app.<domain>` → `bbm-app/web` |
+| Database | One of its own | One of its own |
+| `allowedRecipients` in `config.php` | The testers | Empty |
 
-To settle then: how `api/src`, `api/vendor` and `api/config.php` are kept out of the folder Apache serves, and how `migrate.php` is run without a command line (today it refuses to run outside one).
+OVH ties a Git branch to a site whose root is the folder the branch is copied to. That site is technical (`deploy-beta.<domain>` → `bbm-beta`, `deploy.<domain>` → `bbm-app`): everything it could serve is refused, see below. Each push on the branch copies its content to the folder, through a webhook of GitHub.
 
-To check on the real host, because it cannot be checked locally:
+### What the host receives
 
-- every address is redirected to HTTPS (a rule to add to the `.htaccess` files);
+The branches `beta` and `release` do not hold the source: they hold the tree below, assembled by [scripts/assemble-release.mjs](../scripts/assemble-release.mjs) (`npm run release:assemble` puts it in `build/release/`, to look at).
+
+```
+.htaccess            Require all denied: nothing here is served
+web/                 The only folder a browser reaches
+  .htaccess          Require all granted, the two guards below, then the rules of web/public/.htaccess
+  index.html, …      The built front (web/dist)
+  api/index.php      The relay: three lines that load ../../api/public/index.php
+  api/.htaccess      Sends every /api/... address to the relay
+api/                 The code of the API and vendor/, without the development libraries
+database/            migrate.php and the migrations
+```
+
+- **Only `web/` is public.** The root `.htaccess` refuses everything, and `web/.htaccess` opens that folder alone. The code of the API, its libraries and the migrations are files a browser never reaches. The files written for the host are in [deploy/](../deploy/).
+- **`/api` reaches PHP through a relay**, `web/api/index.php`: the only PHP file under `web/`, with no logic. Shared hosting has no `Alias`, which is what the local stack uses (`docker/apache.conf`).
+- **Two guards**, written in `web/.htaccess` and again in `web/api/.htaccess` (the rewrite rules of a folder replace those of the folder above: keep the two files in step). An address that starts with `/web/` is refused: it only exists through the technical site, and the app has no such route. And everything is sent to HTTPS, unless one of four signs says the request already arrived encrypted (`HTTPS`, the `HTTPS` environment variable, `X-Forwarded-Proto`, port 443): which one a host gives depends on what stands in front of Apache.
+
+### The data folder
+
+`config.php` and `storage/` must survive a deployment, so they are not in the deployed folder. The rule, written once in [api/bootstrap.php](../api/bootstrap.php): **the folder beside the deployed folder, with the same name followed by `-data`**. For an app in `/home/band/bbm-app`, the configuration is `/home/band/bbm-app-data/config.php` and the files are in `/home/band/bbm-app-data/storage/`.
+
+- When that folder exists, both are read there, never one there and the other in the deployed folder. A data folder without `config.php` stops the app with an error; it never starts on another configuration.
+- When it does not exist (the local stack, or a host where nothing replaces the folder), they are where the local stack has them: `api/config.php` and `storage/`.
+- The folder is created by hand, once, with `config.php` (from [api/config.example.php](../api/config.example.php)) and an empty `storage/` that PHP can write to. A file put there by hand is not tracked by Git and is left alone by every deployment.
+
+### From `main` to the members
+
+1. **A merge on `main` builds beta** ([.github/workflows/beta.yml](../.github/workflows/beta.yml), also started by hand). The action runs `npm run check`, builds the front, assembles the tree with `vendor/` installed without the development libraries, and adds one commit to `beta`, whose content is exactly that tree. It does not run the end-to-end tests: they run before the merge. When nothing changed in the tree, `beta` is left as it is.
+2. **The version is tried on the beta site.** If it came with migrations, an admin of beta is told on the home screen and applies them there first.
+3. **Releasing is started by hand** ([.github/workflows/release.yml](../.github/workflows/release.yml), "Run workflow" on GitHub, with `release` typed as a confirmation). It adds one commit to `release` holding exactly the tree of the latest build of `beta`. Nothing is built again: what members get is what was tried.
+4. **Going back** is the same action with the commit of an older build of `beta` in its second field. `release` receives a new commit holding that older tree.
+
+The history of both branches is a plain one, each commit on top of the one before. Neither action ever forces a push, and nobody pushes to these branches by hand. Going back does not undo a migration: a version that needed one is released only once beta has shown it works.
+
+### Migrations without a command line
+
+[Migrations](../api/src/Migrations/Migrations.php) is the only code that applies the scripts of `database/migrations/`, for the three ways to ask:
+
+- **`database/migrate.php`**, from a command line (locally, `npm run db:migrate`). It answers 404 to a request of the web.
+- **The install, on an empty database.** `GET /api/band` and `GET /api/install` answer "not installed" when the tables do not exist. Once the install key is accepted (`POST /api/install/key`, and again `POST /api/install`), the migrations are applied, then the install goes on: one thing to do for whoever installs. A wrong key creates nothing. Once the app is installed, both routes refuse before looking at the key: it opens nothing any more.
+- **The screen of the admin**, `/band/migrations`, in the band settings (model/band.md, "Updating the database"). `GET /api/migrations` lists what waits; `POST /api/migrations` applies it. Both ask for the `runMigrations` permission, which only `ADMIN` grants, and the second asks for the password again ([CurrentPassword](../api/src/Access/CurrentPassword.php), shared with the change of password: a wrong one counts like a wrong password at sign-in). The answer names what was applied and, when a script failed, which one and what MySQL said. That message goes to the admin only and is never logged. While something waits, an admin sees a notice on the home screen and in the band settings.
+
+One run at a time: a lock held in MySQL (`GET_LOCK`) makes a second one answer `migrationsRunning`.
+
+**Not locking oneself out.** The screen needs a session, so it needs the tables of members and sessions to be readable by the new code. Three things keep that true:
+
+- New code must run on the database of the version before it, for what sign-in and the migrations screen read: `member` (`id`, `email`, `passwordHash`, `status`, the sign-in counters), `memberRole` and `memberSession`. A migration that changes one of those tables only adds to it. Renaming or removing a column there is done in two releases: the code stops reading it first, the column goes in the next one.
+- The other screens may fail while the database is late: the notice says so, and the migrations screen does not depend on them (a test applies a migration while the list of gigs cannot be read).
+- If a mistake breaks sign-in all the same, the way out needs no code: in phpMyAdmin, run the content of each waiting file of `database/migrations/` in order, then record it with `INSERT INTO schemaMigration (name) VALUES ('013_example.sql');`. Whoever can do that already holds the database password. There is no second key that opens the migrations: that would be one more door to guard.
+
+A migration is always applied locally, then on beta, before production. Back up the production database before applying one.
+
+### The scheduled task
+
+The automatic reminders of gigs are sent by [api/tasks/gigReminders.php](../api/tasks/gigReminders.php), outside `web/`. In the deployed folder its path is `api/tasks/gigReminders.php`; the host runs it once per hour (on OVH: "Planification de tâches", the path counted from the home folder, for instance `bbm-app/api/tasks/gigReminders.php`, PHP 8.4, every hour). One task per environment.
+
+It refuses to answer the web whichever way the host starts PHP for a task: a request of the web always says its method and its origin, a task says neither. Running it twice in an hour changes nothing.
+
+### Beta never writes to real members
+
+Beta is tried with a copy of the real data, and its scheduled task runs. `allowedRecipients` in `config.php` ([AllowedRecipients](../api/src/Mail/AllowedRecipients.php)) lists the email addresses of the members beta may write to. While the list is filled in, an email for another address ([Mailer](../api/src/Mail/Mailer.php)) and a notification for another member ([Push](../api/src/Push/Push.php), by the email of the member) are put aside: not sent, and the log gets one line saying how many and of which kind, never to whom. The API answers as if they had left. Empty, as in production, everyone is written to. Locally, the server of port 8083 has one listed address, for the tests.
+
+### What to back up
+
+Two things hold everything that cannot be built again: **the database**, and **the data folder** (`config.php`, with the push keys that every device depends on, and `storage/`, the uploaded files). The deployed folder holds nothing to keep: it is the content of a branch.
+
+### To check on the real host
+
+Because it cannot be checked locally. Checked on beta first:
+
+- every address is redirected to HTTPS, without a loop (the four signs above);
+- a file at the root of the deployed folder, and anything under `/web/`, answer 403 through the technical site;
+- whether a file removed from the branch is removed from the folder (if not, old built files stay in `web/assets/`, which harms nothing);
+- the scheduled task runs and its output says how many gigs were reminded for;
 - the session cookie arrives as `__Host-session` with `Secure`, and sign-in works on an iPhone and an Android phone;
 - a write sent by an older browser, which announces itself with `Origin` only, is accepted (see `SameSiteOnly`);
 - PHP errors are not displayed;
-- the answer to a forgotten password request comes back at once, before the email is sent (it relies on PHP-FPM, see "Emails"), and the email arrives from the mailbox of the domain.
+- the answer to a forgotten password request comes back at once, before the email is sent (it relies on PHP-FPM, see "Emails"), and the email arrives from the mailbox of the domain;
+- a notification sent from PHP reaches an iPhone and an Android phone.
 
 ## Traps
 
@@ -857,7 +942,7 @@ To check on the real host, because it cannot be checked locally:
 - **`/icons/` is reserved by Apache** for its own files: anything the app puts at that address answers 404. The app's icons are in `web/public/appIcons/`.
 - **Table names and case.** Covered by the local MySQL; see "The local stack".
 - **Port 8080 serves the built front.** After changing front code, `npm run build` before looking at 8080 or running the tests. Port 5173 has no such step.
-- **A migration file holds several statements**, which MySQL's real prepared statements refuse. `migrate.php` switches that setting for itself only; the API keeps real prepared statements.
+- **A migration file holds several statements**, which MySQL's real prepared statements refuse. `Migrations` switches that setting for the time of a run only; the API keeps real prepared statements.
 - **`npm run db:reset` and `docker compose down -v` delete the local data.**
 - **Text compared by PHP and by the database.** The database ignores case and accents (`Flute` = `Flûte`); PHP's `mb_strtolower` ignores case only. A uniqueness check written in PHP is a courtesy to give a precise error; the constraint of the database is the judge, and its refusal must be caught and turned into a proper error.
 - **`assert()` does nothing on the host**, where PHP runs with assertions off. Never use it to guard against something that can happen: throw.
@@ -871,10 +956,10 @@ To check on the real host, because it cannot be checked locally:
 
 In the order of the scoping document:
 
-1. Deployment to OVH Perso: the GitHub Action that fills the `release` branch, and the way to run a migration without a command line.
+1. Of the deployment: what "To check on the real host" lists, once the host has received its first build.
 2. What the Members feature leaves for later: the export of the directory, the Discord action of a member's sheet, sending an invitation by email, a prettier email, and the screens Figma has not drawn (see below).
 3. What the Songs feature leaves for later: in the Live mode, the jumps written in words (D.S., D.C., coda), the system texts of the score, the tempo and the measure tiles that Figma means to open a picker (not drawn), the halo and the glass panel of the controls; the landscape layout of the MIDI player as drawn; the Discord place on the song; reading the name of a song inside the MuseScore file; and what Figma does not draw: the empty MIDI, Live, PDF and Clip modes (their wording is provisional), the desktop list with its actions (add, manage, download, filters are kept from the phone screen), the management table below the desktop width.
-4. What the Gigs feature leaves for later: a real notification sent from the host (nothing is deployed yet), the scheduled task of the host that runs the automatic reminders (to set up with the deployment), the export and import of the data. Not drawn in Figma, and deduced: where the buttons that add and manage a gig sit on a desktop, the way to the form of a gig that exists (from the panel that manages it), a confirmed gig of several days.
+4. What the Gigs feature leaves for later: a real notification sent from the host (to check with the first deployment), the export and import of the data. Not drawn in Figma, and deduced: where the buttons that add and manage a gig sit on a desktop, the way to the form of a gig that exists (from the panel that manages it), a confirmed gig of several days.
 5. The later features.
 
 Screens that were deduced from the phone screens, because Figma does not draw them yet. Each follows the rules of the design skill (a larger screen derives from the phone screen, a sheet becomes a dialog from 1024 px, a flow takes the floating panel), and is to be checked when it is drawn:
@@ -883,4 +968,5 @@ Screens that were deduced from the phone screens, because Figma does not draw th
 - on a desktop: the sheet of a member, the settings, sign-in, forgotten password, the invitation, the record of a member and the invite form, the settings of the band;
 - what a line of the desktop table opens (the record of the member);
 - loading and server error states (a line of text, and a `Message`);
-- the page opened without the right in the settings of the band, and the list of countries (the list of the device).
+- the page opened without the right in the settings of the band, and the list of countries (the list of the device);
+- updating the database (`/band/migrations`), its row in the settings of the band, and the notice an admin sees on the home screen and in those settings while migrations wait: a `Message`, a `Button`, `Sheet` and `NavRow` for the lists, a `Panel` with a `PasswordField` for the confirmation. No component was created for them.

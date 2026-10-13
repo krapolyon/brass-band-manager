@@ -69,6 +69,10 @@ use BrassBand\Access\CheckPasswordLinkAction;
 use BrassBand\Access\ValidateInvitationAction;
 use BrassBand\Access\ForgotPasswordAction;
 use BrassBand\Mail\Mailer;
+use BrassBand\Access\CurrentPassword;
+use BrassBand\Migrations\ListMigrationsAction;
+use BrassBand\Migrations\Migrations;
+use BrassBand\Migrations\RunMigrationsAction;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\RequireSelfOrPermission;
 use BrassBand\Access\SignInFailures;
@@ -124,7 +128,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string} $config
+ * @param array{storageFolder: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -132,9 +136,11 @@ return function (App $app, Connection $database, array $config): void {
     $cookie = new SessionCookie($config['session']['secureCookie'] ?? true);
     $profile = new Profile($database);
     $installKey = new InstallKey($config['installKey'] ?? '');
-    // The files members upload, in a folder next to api/ that the web server
-    // does not serve: a file leaves it only through an action.
-    $files = new Files(dirname(__DIR__) . '/storage');
+    // The files members upload, in a folder the web server does not serve
+    // (bootstrap.php says where): a file leaves it only through an action.
+    $files = new Files($config['storageFolder']);
+    $migrations = new Migrations($database, $config['migrationsFolder']);
+    $currentPassword = new CurrentPassword($database, $sessions, new SignInFailures($database));
     $logos = new LogoStore($database, $files);
     $mailer = new Mailer($config);
     $push = PushSetup::from($config, $database);
@@ -161,8 +167,8 @@ return function (App $app, Connection $database, array $config): void {
     $app->get('/api/band/icon/{size:180|192|512}', new ShowLogoAction($logos));
     $app->get('/api/manifest', new ManifestAction($database, $logos));
     $app->get('/api/install', new InstallStatusAction($database));
-    $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey));
-    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos));
+    $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey, $migrations));
+    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations));
     $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile));
     // Whoever holds a password link is not signed in yet.
     $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer));
@@ -193,10 +199,12 @@ return function (App $app, Connection $database, array $config): void {
         $costumes,
         $costumePictures,
         $push,
+        $migrations,
+        $currentPassword,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
-        $group->put('/api/me/password', new ChangePasswordAction($database, $sessions, $links, new SignInFailures($database)));
+        $group->put('/api/me/password', new ChangePasswordAction($database, $links, $currentPassword));
         $group->delete('/api/session', new SignOutAction($sessions, $cookie, everywhere: false));
         $group->delete('/api/sessions', new SignOutAction($sessions, $cookie, everywhere: true));
 
@@ -275,6 +283,12 @@ return function (App $app, Connection $database, array $config): void {
 
         $group->put('/api/members/{id:[0-9]+}/roles', new SetRolesAction($database, $members, $links))
             ->add(new RequirePermission(Permission::MANAGE_ROLES));
+
+        // The migrations, on a host without a command line. Applying them asks
+        // for the password again (model/band.md, "Updating the database").
+        $runMigrations = new RequirePermission(Permission::RUN_MIGRATIONS);
+        $group->get('/api/migrations', new ListMigrationsAction($migrations))->add($runMigrations);
+        $group->post('/api/migrations', new RunMigrationsAction($migrations, $currentPassword))->add($runMigrations);
 
         $manageSections = new RequirePermission(Permission::MANAGE_SECTIONS);
         $group->post('/api/sections', new SaveSectionAction($database, $sections))->add($manageSections);

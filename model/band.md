@@ -1,5 +1,6 @@
 # Business dictionary — Band domain
 
+> v1.7 — 2026-10-13 · No change to the tables · Decided with the deployment: updating the database from the app, for the admin, on a host without a command line (rule "Updating the database", permission to run the migrations)
 > v1.6 — 2026-10-13 · Model: `band.dbml` · Validated · Migrations: `002_band.sql`, `004_pictogramsAndBandDefaults.sql`, `008_gigs.sql` · The reminders of a gig
 
 Examples in this document are made up, except the name of the band that started the project.
@@ -30,6 +31,7 @@ The band this instance of the app belongs to, and the settings that make the app
 - **Default accent theme.** The accent colour of the band: the one shown before sign-in, and to every member who has not chosen their own (`member.accentTheme` empty). Install does not ask for it: it starts as the first theme of the list. An admin changes it in the settings; the change applies at once to the members who follow the colour of the band. A band cannot define its own colours for now.
 - **Country.** Install does not ask for it: it starts as the country of the language the install was done in (France for French). No screen changes it yet; the API lets an admin do it.
 - **Reminders of a gig.** The members who have not answered for a gig are reminded twice, a number of days before it, from a given hour (Gigs domain, `model/gigs.md`, rule "Automatic reminders"). Install does not ask for the three values: they start at 15 days, 5 days and 18 h. An admin changes them in the settings, the three together; an empty number of days means that this reminder is not sent, and the second number is smaller than the first. The hour is read on the clock of the server, set in its configuration to the time zone of the band.
+- **Updating the database.** A new version of the app can come with migrations: changes to the tables that must be applied once. On a host without a command line, an admin applies them from the band settings. The screen lists the migrations that wait; applying them asks for a confirmation and for the password of the admin again, because the change cannot be undone and a device left signed in must not be enough. A wrong password counts like a wrong password at sign-in (Members domain, "Wrong passwords"). The screen then says which migrations were applied and, when one failed, which one and what the database answered: the migrations before it stay applied, and the database is repaired by hand before trying again. While migrations wait, an admin is told on the home screen and in the band settings. The first migrations of an instance are applied by the install, on an empty database, once the install key is accepted (Members domain, "Install"); once the app is installed, the install key opens nothing, migrations included. The list of what was applied (`schemaMigration`) is technical and not part of the model.
 - **Default language.** The install opens in French, and its first screen offers the other languages shipped with the app. `defaultLanguage` is set to the language the install was done in, and given to each new member.
 
 ### Relations
@@ -40,6 +42,13 @@ The band this instance of the app belongs to, and the settings that make the app
 |---|---|---|---|
 | Anyone, signed in or not | Everything: the table holds nothing private | No | No |
 | `ADMIN` | Everything | At install only | Yes |
+
+Updating the database is not a change of this object, and has its own line:
+
+| Who | See the migrations that wait | Apply them |
+|---|---|---|
+| Anyone not signed in, and every member who is not an admin, whatever their other roles | No | No |
+| `ADMIN` | Yes | Yes, with their password asked again |
 
 ### Instance settings
 - This whole object is the instance settings.

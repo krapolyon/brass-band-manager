@@ -24,6 +24,7 @@ enum Permission: string
     case MANAGE_COSTUMES = 'manageCostumes';
     case MANAGE_SETLISTS = 'manageSetlists';
     case MANAGE_QUOTES = 'manageQuotes';
+    case RUN_MIGRATIONS = 'runMigrations';
 
     /**
      * The roles that grant this permission. ADMIN grants every one of them
@@ -43,6 +44,7 @@ enum Permission: string
             self::MANAGE_COSTUMES => [],
             self::MANAGE_SETLISTS => [Role::SETLIST_MANAGER],
             self::MANAGE_QUOTES => [Role::QUOTE_MANAGER],
+            self::RUN_MIGRATIONS => [],
         };
     }
 

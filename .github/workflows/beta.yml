@@ -1,0 +1,76 @@
+# Builds the app and puts the result on the "beta" branch, which the host
+# copies to the beta site. See docs/architecture.md, "Deployment".
+#
+# Nothing here reaches the site members use: that is the "release" branch,
+# filled by release.yml, by hand.
+name: Build beta
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One build at a time, each on top of the one before.
+concurrency:
+  group: beta
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install the JavaScript packages
+        run: npm ci
+
+      - name: Install the PHP libraries
+        run: |
+          cp api/config.local.php api/config.php
+          npm run api:install
+
+      - name: Check the code
+        run: npm run check
+
+      - name: Build the front
+        run: npm run build
+
+      - name: Assemble what the host receives
+        run: npm run release:assemble
+
+      # A new commit on beta whose content is exactly build/release/. The
+      # history of beta is a plain one: the host never sees a forced push.
+      - name: Push to beta
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          parent=""
+          if git fetch --depth=1 origin beta; then
+            parent=$(git rev-parse FETCH_HEAD)
+          fi
+
+          # The tree is written from the folder, through an index of its own:
+          # the checkout of main is left alone. "-f" because the folder holds
+          # what .gitignore files name (vendor/).
+          export GIT_INDEX_FILE="$RUNNER_TEMP/beta-index"
+          git --work-tree=build/release add --all --force
+          tree=$(git write-tree)
+
+          if [ -n "$parent" ] && [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
+            echo "Nothing changed in what the host receives: beta is left as it is."
+            exit 0
+          fi
+
+          commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "Build of main at ${GITHUB_SHA}")
+          git push origin "$commit:refs/heads/beta"
+          echo "beta is now at $commit (main at ${GITHUB_SHA})" >> "$GITHUB_STEP_SUMMARY"

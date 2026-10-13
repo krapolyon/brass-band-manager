@@ -22,6 +22,7 @@ final class Mailer
     private readonly string $user;
     private readonly string $password;
     private readonly string $appUrl;
+    private readonly AllowedRecipients $recipients;
 
     /**
      * @param array<mixed> $config The whole configuration of the server
@@ -39,6 +40,7 @@ final class Mailer
         $this->user = $text($mail['user'] ?? '');
         $this->password = is_string($mail['password'] ?? null) ? $mail['password'] : '';
         $this->appUrl = rtrim($text($config['appUrl'] ?? ''), '/');
+        $this->recipients = new AllowedRecipients($config);
     }
 
     // Whether this instance can send email: it needs a mail server, an
@@ -72,6 +74,13 @@ final class Mailer
      */
     public function send(string $to, string $fromName, string $subject, string $text): void
     {
+        // An instance that only writes to some addresses sends nothing to the others.
+        if (!$this->recipients->allows($to)) {
+            AllowedRecipients::logPutAside('email', 1);
+
+            return;
+        }
+
         $mail = new PHPMailer(true);
         $mail->isSMTP();
         $mail->Host = $this->host;

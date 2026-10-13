@@ -70,6 +70,26 @@ services:
       db:
         condition: service_healthy
 
+  # The test server again, allowed to write to one address only: an instance
+  # used to try a version out with a copy of the real data (port 8083).
+  web-test-allowed:
+    build: docker
+    ports:
+      - "8083:80"
+    volumes:
+      - ./web/dist:/var/www/html:ro
+      - ./api:/var/www/api:ro
+      - ./database:/var/www/database:ro
+      - storageTest:/var/www/storage
+    environment:
+      BRASS_BAND_DATABASE: brassBandTest
+      BRASS_BAND_APP_URL: http://localhost:8083
+      BRASS_BAND_PUSH_LOG: /var/www/storage/pushLog.jsonl
+      BRASS_BAND_ALLOWED_RECIPIENTS: zaza@example.org
+    depends_on:
+      db:
+        condition: service_healthy
+
   # The mailbox of the local stack: receives the emails the app sends and
   # sends none further. Read them at http://localhost:8025.
   mail:

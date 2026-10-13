@@ -6,6 +6,9 @@ node_modules/
 vendor/
 dist/
 
+# What the host receives, assembled by scripts/assemble-release.mjs
+/build/
+
 # Local configuration and secrets: never committed
 .env
 .env.*
