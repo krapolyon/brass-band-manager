@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import { Icon } from './Icon.tsx';
 import './GigCard.css';
 
@@ -18,10 +19,27 @@ type Props = {
   time?: string;
   /** The pills: the status and the answer of the member, as Chips. */
   children?: ReactNode;
+  /** Figma: "Show new". A line above the card, for 15 days after the gig leaves the draft. */
+  showNew?: boolean;
+  /** The word of the chip of that line: "Nouveau". */
+  newLabel?: string;
+  /** Figma: "New text": "Proposé hier". */
+  newText?: string;
+  /** Figma: "Show answers". The four answers under the card, on the home screen. */
+  showAnswers?: boolean;
+  /** The nested Attendance/Choices, Small. */
+  answers?: ReactNode;
+  /**
+   * The screen of the gig. With it the card is its own link, and the answers
+   * stay outside the link; without it, the card is drawn inside the link of
+   * whoever lists it.
+   */
+  to?: string;
 };
 
-// Figma: Gig/Card. A gig in the list: its own card. It is drawn inside the
-// link that opens the gig, which gives it its name for screen readers.
+// Figma: Gig/Card. A gig in the list: its own card. The link that opens the
+// gig gives it its name for screen readers: the one it is drawn in, or its
+// own (`to`), which then covers the whole card but its answers.
 export function GigCard({
   playable = 'none',
   playableText,
@@ -33,9 +51,21 @@ export function GigCard({
   place,
   time,
   children,
+  showNew = false,
+  newLabel,
+  newText,
+  showAnswers = false,
+  answers,
+  to,
 }: Props) {
-  return (
-    <span className="GigCard" data-state={state}>
+  const card = (
+    <>
+      {showNew && (
+        <span className="GigCard-new textCaption">
+          <span className="GigCard-newChip">{newLabel}</span>
+          <span>{newText}</span>
+        </span>
+      )}
       {playable !== 'none' && (
         <span className="GigCard-playable textCaption" data-playable={playable}>
           <Icon name={playable === 'playable' ? 'Check' : 'Alert'} size={16} />
@@ -55,7 +85,23 @@ export function GigCard({
           {children && <span className="GigCard-pills">{children}</span>}
         </span>
       </span>
-    </span>
+    </>
+  );
+
+  if (!to) {
+    return (
+      <span className="GigCard" data-state={state}>
+        {card}
+      </span>
+    );
+  }
+  return (
+    <div className="GigCard" data-state={state}>
+      <Link className="GigCard-link" to={to}>
+        {card}
+      </Link>
+      {showAnswers && <div className="GigCard-answers">{answers}</div>}
+    </div>
   );
 }
 

@@ -384,6 +384,34 @@
     "members": "Fanfarons",
     "settings": "Réglages"
   },
+  "home": {
+    "greeting": "Salut {{nickname}} !",
+    "gigDay": "Y’a un plan aujourd’hui.",
+    "upToDate": "Tu es à jour, rien à répondre.",
+    "toAnswer": {
+      "count_one": "1 plan attend ta réponse",
+      "count_other": "{{count}} plans attendent ta réponse",
+      "new_one": "Dont 1 nouveau.",
+      "new_other": "Dont {{count}} nouveaux.",
+      "filter": "N’afficher que ceux-là"
+    },
+    "gigs": {
+      "title": "Plans à venir",
+      "titleFiltered": "Plans à répondre"
+    },
+    "hero": {
+      "today": "Aujourd’hui",
+      "meetingIn": "RDV {{when}}"
+    },
+    "latestSongs": {
+      "title": "Derniers morceaux au répertoire",
+      "close": "Fermer"
+    }
+  },
+  "gig": {
+    "new": "Nouveau",
+    "proposed": "Proposé {{when}}"
+  },
   "comingSoon": {
     "home": "L’accueil arrive bientôt. En attendant, va voir du côté des fanfarons.",
     "songs": "Les morceaux arrivent bientôt : enregistrements, partitions et tout le reste."

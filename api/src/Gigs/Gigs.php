@@ -23,7 +23,7 @@ final class Gigs
     // The columns are listed one by one on purpose: a column added to the
     // table is never sent by accident.
     private const COLUMNS = 'g.id, g.name, g.status, g.startsOn, g.endsOn, g.meetingTime, g.placeName, g.placeUrl,
-        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.notes, g.discordChannelId, g.remindedAt';
+        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
 
     private readonly Setlists $setlists;
 
@@ -395,6 +395,9 @@ final class Gigs
             'city' => $gig['city'],
             // Playable as soon as one slot is.
             'isPlayable' => array_filter($slots, fn (array $slot) => $slot['isPlayable']) !== [],
+            // When members first saw the gig: the home screen marks it as new
+            // for 15 days. Null for a gig that has only been a draft.
+            'proposedAt' => $gig['proposedAt'] === null ? null : str_replace(' ', 'T', (string) $gig['proposedAt']) . 'Z',
             'slots' => $slots,
         ];
     }

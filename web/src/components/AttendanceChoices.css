@@ -1,9 +1,6 @@
+/* Figma: 8 between the answers, in Small as in Large. */
 .AttendanceChoices {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spaceXs);
-}
-
-.AttendanceChoices[data-size="small"] {
-  gap: var(--spaceXxs);
 }

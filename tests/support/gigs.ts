@@ -17,6 +17,8 @@ type NewGig = {
   placeName?: string;
   city?: string;
   notes?: string;
+  /** How many days ago members first saw the gig. Today when left out; never for a draft. */
+  proposedDaysAgo?: number;
   /** The names of its slots; one slot without a name when left out. */
   slots?: string[];
 };
@@ -28,9 +30,10 @@ const text = (value: string | undefined) =>
 export function addGig(name: string, gig: NewGig = {}) {
   const gigId = Number(
     sql(
-      `INSERT INTO gig (name, status, startsOn, endsOn, meetingTime, placeName, city, notes)
+      `INSERT INTO gig (name, status, startsOn, endsOn, meetingTime, placeName, city, notes, proposedAt)
        VALUES (${text(name)}, '${gig.status ?? 'PROPOSED'}', '${gig.startsOn ?? day(30)}', ${text(gig.endsOn)},
-               ${text(gig.meetingTime)}, ${text(gig.placeName)}, ${text(gig.city)}, ${text(gig.notes)});
+               ${text(gig.meetingTime)}, ${text(gig.placeName)}, ${text(gig.city)}, ${text(gig.notes)},
+               ${gig.status === 'DRAFT' ? 'NULL' : `UTC_TIMESTAMP() - INTERVAL ${gig.proposedDaysAgo ?? 0} DAY`});
        SELECT LAST_INSERT_ID();`,
     ),
   );

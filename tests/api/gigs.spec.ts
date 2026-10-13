@@ -121,6 +121,7 @@ test.describe('who may do what', () => {
         'name',
         'placeName',
         'postalCode',
+        'proposedAt',
         'slots',
         'startsOn',
         'status',
@@ -482,6 +483,44 @@ test.describe('the life cycle of a gig', () => {
     expect((await reopened.json()).slots[0].answers).toMatchObject([
       { nickname: 'Zaza', answer: 'YES' },
     ]);
+  });
+
+  test('a gig is proposed the first time members see it, and never again', async ({
+    playwright,
+  }) => {
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const { gigId } = addGig('Carnaval', 'DRAFT');
+    const move = (status: string) => gigi.put(`/api/gigs/${gigId}/status`, { data: { status } });
+    const proposedAt = () => sql(`SELECT proposedAt FROM gig WHERE id = ${gigId}`);
+
+    // A draft was never proposed, even cancelled then reopened as a draft.
+    expect((await (await gigi.get(`/api/gigs/${gigId}`)).json()).proposedAt).toBeNull();
+    await move('CANCELLED');
+    await move('DRAFT');
+    expect(proposedAt()).toBe('NULL');
+
+    const proposed = await move('PROPOSED');
+    const first = (await proposed.json()).proposedAt;
+    expect(Math.abs(Date.now() - Date.parse(first))).toBeLessThan(60_000);
+    const listed = await (await zaza.get('/api/gigs')).json();
+    expect(listed).toMatchObject([{ id: gigId, proposedAt: first }]);
+
+    // Said twenty days ago: no later change of status moves it.
+    sql(`UPDATE gig SET proposedAt = UTC_TIMESTAMP() - INTERVAL 20 DAY WHERE id = ${gigId}`);
+    const before = proposedAt();
+    for (const status of [
+      'ACCEPTED',
+      'CANCELLED',
+      'PROPOSED',
+      'CONFIRMED',
+      'CANCELLED',
+      'DRAFT',
+      'PROPOSED',
+    ]) {
+      expect((await move(status)).status(), status).toBe(200);
+      expect(proposedAt(), status).toBe(before);
+    }
   });
 });
 

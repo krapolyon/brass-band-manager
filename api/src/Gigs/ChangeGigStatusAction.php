@@ -42,6 +42,11 @@ final class ChangeGigStatusAction
                 throw new ApiError(409, 'invalidTransition');
             }
             $this->database->update('gig', ['status' => $next->value, 'updatedByMemberId' => $me->id], ['id' => $gigId]);
+            // The first time members see the gig, and never again: a gig that
+            // is cancelled then reopened does not become new (model/gigs.md, "New").
+            if ($next !== GigStatus::DRAFT && $next !== GigStatus::CANCELLED) {
+                $this->database->executeStatement('UPDATE gig SET proposedAt = UTC_TIMESTAMP() WHERE id = ? AND proposedAt IS NULL', [$gigId]);
+            }
             // A gig that is no longer confirmed hides its setlists: none stays live.
             if ($next !== GigStatus::CONFIRMED) {
                 $this->setlists->endLiveOfGig($gigId);

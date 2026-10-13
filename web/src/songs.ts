@@ -28,6 +28,8 @@ export type SongSummary = {
   status: SongStatus;
   /** The day the arrangement last changed, "2026-09-14". */
   versionOn: string | null;
+  /** An instant in UTC: when the song was created. */
+  createdAt: string;
   coverUrl: string | null;
   partCount: number;
   /** The weight of each file in bytes, null when the song has none. ownPart: the part of the member's instrument. */

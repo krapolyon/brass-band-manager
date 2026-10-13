@@ -23,7 +23,7 @@ final class Songs
     // table is never sent by accident.
     private const COLUMNS = 's.id, s.name, s.originalTitle, s.originalArtist, s.bpm, s.status, s.versionOn,
         s.versionNote, s.clipUrl, s.clipThumbnailPath, s.discordChannelId,
-        s.coverPath, s.museScorePath, s.midiPath, s.musicXmlPath, s.audioPath';
+        s.coverPath, s.museScorePath, s.midiPath, s.musicXmlPath, s.audioPath, s.createdAt';
 
     // The levels of the band on each song: the average of the current
     // members who answered, and how many did.
@@ -183,6 +183,8 @@ final class Songs
             'bpm' => $song['bpm'] === null ? null : (int) $song['bpm'],
             'status' => $song['status'],
             'versionOn' => $song['versionOn'],
+            // The home screen shows the songs of the repertoire created last.
+            'createdAt' => str_replace(' ', 'T', (string) $song['createdAt']) . 'Z',
             'coverUrl' => $this->files->view("{$address}/cover", $song['coverPath'])['url'] ?? null,
             'partCount' => (int) $song['partCount'],
             // The weight of each file, null when the song has none: what

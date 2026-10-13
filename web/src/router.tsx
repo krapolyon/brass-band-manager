@@ -9,12 +9,12 @@ import { BandRemindersScreen } from './screens/band/BandRemindersScreen.tsx';
 import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
 import { BandSettingsScreen } from './screens/band/BandSettingsScreen.tsx';
 import { BandSpellingsScreen } from './screens/band/BandSpellingsScreen.tsx';
-import { ComingSoonScreen } from './screens/ComingSoonScreen.tsx';
 import { GigFormScreen } from './screens/gigs/GigFormScreen.tsx';
 import { GigsScreen } from './screens/gigs/GigsScreen.tsx';
 import { LiveSetlistScreen } from './screens/gigs/LiveSetlistScreen.tsx';
 import { SetlistFormScreen } from './screens/gigs/SetlistFormScreen.tsx';
 import { WhoComesScreen } from './screens/gigs/WhoComesScreen.tsx';
+import { HomeScreen } from './screens/home/HomeScreen.tsx';
 import { BandScreen } from './screens/install/BandScreen.tsx';
 import { DoneScreen } from './screens/install/DoneScreen.tsx';
 import { InstallDraftProvider } from './screens/install/InstallDraft.tsx';
@@ -43,7 +43,7 @@ export const router = createBrowserRouter([
     // The app itself: for signed-in members.
     element: <MembersOnly />,
     children: [
-      { path: '/', element: <ComingSoonScreen tab="home" /> },
+      { path: '/', element: <HomeScreen /> },
       { path: '/songs', element: <SongsScreen /> },
       { path: '/songs/new', element: <ImportScreen /> },
       { path: '/songs/manage', element: <ManageSongsScreen /> },
