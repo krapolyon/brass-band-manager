@@ -1,0 +1,86 @@
+# Puts on the "release" branch, which the host copies to the site members
+# use, exactly what a build of "beta" holds. Nothing is built again.
+# Started by hand only. See docs/architecture.md, "Deployment".
+#
+# Going back to an older build is the same thing: give its commit. In both
+# cases "release" receives a new commit; its history is never rewritten.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "release" to put this build on the site members use'
+        required: true
+        type: string
+      build:
+        description: 'A commit of beta to release (empty: the latest build)'
+        required: false
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check the confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "release" ]; then
+            echo "::error::Not confirmed: type \"release\" in the confirmation field."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: beta
+          fetch-depth: 0
+
+      - name: Push to release
+        env:
+          BUILD: ${{ inputs.build }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          build=$(git rev-parse --verify --quiet "${BUILD:-HEAD}^{commit}") || {
+            echo "::error::This commit does not exist."
+            exit 1
+          }
+          # Only a build: a commit of beta, never one of main or of a branch.
+          if ! git merge-base --is-ancestor "$build" HEAD; then
+            echo "::error::$build is not a build of beta."
+            exit 1
+          fi
+          # And one that beta.yml made: a branch created by hand from main
+          # would otherwise bring the commits of the source with it.
+          case "$(git log -1 --format=%s "$build")" in
+            "Build of main at "*) ;;
+            *)
+              echo "::error::$build is not a build made by the Build beta action."
+              exit 1
+              ;;
+          esac
+          tree=$(git rev-parse "$build^{tree}")
+
+          parent=""
+          if git fetch origin release; then
+            parent=$(git rev-parse FETCH_HEAD)
+          fi
+          if [ -n "$parent" ] && [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
+            echo "release already holds this build: left as it is."
+            exit 0
+          fi
+
+          # A new commit on top of release, holding the tree of the build.
+          commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "Release of the beta build $build" -m "$(git log -1 --format=%s "$build")")
+          git push origin "$commit:refs/heads/release"
+          echo "release now holds the beta build $build" >> "$GITHUB_STEP_SUMMARY"

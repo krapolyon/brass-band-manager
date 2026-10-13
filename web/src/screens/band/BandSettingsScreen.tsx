@@ -9,8 +9,10 @@ import { NavRow } from '../../components/NavRow.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { useCostumes } from '../../gigs.ts';
 import { useSections } from '../../members.ts';
+import { useCanRunMigrations, usePendingMigrations } from '../../migrations.ts';
 import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
+import { PendingMigrationsNotice } from './BandMigrationsScreen.tsx';
 import '../settings/settings.css';
 
 /** Whether the signed-in member may change the settings of the band. Null while it is not known. */
@@ -60,6 +62,8 @@ export function BandSettingsScreen() {
 
   const costumeCount = useCostumes().data?.length ?? 0;
   const band = useGigReminders(canManage === true).data;
+  const canRunMigrations = useCanRunMigrations() === true;
+  const pendingMigrations = usePendingMigrations().data;
 
   if (canManage === null) return null;
   if (!canManage && !canManageSongs) return <AdminsOnlyScreen />;
@@ -112,6 +116,7 @@ export function BandSettingsScreen() {
       subtitle={t('band.lead')}
     >
       <BandMention />
+      <PendingMigrationsNotice />
       <Sheet>
         <div className="settings-rows">
           <NavRow
@@ -142,6 +147,19 @@ export function BandSettingsScreen() {
             detail={remindersDetail}
             to="/band/reminders"
           />
+          {/* Not drawn in Figma: deduced (docs/architecture.md, "Deployment"). */}
+          {canRunMigrations && (
+            <NavRow
+              icon="Settings"
+              label={t('band.migrations.title')}
+              detail={
+                pendingMigrations
+                  ? t('band.migrations.detail', { count: pendingMigrations.length })
+                  : undefined
+              }
+              to="/band/migrations"
+            />
+          )}
         </div>
       </Sheet>
       <Sheet title={t('band.connections')}>

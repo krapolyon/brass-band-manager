@@ -34,7 +34,7 @@ Guiding principle: what is frozen must not age. The app will be changed rarely o
 - **Database**: MySQL, evolved through numbered SQL scripts.
 - **Hosting**: OVH shared hosting. OVH maintains PHP and keeps old versions available for a long time ([PHP versions at OVH](https://docs.ovhcloud.com/fr/guides/web-cloud/web-hosting/web-hosting-main-info)).
 - **Notifications**: web push, with reminders triggered by OVH's scheduled tasks.
-- **Deployment**: OVH's Git integration deploys a dedicated `release` branch. A GitHub Action builds the front end, installs the PHP dependencies and pushes the result to `release`. Nothing is built on the host, and `main` is never deployed directly.
+- **Deployment**: OVH's Git integration deploys two dedicated branches, each to its own site: `beta`, to try a version out, and `release`, for the members. A GitHub Action builds the front end, installs the PHP dependencies and pushes the result to `beta` on each merge into `main`; a second one, started by hand, puts on `release` exactly what `beta` holds. Nothing is built on the host, and `main` is never deployed directly.
 - **End-to-end tests**: Playwright.
 
 **Interface**: no component library such as MUI, which would make the app look like many others. Components are written for the app, in plain CSS, with variables for colours and typography. The same variables let other bands restyle it. A behaviour-only library (dialogs, menus, accessibility, no styling) may be added to the base layer.
@@ -43,9 +43,9 @@ Guiding principle: what is frozen must not age. The app will be changed rarely o
 
 What shared hosting rules out: real time and permanent background processes. No planned feature needs them.
 
-Without SSH, migrations run through a protected admin page (admin role, explicit confirmation) or through phpMyAdmin. The app is served from a subdomain (e.g. `app.<band-domain>`) next to the existing website.
+Without SSH, migrations run through a protected admin page (admin role, password asked again, explicit confirmation), with phpMyAdmin as the last resort. The app is served from a subdomain (e.g. `app.<band-domain>`) next to the existing website.
 
-What the OVH Perso plan gives, as read on OVH's product page on 2026-10-12: 5 MySQL databases of 1 GB, 15 sites, 100 GB of storage, 10 email addresses; PHP up to 8.4 in PHP-FPM (`memory_limit` 512M, `max_execution_time` 165 s); PHP `mail()` limited to 100 sendings per hour; scheduled tasks once per hour at most, each running 60 minutes at most; no SSH; a Git integration for GitHub only, one repository, deployed by a webhook on push, from a branch of one's choice, into a target folder that starts empty, with no build step.
+What the OVH Perso plan gives, as read on OVH's product page on 2026-10-12: 5 MySQL databases of 1 GB, 15 sites, 100 GB of storage, 10 email addresses; PHP up to 8.4 in PHP-FPM (`memory_limit` 512M, `max_execution_time` 165 s); PHP `mail()` limited to 100 sendings per hour; scheduled tasks once per hour at most, each running 60 minutes at most; no SSH; a Git integration for GitHub only, one repository, deployed by a webhook on push, from a branch of one's choice, into a target folder that starts empty, with no build step. Read on the host on 2026-10-13: PHP 8.4.22, MySQL 8.4, `upload_max_filesize` 128M and `post_max_size` 130M, one Git association per site, and a mail server (SMTP) on ports 465 and 587.
 
 ## Sign-in and data protection
 
@@ -111,7 +111,7 @@ They are not built in the first version, but the model and the design reserve a 
 - **Rehearsals**: songs to work on.
 - **Song statistics**.
 - **Quotes**: quotes for paid gigs.
-- **Export and import of the data of an instance**, to move a band from one install to another, or to prepare it locally and send it to the server (scoped on 2026-10-13, built later). For the admin, in Band settings: a zip in a fixed, versioned format (“format 1”), by feature (general settings, members, songs, gigs), carrying the database rows and the files of `storage/`. Gigs need members and settings; songs need settings. Passwords travel as their hashes; sessions and push subscriptions never travel. The admin who imports must be an admin in the file, or the import is refused; afterwards they sign in again. A file too large for the browser (about 250 MB at most) is dropped by FTP into an `import` folder of the hosting, where the screen finds it. The format is written in `model/export-import.md` (format 1).
+- **Export and import of the data of an instance**, to move a band from one install to another, or to prepare it locally and send it to the server (scoped on 2026-10-13, built later). For the admin, in Band settings: a zip in a fixed, versioned format (“format 1”), by feature (general settings, members, songs, gigs), carrying the database rows and the files of `storage/`. Gigs need members and settings; songs need settings. Passwords travel as their hashes; sessions and push subscriptions never travel. The admin who imports must be an admin in the file, or the import is refused; afterwards they sign in again. A file too large for the browser is dropped by FTP into an `import` folder of the hosting, where the screen finds it. On this hosting the browser sends 128 MB at most (`upload_max_filesize` 128M, `post_max_size` 130M, read on 2026-10-13; the scoping first said about 250 MB): above that, the FTP folder is the way. The format is written in `model/export-import.md` (format 1).
 
 ### Opening the code
 
@@ -201,15 +201,15 @@ Skills first, agents later.
 
 | Point | To settle during |
 | --- | --- |
-| Outbound HTTPS calls from PHP (web push, Discord API) work on OVH Perso: test with a throwaway script before building on them | Base |
-| The existing band website does not already use the plan's single Git deployment slot | Base |
+| ~~Outbound HTTPS calls from PHP work on OVH Perso~~ Verified on 2026-10-13: PHP reaches the push services of Apple, Google and Mozilla, Discord, YouTube and the OpenStreetMap tiles over HTTPS | Done |
+| ~~The existing band website does not already use the plan's single Git deployment slot~~ Verified on 2026-10-13: the existing website does not use it, and the plan accepts one Git association per site, so beta and production each have theirs | Done |
 | Whether a 90-day session really holds on a PWA installed on an iPhone | Base |
 | Push notifications on iPhone, once the app is on the home screen: they arrive (prototype of 2026-10-13, notifications sent from Node on a computer); a notification cannot be replaced or closed by the app. Still to test: sending from PHP on the hosting, the delay, a watch, a phone locked for 30 minutes, Android | Gigs |
 | The vector tiles of the OpenStreetMap Foundation have no service level: the policy asks for the credit, a valid Referer and no bulk download. Opening a gig sends the address of the member to its servers, which the privacy notice says. If the service becomes unusable, the instance setting points to another source of the same schema | Gigs |
 | Dictation on the real repertoire: short titles and titles spelled letter by letter, once the band has used it a few times (prototype of 2026-10-13: good on an iPhone, in the installed app) | Gigs |
 | The live screen on a real phone: the screen kept on (Screen Wake Lock), scrolling with a finger, two managers starting two setlists at once | Gigs |
 | Many mail providers no longer accept mail sent by PHP `mail()` unless the domain has SPF and DKIM set up (not verified). The app sends through the mailbox of the domain, by SMTP: check that its emails arrive, and what the domain needs | Notifications |
-| MySQL treats table names as case-sensitive on OVH (Linux) but not on a Mac. With camelCase names, the development database must behave like OVH's | Base |
+| MySQL treats table names as case-sensitive on OVH (Linux) but not on a Mac. With camelCase names, the development database must behave like OVH's. The host runs MySQL 8.4 (read on 2026-10-13), as the local stack does | Base |
 | Command-line MuseScore conversion on the oldest files | Prototype |
 | Smoothness of a long scrolling score on a phone | Prototype |
 | Repeats, codas and open solos: controls to follow the band live | Prototype |

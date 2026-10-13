@@ -3,6 +3,13 @@
 // Configuration of the app ON THE HOST. Copy this file to config.php there and
 // fill it in. config.php is never committed and never copied by a deployment.
 // (For the local Docker stack, the file to copy is config.local.php.)
+//
+// WHERE IT GOES: in the data folder of the app, beside the deployed folder and
+// named after it, followed by "-data". For an app deployed in
+// /home/band/app, this file is /home/band/app-data/config.php, and the
+// uploaded files are in /home/band/app-data/storage/ (create that folder too,
+// empty). A deployment never writes there. See docs/architecture.md,
+// "Deployment".
 
 return [
     'database' => [
@@ -39,6 +46,14 @@ return [
         'user' => '',
         'password' => '',
     ],
+
+    // Who this instance may write to. Leave it empty on the instance the band
+    // uses: everyone receives their emails and notifications. On an instance
+    // used to try a version out with a copy of the real data, list the email
+    // addresses of the members who test: an email or a notification for
+    // anyone else is not sent, and the log says that one was put aside,
+    // without saying to whom.
+    'allowedRecipients' => [],
 
     // The time zone of the band, as PHP names it. The hour of the automatic
     // reminders of gigs is read on this clock. Left empty, the clock is the

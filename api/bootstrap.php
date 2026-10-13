@@ -8,7 +8,22 @@ declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
 
-$config = require __DIR__ . '/config.php';
+// Where config.php and storage/ are. On a host, a deployment replaces the
+// folder of the app, so what must survive it lives beside that folder, in the
+// folder of the same name followed by "-data": the app in /home/band/app, its
+// data in /home/band/app-data. When that folder exists, both are read there,
+// never one there and the other here. Without it (the local stack, or a host
+// where nothing replaces the folder), they are where they always were:
+// api/config.php and storage/.
+$appFolder = dirname(__DIR__);
+$dataFolder = dirname($appFolder) . '/' . basename($appFolder) . '-data';
+$hasDataFolder = is_dir($dataFolder);
+
+$config = require ($hasDataFolder ? $dataFolder : __DIR__) . '/config.php';
+
+// Not settings of config.php: where the files of the app are on this server.
+$config['storageFolder'] = ($hasDataFolder ? $dataFolder : $appFolder) . '/storage';
+$config['migrationsFolder'] = $appFolder . '/database/migrations';
 
 // The clock of the app is the one of the band: the hour of the reminders of
 // gigs, and the day a gig is over, are read on it.

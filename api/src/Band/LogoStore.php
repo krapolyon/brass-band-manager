@@ -8,6 +8,7 @@ use BrassBand\Http\FieldErrors;
 use BrassBand\Storage\Files;
 use BrassBand\Storage\Images;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 
 // The logo of the band and the icons of the installed app: checking what is
 // received, keeping the files, finding them again. Rules: model/band.md.
@@ -134,7 +135,12 @@ final class LogoStore
     // The path of the logo of the band, or null when it has none.
     public function current(): ?string
     {
-        $path = $this->database->fetchOne('SELECT logoPath FROM band WHERE id = 1');
+        try {
+            $path = $this->database->fetchOne('SELECT logoPath FROM band WHERE id = 1');
+        } catch (TableNotFoundException) {
+            // An empty database, before the install: no band, no logo.
+            return null;
+        }
 
         return is_string($path) && $path !== '' ? $path : null;
     }

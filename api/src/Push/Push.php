@@ -6,6 +6,7 @@ namespace BrassBand\Push;
 
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\ApiError;
+use BrassBand\Mail\AllowedRecipients;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
@@ -34,6 +35,7 @@ final class Push
         private readonly Connection $database,
         private readonly ?string $publicKey,
         private readonly ?PushTransport $transport,
+        private readonly AllowedRecipients $recipients,
     ) {
     }
 
@@ -101,7 +103,7 @@ final class Push
             return;
         }
         $devices = $this->database->fetchAllAssociative(
-            'SELECT p.endpoint, p.p256dhKey, p.authKey, m.id AS memberId, m.language
+            'SELECT p.endpoint, p.p256dhKey, p.authKey, m.id AS memberId, m.language, m.email
              FROM pushSubscription p
              JOIN memberSession s ON s.id = p.memberSessionId AND s.expiresAt > UTC_TIMESTAMP()
              JOIN member m ON m.id = s.memberId
@@ -112,7 +114,13 @@ final class Push
 
         $messages = [];
         $written = [];
+        $putAside = 0;
         foreach ($devices as $device) {
+            // An instance that only writes to some members notifies nobody else.
+            if (!$this->recipients->allows((string) $device['email'])) {
+                $putAside++;
+                continue;
+            }
             $memberId = (int) $device['memberId'];
             $written[$memberId] ??= [$notification($memberId, (string) $device['language'])];
             $payload = $written[$memberId][0];
@@ -127,6 +135,7 @@ final class Push
                 'options' => ['TTL' => $ttl, 'urgency' => 'high', ...($topic === null ? [] : ['topic' => $topic])],
             ];
         }
+        AllowedRecipients::logPutAside('notification', $putAside);
         if ($messages === []) {
             return;
         }

@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.19 — 2026-10-13 · No change to the tables · Decided with the deployment: the permission to run the migrations, for the admin (Band v1.7); on an empty database, the install creates the tables once the install key is accepted
 > v1.18 — 2026-10-13 · No change to the tables · A device that accepted notifications also receives the live setlist of a gig (Gigs v1.3)
 > v1.17 — 2026-10-13 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`, `008_gigs.sql` · Push subscriptions; what leaving changes for gigs
 
@@ -70,7 +71,7 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
   2. choose the sections and instruments of the band from the starting library (entry 2), which can be adjusted and extended on the spot. The instruments the library marks as preselected are ticked when the step opens. At least one instrument has to be kept: the first member needs one;
   3. create the first member: email, password, last name, first name, nickname and instrument, chosen among the instruments kept at step 2. This member is `ACTIVE` and holds the `ADMIN` role.
 
-  Nothing is saved before the last step is confirmed: an install that is abandoned leaves an empty database. Confirming the last step signs the first member in on the device used, as a sign-in would.
+  Nothing is saved before the last step is confirmed: an install that is abandoned leaves no band and no member. On a database that has no tables yet (a host, the first time), accepting the install key creates them first, by applying the migrations (Band domain, `band.md`, "Updating the database"): the person who installs starts from an empty database and does one thing only. A wrong key creates nothing. Confirming the last step signs the first member in on the device used, as a sign-in would.
 
   Install also asks for the **install key**: a text written in the configuration of the server by the person who set the app up. Without it, whoever reached a new instance first could make themself its admin.
 
@@ -96,6 +97,7 @@ A role is a named set of **permissions**. The code never asks "is this member a 
 | Manage roles | `ADMIN` |
 | Manage sections and instruments | `ADMIN` |
 | Manage band settings | `ADMIN` |
+| Run the migrations (update the database, `band.md`) | `ADMIN` |
 | Manage songs | `SONG_MANAGER`, `ADMIN` |
 | Manage gigs | `GIG_MANAGER`, `ADMIN`; and, for one gig, its organisers (`model/gigs.md`) |
 | Manage costumes | `ADMIN` |

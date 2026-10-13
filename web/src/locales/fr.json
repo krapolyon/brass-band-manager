@@ -53,7 +53,8 @@
         "hide": "Masquer la clé"
       },
       "start": "C’est parti",
-      "checking": "Vérification de la clé…"
+      "checking": "Vérification de la clé…",
+      "databaseFailed": "La clé est la bonne, mais la base de données n’a pas pu être préparée. Regarde le journal du serveur, répare la base, puis réessaie."
     },
     "alreadyInstalled": {
       "title": "L’app est déjà installée",
@@ -766,6 +767,37 @@
       "errors": {
         "days": "Un nombre de 1 à 90.",
         "order": "Le second rappel vient après le premier : moins de jours avant le plan."
+      }
+    },
+    "migrations": {
+      "title": "Mise à jour de la base",
+      "lead": "Après une nouvelle version de l’app, la base de données doit parfois suivre. Réservé aux admins.",
+      "detail_zero": "La base est à jour",
+      "detail_one": "1 mise à jour en attente",
+      "detail_other": "{{count}} mises à jour en attente",
+      "notice_one": "Une mise à jour de la base attend. Tant qu’elle n’est pas appliquée, des écrans peuvent mal fonctionner.",
+      "notice_other": "{{count}} mises à jour de la base attendent. Tant qu’elles ne sont pas appliquées, des écrans peuvent mal fonctionner.",
+      "open": "Voir les mises à jour",
+      "upToDate": "La base est à jour. Rien à faire ici.",
+      "backup": "Sauvegarde la base avant de continuer : une mise à jour ne s’annule pas.",
+      "pending_one": "En attente (1)",
+      "pending_other": "En attente ({{count}})",
+      "apply": "Appliquer les mises à jour",
+      "applied": "Appliquées",
+      "done_one": "La mise à jour est appliquée. La base est à jour.",
+      "done_other": "Les {{count}} mises à jour sont appliquées. La base est à jour.",
+      "failed": "« {{name}} » a échoué. Ce qui a été appliqué avant reste en place. Répare la base à la main avant de réessayer.",
+      "answer": "Réponse de la base",
+      "running": "Une mise à jour est déjà en cours. Réessaie dans un instant.",
+      "passwordMissing": "Il manque ton mot de passe.",
+      "confirm": {
+        "title": "Appliquer les mises à jour ?",
+        "text_one": "Une mise à jour va modifier la base de données. Ça ne s’annule pas. Confirme avec ton mot de passe.",
+        "text_other": "{{count}} mises à jour vont modifier la base de données. Ça ne s’annule pas. Confirme avec ton mot de passe.",
+        "password": "Mot de passe",
+        "submit": "Appliquer",
+        "applying": "Mise à jour en cours…",
+        "cancel": "Annuler"
       }
     }
   },

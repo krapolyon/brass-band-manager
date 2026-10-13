@@ -63,7 +63,14 @@ export function WelcomeScreen() {
 
   const isUnreachable =
     status.isError || (check.error instanceof ApiError && check.error.status === 0);
-  const isKeyWrong = check.isError && !isUnreachable;
+  // The key was right, and the tables could not be created (an empty
+  // database gets them here): not a matter of key.
+  const databaseError =
+    check.error instanceof ApiError &&
+    (check.error.error === 'migrationFailed' || check.error.error === 'migrationsRunning')
+      ? check.error.error
+      : null;
+  const isKeyWrong = check.isError && !isUnreachable && !databaseError;
   const keyError = isKeyMissing
     ? t('install.welcome.key.missing')
     : isKeyWrong
@@ -93,6 +100,13 @@ export function WelcomeScreen() {
         }
       >
         {isUnreachable && <Message kind="danger">{t('errors.unreachable')}</Message>}
+        {databaseError && (
+          <Message kind="danger">
+            {databaseError === 'migrationFailed'
+              ? t('install.welcome.databaseFailed')
+              : t('band.migrations.running')}
+          </Message>
+        )}
         <Sheet>
           <ListRow
             label={t('install.welcome.steps.band.label')}

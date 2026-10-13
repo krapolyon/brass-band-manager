@@ -42,7 +42,7 @@ These are decided when a feature is modelled and designed, not added after it wo
 | Sign-in | Email and password, long server-side sessions that can be revoked | No magic link |
 | Tests | Playwright, end to end | Each feature ships with its tests. The domain in progress while building, everything before a merge |
 | Code checks | TypeScript, Biome, PHPStan | `npm run check` passes before a commit |
-| Deploy | OVH Git deployment of a `release` branch built by a GitHub Action | No build step on the host. Never deploy from `main` directly |
+| Deploy | OVH Git deployment of two branches filled by GitHub Actions: `beta` (built from `main`) and `release` (what `beta` holds, promoted by hand) | No build step on the host. Never deploy from `main` directly. `config.php` and `storage/` live beside the deployed folder, in `<folder>-data` |
 
 The reasons behind these choices are in the scoping document, `docs/scoping.md`. A choice recorded there is settled: if one looks wrong, say so once with the reason, and do not work around it.
 
@@ -102,12 +102,13 @@ Features are built one at a time, in the order set by the scoping document.
 | Folder | What it holds |
 |---|---|
 | `web/` | The front: `src/` (React, TypeScript), `src/locales/` (translations), `public/` (files copied as they are). Built to `web/dist/` |
-| `api/` | The back: `public/index.php` (single entry point), `routes.php` (every address), `src/` (classes), `config.php` (server configuration, never committed) |
+| `api/` | The back: `public/index.php` (single entry point), `routes.php` (every address), `src/` (classes), `tasks/` (scripts for the scheduled tasks of the host), `config.php` (server configuration, never committed) |
 | `database/` | `migrations/` (numbered SQL scripts) and `migrate.php`, which applies them |
 | `tests/` | Playwright end-to-end tests |
 | `storage/` | Files uploaded by members (the logo, later the songs). Never committed, never served directly: a file leaves it through an action of the API |
 | `docker/`, `docker-compose.yml` | The local stand-in for the host |
 | `scripts/` | Project tooling, `setup.mjs` first |
+| `deploy/`, `.github/workflows/` | What only the host needs (its `.htaccess` files, the relay of `/api`), and the two actions that fill `beta` and `release` |
 | `model/`, `docs/`, `skills/` | The sources of truth above |
 
 ## Commands
@@ -118,14 +119,23 @@ Features are built one at a time, in the order set by the scoping document.
 | Start / stop the local stack | `npm run stack:up` / `npm run stack:down`. The app is at http://localhost:8080 |
 | Work on the front | `npm run dev`, then http://localhost:5173 |
 | Build the front | `npm run build`. Needed before testing a change of the front |
-| Test everything | `npm test` (about 25 minutes). Runs against the test server (port 8081) and its own database, never the data of 8080 |
+| Test everything | `npm test` (about 25 minutes). Runs against the test server (port 8081) and its own database, never the data of 8080. After a change of `docker-compose.yml`, `npm run stack:up` first |
 | Test one domain | `npx playwright test tests/gigs.spec.ts --project=android` (projects: `api`, `android`, `iphone`). Run `npm run test:prepare` first after a new migration |
 | Check the code | `npm run check` (Biome, TypeScript, PHPStan). `npm run format` fixes the layout |
 | Apply the migrations | `npm run db:migrate`, on the local database only |
 | Empty the local database | `npm run db:reset`. Deletes local data: ask first |
 | Add a PHP library | `docker compose run --rm php composer require vendor/name:1.2.3` |
 
-Deployment is not set up yet. The hosting is OVH Perso: there is no command line on the host.
+Deployment (details in `docs/architecture.md`, "Deployment"). The hosting is OVH Perso: there is no command line on the host, and each of these is asked before it is done.
+
+| To | Do |
+|---|---|
+| Put a version on beta | Merge into `main`: the "Build beta" action checks, builds and pushes the result to the `beta` branch. Or start it by hand: `gh workflow run beta.yml` |
+| Look at what the host would receive | `npm run build`, then `npm run release:assemble`: the tree is in `build/release/` |
+| Put on production what beta holds | `gh workflow run release.yml -f confirm=release` (or "Run workflow" on GitHub). Nothing is built again |
+| Go back to an older build | `gh workflow run release.yml -f confirm=release -f build=<commit of beta>`: a new commit on `release`, never a forced push |
+| Apply the migrations on a host | In the app, as an admin: Band settings, "Mise à jour de la base". Beta first, and a backup of the production database before |
+| Never | Create `beta` or `release` by hand, push to them, deploy from `main`, or force a push on either: the two actions create and fill them |
 
 ## Shared layer
 
@@ -154,7 +164,4 @@ A route is public only by decision: the list is short and written at the top of 
 
 ## Still to fill in
 
-- Deployment commands.
-- GitHub Action that builds the front end, installs `vendor/` and pushes to `release`.
-- How a migration is run on the live database without SSH.
-- The MySQL version of the host, to keep `docker-compose.yml` equal to it (MySQL 8.4 for now). PHP is 8.4 on the host, as in `docker/Dockerfile`.
+- What `docs/architecture.md` lists under "To check on the real host", once the host has received its first build.

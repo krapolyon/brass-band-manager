@@ -11,6 +11,7 @@
     "setup": "node scripts/setup.mjs",
     "dev": "vite",
     "build": "tsc && vite build",
+    "release:assemble": "node scripts/assemble-release.mjs",
     "stack:up": "docker compose up -d --build --wait",
     "stack:down": "docker compose down",
     "stack:logs": "docker compose logs -f web",

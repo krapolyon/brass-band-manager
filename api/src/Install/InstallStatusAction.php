@@ -6,6 +6,7 @@ namespace BrassBand\Install;
 
 use BrassBand\Http\Json;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -41,6 +42,11 @@ final class InstallStatusAction
     /** @phpstan-impure */
     public static function isInstalled(Connection $database): bool
     {
-        return (int) $database->fetchOne('SELECT COUNT(*) FROM member') > 0;
+        try {
+            return (int) $database->fetchOne('SELECT COUNT(*) FROM member') > 0;
+        } catch (TableNotFoundException) {
+            // An empty database: the install applies the migrations first.
+            return false;
+        }
     }
 }

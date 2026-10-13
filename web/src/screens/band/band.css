@@ -146,3 +146,9 @@
   -webkit-touch-callout: none;
   touch-action: manipulation;
 }
+
+/* What MySQL answered to a migration that failed: long words and no spaces. */
+.band-migrationAnswer {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

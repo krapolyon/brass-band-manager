@@ -91,6 +91,7 @@ test('install creates the band, its sections and instruments, and the admin', as
     'manageCostumes',
     'manageSetlists',
     'manageQuotes',
+    'runMigrations',
   ]);
 
   expect(sql('SELECT name, defaultLanguage FROM band')).toBe(

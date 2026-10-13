@@ -1,0 +1,23 @@
+# The only folder of the deployed tree a browser reaches: the built front,
+# and the relay of the API in api/. Written before the rules of
+# web/public/.htaccess by scripts/assemble-release.mjs.
+Require all granted
+
+RewriteEngine On
+
+# The host serves this folder as the root of the app. Reached under /web/, it
+# is being read through a site that serves the whole deployed folder, which
+# exists for the host's own needs (the Git deployment of OVH): refused.
+RewriteCond %{REQUEST_URI} ^/+web/
+RewriteRule ^ - [F]
+
+# Everything goes over HTTPS. A host says in more than one way that a request
+# arrived encrypted, depending on what stands in front of Apache: the request
+# is sent to HTTPS only when none of them says so.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{ENV:HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteCond %{SERVER_PORT} !=443
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Below: web/public/.htaccess, as on the local stack.

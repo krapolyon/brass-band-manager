@@ -35,6 +35,10 @@ return [
         'password' => '',
     ],
 
+    // A fourth local server (port 8083) only writes to some addresses, like
+    // an instance used to try a version out on a copy of the real data.
+    ...(getenv('BRASS_BAND_ALLOWED_RECIPIENTS') ? ['allowedRecipients' => explode(',', getenv('BRASS_BAND_ALLOWED_RECIPIENTS'))] : []),
+
     // Where the thumbnail of a clip is fetched. Left out, it is YouTube. The
     // test server fetches a file of its own instead (docker-compose.yml).
     ...(getenv('BRASS_BAND_CLIP_THUMBNAIL_URL') ? ['clipThumbnailUrls' => [getenv('BRASS_BAND_CLIP_THUMBNAIL_URL')]] : []),
