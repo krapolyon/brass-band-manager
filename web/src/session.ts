@@ -26,9 +26,8 @@ export type Me = Appearance & {
   permissions: string[];
 };
 
-// Where a member lands once signed in. The home screen is not designed yet:
-// until it is, the directory is the first thing worth seeing.
-export const HOME = '/members';
+// Where a member lands once signed in: the home screen.
+export const HOME = '/';
 
 /** The signed-in member; null when nobody is signed in on this device. */
 export function useMe() {

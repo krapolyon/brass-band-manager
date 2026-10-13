@@ -32,7 +32,7 @@ async function signIn(page: Page, who = admin.email, password = admin.password) 
   await page.getByLabel('Adresse email').fill(who);
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
-  await expect(page).toHaveURL('/members');
+  await expect(page).toHaveURL('/');
 }
 
 /** Signs a member in and opens the home screen. */

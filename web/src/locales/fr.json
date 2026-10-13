@@ -412,10 +412,6 @@
     "new": "Nouveau",
     "proposed": "Proposé {{when}}"
   },
-  "comingSoon": {
-    "home": "L’accueil arrive bientôt. En attendant, va voir du côté des fanfarons.",
-    "songs": "Les morceaux arrivent bientôt : enregistrements, partitions et tout le reste."
-  },
   "directory": {
     "all_one": "1 fanfaron. Touche une tête pour l’appeler, lui écrire ou passer la voir.",
     "all_other": "{{count}} fanfarons, de A à Z. Touche une tête pour l’appeler, lui écrire ou passer la voir.",

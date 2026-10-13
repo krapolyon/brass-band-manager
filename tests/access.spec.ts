@@ -38,10 +38,10 @@ test.describe('sign-in', () => {
 
     await signIn(page, admin.email, admin.password);
 
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
     // The device is signed in for good: the app still knows it after a reload.
     await page.reload();
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
   });
 
   test('every refusal says the same thing, and keeps what was typed', async ({ page }) => {
@@ -71,17 +71,17 @@ test.describe('sign-in', () => {
 
     await password(page).press('Enter');
 
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
   });
 
   test('a member already signed in has nothing to do on the sign-in screen', async ({ page }) => {
     await signIn(page, admin.email, admin.password);
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
 
     await page.goto('/sign-in');
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
     await page.goto('/forgot-password');
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
   });
 
   test('when the server does not answer, the screen says so and not that the password is wrong', async ({
@@ -141,7 +141,7 @@ test.describe('accessibility before sign-in', () => {
     await expect(root(page)).toHaveAttribute('data-contrast', 'more');
 
     await signIn(page, admin.email, admin.password);
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
 
     // The account of Jibé has no option on.
     await expect(root(page)).not.toHaveAttribute('data-contrast', 'more');
@@ -175,7 +175,7 @@ test.describe('accessibility before sign-in', () => {
     await email(page).fill(admin.email);
     await password(page).fill(admin.password);
     await page.getByRole('button', { name: 'Se connecter' }).click();
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
   });
 });
 
@@ -217,7 +217,7 @@ test.describe('forgotten password', () => {
 
     await field.fill('un-tout-nouveau-mot-de-passe');
     await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();
-    await expect(page).toHaveURL('/members');
+    await expect(page).toHaveURL('/');
     expect(asked.filter((url) => url.includes(token))).toEqual([]);
 
     // The link worked once.
