@@ -159,6 +159,11 @@
   --dangerSoft: var(--red400A16);
   --info: var(--blue300);
   --infoSoft: var(--blue400A16);
+  /* The opacities of the live setlist, by distance from the song being played (percent in Figma). */
+  --fadeNear: 0.6;
+  --fadeMid: 0.38;
+  --fadeFar: 0.25;
+  --fadeFaint: 0.15;
   --haloAccent: var(--themeAccent);
   --haloCool: var(--blue600);
   --haloDeep: var(--violet600);
@@ -187,6 +192,10 @@
   --dangerSoft: var(--red700A10);
   --info: var(--blue600);
   --infoSoft: var(--blue600A12);
+  --fadeNear: 0.6;
+  --fadeMid: 0.38;
+  --fadeFar: 0.25;
+  --fadeFaint: 0.15;
   --haloAccent: var(--themeAccent);
   --haloCool: var(--blue300);
   --haloDeep: var(--violet300);
@@ -216,6 +225,10 @@
   --dangerSoft: var(--red400A16);
   --info: var(--blue300);
   --infoSoft: var(--blue400A16);
+  --fadeNear: 1;
+  --fadeMid: 0.85;
+  --fadeFar: 0.75;
+  --fadeFaint: 0.7;
   --haloAccent: var(--neutral1000);
   --haloCool: var(--neutral1000);
   --haloDeep: var(--neutral1000);
@@ -244,6 +257,10 @@
   --dangerSoft: var(--red700A10);
   --info: var(--blue600);
   --infoSoft: var(--blue600A12);
+  --fadeNear: 1;
+  --fadeMid: 0.85;
+  --fadeFar: 0.75;
+  --fadeFaint: 0.7;
   --haloAccent: var(--neutral100);
   --haloCool: var(--neutral100);
   --haloDeep: var(--neutral100);

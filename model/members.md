@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.18 — 2026-10-13 · No change to the tables · A device that accepted notifications also receives the live setlist of a gig (Gigs v1.3)
 > v1.17 — 2026-10-13 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`, `008_gigs.sql` · Push subscriptions; what leaving changes for gigs
 
 Examples in this document are made up. No real member appears in the repository.
@@ -250,7 +251,7 @@ A session is a device on which a member is signed in. A password link is a singl
 
 ### Personal data
 - No IP address and no device name is stored.
-- `pushSubscription`: the address and the keys of a device. Purpose: reminding the member to answer for a gig. Seen by no one, the member included; never sent to the front, never written to a log.
+- `pushSubscription`: the address and the keys of a device. Purpose: reminding the member to answer for a gig, and showing them the live setlist of a gig they play. Seen by no one, the member included; never sent to the front, never written to a log.
 
 ## 4. Storage conventions
 

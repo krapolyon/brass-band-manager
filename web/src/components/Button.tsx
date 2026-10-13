@@ -9,6 +9,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: 'large' | 'small';
   /** An icon before the label (Figma: "Show icon" and "Icon"). */
   icon?: IconName;
+  /** The filled drawing of the icon (Figma: Style=Filled). */
+  iconFilled?: boolean;
 };
 
 // Figma: Button. A button says what it does and keeps the same name through
@@ -17,6 +19,7 @@ export function Button({
   kind = 'primary',
   size = 'large',
   icon,
+  iconFilled,
   type = 'button',
   children,
   ...rest
@@ -29,7 +32,7 @@ export function Button({
       type={type}
       {...rest}
     >
-      {icon && <Icon name={icon} size={20} />}
+      {icon && <Icon name={icon} size={20} filled={iconFilled} />}
       {children}
     </button>
   );

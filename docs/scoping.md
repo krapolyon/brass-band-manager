@@ -97,18 +97,19 @@ Decided on 2026-10-13 with the model of gigs (`model/gigs.md`), which replaces t
 - Who organises: the organisers may edit their gig.
 - Slots: one by default, several with a name for a gig of several days. Members answer per slot: yes, no, maybe, if needed. A slot is playable once every section has a yes.
 - Costumes: a list managed by the band, those to bring to a gig, the one of each slot.
-- Setlists: order of songs, setlist number, tied to a gig. Built last in this step.
-- Push notifications, first used here: two automatic reminders before a gig, and a button to remind at once.
+- Setlists: order of songs, numbered within their gig (1, 2, 3…), tied to a slot of the gig; songs of the repertoire and temporary songs only. Built last in this step.
+- The live setlist (decided on 2026-10-13): who manages setlists starts it, taps “Suivant” at the end of each song and ends it; the members who said yes to the slot follow it on a live screen and by push notification. There is no lock-screen widget: Live Activities are reserved to native iOS apps. On an iPhone the notifications of a web app cannot be replaced: they pile up, the newest on top (prototype of 2026-10-13); on Android one notification replaces itself.
+- Push notifications, first used here: the live setlist, two automatic reminders before a gig, and a button to remind at once. Set per device in the member's account.
 
 ## Later features
 
 They are not built in the first version, but the model and the design reserve a place for them from the start.
 
-- **Setlists, further**: following a setlist during the gig, the next songs on the lock screen, Discord interaction. Song suggestion to be studied. The setlists themselves are built with the gigs (decided on 2026-10-13).
+- **Setlists, further**: Discord interaction, how often each song is played. Song suggestion to be studied. The setlists and their live following are built with the gigs (decided on 2026-10-13).
 - **Rehearsals**: songs to work on.
 - **Song statistics**.
 - **Quotes**: quotes for paid gigs.
-- **Export and import of the data of an instance**, to move a band from one install to another (noted by the owner on 2026-10-11, not scoped yet). It has to carry the database and the uploaded files of `storage/` together, and to say what happens to passwords and sessions.
+- **Export and import of the data of an instance**, to move a band from one install to another, or to prepare it locally and send it to the server (scoped on 2026-10-13, built later). For the admin, in Band settings: a zip in a fixed, versioned format (“format 1”), by feature (general settings, members, songs, gigs), carrying the database rows and the files of `storage/`. Gigs need members and settings; songs need settings. Passwords travel as their hashes; sessions and push subscriptions never travel. The admin who imports must be an admin in the file, or the import is refused; afterwards they sign in again. A file too large for the browser (about 250 MB at most) is dropped by FTP into an `import` folder of the hosting, where the screen finds it. The format is documented in `docs/` before it is built.
 
 ### Opening the code
 
@@ -201,7 +202,7 @@ Skills first, agents later.
 | Outbound HTTPS calls from PHP (web push, Discord API) work on OVH Perso: test with a throwaway script before building on them | Base |
 | The existing band website does not already use the plan's single Git deployment slot | Base |
 | Whether a 90-day session really holds on a PWA installed on an iPhone | Base |
-| Push notifications on iPhone, once the app is on the home screen | Base, then gigs |
+| Push notifications on iPhone, once the app is on the home screen: they arrive (prototype of 2026-10-13, notifications sent from Node on a computer); a notification cannot be replaced or closed by the app. Still to test: sending from PHP on the hosting, the delay, a watch, a phone locked for 30 minutes, Android | Gigs |
 | Many mail providers no longer accept mail sent by PHP `mail()` unless the domain has SPF and DKIM set up (not verified). The app sends through the mailbox of the domain, by SMTP: check that its emails arrive, and what the domain needs | Notifications |
 | MySQL treats table names as case-sensitive on OVH (Linux) but not on a Mac. With camelCase names, the development database must behave like OVH's | Base |
 | Command-line MuseScore conversion on the oldest files | Prototype |
@@ -216,4 +217,4 @@ Skills first, agents later.
 
 - Two or three .mscz files from different periods, including one of the oldest, with their PDFs.
 - The bulk upload and file analysis code written during the first trials.
-- The OVH Perso hosting, to order, and the subdomain of the app.
+- The subdomain of the app. The OVH Perso hosting was ordered on 2026-10-13; its Let's Encrypt certificate takes a while to become valid.

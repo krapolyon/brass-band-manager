@@ -23,6 +23,7 @@ final class ChangeGigStatusAction
     public function __construct(
         private readonly Connection $database,
         private readonly Gigs $gigs,
+        private readonly Setlists $setlists,
     ) {
     }
 
@@ -41,6 +42,10 @@ final class ChangeGigStatusAction
                 throw new ApiError(409, 'invalidTransition');
             }
             $this->database->update('gig', ['status' => $next->value, 'updatedByMemberId' => $me->id], ['id' => $gigId]);
+            // A gig that is no longer confirmed hides its setlists: none stays live.
+            if ($next !== GigStatus::CONFIRMED) {
+                $this->setlists->endLiveOfGig($gigId);
+            }
             $this->gigs->confirmIfPlayable($gigId);
         });
 

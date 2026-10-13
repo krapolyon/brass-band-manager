@@ -80,8 +80,28 @@ export type Gig = Omit<GigSummary, 'slots'> & {
   organizers: { id: number; nickname: string }[];
   costumes: GigCostume[];
   slots: GigSlot[];
+  /** Shown from "Validé" on; empty before. */
+  setlists: Setlist[];
   /** Sent to who may edit the gig only. */
   discordChannelId?: string | null;
+};
+
+export type SetlistSong = { position: number; songId: number; name: string };
+
+/** A setlist of a gig: its songs in order, and where its live session is. */
+export type Setlist = {
+  id: number;
+  gigId: number;
+  /** The slot it is played at: its members who said yes follow it live. */
+  gigSlotId: number;
+  /** Given by the app, within its gig: 1, 2, 3… */
+  number: number;
+  description: string | null;
+  /** An instant in UTC; null when the setlist is not live. */
+  liveStartedAt: string | null;
+  /** The position of the song being played; null when the setlist is not live. */
+  livePosition: number | null;
+  songs: SetlistSong[];
 };
 
 export type Costume = {
@@ -106,6 +126,23 @@ export function useGig(gigId: number, enabled = true) {
     queryKey: ['gig', gigId],
     queryFn: () => api<Gig>(`/api/gigs/${gigId}`),
     enabled,
+    // On the days of a confirmed gig its setlists go live and move on: the
+    // screen of the gig asks again from time to time.
+    refetchInterval: (query) => {
+      const gig = query.state.data;
+      const isPlayed =
+        gig?.status === 'CONFIRMED' && !isOver(gig) && dayOf(gig.startsOn) <= new Date();
+      return isPlayed ? 15_000 : false;
+    },
+  });
+}
+
+/** One setlist, asked again every few seconds: the live screen follows it. */
+export function useSetlist(setlistId: number) {
+  return useQuery({
+    queryKey: ['setlist', setlistId],
+    queryFn: () => api<Setlist & { gigName: string }>(`/api/setlists/${setlistId}`),
+    refetchInterval: 4000,
   });
 }
 

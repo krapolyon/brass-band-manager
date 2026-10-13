@@ -1,6 +1,6 @@
 # Business dictionary — Gigs domain
 
-> v1.3 — 2026-10-13 · Rules found while building the screens (no schema change): the picture of a costume is made small by the browser; what the list counts; what a screen reads from the dates
+> v1.3 — 2026-10-13 · Validated by the owner · The live setlist, decided with the design: a setlist belongs to a slot; the setlist manager starts it live, moves it on song by song and ends it; the members who said yes to the slot follow it by notification · Migration: `010_setlistLive.sql`
 > v1.2 — 2026-10-13 · Decided with the design of gigs: a setlist is numbered within its gig (1, 2, 3…); only a song in the repertoire or a temporary one is added to a setlist · Migration: `009_setlistNumberPerGig.sql`
 > v1.1 — 2026-10-13 · Rules found while writing the API (no schema change): a draft that has answers is not deleted; when the server holds a gig for over; when the app looks whether an accepted gig is playable; an organiser who left stays on a gig that is saved again
 > v1.0 — 2026-10-13 · Model: `gigs.dbml` · Validated by the owner on 2026-10-13 · Migration: `008_gigs.sql`, with the reminders of the band (Band v1.6) and the push subscriptions (Members v1.17)
@@ -95,7 +95,7 @@ The right of an organiser depends on the gig, not on a role: the shared layer ch
 - Dates through `Intl`, in the language of the member: "ven. 4 – dim. 6 déc." for several days.
 - A gig with only a postal code and a city shows them as its place.
 - The coordinates open the map application of the device.
-- Representations in the design library (Figma, page `Gigs`): `Gig/Card`, `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`.
+- Representations in the design library (Figma, page `Gigs`): `Gig/Card`, `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row`.
 - The count of a slot is "x oui sur y", y being the current members of the band.
 
 ## 2. Slot (`gigSlot`, `gigSlotAttendance`)
@@ -156,33 +156,52 @@ An outfit the band wears at a gig. In the French locale a costume is a "déguise
 ## 4. Setlist (`setlist`, `setlistSong`)
 
 ### Definition
-An ordered list of songs played at a gig. A gig can have several: one per set, or one per slot.
+An ordered list of songs played at a slot of a gig, followed live by the members who play it. A gig can have several: one per set, or one per slot.
 
 ### Fields
 | Field | Label (en) | Label (fr) | Required | Real example | Realistic length | Rules |
 |---|---|---|---|---|---|---|
+| `gigSlotId` | Slot | Présence | Yes | Samedi midi | — | One of the slots of the gig. Asked only when the gig has several; the only slot otherwise |
 | `number` | Number | Numéro | Yes | 2 | — | Given by the app: one more than the highest of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig |
 | `description` | Description | Description | No | Parade, 45 minutes | Up to 60 characters | |
 | `position` | — | — | Yes | 7 | — | A song can come twice in a setlist |
 | `songId` | Song | Morceau | Yes | Seven Nation Army | — | A song whose status is `IN_REPERTOIRE` or `TEMPORARY` when it is added |
+| `liveStartedAt` | — | — | No | 2026-10-17 10:12 | — | Filled while the setlist is live |
+| `livePosition` | Song being played | Morceau en cours | No | 3 | — | A position of the setlist; filled while it is live |
+
+### Life cycle
+| State | Meaning | Goes to | Trigger | Effects |
+|---|---|---|---|---|
+| Not live | Written, or played and ended | Live | “Lancer en direct”, by who manages setlists | `liveStartedAt` set, `livePosition` = 1. Any other live setlist of the band ends. A notification to the followers |
+| Live | Being played | Live, another song | “Suivant” at the end of a song; or who manages setlists scrolls the live list up or down and stops on a song, to correct | `livePosition` set to that song, never beyond the first or the last. A notification to the followers |
+| Live | Being played | Not live | “Terminer”, which replaces “Suivant” on the last song | Both fields emptied. A last notification to the followers: “Setlist terminée” |
+
+The followers are the current members who answered yes to the slot of the setlist and have at least one device that accepted notifications (Members, `pushSubscription`). There is no way to follow without notifications: the live screen of the app shows the same thing to any member who opens it.
+
+The notification names the song being played and the two after it: “3/6 · Prochain : Toxic”, then “Puis : Valerie · Uptown Funk”; on the last song “6/6 · Dernier : Seven Nation Army”. On an iPhone a notification cannot be replaced: the notifications pile up, the newest on top, so each one reads on its own. On Android it replaces the previous one without a new vibration, and shows “Suivant” to who manages setlists.
 
 ### Rules
 - Setlists are numbered within their gig: the Fête des Lumières has its setlists 1, 2 and 3, and the next gig starts again at 1. Deleting a setlist does not renumber the others.
 - Only a song the band plays can be added to a setlist: in the repertoire (`IN_REPERTOIRE`) or temporary (`TEMPORARY`, learned for an occasion, often this very gig). The songs offered while typing or dictating are those. A song whose status changes afterwards stays in the setlists that already hold it.
 - A setlist is written before the gig or, more often, once it has started. It stays editable after the gig: it says what was played.
-- A song used by a setlist cannot be deleted (Songs domain).
-- Later, not modelled: how far the band is in the setlist during the gig, with a button to move on; the next songs on the lock screen of the phone; how often each song is played, counted from the setlists of past gigs.
+- A setlist holds 100 songs at most.
+- A gig that leaves `CONFIRMED` (cancelled) hides its setlists and ends the one that was live.
+- A song used by a setlist cannot be deleted (Songs domain). A slot that has setlists cannot be deleted: its setlists are moved to another slot or deleted first.
+- The setlists of a gig are shown from `CONFIRMED` on (in progress and past included): before, the band does not know it plays. A member who taps a song of a setlist opens the song, in the mode they used last.
+- A live setlist can still be edited; its position stays the same number, and who manages setlists corrects it by scrolling if needed.
+- Later, not modelled: how often each song is played, counted from the setlists of past gigs.
 
 ### Access rights
-| Who | View | Create, edit, delete |
-|---|---|---|
-| Any signed-in member | The setlists of the gigs they see | No |
-| `SETLIST_MANAGER`, `ADMIN` | The same | Yes |
+| Who | View | Create, edit, delete | Start live, move on, end |
+|---|---|---|---|
+| Any signed-in member | The setlists of the gigs they see, from `CONFIRMED` on, and the live screen | No | No |
+| `SETLIST_MANAGER`, `ADMIN` | The same | Yes | Yes |
 
 ## 5. Other domains
 
 Changed with this domain:
 
+- **Members** (v1.18): a device that accepted notifications also receives the live setlist.
 - **Members** (v1.17): `pushSubscription`, a device that accepted push notifications. The permission "manage costumes" goes to `ADMIN`. The role `SETLIST_MANAGER` is offered once setlists are built. A member who leaves is taken off the gigs they organise that are not over.
 - **Band** (v1.6): `gigFirstReminderDays` (15 by default), `gigSecondReminderDays` (5) and `gigReminderHour` (18).
 - **Songs**: nothing changes; `song` is referred to by `setlistSong`.

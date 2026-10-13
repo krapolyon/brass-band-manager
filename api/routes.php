@@ -43,7 +43,12 @@ use BrassBand\Gigs\RequireGigEditor;
 use BrassBand\Gigs\SaveCostumeAction;
 use BrassBand\Gigs\SaveGigAction;
 use BrassBand\Gigs\SaveSlotAction;
+use BrassBand\Gigs\DeleteSetlistAction;
+use BrassBand\Gigs\LiveSetlistAction;
+use BrassBand\Gigs\SaveSetlistAction;
+use BrassBand\Gigs\Setlists;
 use BrassBand\Gigs\ShowCostumePictureAction;
+use BrassBand\Gigs\ShowSetlistAction;
 use BrassBand\Gigs\ShowGigAction;
 use BrassBand\Gigs\UpdateCostumePictureAction;
 use BrassBand\Health\HealthAction;
@@ -135,6 +140,7 @@ return function (App $app, Connection $database, array $config): void {
     $thumbnails = new ClipThumbnails($config);
     $gigs = new Gigs($database);
     $costumes = new Costumes($database);
+    $setlists = new Setlists($database);
     $costumePictures = new CostumePictures($database, $files);
 
     // ---------------------------------------------------------------
@@ -174,6 +180,7 @@ return function (App $app, Connection $database, array $config): void {
         $songs,
         $thumbnails,
         $gigs,
+        $setlists,
         $costumes,
         $costumePictures,
     ): void {
@@ -208,6 +215,7 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/gigs/{id:[0-9]+}', new ShowGigAction($gigs));
         // One's own answer for a slot: the address names no member.
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, forAnother: false));
+        $group->get('/api/setlists/{id:[0-9]+}', new ShowSetlistAction($gigs, $setlists));
         $group->get('/api/costumes', new ListCostumesAction($costumes));
         $group->get('/api/costumes/{id:[0-9]+}/picture', new ShowCostumePictureAction($costumePictures));
 
@@ -225,7 +233,7 @@ return function (App $app, Connection $database, array $config): void {
         // A gig is edited by whoever manages gigs and by its organisers.
         $editGig = new RequireGigEditor($gigs);
         $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs))->add($editGig);
-        $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs, $setlists))->add($editGig);
         $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
@@ -287,6 +295,16 @@ return function (App $app, Connection $database, array $config): void {
         $manageGigs = new RequirePermission(Permission::MANAGE_GIGS);
         $group->post('/api/gigs', new SaveGigAction($database, $gigs))->add($manageGigs);
         $group->delete('/api/gigs/{id:[0-9]+}', new DeleteGigAction($database, $gigs))->add($manageGigs);
+
+        // Setlists are written and played live by who manages setlists.
+        $manageSetlists = new RequirePermission(Permission::MANAGE_SETLISTS);
+        $group->post('/api/gigs/{id:[0-9]+}/setlists', new SaveSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
+        $group->put('/api/setlists/{id:[0-9]+}', new SaveSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
+        $group->delete('/api/setlists/{id:[0-9]+}', new DeleteSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
+        $live = new LiveSetlistAction($database, $setlists);
+        $group->post('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
+        $group->put('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
+        $group->delete('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
 
         $manageCostumes = new RequirePermission(Permission::MANAGE_COSTUMES);
         $group->post('/api/costumes', new SaveCostumeAction($database, $costumes))->add($manageCostumes);

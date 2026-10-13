@@ -1,0 +1,63 @@
+.SetlistCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceMd) var(--spaceMd) var(--spaceMd) var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.SetlistCard-heading {
+  margin: 0;
+}
+
+.SetlistCard-heading button {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusSm);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 2 in Figma. */
+.SetlistCard-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.SetlistCard-description {
+  color: var(--textMuted);
+}
+
+.SetlistCard-toggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+}
+
+.SetlistCard-songs {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.SetlistCard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}

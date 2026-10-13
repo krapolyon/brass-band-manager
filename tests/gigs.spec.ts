@@ -370,16 +370,36 @@ test.describe('who may edit a gig', () => {
     await asMember(page, 'Gigi');
     await page.goto(`/gigs/${gigId}`);
 
+    // The more button opens a menu: the form, the status, and deleting, which
+    // is for a draft nobody answered.
     await page.getByRole('button', { name: 'Gérer le plan' }).click();
+    const menu = page.getByRole('dialog', { name: 'Carnaval' });
+    await expect(menu.getByRole('link', { name: 'Modifier le plan' })).toHaveAttribute(
+      'href',
+      `/gigs/${gigId}/edit`,
+    );
+    const remove = menu.getByRole('button', { name: /Supprimer le plan/ });
+    await expect(remove).toContainText('Seulement un brouillon sans réponse');
+    await expect(remove).toHaveAttribute('aria-disabled', 'true');
+    await menu.getByRole('button', { name: 'Changer le statut' }).click();
+
     let panel = page.getByRole('dialog', { name: 'Statut du plan' });
-    // From "Proposition": not back to a draft.
-    await expect(panel.getByRole('radio')).toHaveCount(4);
-    await expect(panel.getByRole('radio', { name: /Brouillon/ })).toHaveCount(0);
+    // The five statuses stay listed. From "Proposition" there is no way back
+    // to a draft: the row says so and cannot be chosen.
+    await expect(panel.getByRole('radio')).toHaveCount(5);
+    await expect(panel.getByRole('radio', { name: /^Brouillon/ })).toBeDisabled();
+    await expect(panel.getByText('Pas depuis « Proposition »')).toBeVisible();
+    await expect(panel.getByRole('radio', { name: /^Proposition/ })).toBeChecked();
     await panel.getByText('Validé', { exact: true }).click();
     await panel.getByRole('button', { name: 'Enregistrer le statut' }).click();
 
-    panel = page.getByRole('dialog', { name: 'Valider sans saxophone et souba ?' });
-    await expect(panel.getByText('Pupitre sans oui : Saxophone, Souba.')).toBeVisible();
+    // Sections are named as they are, members by their nickname.
+    panel = page.getByRole('dialog', { name: 'Valider sans Saxophone et Souba ?' });
+    await expect(
+      panel.getByText(
+        'Pupitre sans oui : Saxophone, Souba. Jibé n’a pas répondu, Riton n’a pas répondu.',
+      ),
+    ).toBeVisible();
     expect(statusOf(gigId)).toBe('PROPOSED');
     await panel.getByRole('button', { name: 'Valider quand même' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -848,6 +868,182 @@ test.describe('what must not go wrong', () => {
     await panel.getByRole('button', { name: 'Enregistrer le déguiz' }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(sql('SELECT name, imagePath IS NOT NULL FROM costume')).toBe('Paillettes\t1');
+  });
+
+  test('a costume is moved up and down from its panel, and the list follows', async ({ page }) => {
+    addCostume('Jungle');
+    addCostume('Paillettes');
+    addCostume('Marins');
+    await signIn(page);
+    await page.goto('/band/costumes');
+    await page.getByRole('button', { name: 'Modifier Marins' }).click();
+    const panel = page.getByRole('dialog', { name: 'Marins' });
+    await expect(panel.getByRole('button', { name: 'Descendre' })).toBeDisabled();
+    await panel.getByRole('button', { name: 'Monter' }).click();
+    await expect(panel.getByText('2e sur 3')).toBeVisible();
+    await panel.getByRole('button', { name: 'Monter' }).click();
+    await expect(panel.getByRole('button', { name: 'Monter' })).toBeDisabled();
+    expect(sql('SELECT name FROM costume ORDER BY position')).toBe('Marins\nJungle\nPaillettes');
+  });
+
+  test('on a tablet the list is a grid of two, and a gig takes the whole screen without the tab bar', async ({
+    page,
+  }) => {
+    const first = addGig('Carnaval', { startsOn: day(12) });
+    addGig('Fête de la soupe', { startsOn: day(14) });
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await asMember(page, 'Zaza');
+    await page.goto('/gigs');
+
+    // Two cards side by side, and the tab bar under them.
+    const cards = page.locator('.gigs-cardLink');
+    await expect(cards).toHaveCount(2);
+    const [left, right] = [await cards.nth(0).boundingBox(), await cards.nth(1).boundingBox()];
+    expect(left?.y).toBe(right?.y);
+    expect(right?.x).toBeGreaterThan((left?.x ?? 0) + (left?.width ?? 0));
+    await expect(page.getByRole('navigation', { name: 'Navigation' })).toBeVisible();
+
+    await cards.nth(0).click();
+    await expect(page).toHaveURL(`/gigs/${first.gigId}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Carnaval' })).toBeVisible();
+    // The gig alone: the compact header, a way back, no list and no tab bar.
+    await expect(page.locator('.GigHeader')).toHaveAttribute('data-size', 'compact');
+    await expect(page.getByRole('navigation')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Plans' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Retour aux plans' }).click();
+    await expect(page).toHaveURL('/gigs');
+  });
+
+  test('on a desktop the list sits beside the gig, and a card opens its gig in place', async ({
+    page,
+  }) => {
+    const first = addGig('Carnaval', { startsOn: day(12) });
+    const second = addGig('Fête de la soupe', { startsOn: day(14) });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await asMember(page, 'Zaza');
+    await page.goto('/gigs');
+
+    // The first gig of the list opens beside it; the menu is on the left.
+    await expect(page).toHaveURL(`/gigs/${first.gigId}`);
+    await expect(page.getByRole('navigation', { name: 'Navigation' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Plans' })).toBeVisible();
+    const list = await page.locator('.gigs-list').boundingBox();
+    const pane = await page.locator('.gigs-view').boundingBox();
+    expect(list?.width).toBe(390);
+    expect(pane?.x).toBeGreaterThanOrEqual((list?.x ?? 0) + 390);
+    // No way back in the pane: the list is there.
+    await expect(page.getByRole('button', { name: 'Retour aux plans' })).toHaveCount(0);
+
+    await page.getByRole('link', { name: /Fête de la soupe/ }).click();
+    await expect(page).toHaveURL(`/gigs/${second.gigId}`);
+    await expect(page.getByRole('heading', { level: 2, name: 'Fête de la soupe' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Fête de la soupe/ })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    await expect(page.getByRole('link', { name: /Carnaval/ })).not.toHaveAttribute('aria-current');
+    // Answering there updates the card of the list.
+    await page.getByRole('radio', { name: 'Oui' }).click();
+    await expect(
+      page.getByRole('link', { name: /Fête de la soupe/ }).getByText('Oui'),
+    ).toBeVisible();
+  });
+
+  test('“Y aller” opens the maps of the device on the coordinates, or on the address without them', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Vide-grenier', {
+      status: 'CONFIRMED',
+      startsOn: day(5),
+      meetingTime: '09:30',
+      placeName: 'Métro Croix-Rousse',
+      city: 'Lyon',
+    });
+    sql(`UPDATE gig SET placeUrl = 'https://example.org/lieu' WHERE id = ${gigId}`);
+    // What the page asks the device to open is kept instead of opened.
+    await page.addInitScript(() => {
+      const opened: string[] = [];
+      Object.assign(window, { opened, open: (address: string) => opened.push(address) });
+    });
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+    const opened = () => page.evaluate(() => (window as unknown as { opened: string[] }).opened);
+
+    await page.getByRole('button', { name: 'Y aller' }).click();
+    const byAddress = (await opened())[0] ?? '';
+    expect(byAddress).toMatch(/^(geo:0,0\?q=|https:\/\/maps\.apple\.com\/\?daddr=)/);
+    expect(decodeURIComponent(byAddress)).toContain('Métro Croix-Rousse, Lyon');
+
+    sql(`UPDATE gig SET latitude = 45.7743, longitude = 4.8320 WHERE id = ${gigId}`);
+    await page.reload();
+    await page.getByRole('button', { name: 'Y aller' }).click();
+    expect(decodeURIComponent((await opened())[0] ?? '')).toContain('45.7743,4.832');
+
+    await page.getByRole('button', { name: 'Voir le lieu' }).click();
+    expect((await opened())[1]).toBe('https://example.org/lieu');
+  });
+
+  test('“Copier l’adresse” copies the address and says so, in sight and to screen readers', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Vide-grenier', {
+      status: 'CONFIRMED',
+      startsOn: day(5),
+      placeName: 'Métro Croix-Rousse',
+      city: 'Lyon',
+    });
+    sql(
+      `UPDATE gig SET streetAddress = 'Boulevard de la Croix-Rousse', postalCode = '69004' WHERE id = ${gigId}`,
+    );
+    await page.addInitScript(() => {
+      const copied: string[] = [];
+      Object.assign(window, { copied });
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: async (text: string) => void copied.push(text) },
+      });
+    });
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+
+    await page.getByRole('button', { name: 'Copier l’adresse' }).click();
+    await expect(page.getByRole('button', { name: 'Adresse copiée.' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Adresse copiée.' })).toHaveCount(1);
+    expect(await page.evaluate(() => (window as unknown as { copied: string[] }).copied)).toEqual([
+      'Boulevard de la Croix-Rousse, 69004 Lyon',
+    ]);
+  });
+
+  test('a confirmed gig is “En cours” from 20 minutes after the meeting time, until its last day ends', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Vide-grenier', {
+      status: 'CONFIRMED',
+      startsOn: day(0),
+      meetingTime: '11:30',
+      placeName: 'Métro Croix-Rousse',
+    });
+    const at = (time: string) => new Date(`${day(0)}T${time}:00`);
+    await page.clock.install({ time: at('11:45') });
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+    const header = page.locator('.GigHeader');
+    await expect(header.getByText('Validé')).toBeVisible();
+    await expect(header.getByText('En cours')).toHaveCount(0);
+
+    await page.clock.setFixedTime(at('11:50'));
+    await page.reload();
+    await expect(header.getByText('En cours')).toBeVisible();
+    // The place stays in sight, and the answers stay open.
+    await expect(header.getByText('Métro Croix-Rousse')).toBeVisible();
+    await expect(page.getByRole('radiogroup', { name: 'Ta réponse' })).toBeVisible();
+    await page.goto('/gigs');
+    await expect(page.getByRole('link', { name: /Vide-grenier/ })).toBeVisible();
+
+    // Without a meeting time: from the start of the day.
+    sql(`UPDATE gig SET meetingTime = NULL WHERE id = ${gigId}`);
+    await page.clock.setFixedTime(at('00:05'));
+    await page.goto(`/gigs/${gigId}`);
+    await expect(header.getByText('En cours')).toBeVisible();
   });
 
   test('one reminder alone is written in the singular when it is one day before', async ({

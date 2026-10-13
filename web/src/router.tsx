@@ -12,6 +12,8 @@ import { BandSpellingsScreen } from './screens/band/BandSpellingsScreen.tsx';
 import { ComingSoonScreen } from './screens/ComingSoonScreen.tsx';
 import { GigFormScreen } from './screens/gigs/GigFormScreen.tsx';
 import { GigsScreen } from './screens/gigs/GigsScreen.tsx';
+import { LiveSetlistScreen } from './screens/gigs/LiveSetlistScreen.tsx';
+import { SetlistFormScreen } from './screens/gigs/SetlistFormScreen.tsx';
 import { WhoComesScreen } from './screens/gigs/WhoComesScreen.tsx';
 import { BandScreen } from './screens/install/BandScreen.tsx';
 import { DoneScreen } from './screens/install/DoneScreen.tsx';
@@ -51,6 +53,9 @@ export const router = createBrowserRouter([
       { path: '/gigs/:id', element: <GigsScreen /> },
       { path: '/gigs/:id/edit', element: <GigFormScreen /> },
       { path: '/gigs/:id/answers', element: <WhoComesScreen /> },
+      { path: '/gigs/:id/setlists/new', element: <SetlistFormScreen /> },
+      { path: '/gigs/:id/setlists/:setlistId', element: <SetlistFormScreen /> },
+      { path: '/setlists/:id/live', element: <LiveSetlistScreen /> },
       { path: '/members', element: <DirectoryScreen /> },
       { path: '/members/manage', element: <ManageListScreen /> },
       { path: '/members/manage/invite', element: <InviteScreen /> },

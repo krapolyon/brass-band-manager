@@ -277,6 +277,7 @@
   }
 
   .gigs-pane .gigs-card,
+  .gigs-pane .SetlistCard,
   .gigs-pane .GigSlotWhoComes,
   .gigs-pane .GigInfos,
   .gigs-pane .GigMeeting {
@@ -431,4 +432,213 @@ button.gigs-member {
 .gigs-organiser > .MemberMention {
   flex: 1;
   min-width: 0;
+}
+
+/* The more menu of a gig: its rows, 8 apart. */
+.gigs-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+/* ---------------------------------------------------------------
+   The form of a setlist
+   --------------------------------------------------------------- */
+
+.gigs-setlistForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.gigs-setlistForm > p {
+  margin: 0;
+}
+
+.gigs-setlistSongs {
+  padding: var(--spaceSm) var(--spaceMd);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.gigs-setlistSongs > p {
+  margin: 0;
+}
+
+.gigs-setlistSongs ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gigs-suggestions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--spaceXs);
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+  list-style: none;
+}
+
+.gigs-suggestions li.gigs-muted {
+  padding: var(--spaceSm);
+}
+
+.gigs-suggestions button {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  min-height: var(--controlHeightSm);
+  padding: var(--spaceSm);
+  border: 0;
+  border-radius: var(--radiusSm);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The one Enter adds. */
+.gigs-suggestions button[data-first="true"] {
+  background: var(--control);
+}
+
+.gigs-suggestions button .Icon {
+  flex: none;
+  color: var(--accentText);
+}
+
+/* ---------------------------------------------------------------
+   The live setlist: the whole window, no menu, one column of 560 at most.
+   The paddings of the list are those of Figma (section 15): its top padding
+   IS the focus line, where the song being played sits.
+   --------------------------------------------------------------- */
+
+.gigs-live {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.gigs-liveColumn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 35rem;
+  min-height: 0;
+}
+
+.gigs-liveNote {
+  padding: var(--spaceMd) var(--spaceXl) 0;
+}
+
+.gigs-liveSongs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  /* 22 between two songs in Figma. */
+  --liveGap: 1.375rem;
+  /* The focus line: 56, then the two songs just played, which stay in sight
+     (156 in Figma; more when the text of the member is larger). */
+  --liveLine: calc(
+    3.5rem +
+    var(--fontSizeHeading) *
+    1.2 +
+    var(--fontSizeTitle) *
+    1.1 +
+    2 *
+    var(--liveGap)
+  );
+  gap: var(--liveGap);
+  min-height: 0;
+  margin: 0;
+  /* Below, room for the last song to come up to the line. */
+  padding: var(--liveLine) var(--spaceXl) 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-top: var(--liveLine);
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  list-style: none;
+}
+
+.gigs-liveSongs li {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  scroll-snap-align: start;
+  transition: opacity 0.3s;
+}
+
+.gigs-liveSongs li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gigs-liveSongs li[data-offset="-2"] {
+  opacity: var(--fadeFaint);
+}
+
+.gigs-liveSongs li[data-offset="-1"],
+.gigs-liveSongs li[data-offset="2"] {
+  opacity: var(--fadeMid);
+}
+
+.gigs-liveSongs li[data-offset="1"] {
+  opacity: var(--fadeNear);
+}
+
+.gigs-liveSongs li[data-offset="3"] {
+  opacity: var(--fadeFar);
+}
+
+/* The one button, where the thumb rests, over the end of the list. */
+.gigs-liveBar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceMd) var(--spaceXl) max(var(--spaceMd), env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--ground) var(--spaceXl));
+}
+
+.gigs-livePrevious {
+  position: absolute;
+  bottom: 100%;
+  left: var(--spaceXl);
+  min-height: var(--controlHeightSm);
+  padding: 0 var(--spaceMd);
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--sheet);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gigs-livePrevious:focus {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+:root[data-motion="reduced"] .gigs-liveSongs li {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gigs-liveSongs li {
+    transition: none;
+  }
 }

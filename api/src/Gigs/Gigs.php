@@ -25,8 +25,11 @@ final class Gigs
     private const COLUMNS = 'g.id, g.name, g.status, g.startsOn, g.endsOn, g.meetingTime, g.placeName, g.placeUrl,
         g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.notes, g.discordChannelId, g.remindedAt';
 
+    private readonly Setlists $setlists;
+
     public function __construct(private readonly Connection $database)
     {
+        $this->setlists = new Setlists($database);
     }
 
     // True when the member manages gigs, or organises this one.
@@ -170,6 +173,8 @@ final class Gigs
                     [$gigId],
                 ),
             ),
+            // Shown from CONFIRMED on: before, the band does not know it plays.
+            'setlists' => $gig['status'] === GigStatus::CONFIRMED->value ? $this->setlists->ofGig($gigId) : [],
         ];
         if ($canEdit) {
             $view['discordChannelId'] = $gig['discordChannelId'];

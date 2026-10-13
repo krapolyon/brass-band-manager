@@ -33,6 +33,7 @@ import { useIsTablet } from '../songs/device.ts';
 import { type Attendance, attendanceOf } from './attendance.ts';
 import { AnswerChip, MomentChip, StatusChip } from './chips.tsx';
 import { addressText, inSentence, timeText, whenText, whereText } from './format.ts';
+import { GigSetlists } from './GigSetlists.tsx';
 import { ManagePanel } from './ManagePanel.tsx';
 
 type Props = {
@@ -87,7 +88,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
   const isTablet = useIsTablet();
   const answer = useAnswer(gigId);
   const [isManaging, setManaging] = useState(false);
-  const [manageStart, setManageStart] = useState<'status' | 'delete'>('status');
+  const [manageStart, setManageStart] = useState<'menu' | 'status' | 'delete'>('menu');
   const [openSlotId, setOpenSlot] = useState<number | null>(null);
   const [isChanging, setChanging] = useState(false);
   const [wasConfirmed, setConfirmed] = useState(false);
@@ -371,6 +372,12 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       {gig.slots.map((slot) => {
         const name = slot.name ?? t('gigs.gig.onlySlot');
         const slotMissing = sectionNames(sections, slot.missingSectionIds);
+        // "Jouable si Riton vient (si besoin)": who would fill the sections without a yes.
+        const ifNeeded = attendance(slot)
+          .sections.filter(({ section }) => slot.missingSectionIds.includes(section.id))
+          .flatMap(({ attendees }) => attendees)
+          .filter((one) => one.answer === 'IF_NEEDED')
+          .map((one) => one.nickname);
         return (
           <GigSlotCard
             key={slot.id}
@@ -383,7 +390,10 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
               slot.isPlayable
                 ? t('gigs.playable.yes')
                 : slot.isPlayableIfNeeded
-                  ? t('gigs.playable.ifNeeded')
+                  ? t('gigs.playable.ifNeeded', {
+                      count: ifNeeded.length,
+                      names: inSentence(ifNeeded, language),
+                    })
                   : t('gigs.playable.missing', { sections: slotMissing.join(', ') })
             }
             whoComes={
@@ -560,7 +570,10 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
             kind="secondary"
             icon="Undo"
             aria-haspopup="dialog"
-            onClick={() => setManaging(true)}
+            onClick={() => {
+              setManageStart('status');
+              setManaging(true);
+            }}
           >
             {t('gigs.gig.reopen')}
           </Button>
@@ -613,6 +626,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
               : t('gigs.gig.youDidNotAnswer'),
           ].join(' '),
         )}
+        <GigSetlists gig={gig} headingLevel={cardLevel} canGoLive={false} />
         {allAnswers()}
       </>
     );
@@ -626,6 +640,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
           </Message>
         )}
         {meeting}
+        <GigSetlists gig={gig} headingLevel={cardLevel} canGoLive />
         {notesCard(t('gigs.gig.notes'))}
         {gig.costumes.length > 0 && (
           <section className="gigs-card">
@@ -744,7 +759,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
           start={manageStart}
           onClose={() => {
             setManaging(false);
-            setManageStart('status');
+            setManageStart('menu');
           }}
         />
       )}

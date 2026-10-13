@@ -39,6 +39,10 @@ final class DeleteSlotAction
             if (count($slotIds) === 1) {
                 throw new ApiError(409, 'lastSlot');
             }
+            // Its setlists are moved to another slot or deleted first.
+            if ($this->database->fetchOne('SELECT 1 FROM setlist WHERE gigSlotId = ?', [(int) $arguments['slotId']]) !== false) {
+                throw new ApiError(409, 'slotHasSetlists');
+            }
             // The answers go with the row: the database deletes them.
             $this->database->delete('gigSlot', ['id' => (int) $arguments['slotId']]);
             $this->gigs->placeSlot($gigId, null, 0, $me->id);

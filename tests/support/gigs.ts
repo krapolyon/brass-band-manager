@@ -68,3 +68,37 @@ export function plays(nickname: string, instrument: string) {
     `UPDATE member SET instrumentId = (SELECT id FROM instrument WHERE name = ${text(instrument)}) WHERE id = ${memberId(nickname)}`,
   );
 }
+
+/** A song of the band, by its name. The titles are examples. */
+export function addSong(
+  name: string,
+  status:
+    | 'PROPOSED'
+    | 'IN_PROGRESS'
+    | 'IN_REPERTOIRE'
+    | 'TEMPORARY'
+    | 'ABANDONED' = 'IN_REPERTOIRE',
+): number {
+  return Number(
+    sql(
+      `INSERT INTO song (name, originalTitle, originalArtist, status) VALUES (${text(name)}, ${text(name)}, 'Exemple', '${status}'); SELECT LAST_INSERT_ID();`,
+    ),
+  );
+}
+
+/** A setlist written straight in the database. Returns its id. */
+export function addSetlist(gigId: number, slotId: number, songIds: number[], description?: string) {
+  const id = Number(
+    sql(
+      `INSERT INTO setlist (gigId, gigSlotId, number, description)
+       SELECT ${gigId}, ${slotId}, COALESCE(MAX(number), 0) + 1, ${text(description)} FROM setlist WHERE gigId = ${gigId};
+       SELECT LAST_INSERT_ID();`,
+    ),
+  );
+  songIds.forEach((songId, index) => {
+    sql(
+      `INSERT INTO setlistSong (setlistId, position, songId) VALUES (${id}, ${index + 1}, ${songId})`,
+    );
+  });
+  return id;
+}

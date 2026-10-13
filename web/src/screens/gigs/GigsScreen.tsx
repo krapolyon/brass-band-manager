@@ -131,8 +131,14 @@ export function GigsScreen() {
       subtitle={subtitle}
       action={
         canManage && (
-          <Button kind="secondary" size="small" icon="Plus" onClick={() => navigate('/gigs/new')}>
-            {t('gigs.list.add')}
+          // Figma, section 16: on a desktop, "Nouveau plan" beside the title.
+          <Button
+            kind={isDesktop ? 'primary' : 'secondary'}
+            size="small"
+            icon="Plus"
+            onClick={() => navigate('/gigs/new')}
+          >
+            {t(isDesktop ? 'gigs.list.addDesktop' : 'gigs.list.add')}
           </Button>
         )
       }
@@ -140,10 +146,10 @@ export function GigsScreen() {
       <div className="gigs-split">
         <div className="gigs-list">
           <div className="gigs-filters">
-            <FilterChip pressed={withCancelled} onChange={setCancelled}>
+            <FilterChip icon="Close" pressed={withCancelled} onChange={setCancelled}>
               {t('gigs.list.filterCancelled')}
             </FilterChip>
-            <FilterChip pressed={withPast} onChange={setPast}>
+            <FilterChip icon="Archive" pressed={withPast} onChange={setPast}>
               {t('gigs.list.filterPast')}
             </FilterChip>
           </div>

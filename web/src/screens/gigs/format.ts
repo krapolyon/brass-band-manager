@@ -115,9 +115,7 @@ export function shortPlace(gig: Pick<GigSummary, 'placeName' | 'postalCode' | 'c
   return gig.placeName ?? [gig.postalCode, gig.city].filter(Boolean).join(' ');
 }
 
-/** A list of names inside a sentence, in lowercase as the sentence goes on: "souba, percu". */
+/** A list of sections inside a sentence. A section is named as it is, never in the plural: "Percu et Souba". */
 export function inSentence(names: string[], language: string): string {
-  return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(
-    names.map((name) => name.toLocaleLowerCase(language)),
-  );
+  return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(names);
 }

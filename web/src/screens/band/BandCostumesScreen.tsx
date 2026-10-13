@@ -183,6 +183,29 @@ function CostumePanel({ costume, onClose, onCreated }: PanelProps) {
     }
   };
 
+  // Moved at once, one place at a time: the order is the one of the choices of a gig.
+  const all = useCostumes().data ?? [];
+  const rank = existing ? all.findIndex((one) => one.id === existing.id) : -1;
+  const move = async (by: 1 | -1) => {
+    if (!existing) return;
+    setSaving(true);
+    setFailure(null);
+    try {
+      keepsPanel.current = true;
+      keep(
+        await api<Costume[]>(`/api/costumes/${existing.id}`, {
+          method: 'PUT',
+          body: { name: existing.name, position: rank + 1 + by },
+        }),
+      );
+    } catch {
+      setFailure('failed');
+    } finally {
+      keepsPanel.current = false;
+      setSaving(false);
+    }
+  };
+
   const inUse = (existing?.gigCount ?? 0) > 0;
   const title = isDeleting
     ? t('band.costumes.deleteTitle', { name: existing?.name ?? '' })
@@ -218,6 +241,35 @@ function CostumePanel({ costume, onClose, onCreated }: PanelProps) {
           <Button disabled={isSaving} onClick={save}>
             {t('band.costumes.save')}
           </Button>
+          {existing && all.length > 1 && (
+            // biome-ignore lint/a11y/useSemanticElements: a fieldset cannot be laid out as this group is
+            <div className="band-order" role="group" aria-label={t('band.costumes.order')}>
+              <Button
+                kind="secondary"
+                size="small"
+                icon="ArrowUp"
+                disabled={isSaving || rank <= 0}
+                onClick={() => move(-1)}
+              >
+                {t('install.sections.section.moveUp')}
+              </Button>
+              <Button
+                kind="secondary"
+                size="small"
+                icon="ArrowDown"
+                disabled={isSaving || rank === all.length - 1}
+                onClick={() => move(1)}
+              >
+                {t('install.sections.section.moveDown')}
+              </Button>
+              <span className="band-muted textCaption" aria-live="polite">
+                {t('install.sections.section.position', {
+                  rank: t('install.sections.section.rank', { count: rank + 1, ordinal: true }),
+                  total: all.length,
+                })}
+              </span>
+            </div>
+          )}
           {existing && (
             <>
               <Button kind="danger" icon="Trash" disabled={inUse} onClick={() => setDeleting(true)}>

@@ -7,15 +7,17 @@ type Props = {
   kind?: 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
   /** Figma: "Show icon" and "Icon". */
   icon?: IconName;
+  /** The filled drawing of the icon (Figma: Style=Filled). */
+  iconFilled?: boolean;
   children: ReactNode;
 };
 
 // Figma: Chip. A short status, a role or a count. A status always carries a
 // word or an icon: its colour is never the only signal.
-export function Chip({ kind = 'neutral', icon, children }: Props) {
+export function Chip({ kind = 'neutral', icon, iconFilled, children }: Props) {
   return (
     <span className="Chip textCaption" data-kind={kind}>
-      {icon && <Icon name={icon} size={16} />}
+      {icon && <Icon name={icon} size={16} filled={iconFilled} />}
       {children}
     </span>
   );

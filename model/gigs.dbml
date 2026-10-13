@@ -1,5 +1,5 @@
 // Domain: Gigs
-// v1.3 — 2026-10-13 — rules found while building the screens (dictionary only, no schema change)
+// v1.3 — 2026-10-13 — validated, migration 010: the live setlist (decided with the design): a setlist belongs to a slot of its gig, whose members who said yes follow it live; the position of the song being played and the start of the live session.
 // v1.2 — 2026-10-13 — decided with the design: a setlist is numbered within its gig (1, 2, 3…), not across the band; only a song in the repertoire or a temporary one is added to a setlist. Migration 009
 // v1.1 — 2026-10-13 — rules found while writing the API (dictionary only, no schema change)
 // v1.0 — 2026-10-13 — validated, migration 008
@@ -73,6 +73,10 @@ Table gigSlot {
   note varchar [note: 'Information specific to this slot, for instance "Parade, no amplification". Can hold several lines.']
   costumeId integer [ref: > costume.id, note: 'The costume worn at this slot, one of the costumes of the gig (gigCostume). Empty when none is decided.']
   Note: 'A moment of a gig for which members say whether they come: a roll call (a "présence" in the French locale). Playable as soon as every section has one member who answered yes; a gig is playable as soon as one of its slots is. Never stored: computed from the answers.'
+
+  indexes {
+    (id, gigId) [unique, note: 'Target of the reference of a setlist to its slot, which keeps the slot in the gig of the setlist']
+  }
 }
 
 Enum attendanceAnswer {
@@ -125,9 +129,12 @@ Table gigCostume {
 Table setlist {
   id integer [pk]
   gigId integer [not null, ref: > gig.id, note: 'The gig this setlist is played at. A gig can have none or several.']
+  gigSlotId integer [not null, note: 'The slot of the gig this setlist is played at: its members who answered yes follow it live. Chosen when the gig has several slots, the only slot otherwise. A slot that has setlists is not deleted.']
   number integer [not null, note: 'Given by the app: one more than the highest number of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig. Deleting a setlist does not renumber the others.']
   description varchar [note: 'A short text, for instance "Parade, 45 minutes"']
-  Note: 'An ordered list of songs played at a gig. How far the band is in it during the gig, and the count of how often a song is played, come later.'
+  liveStartedAt timestamp [note: 'When the setlist was started live. Empty when it is not live. One setlist at most is live in the band: starting one ends the one that was.']
+  livePosition integer [note: 'While the setlist is live, the position (setlistSong.position) of the song being played, the one the notification announces. Filled with liveStartedAt or not at all.']
+  Note: 'An ordered list of songs played at a gig, followed live by the members who play it. The count of how often a song is played comes later.'
 
   indexes {
     (gigId, number) [unique]
@@ -162,6 +169,8 @@ Table song {
 // ---------------------------------------------------------------
 // Groups
 // ---------------------------------------------------------------
+
+Ref setlistSlotOfGig: setlist.(gigSlotId, gigId) > gigSlot.(id, gigId)
 
 TableGroup gigs {
   gig

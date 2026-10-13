@@ -26,6 +26,8 @@ type Props = {
   selected?: boolean;
   onSelect?: () => void;
   group?: string;
+  /** Figma: State=Disabled. A choice that cannot be made: `detail` says why. */
+  disabled?: boolean;
 };
 
 // Figma: ListRow. One line of a list: a label, an optional detail and an
@@ -42,6 +44,7 @@ export function ListRow({
   selected,
   onSelect,
   group,
+  disabled,
 }: Props) {
   const id = useId();
   const texts = (
@@ -53,10 +56,16 @@ export function ListRow({
 
   if (onSelect) {
     return (
-      <div className="ListRow" data-selected={selected ?? false}>
+      <div className="ListRow" data-selected={selected ?? false} data-disabled={disabled}>
         {/* The label is the touch target of the radio and gives it its name. */}
         <label className="ListRow-check" htmlFor={id}>
-          <Radio id={id} name={group} checked={selected ?? false} onChange={onSelect} />
+          <Radio
+            id={id}
+            name={group}
+            checked={selected ?? false}
+            disabled={disabled}
+            onChange={onSelect}
+          />
           {texts}
         </label>
         {trailing}

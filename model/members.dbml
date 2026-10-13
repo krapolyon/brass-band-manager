@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.18 — 2026-10-13 — no change to the tables: a device that accepted notifications also receives the live setlist of a gig (dictionary, with Gigs v1.3)
 // v1.17 — 2026-10-13 — validated with Gigs v1.0, migration 008: pushSubscription, a device that accepted push notifications; a member who leaves is taken off the gigs to come they organise (dictionary)
 // v1.16 — 2026-10-12 — no change to the tables: the levels a member gave to songs are erased when they leave; the starting library carries the aliases of its instruments (dictionary, with Songs v1.0)
 // v1.15 — 2026-10-12 — memberPasswordLink.refusedCount (migration 005): an invitation tolerates ten refusals; the members counted on an instrument are the current ones (dictionary)
@@ -152,7 +153,7 @@ Table pushSubscription {
   endpoint varchar [not null, unique, note: 'Address given by the browser, at its push service, to send a notification to this device. Whoever holds it can write to the device: never sent to the front, never logged.']
   p256dhKey varchar [not null, note: 'Public key given by the browser, which encrypts the notification for this device']
   authKey varchar [not null, note: 'Secret given by the browser with the key. Never sent to the front, never logged.']
-  Note: 'A device on which a member accepted push notifications. One per signed-in device at most. First used by the reminders of gigs (Gigs domain).'
+  Note: 'A device on which a member accepted push notifications. One per signed-in device at most. Used by the reminders of gigs and the live setlist (Gigs domain).'
 }
 
 // ---------------------------------------------------------------

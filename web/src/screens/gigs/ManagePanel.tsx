@@ -8,40 +8,43 @@ import { ListRow } from '../../components/ListRow.tsx';
 import { Message } from '../../components/Message.tsx';
 import { NavRow } from '../../components/NavRow.tsx';
 import { Panel } from '../../components/Panel.tsx';
-import { type Gig, type GigStatus, nearestSlot, nextStatuses, sectionNames } from '../../gigs.ts';
-import { useSections } from '../../members.ts';
+import {
+  type Gig,
+  type GigStatus,
+  gigStatuses,
+  nearestSlot,
+  nextStatuses,
+  sectionNames,
+} from '../../gigs.ts';
+import { useMembers, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
+import { attendanceOf } from './attendance.ts';
 import { inSentence } from './format.ts';
 
-type Step = 'status' | 'force' | 'delete';
+type Step = 'menu' | 'status' | 'force' | 'delete';
 type Props = {
   gig: Gig;
   open: boolean;
   onClose: () => void;
-  /** The step it opens on: "delete" from the button that deletes a draft. */
-  start?: 'status' | 'delete';
+  /** The step it opens on: the menu from the more button, "status" or "delete" from a button of the gig. */
+  start?: 'menu' | 'status' | 'delete';
 };
 
-// Figma: Gigs / Status (section 6). What who may edit a gig does with it:
-// change its status, from the statuses the model allows after the current one
-// (the API decides); open its form; delete it while it is a draft. Forcing
-// "Validé" while a section has no yes asks first, and so does deleting.
-export function ManagePanel({ gig, open, onClose, start = 'status' }: Props) {
+// Figma: Gigs / Gig — the more menu (section 16) and Gigs / Status (sections
+// 6 and 16). What who may edit a gig does with it: open its form, change its
+// status, delete it while it is a draft nobody answered. The five statuses
+// stay listed; one the model does not allow after the current one (the API
+// decides) cannot be chosen, and says why. Forcing "Validé" while a section
+// has no yes asks first, and so does deleting.
+export function ManagePanel({ gig, open, onClose, start = 'menu' }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const me = useMe().data;
   const sections = useSections().data;
+  const members = useMembers().data;
   const [chosen, setChosen] = useState<GigStatus>(gig.status);
   const [step, setStep] = useState<Step>(start);
-
-  // Each opening starts from the status the gig has.
-  useEffect(() => {
-    if (open) {
-      setChosen(gig.status);
-      setStep(start);
-    }
-  }, [open, gig.status, start]);
 
   const save = useMutation({
     mutationFn: (status: GigStatus) =>
@@ -62,9 +65,31 @@ export function ManagePanel({ gig, open, onClose, start = 'status' }: Props) {
     },
   });
 
-  const canDelete = gig.status === 'DRAFT' && (me?.permissions.includes('manageGigs') ?? false);
-  const missing = sectionNames(sections, nearestSlot(gig.slots)?.missingSectionIds ?? []);
-  const statuses = [gig.status, ...nextStatuses[gig.status]];
+  const resetSave = save.reset;
+  const resetRemove = remove.reset;
+  // Each opening starts from the status the gig has.
+  useEffect(() => {
+    if (open) {
+      setChosen(gig.status);
+      setStep(start);
+      // What failed the last time is not said again.
+      resetSave();
+      resetRemove();
+    }
+  }, [open, gig.status, start, resetSave, resetRemove]);
+
+  const mayDelete = me?.permissions.includes('manageGigs') ?? false;
+  const canDelete = gig.status === 'DRAFT' && gig.slots.every((slot) => slot.answers.length === 0);
+  const nearest = nearestSlot(gig.slots);
+  const missing = sectionNames(sections, nearest?.missingSectionIds ?? []);
+  // "Riton a dit non, Jibé n’a pas répondu": the members of the sections without a yes.
+  const absent = nearest
+    ? attendanceOf(nearest, members ?? [], sections ?? [], i18n.language, false)
+        .sections.filter(({ section }) => nearest.missingSectionIds.includes(section.id))
+        .flatMap(({ attendees }) => attendees)
+        .map(({ nickname, answer }) => t(`gigs.statusPanel.said.${answer ?? 'NONE'}`, { nickname }))
+        .join(', ')
+    : '';
   const submit = () => {
     if (chosen === gig.status) return onClose();
     if (chosen === 'CONFIRMED' && !gig.isPlayable) return setStep('force');
@@ -77,42 +102,72 @@ export function ManagePanel({ gig, open, onClose, start = 'status' }: Props) {
       ? t('gigs.statusPanel.forceTitle', { sections: inSentence(missing, i18n.language) })
       : step === 'delete'
         ? t('gigs.statusPanel.deleteTitle')
-        : t('gigs.statusPanel.title');
+        : step === 'menu'
+          ? gig.name
+          : t('gigs.statusPanel.title');
 
   return (
     <Panel open={open} onClose={onClose} title={title}>
+      {step === 'menu' && (
+        <div className="gigs-menu">
+          <NavRow icon="Pencil" label={t('gigs.gig.edit')} to={`/gigs/${gig.id}/edit`} />
+          <NavRow
+            icon="CalendarTick"
+            label={t('gigs.gig.changeStatus')}
+            chevron
+            onClick={() => setStep('status')}
+          />
+          {mayDelete && (
+            <NavRow
+              icon="Trash"
+              tone="danger"
+              label={t('gigs.gig.delete')}
+              detail={t('gigs.gig.deleteDetail')}
+              disabled={!canDelete}
+              onClick={() => setStep('delete')}
+            />
+          )}
+        </div>
+      )}
       {step === 'status' && (
         <div className="gigs-sheet">
-          <NavRow icon="Pencil" label={t('gigs.gig.edit')} to={`/gigs/${gig.id}/edit`} />
           <p className="gigs-muted textBody">{t('gigs.statusPanel.lead')}</p>
           <div className="gigs-rows" role="radiogroup" aria-label={t('gigs.statusPanel.title')}>
-            {statuses.map((status) => (
-              <ListRow
-                key={status}
-                label={t(`gigs.status.${status}`)}
-                detail={t(`gigs.statusPanel.detail.${status}`)}
-                group="gigStatus"
-                selected={chosen === status}
-                onSelect={() => setChosen(status)}
-              />
-            ))}
+            {gigStatuses.map((status) => {
+              const isAllowed = status === gig.status || nextStatuses[gig.status].includes(status);
+              return (
+                <ListRow
+                  key={status}
+                  label={t(`gigs.status.${status}`)}
+                  detail={
+                    isAllowed
+                      ? t(`gigs.statusPanel.detail.${status}`)
+                      : t('gigs.statusPanel.notAllowed', {
+                          status: t(`gigs.status.${gig.status}`),
+                        })
+                  }
+                  group="gigStatus"
+                  selected={chosen === status}
+                  disabled={!isAllowed}
+                  onSelect={() => setChosen(status)}
+                />
+              );
+            })}
           </div>
           {save.isError && <Message kind="danger">{t('gigs.statusPanel.failed')}</Message>}
           <Button disabled={save.isPending} onClick={submit}>
             {t('gigs.statusPanel.save')}
           </Button>
-          {canDelete && (
-            <Button kind="danger" icon="Trash" onClick={() => setStep('delete')}>
-              {t('gigs.statusPanel.delete')}
-            </Button>
-          )}
         </div>
       )}
       {step === 'force' && (
         <div className="gigs-sheet">
-          <p className="textBody">{t('gigs.statusPanel.forceLead')}</p>
+          <p className="textBody">
+            {t('gigs.statusPanel.forceLead', { sections: inSentence(missing, i18n.language) })}
+          </p>
           <Message kind="warning">
             {t('gigs.statusPanel.forceMissing', { sections: missing.join(', ') })}
+            {absent && ` ${absent}.`}
           </Message>
           {save.isError && <Message kind="danger">{t('gigs.statusPanel.failed')}</Message>}
           <Button icon="Check" disabled={save.isPending} onClick={() => save.mutate('CONFIRMED')}>
@@ -139,7 +194,7 @@ export function ManagePanel({ gig, open, onClose, start = 'status' }: Props) {
           >
             {t('gigs.statusPanel.delete')}
           </Button>
-          <Button kind="quiet" onClick={() => setStep('status')}>
+          <Button kind="quiet" onClick={onClose}>
             {t('gigs.statusPanel.keepDraft')}
           </Button>
         </div>
