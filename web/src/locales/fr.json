@@ -1172,6 +1172,7 @@
         "noSong": "Pas encore de morceau. Tape le premier.",
         "noSongOrDictate": "Pas encore de morceau. Tape ou dicte le premier.",
         "dictation": {
+          "language": "fr-FR",
           "start": "Dicter les morceaux",
           "listening": "J’écoute…",
           "stop": "Arrêter",

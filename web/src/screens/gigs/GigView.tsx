@@ -66,9 +66,15 @@ function mapsUrl(gig: Gig): string | null {
   if (!point && !address) return null;
 
   const target = encodeURIComponent(point ?? address);
+  // With a point, the address in words names it in the maps app.
+  const name = point && address ? encodeURIComponent(address) : null;
   const platform = navigator.userAgent;
-  if (/iPhone|iPad|Macintosh/.test(platform)) return `https://maps.apple.com/?daddr=${target}`;
-  if (/Android/.test(platform)) return `geo:0,0?q=${target}`;
+  if (/iPhone|iPad|Macintosh/.test(platform)) {
+    return `https://maps.apple.com/?daddr=${target}${name ? `&q=${name}` : ''}`;
+  }
+  if (/Android/.test(platform)) {
+    return name ? `geo:${point}?q=${point}(${name})` : `geo:0,0?q=${target}`;
+  }
   return point
     ? `https://www.openstreetmap.org/?mlat=${gig.latitude}&mlon=${gig.longitude}#map=17/${gig.latitude}/${gig.longitude}`
     : `https://www.openstreetmap.org/search?query=${target}`;

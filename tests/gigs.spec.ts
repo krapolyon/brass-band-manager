@@ -1014,7 +1014,10 @@ test.describe('what must not go wrong', () => {
     sql(`UPDATE gig SET latitude = 45.7743, longitude = 4.8320 WHERE id = ${gigId}`);
     await page.reload();
     await page.getByRole('button', { name: 'Y aller' }).click();
-    expect(decodeURIComponent((await opened())[0] ?? '')).toContain('45.7743,4.832');
+    const byPoint = decodeURIComponent((await opened())[0] ?? '');
+    expect(byPoint).toContain('45.7743,4.832');
+    // The address in words goes with the point, so that the maps app names it.
+    expect(byPoint).toContain('Métro Croix-Rousse, Lyon');
 
     await page.getByRole('button', { name: 'Voir le lieu' }).click();
     expect((await opened())[1]).toBe('https://example.org/lieu');

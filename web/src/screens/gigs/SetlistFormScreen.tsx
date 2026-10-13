@@ -53,7 +53,7 @@ const record = (draft: Draft) => ({
 // the band plays, and the app learns from the choices (model/songs.md, entry
 // 4). For who manages setlists.
 export function SetlistFormScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const params = useParams();
   const queryClient = useQueryClient();
@@ -90,7 +90,9 @@ export function SetlistFormScreen() {
   const dictated = useRef<{ key: string; phrase: string } | null>(null);
   const correcting = useRef<string | null>(null);
   const onHeard = useRef<(wordings: string[]) => void>(() => {});
-  const dictation = useDictation(i18n.language, (wordings) => onHeard.current(wordings));
+  const dictation = useDictation(t('gigs.setlist.form.dictation.language'), (wordings) =>
+    onHeard.current(wordings),
+  );
 
   const gig = gigQuery.data;
   // Leaving with changes asks first, by the cross as by the back button of the browser.

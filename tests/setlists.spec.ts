@@ -361,6 +361,32 @@ test.describe('dictating a setlist', () => {
     expect(sql('SELECT COUNT(*) FROM setlistSong')).toBe('4');
   });
 
+  test('a title heard the French way, or spelt with the names of its letters, still meets its song', async ({
+    page,
+  }) => {
+    const { gigId } = confirmed();
+    for (const name of ['Toxic', 'Dance', 'Get Lucky']) addSong(name);
+    await fakeRecogniser(page);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/new`);
+    await page.getByRole('button', { name: 'Dicter les morceaux' }).click();
+
+    await say(page, 'toxique');
+    await expect(page.getByText('Entendu : « toxique » → Toxic')).toBeVisible();
+    await say(page, 'dé a enne cé e');
+    await expect(page.getByText('Entendu : « de a enne ce e » → Dance')).toBeVisible();
+    // Among the wordings of the recogniser, the one closest to a song is kept.
+    await say(page, 'le queue', 'guette lucky');
+    await expect(page.getByText('Entendu : « guette lucky » → Get Lucky')).toBeVisible();
+    await expect(page.getByRole('list').first().getByRole('listitem')).toHaveText([
+      /Toxic/,
+      /Dance/,
+      /Get Lucky/,
+    ]);
+    // Guessed, not chosen: nothing is learned.
+    expect(phrases()).toBe('');
+  });
+
   test('replacing at once the song the dictation added teaches the phrase to the right one', async ({
     page,
   }) => {

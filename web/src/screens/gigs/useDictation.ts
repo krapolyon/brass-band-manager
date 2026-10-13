@@ -36,7 +36,7 @@ const recognitionClass = (): RecognitionClass | undefined => {
 export type DictationProblem = 'denied' | 'failed';
 
 /**
- * @param language The language spoken, as the app has it: "fr"
+ * @param language The language spoken, with its country: "fr-FR"
  * @param onHeard Called with what was heard, the likeliest wording first
  */
 export function useDictation(language: string, onHeard: (wordings: string[]) => void) {
@@ -61,7 +61,8 @@ export function useDictation(language: string, onHeard: (wordings: string[]) => 
     const one = new Class();
     one.lang = language;
     one.continuous = true;
-    one.interimResults = false;
+    // Asked for and not shown: this is how the prototype listened on the phones tried.
+    one.interimResults = true;
     one.maxAlternatives = 3;
     one.onresult = (event) => {
       for (let index = event.resultIndex; index < event.results.length; index++) {

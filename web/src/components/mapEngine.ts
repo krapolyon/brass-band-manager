@@ -38,9 +38,22 @@ const GREEN = [
   'cemetery',
   'grave_yard',
 ];
-const MAJOR = ['motorway', 'trunk', 'primary'];
-const MIDDLE = ['secondary', 'tertiary'];
-const PATHS = ['footway', 'path', 'steps', 'cycleway', 'track', 'bridleway'];
+// The kinds of streets, grouped as in the prototype the owner validated: the
+// ways of a car park, of a courtyard or of a pedestrian area are drawn thin,
+// like the paths, so that the streets stand out.
+const MAJOR = ['motorway', 'trunk', 'primary', 'secondary'];
+const MIDDLE = ['tertiary'];
+const PATHS = [
+  'footway',
+  'path',
+  'steps',
+  'pedestrian',
+  'living_street',
+  'service',
+  'cycleway',
+  'track',
+  'bridleway',
+];
 
 // The width of a street by its kind, in pixels at a zoom.
 const streetWidth = (major: number, middle: number, small: number, path: number) => [
@@ -132,12 +145,12 @@ function styleOf(tilesUrl: string, colours: MapColours): StyleSpecification {
             ['exponential', 1.6],
             ['zoom'],
             12,
-            streetWidth(2.5, 1.5, 0.6, 0),
+            streetWidth(2.5, 1.5, 0.6, 0.3),
             17,
             // Figma draws the streets 10, 8 and 6 thick.
-            streetWidth(10, 8, 6, 1.5),
+            streetWidth(10, 8, 6, 2.5),
             19,
-            streetWidth(28, 22, 16, 4),
+            streetWidth(28, 22, 16, 6),
           ],
         },
       },
