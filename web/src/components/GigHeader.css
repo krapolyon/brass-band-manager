@@ -1,0 +1,76 @@
+.GigHeader {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.GigHeader-picture {
+  position: relative;
+  color: var(--text);
+}
+
+/* Large: the picture is 320 tall, and the titles are a panel of ground that
+   overlaps it by 28, as Song/Header. */
+.GigHeader[data-size="large"] .GigHeader-picture {
+  height: 20rem;
+}
+
+.GigHeader-top {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  /* The top margin of a screen: 32, or the safe area plus 8 when that is more. */
+  padding: max(var(--spaceXxl), calc(env(safe-area-inset-top) + var(--spaceXs))) var(--spaceMd) 0;
+}
+
+.GigHeader-titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 0;
+}
+
+.GigHeader-titles > * {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.GigHeader[data-size="large"] .GigHeader-titles {
+  position: relative;
+  margin-top: -1.75rem;
+  padding: var(--spaceXl) var(--spaceMd) var(--spaceSm);
+  border-radius: var(--radiusLg) var(--radiusLg) 0 0;
+  background: var(--ground);
+}
+
+.GigHeader-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.GigHeader-where {
+  color: var(--textMuted);
+}
+
+/* Compact: the picture, 176 by 132, beside the titles. The titles go under
+   the picture when they would get less than 240. */
+.GigHeader[data-size="compact"] {
+  flex-flow: row wrap;
+  align-items: center;
+  gap: var(--spaceLg);
+}
+
+.GigHeader[data-size="compact"] .GigHeader-picture {
+  flex: none;
+  width: 11rem;
+  height: 8.25rem;
+  overflow: hidden;
+  border-radius: var(--radiusMd);
+}
+
+.GigHeader[data-size="compact"] .GigHeader-titles {
+  flex: 1;
+  min-width: 15rem;
+}

@@ -1,0 +1,52 @@
+.GigSlotCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceMd);
+  border-radius: var(--radiusMd);
+  background: var(--control);
+}
+
+.GigSlotCard :is(h3, h4),
+.GigSlotCard p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.GigSlotCard-heading,
+.GigSlotCard-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.GigSlotCard-heading :is(h3, h4) {
+  flex: 1;
+  min-width: 8rem;
+}
+
+.GigSlotCard-note {
+  color: var(--textMuted);
+  white-space: pre-line;
+}
+
+.GigSlotCard-playable {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--spaceXs);
+  min-width: 8rem;
+  padding: var(--spaceXs) var(--spaceSm);
+  border-radius: var(--radiusSm);
+}
+
+.GigSlotCard-playable[data-playable="yes"] {
+  background: var(--successSoft);
+  color: var(--success);
+}
+
+.GigSlotCard-playable[data-playable="missing"] {
+  background: var(--warningSoft);
+  color: var(--warning);
+}

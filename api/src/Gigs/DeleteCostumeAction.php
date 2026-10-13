@@ -18,6 +18,7 @@ final class DeleteCostumeAction
     public function __construct(
         private readonly Connection $database,
         private readonly Costumes $costumes,
+        private readonly CostumePictures $pictures,
     ) {
     }
 
@@ -26,7 +27,8 @@ final class DeleteCostumeAction
      */
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $arguments): ResponseInterface
     {
-        if ($this->database->fetchOne('SELECT 1 FROM costume WHERE id = ?', [(int) $arguments['id']]) === false) {
+        $imagePath = $this->database->fetchOne('SELECT imagePath FROM costume WHERE id = ?', [(int) $arguments['id']]);
+        if ($imagePath === false) {
             throw new ApiError(404, 'notFound');
         }
         try {
@@ -35,6 +37,8 @@ final class DeleteCostumeAction
         } catch (ForeignKeyConstraintViolationException) {
             throw new ApiError(409, 'costumeInUse');
         }
+        // Once the costume is gone for good: a file is never deleted for a costume that stays.
+        $this->pictures->delete(is_string($imagePath) ? $imagePath : null);
 
         return Json::write($response, $this->costumes->all());
     }

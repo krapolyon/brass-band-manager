@@ -1,0 +1,92 @@
+.GigSlotWhoComes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.GigSlotWhoComes-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.GigSlotWhoComes-heading :is(h2, h3) {
+  flex: 1;
+  margin: 0;
+}
+
+.GigSlotWhoComes-heading span {
+  color: var(--textMuted);
+}
+
+.GigSlotWhoComes-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+}
+
+.AnswerShares {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+/* 10 tall, 2 between two parts. */
+.AnswerShares-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.625rem;
+  overflow: hidden;
+  border-radius: var(--radiusFull);
+}
+
+.AnswerShares-bar span {
+  flex-basis: 0;
+}
+
+.AnswerShares-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXxs) var(--spaceSm);
+  margin: 0;
+  padding: 0;
+  color: var(--textMuted);
+  list-style: none;
+}
+
+.AnswerShares-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXxs);
+}
+
+.AnswerShares-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radiusFull);
+}
+
+/* "If needed" takes info, never haloCool, which is the ground in high contrast. */
+.AnswerShares [data-answer="yes"] {
+  background: var(--success);
+}
+
+.AnswerShares [data-answer="maybe"] {
+  background: var(--warning);
+}
+
+.AnswerShares [data-answer="ifNeeded"] {
+  background: var(--info);
+}
+
+.AnswerShares [data-answer="no"] {
+  background: var(--danger);
+}
+
+.AnswerShares [data-answer="none"] {
+  background: var(--border);
+}

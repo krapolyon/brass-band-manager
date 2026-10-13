@@ -3,6 +3,8 @@ import './MemberMention.css';
 
 type Props = {
   nickname: string;
+  /** What follows the nickname without being part of it: "(toi)" for the member themself. */
+  suffix?: string;
   /** Figma: "Detail" and "Show detail": the instrument, most often. */
   detail?: string;
   photoUrl: string | null;
@@ -10,12 +12,15 @@ type Props = {
 
 // Figma: Member/Mention. A member named inside another component: the
 // signed-in member at the foot of the menu, later the organisers of a gig.
-export function MemberMention({ nickname, detail, photoUrl }: Props) {
+export function MemberMention({ nickname, suffix, detail, photoUrl }: Props) {
   return (
     <span className="MemberMention">
       <Avatar photoUrl={photoUrl} initials={initialsOf(nickname)} />
       <span className="MemberMention-texts">
-        <span className="textBodyStrong">{nickname}</span>
+        <span className="textBodyStrong">
+          {nickname}
+          {suffix && ` ${suffix}`}
+        </span>
         {detail && <span className="MemberMention-detail textCaption">{detail}</span>}
       </span>
     </span>

@@ -37,6 +37,23 @@ export function useBand() {
   });
 }
 
+// What GET /api/band/gigReminders answers, to who manages the band.
+export type GigReminders = {
+  /** How many days before a gig its two reminders are sent; null for a reminder that is not sent. */
+  gigFirstReminderDays: number | null;
+  gigSecondReminderDays: number | null;
+  /** The hour of the day from which the reminders are sent, 0 to 23. */
+  gigReminderHour: number;
+};
+
+export function useGigReminders(enabled: boolean) {
+  return useQuery({
+    queryKey: ['gigReminders'],
+    queryFn: () => api<GigReminders>('/api/band/gigReminders'),
+    enabled,
+  });
+}
+
 // Gives the page the name, the accent theme and the icon of the band: the title of the tab, the
 // icon of the tab, and the icon an iPhone takes when the app is added to its
 // home screen. Without a band, or without a logo, index.html keeps its own.

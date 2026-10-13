@@ -4,10 +4,15 @@ import { MembersOnly, VisitorsOnly } from './screens/access/Guards.tsx';
 import { PasswordLinkScreen } from './screens/access/PasswordLinkScreen.tsx';
 import { SignInScreen } from './screens/access/SignInScreen.tsx';
 import { BandAppearanceScreen } from './screens/band/BandAppearanceScreen.tsx';
+import { BandCostumesScreen } from './screens/band/BandCostumesScreen.tsx';
+import { BandRemindersScreen } from './screens/band/BandRemindersScreen.tsx';
 import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
 import { BandSettingsScreen } from './screens/band/BandSettingsScreen.tsx';
 import { BandSpellingsScreen } from './screens/band/BandSpellingsScreen.tsx';
 import { ComingSoonScreen } from './screens/ComingSoonScreen.tsx';
+import { GigFormScreen } from './screens/gigs/GigFormScreen.tsx';
+import { GigsScreen } from './screens/gigs/GigsScreen.tsx';
+import { WhoComesScreen } from './screens/gigs/WhoComesScreen.tsx';
 import { BandScreen } from './screens/install/BandScreen.tsx';
 import { DoneScreen } from './screens/install/DoneScreen.tsx';
 import { InstallDraftProvider } from './screens/install/InstallDraft.tsx';
@@ -41,7 +46,11 @@ export const router = createBrowserRouter([
       { path: '/songs/manage', element: <ManageSongsScreen /> },
       { path: '/songs/:id', element: <SongsScreen /> },
       { path: '/songs/:id/edit', element: <SongEditScreen /> },
-      { path: '/gigs', element: <ComingSoonScreen tab="gigs" /> },
+      { path: '/gigs', element: <GigsScreen /> },
+      { path: '/gigs/new', element: <GigFormScreen /> },
+      { path: '/gigs/:id', element: <GigsScreen /> },
+      { path: '/gigs/:id/edit', element: <GigFormScreen /> },
+      { path: '/gigs/:id/answers', element: <WhoComesScreen /> },
       { path: '/members', element: <DirectoryScreen /> },
       { path: '/members/manage', element: <ManageListScreen /> },
       { path: '/members/manage/invite', element: <InviteScreen /> },
@@ -50,6 +59,8 @@ export const router = createBrowserRouter([
       { path: '/band/appearance', element: <BandAppearanceScreen /> },
       { path: '/band/sections', element: <BandSectionsScreen /> },
       { path: '/band/spellings', element: <BandSpellingsScreen /> },
+      { path: '/band/costumes', element: <BandCostumesScreen /> },
+      { path: '/band/reminders', element: <BandRemindersScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/settings/profile', element: <ProfileScreen /> },
       { path: '/settings/password', element: <PasswordScreen /> },

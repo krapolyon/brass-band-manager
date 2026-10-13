@@ -1,6 +1,7 @@
 # Business dictionary — Gigs domain
 
-> v1.2 — 2026-10-13 · Decided with the design of gigs: a setlist is numbered within its gig (1, 2, 3…); only a song in the repertoire is added to a setlist · Migration: `009_setlistNumberPerGig.sql`
+> v1.3 — 2026-10-13 · Rules found while building the screens (no schema change): the picture of a costume is made small by the browser; what the list counts; what a screen reads from the dates
+> v1.2 — 2026-10-13 · Decided with the design of gigs: a setlist is numbered within its gig (1, 2, 3…); only a song in the repertoire or a temporary one is added to a setlist · Migration: `009_setlistNumberPerGig.sql`
 > v1.1 — 2026-10-13 · Rules found while writing the API (no schema change): a draft that has answers is not deleted; when the server holds a gig for over; when the app looks whether an accepted gig is playable; an organiser who left stays on a gig that is saved again
 > v1.0 — 2026-10-13 · Model: `gigs.dbml` · Validated by the owner on 2026-10-13 · Migration: `008_gigs.sql`, with the reminders of the band (Band v1.6) and the push subscriptions (Members v1.17)
 > v0.3 — 2026-10-13 · DRAFT, no question left · No field for the quote, `ACCEPTED` is set by hand; two automatic reminders, a number of days before the gig; a member who leaves stays organiser of the gigs already played; a gig not confirmed whose date has passed is to close; setlists are built with this domain, last
@@ -94,7 +95,8 @@ The right of an organiser depends on the gig, not on a role: the shared layer ch
 - Dates through `Intl`, in the language of the member: "ven. 4 – dim. 6 déc." for several days.
 - A gig with only a postal code and a city shows them as its place.
 - The coordinates open the map application of the device.
-- Representations in the design library: to draw (row of the list, header of its screen, mention). None exists yet.
+- Representations in the design library (Figma, page `Gigs`): `Gig/Card`, `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`.
+- The count of a slot is "x oui sur y", y being the current members of the band.
 
 ## 2. Slot (`gigSlot`, `gigSlotAttendance`)
 
@@ -137,7 +139,7 @@ An outfit the band wears at a gig. In the French locale a costume is a "déguise
 | Field | Label (en) | Label (fr) | Required | Real example | Realistic length | Rules |
 |---|---|---|---|---|---|---|
 | `name` | Name | Nom | Yes | Paillettes | Up to 20 characters | Unique |
-| `imagePath` | Picture | Image | No | — | — | JPEG, PNG or WebP, kept in the storage folder and served to signed-in members only |
+| `imagePath` | Picture | Image | No | — | — | JPEG, PNG or WebP, kept in the storage folder and served to signed-in members only. Made small by the browser that sends it, 1200 pixels wide at most; the server accepts nothing larger (1200 by 2400, 800 kB) |
 | `position` | — | — | Yes | 2 | — | |
 
 ### Rules
@@ -162,11 +164,11 @@ An ordered list of songs played at a gig. A gig can have several: one per set, o
 | `number` | Number | Numéro | Yes | 2 | — | Given by the app: one more than the highest of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig |
 | `description` | Description | Description | No | Parade, 45 minutes | Up to 60 characters | |
 | `position` | — | — | Yes | 7 | — | A song can come twice in a setlist |
-| `songId` | Song | Morceau | Yes | Seven Nation Army | — | A song whose status is `IN_REPERTOIRE` when it is added |
+| `songId` | Song | Morceau | Yes | Seven Nation Army | — | A song whose status is `IN_REPERTOIRE` or `TEMPORARY` when it is added |
 
 ### Rules
 - Setlists are numbered within their gig: the Fête des Lumières has its setlists 1, 2 and 3, and the next gig starts again at 1. Deleting a setlist does not renumber the others.
-- Only a song in the repertoire (`IN_REPERTOIRE`) can be added to a setlist; the songs offered while typing or dictating are those. A song that leaves the repertoire afterwards stays in the setlists that already hold it.
+- Only a song the band plays can be added to a setlist: in the repertoire (`IN_REPERTOIRE`) or temporary (`TEMPORARY`, learned for an occasion, often this very gig). The songs offered while typing or dictating are those. A song whose status changes afterwards stays in the setlists that already hold it.
 - A setlist is written before the gig or, more often, once it has started. It stays editable after the gig: it says what was played.
 - A song used by a setlist cannot be deleted (Songs domain).
 - Later, not modelled: how far the band is in the setlist during the gig, with a button to move on; the next songs on the lock screen of the phone; how often each song is played, counted from the setlists of past gigs.

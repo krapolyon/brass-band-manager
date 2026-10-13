@@ -1,5 +1,6 @@
 // Domain: Gigs
-// v1.2 — 2026-10-13 — decided with the design: a setlist is numbered within its gig (1, 2, 3…), not across the band; only a song in the repertoire is added to a setlist. Migration 009
+// v1.3 — 2026-10-13 — rules found while building the screens (dictionary only, no schema change)
+// v1.2 — 2026-10-13 — decided with the design: a setlist is numbered within its gig (1, 2, 3…), not across the band; only a song in the repertoire or a temporary one is added to a setlist. Migration 009
 // v1.1 — 2026-10-13 — rules found while writing the API (dictionary only, no schema change)
 // v1.0 — 2026-10-13 — validated, migration 008
 // v0.3 — 2026-10-13 — DRAFT, no question left: no field for the quote, ACCEPTED is set by hand; two automatic reminders, a number of days before the gig; a member who leaves stays organiser of the gigs already played; setlists are built with this domain
@@ -135,7 +136,7 @@ Table setlist {
 
 Table setlistSong {
   setlistId integer [not null, ref: > setlist.id]
-  songId integer [not null, ref: > song.id, note: 'A song whose status is IN_REPERTOIRE when it is added. A song that leaves the repertoire afterwards stays in the setlists that hold it.']
+  songId integer [not null, ref: > song.id, note: 'A song whose status is IN_REPERTOIRE or TEMPORARY when it is added: the band plays them. A song whose status changes afterwards stays in the setlists that hold it.']
   position integer [not null, note: 'Rank of the song in the setlist, starting at 1. A song can come twice.']
   Note: 'A song at a given position in a setlist.'
 

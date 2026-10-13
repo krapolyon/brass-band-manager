@@ -7,7 +7,7 @@ namespace BrassBand\Gigs;
 use Doctrine\DBAL\Connection;
 
 // What the actions on costumes share: how they are listed and ordered.
-// Rules: model/gigs.md, entry 3. The picture of a costume is not built yet.
+// Rules: model/gigs.md, entry 3.
 final class Costumes
 {
     public const NAME_MAX_LENGTH = 40;
@@ -19,13 +19,26 @@ final class Costumes
     /**
      * The costumes of the band, in its order.
      *
-     * @return list<array{id: int, name: string, position: int}>
+     * gigCount is how many gigs have the costume, the gigs already played
+     * included: a costume a gig has cannot be deleted.
+     *
+     * @return list<array{id: int, name: string, position: int, pictureUrl: string|null, gigCount: int}>
      */
     public function all(): array
     {
         return array_map(
-            fn (array $costume) => ['id' => (int) $costume['id'], 'name' => (string) $costume['name'], 'position' => (int) $costume['position']],
-            $this->database->fetchAllAssociative('SELECT id, name, position FROM costume ORDER BY position, name'),
+            fn (array $costume) => [
+                'id' => (int) $costume['id'],
+                'name' => (string) $costume['name'],
+                'position' => (int) $costume['position'],
+                'pictureUrl' => CostumePictures::url((int) $costume['id'], $costume['imagePath']),
+                'gigCount' => (int) $costume['gigCount'],
+            ],
+            $this->database->fetchAllAssociative(
+                'SELECT c.id, c.name, c.position, c.imagePath,
+                        (SELECT COUNT(*) FROM gigCostume g WHERE g.costumeId = c.id) AS gigCount
+                 FROM costume c ORDER BY c.position, c.name',
+            ),
         );
     }
 

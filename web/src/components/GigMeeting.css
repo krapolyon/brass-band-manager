@@ -1,0 +1,35 @@
+.GigMeeting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.GigMeeting-texts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+}
+
+.GigMeeting-texts > * {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.GigMeeting-label,
+.GigMeeting-address {
+  color: var(--textMuted);
+}
+
+/* The first action takes the whole line; the next ones wrap under it. */
+.GigMeeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.GigMeeting-actions > :first-child {
+  flex: 1 1 100%;
+}

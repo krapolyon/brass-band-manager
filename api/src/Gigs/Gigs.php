@@ -160,9 +160,13 @@ final class Gigs
                 ),
             ),
             'costumes' => array_map(
-                fn (array $costume) => ['id' => (int) $costume['id'], 'name' => (string) $costume['name']],
+                fn (array $costume) => [
+                    'id' => (int) $costume['id'],
+                    'name' => (string) $costume['name'],
+                    'pictureUrl' => CostumePictures::url((int) $costume['id'], $costume['imagePath']),
+                ],
                 $this->database->fetchAllAssociative(
-                    'SELECT c.id, c.name FROM gigCostume gc JOIN costume c ON c.id = gc.costumeId WHERE gc.gigId = ? ORDER BY c.position, c.name',
+                    'SELECT c.id, c.name, c.imagePath FROM gigCostume gc JOIN costume c ON c.id = gc.costumeId WHERE gc.gigId = ? ORDER BY c.position, c.name',
                     [$gigId],
                 ),
             ),

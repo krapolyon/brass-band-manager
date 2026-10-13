@@ -1,0 +1,47 @@
+.GigPicture {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--control);
+}
+
+.GigPicture-part {
+  position: absolute;
+  inset: 0;
+}
+
+.GigPicture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Two or three pictures: each one after the first is cut by a diagonal that
+   leans as in Figma (16 % of the width from top to bottom). The part is the
+   colour of the ground and its picture starts 4 px further: the line between
+   two pictures. --top and --bottom are where the diagonal meets the two edges. */
+.GigPicture-part + .GigPicture-part {
+  background: var(--ground);
+  clip-path: polygon(var(--top) 0, 100% 0, 100% 100%, var(--bottom) 100%);
+}
+
+.GigPicture-part + .GigPicture-part img {
+  clip-path: polygon(calc(var(--top) + 4px) 0, 100% 0, 100% 100%, calc(var(--bottom) + 4px) 100%);
+}
+
+.GigPicture[data-count="2"] .GigPicture-part:nth-child(2) {
+  --top: 58%;
+  --bottom: 42%;
+}
+
+.GigPicture[data-count="3"] .GigPicture-part:nth-child(2) {
+  --top: 41%;
+  --bottom: 25%;
+}
+
+.GigPicture[data-count="3"] .GigPicture-part:nth-child(3) {
+  --top: 74.5%;
+  --bottom: 58.5%;
+}

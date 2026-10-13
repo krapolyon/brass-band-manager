@@ -1,0 +1,53 @@
+.ChoiceButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  /* A minimum: the label wraps when the text grows. */
+  min-height: var(--controlHeight);
+  padding: var(--spaceXxs) var(--spaceXs);
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+
+.ChoiceButton[data-size="small"] {
+  min-height: var(--controlHeightSm);
+}
+
+/* The radio button itself covers the whole button and is not drawn. */
+.ChoiceButton input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ChoiceButton .Icon {
+  display: none;
+}
+
+.ChoiceButton:has(input:checked) {
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.ChoiceButton:has(input:checked) .Icon {
+  display: block;
+}
+
+.ChoiceButton:has(input:focus-visible) {
+  outline: var(--focusWidth) solid var(--accentText);
+  outline-offset: 2px;
+}
+
+.ChoiceButton:has(input:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}

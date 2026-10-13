@@ -73,6 +73,8 @@
   --red700A10: rgb(179 38 30 / 0.1);
   --blue300: #8fa5ff;
   --blue600: #3a56c4;
+  --blue400A16: rgb(111 134 240 / 0.16);
+  --blue600A12: rgb(58 86 196 / 0.12);
   --violet300: #c9a6f2;
   --violet600: #6b3fa8;
 }
@@ -155,6 +157,8 @@
   --warningSoft: var(--amber300A16);
   --danger: var(--red300);
   --dangerSoft: var(--red400A16);
+  --info: var(--blue300);
+  --infoSoft: var(--blue400A16);
   --haloAccent: var(--themeAccent);
   --haloCool: var(--blue600);
   --haloDeep: var(--violet600);
@@ -181,6 +185,8 @@
   --warningSoft: var(--amber600A16);
   --danger: var(--red700);
   --dangerSoft: var(--red700A10);
+  --info: var(--blue600);
+  --infoSoft: var(--blue600A12);
   --haloAccent: var(--themeAccent);
   --haloCool: var(--blue300);
   --haloDeep: var(--violet300);
@@ -208,6 +214,8 @@
   --warningSoft: var(--amber300A16);
   --danger: var(--red300);
   --dangerSoft: var(--red400A16);
+  --info: var(--blue300);
+  --infoSoft: var(--blue400A16);
   --haloAccent: var(--neutral1000);
   --haloCool: var(--neutral1000);
   --haloDeep: var(--neutral1000);
@@ -234,6 +242,8 @@
   --warningSoft: var(--amber600A16);
   --danger: var(--red700);
   --dangerSoft: var(--red700A10);
+  --info: var(--blue600);
+  --infoSoft: var(--blue600A12);
   --haloAccent: var(--neutral100);
   --haloCool: var(--neutral100);
   --haloDeep: var(--neutral100);

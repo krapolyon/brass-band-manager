@@ -26,9 +26,12 @@ use BrassBand\Access\SignInAction;
 use BrassBand\Access\SignOutAction;
 use BrassBand\Band\Bands;
 use BrassBand\Band\ShowBandAction;
+use BrassBand\Band\ShowGigRemindersAction;
 use BrassBand\Band\UpdateBandAction;
+use BrassBand\Band\UpdateGigRemindersAction;
 use BrassBand\Gigs\AnswerAction;
 use BrassBand\Gigs\ChangeGigStatusAction;
+use BrassBand\Gigs\CostumePictures;
 use BrassBand\Gigs\Costumes;
 use BrassBand\Gigs\DeleteCostumeAction;
 use BrassBand\Gigs\DeleteGigAction;
@@ -40,7 +43,9 @@ use BrassBand\Gigs\RequireGigEditor;
 use BrassBand\Gigs\SaveCostumeAction;
 use BrassBand\Gigs\SaveGigAction;
 use BrassBand\Gigs\SaveSlotAction;
+use BrassBand\Gigs\ShowCostumePictureAction;
 use BrassBand\Gigs\ShowGigAction;
+use BrassBand\Gigs\UpdateCostumePictureAction;
 use BrassBand\Health\HealthAction;
 use BrassBand\Band\DeleteLogoAction;
 use BrassBand\Band\LogoStore;
@@ -130,6 +135,7 @@ return function (App $app, Connection $database, array $config): void {
     $thumbnails = new ClipThumbnails($config);
     $gigs = new Gigs($database);
     $costumes = new Costumes($database);
+    $costumePictures = new CostumePictures($database, $files);
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -169,6 +175,7 @@ return function (App $app, Connection $database, array $config): void {
         $thumbnails,
         $gigs,
         $costumes,
+        $costumePictures,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
@@ -202,6 +209,7 @@ return function (App $app, Connection $database, array $config): void {
         // One's own answer for a slot: the address names no member.
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, forAnother: false));
         $group->get('/api/costumes', new ListCostumesAction($costumes));
+        $group->get('/api/costumes/{id:[0-9]+}/picture', new ShowCostumePictureAction($costumePictures));
 
         // ---------------------------------------------------------------
         // 3. One's own record or one's own gig, or a permission
@@ -283,10 +291,14 @@ return function (App $app, Connection $database, array $config): void {
         $manageCostumes = new RequirePermission(Permission::MANAGE_COSTUMES);
         $group->post('/api/costumes', new SaveCostumeAction($database, $costumes))->add($manageCostumes);
         $group->put('/api/costumes/{id:[0-9]+}', new SaveCostumeAction($database, $costumes))->add($manageCostumes);
-        $group->delete('/api/costumes/{id:[0-9]+}', new DeleteCostumeAction($database, $costumes))->add($manageCostumes);
+        $group->delete('/api/costumes/{id:[0-9]+}', new DeleteCostumeAction($database, $costumes, $costumePictures))->add($manageCostumes);
+        $group->put('/api/costumes/{id:[0-9]+}/picture', new UpdateCostumePictureAction($costumes, $costumePictures, removes: false))->add($manageCostumes);
+        $group->delete('/api/costumes/{id:[0-9]+}/picture', new UpdateCostumePictureAction($costumes, $costumePictures, removes: true))->add($manageCostumes);
 
         $manageBand = new RequirePermission(Permission::MANAGE_BAND);
         $group->patch('/api/band', new UpdateBandAction($database, $bands))->add($manageBand);
+        $group->get('/api/band/gigReminders', new ShowGigRemindersAction($bands))->add($manageBand);
+        $group->put('/api/band/gigReminders', new UpdateGigRemindersAction($database, $bands))->add($manageBand);
         $group->put('/api/band/logo', new UpdateLogoAction($logos))->add($manageBand);
         $group->delete('/api/band/logo', new DeleteLogoAction($logos))->add($manageBand);
     })->add(new RequireSession($sessions, $cookie));

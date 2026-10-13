@@ -1,6 +1,8 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
+import { png } from '../support/images.ts';
 import { addMember, admin, deviceOf, install, memberId } from '../support/scenario.ts';
+import { emptyStorage, storedFiles } from '../support/storage.ts';
 
 // Gigs, their slots, the answers of members and the costumes. Each test is a
 // line of model/gigs.md: "Access rights", "Life cycle" and "Rules" of its
@@ -12,6 +14,7 @@ import { addMember, admin, deviceOf, install, memberId } from '../support/scenar
 // third one, Souba.
 test.beforeEach(async ({ playwright, baseURL }) => {
   emptyDatabase();
+  emptyStorage();
   const setup = await playwright.request.newContext({ baseURL });
   await install(setup);
   await setup.dispose();
@@ -279,7 +282,7 @@ test.describe('the record of a gig', () => {
       notes: 'Parking derrière la mairie\nRepas prévu',
       remindedAt: null,
       organizers: [{ nickname: 'Zaza' }],
-      costumes: [{ id: jungle, name: 'Jungle' }],
+      costumes: [{ id: jungle, name: 'Jungle', pictureUrl: null }],
       slots: [{ name: null, position: 1, costumeId: null, ownAnswer: null, answers: [] }],
     });
     expect(sql('SELECT updatedByMemberId FROM gig')).toBe(String(memberId('Gigi')));
@@ -738,10 +741,11 @@ test.describe('costumes', () => {
     expect((await jibe.post('/api/costumes', { data: { name: 'Jungle' } })).status()).toBe(201);
     await jibe.post('/api/costumes', { data: { name: 'Paillettes' } });
     const moved = await jibe.post('/api/costumes', { data: { name: ' Libre ', position: 1 } });
+    const costume = { id: expect.any(Number), pictureUrl: null, gigCount: 0 };
     expect(await moved.json()).toEqual([
-      { id: expect.any(Number), name: 'Libre', position: 1 },
-      { id: expect.any(Number), name: 'Jungle', position: 2 },
-      { id: expect.any(Number), name: 'Paillettes', position: 3 },
+      { ...costume, name: 'Libre', position: 1 },
+      { ...costume, name: 'Jungle', position: 2 },
+      { ...costume, name: 'Paillettes', position: 3 },
     ]);
     expect(await (await zaza.get('/api/costumes')).json()).toHaveLength(3);
 
@@ -1044,5 +1048,142 @@ test.describe('found by the review', () => {
       expect(response.status(), response.url()).toBe(401);
     }
     expect(sql('SELECT COUNT(*) FROM costume')).toBe('2');
+  });
+});
+
+test.describe('the picture of a costume', () => {
+  const picture = (width: number, height = width) => ({
+    data: { image: png(width, height).toString('base64') },
+  });
+
+  test('only the admin gives, replaces and removes it; every member sees it', async ({
+    playwright,
+    request,
+  }) => {
+    const jungle = addCostume('Jungle');
+    const { gigId } = addGig('Carnaval');
+    sql(`INSERT INTO gigCostume (gigId, costumeId) VALUES (${gigId}, ${jungle})`);
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const address = `/api/costumes/${jungle}/picture`;
+
+    // Who manages gigs does not manage costumes; nobody without signing in.
+    expect((await gigi.put(address, picture(64))).status()).toBe(403);
+    expect((await gigi.delete(address)).status()).toBe(403);
+    expect((await request.put(address, picture(64))).status()).toBe(401);
+    expect((await request.get(address)).status()).toBe(401);
+    expect((await zaza.get(address)).status()).toBe(404);
+
+    const given = await jibe.put(address, picture(64, 48));
+    expect(given.status()).toBe(200);
+    const [costume] = await given.json();
+    expect(costume).toMatchObject({ name: 'Jungle', gigCount: 1 });
+    expect(costume.pictureUrl).toMatch(new RegExp(`^/api/costumes/${jungle}/picture\\?v=`));
+    expect(storedFiles('costumes')).toHaveLength(1);
+
+    // Served to members only, and the gig names it.
+    const served = await zaza.get(costume.pictureUrl);
+    expect(served.status()).toBe(200);
+    expect(served.headers()['content-type']).toBe('image/png');
+    expect((await (await zaza.get(`/api/gigs/${gigId}`)).json()).costumes).toEqual([
+      { id: jungle, name: 'Jungle', pictureUrl: costume.pictureUrl },
+    ]);
+
+    // Replacing leaves one file; removing leaves none.
+    await jibe.put(address, picture(32));
+    expect(storedFiles('costumes')).toHaveLength(1);
+    expect((await (await jibe.delete(address)).json())[0].pictureUrl).toBeNull();
+    expect(storedFiles('costumes')).toEqual([]);
+    expect((await jibe.put('/api/costumes/9999/picture', picture(64))).status()).toBe(404);
+  });
+
+  test('what is not a small enough image is refused, and a deleted costume takes its file with it', async ({
+    playwright,
+  }) => {
+    const free = addCostume('Libre');
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const address = `/api/costumes/${free}/picture`;
+
+    for (const image of [
+      Buffer.from('not an image').toString('base64'),
+      png(8).toString('base64'),
+      png(1201, 16).toString('base64'),
+      '***',
+    ]) {
+      const refused = await jibe.put(address, { data: { image } });
+      expect(await refused.json()).toEqual({
+        error: 'invalidInput',
+        fields: { picture: 'invalid' },
+      });
+    }
+    expect(storedFiles('costumes')).toEqual([]);
+
+    await jibe.put(address, picture(64));
+    expect(storedFiles('costumes')).toHaveLength(1);
+    expect((await jibe.delete(`/api/costumes/${free}`)).status()).toBe(200);
+    expect(storedFiles('costumes')).toEqual([]);
+  });
+});
+
+test.describe('the reminders of the band', () => {
+  test('only the admin sets them, within the bounds of the model', async ({
+    playwright,
+    request,
+  }) => {
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    const reminders = (data: Record<string, unknown>) => ({ data });
+
+    // Install gives the defaults: 15 days, 5 days, from 18.
+    expect(await (await jibe.get('/api/band/gigReminders')).json()).toEqual({
+      gigFirstReminderDays: 15,
+      gigSecondReminderDays: 5,
+      gigReminderHour: 18,
+    });
+    // Read by who sets them only: the public answer of the band does not hold them.
+    expect((await gigi.get('/api/band/gigReminders')).status()).toBe(403);
+    expect((await request.get('/api/band/gigReminders')).status()).toBe(401);
+    expect(await (await request.get('/api/band')).json()).not.toHaveProperty('gigReminderHour');
+    const asked = reminders({
+      gigFirstReminderDays: 10,
+      gigSecondReminderDays: 2,
+      gigReminderHour: 9,
+    });
+    expect((await gigi.put('/api/band/gigReminders', asked)).status()).toBe(403);
+    expect((await request.put('/api/band/gigReminders', asked)).status()).toBe(401);
+
+    expect(await (await jibe.put('/api/band/gigReminders', asked)).json()).toMatchObject(
+      asked.data,
+    );
+    // A number of days left out: this reminder is not sent.
+    const none = await jibe.put('/api/band/gigReminders', reminders({ gigReminderHour: 0 }));
+    expect(await none.json()).toMatchObject({
+      gigFirstReminderDays: null,
+      gigSecondReminderDays: null,
+      gigReminderHour: 0,
+    });
+
+    const faults: [Record<string, unknown>, string][] = [
+      [{ gigFirstReminderDays: 0, gigReminderHour: 18 }, 'gigFirstReminderDays'],
+      [{ gigFirstReminderDays: 91, gigReminderHour: 18 }, 'gigFirstReminderDays'],
+      [{ gigSecondReminderDays: 0, gigReminderHour: 18 }, 'gigSecondReminderDays'],
+      // The second reminder comes after the first.
+      [
+        { gigFirstReminderDays: 5, gigSecondReminderDays: 5, gigReminderHour: 18 },
+        'gigSecondReminderDays',
+      ],
+      [{ gigFirstReminderDays: 5, gigReminderHour: 24 }, 'gigReminderHour'],
+    ];
+    for (const [data, field] of faults) {
+      const refused = await jibe.put('/api/band/gigReminders', reminders(data));
+      expect(await refused.json(), JSON.stringify(data)).toEqual({
+        error: 'invalidInput',
+        fields: { [field]: 'invalid' },
+      });
+    }
+    expect(
+      sql('SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour FROM band'),
+    ).toBe('NULL\tNULL\t0');
   });
 });

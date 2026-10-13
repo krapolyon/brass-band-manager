@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { useGigReminders } from '../../band.ts';
 import { BandMention } from '../../components/BandMention.tsx';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
 import { Chip } from '../../components/Chip.tsx';
 import { NavRow } from '../../components/NavRow.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
+import { useCostumes } from '../../gigs.ts';
 import { useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
@@ -56,8 +58,23 @@ export function BandSettingsScreen() {
     0,
   );
 
+  const costumeCount = useCostumes().data?.length ?? 0;
+  const band = useGigReminders(canManage === true).data;
+
   if (canManage === null) return null;
   if (!canManage && !canManageSongs) return <AdminsOnlyScreen />;
+
+  // "15 et 5 jours avant, à partir de 18 h", or what is left of it.
+  const days = [band?.gigFirstReminderDays, band?.gigSecondReminderDays].filter(
+    (value): value is number => typeof value === 'number',
+  );
+  const hour = band?.gigReminderHour ?? 18;
+  const remindersDetail =
+    days.length === 2
+      ? t('band.reminders.detail', { first: days[0], second: days[1], hour })
+      : days.length === 1
+        ? t('band.reminders.detailOne', { count: days[0], hour })
+        : t('band.reminders.detailNone');
 
   const spellings = (
     <NavRow
@@ -113,6 +130,18 @@ export function BandSettingsScreen() {
             to="/band/sections"
           />
           {canManageSongs && spellings}
+          <NavRow
+            icon="Image"
+            label={t('band.costumes.title')}
+            detail={t('band.costumes.detail', { count: costumeCount })}
+            to="/band/costumes"
+          />
+          <NavRow
+            icon="Timer"
+            label={t('band.reminders.title')}
+            detail={remindersDetail}
+            to="/band/reminders"
+          />
         </div>
       </Sheet>
       <Sheet title={t('band.connections')}>

@@ -30,6 +30,6 @@ export function emptyStorage(): void {
     'web-test',
     'sh',
     '-c',
-    'rm -rf /var/www/storage/band /var/www/storage/members /var/www/storage/songs',
+    'rm -rf /var/www/storage/band /var/www/storage/members /var/www/storage/songs /var/www/storage/costumes',
   ]);
 }

@@ -4,7 +4,7 @@ import './Chip.css';
 
 type Props = {
   /** Status kinds keep their colour whatever the accent theme. */
-  kind?: 'neutral' | 'accent' | 'success' | 'warning' | 'danger';
+  kind?: 'neutral' | 'accent' | 'success' | 'warning' | 'danger' | 'info';
   /** Figma: "Show icon" and "Icon". */
   icon?: IconName;
   children: ReactNode;

@@ -1,0 +1,44 @@
+.GigInfos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.GigInfos :is(h2, h3),
+.GigInfos dl,
+.GigInfos dd {
+  margin: 0;
+}
+
+.GigInfos dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.GigInfos-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs) var(--spaceMd);
+}
+
+/* 110 in Figma, more when the text of the member is larger. */
+.GigInfos-row dt {
+  flex: none;
+  min-width: 6.875rem;
+  max-width: 100%;
+  color: var(--textMuted);
+}
+
+.GigInfos-row dd {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 10rem;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

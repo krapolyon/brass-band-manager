@@ -28,3 +28,8 @@
   background: var(--dangerSoft);
   color: var(--danger);
 }
+
+.Chip[data-kind="info"] {
+  background: var(--infoSoft);
+  color: var(--info);
+}

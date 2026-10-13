@@ -41,4 +41,25 @@ final class Bands
             ...($this->logos->urls() ?? ['logoUrl' => null, 'icons' => null]),
         ];
     }
+
+    /**
+     * The reminders of gigs: null for a reminder that is not sent.
+     *
+     * @return array<string, int|null>
+     */
+    public function gigReminders(): array
+    {
+        $band = $this->database->fetchAssociative(
+            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour FROM band WHERE id = 1',
+        );
+        if ($band === false) {
+            throw new ApiError(404, 'notInstalled');
+        }
+
+        return [
+            'gigFirstReminderDays' => $band['gigFirstReminderDays'] === null ? null : (int) $band['gigFirstReminderDays'],
+            'gigSecondReminderDays' => $band['gigSecondReminderDays'] === null ? null : (int) $band['gigSecondReminderDays'],
+            'gigReminderHour' => (int) $band['gigReminderHour'],
+        ];
+    }
 }
