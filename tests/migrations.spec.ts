@@ -1,7 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
-import { forgetLast, LAST, repairMigrations, unapplyLast } from './support/migrations.ts';
-import { addMember, admin, install, memberPassword } from './support/scenario.ts';
+import {
+  dropTables,
+  forgetLast,
+  LAST,
+  repairMigrations,
+  unapplyLast,
+} from './support/migrations.ts';
+import { addMember, admin, install, installInput, memberPassword } from './support/scenario.ts';
 
 // The screen where an admin applies the migrations, and the notice that tells
 // them some wait. Rules: model/band.md, "Updating the database". The screen
@@ -52,6 +58,8 @@ test('an admin is told on the home screen, applies the migration and sees the re
 
   await expect(page.getByRole('status')).toContainText('La mise à jour est appliquée.');
   await expect(panel(page)).toBeHidden();
+  // The button that opened the panel is gone: the focus is on what happened.
+  await expect(page.locator(':focus')).toContainText('La mise à jour est appliquée.');
   await expect(page.getByRole('heading', { name: 'Appliquées' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Appliquer les mises à jour' })).toBeHidden();
   expect(isRecorded()).toBe('1');
@@ -136,4 +144,22 @@ test('a member who is not an admin sees neither the notice, nor the row, nor the
   await page.goto('/band/migrations');
   await expect(page.getByText('Cette page est réservée aux admins de la fanfare.')).toBeVisible();
   await expect(page.getByText(LAST)).toBeHidden();
+});
+
+test('on an empty database, a migration that fails is not said to be a wrong key', async ({
+  page,
+}) => {
+  dropTables();
+  // A table stands in the way of the first migration.
+  sql('CREATE TABLE section (id INT PRIMARY KEY)');
+
+  await page.goto('/install');
+  await page.getByLabel('Clé d’installation').fill(installInput().installKey);
+  await page.getByRole('button', { name: 'C’est parti' }).click();
+
+  await expect(page.getByRole('alert')).toContainText(
+    'La clé est la bonne, mais la base de données n’a pas pu être préparée.',
+  );
+  await expect(page.getByText('Ce n’est pas la bonne clé.')).toBeHidden();
+  await expect(page).toHaveURL('/install');
 });

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ApiError, api } from '../../api.ts';
@@ -56,11 +56,16 @@ export function BandMigrationsScreen() {
   const [isConfirming, setConfirming] = useState(false);
   const [password, setPassword] = useState('');
   const [wasSent, setSent] = useState(false);
+  // What the last run did. Kept here, so that it is shown whatever happened
+  // to the panel in the meantime.
+  const [result, setResult] = useState<MigrationsResult | null>(null);
+  const outcome = useRef<HTMLDivElement>(null);
 
   const run = useMutation({
     mutationFn: () =>
       api<MigrationsResult>('/api/migrations', { method: 'POST', body: { password } }),
     onSuccess: (result) => {
+      setResult(result);
       queryClient.setQueryData(['migrations'], result.pending);
       // The tables changed: what the app had read is asked again.
       queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] !== 'migrations' });
@@ -77,11 +82,16 @@ export function BandMigrationsScreen() {
     },
   });
 
+  // The button that opened the panel may be gone once the run is over: the
+  // focus goes to what happened, never nowhere.
+  useEffect(() => {
+    if (result) outcome.current?.focus();
+  }, [result]);
+
   if (canRun === null) return null;
   if (!canRun) return <AdminsOnlyScreen />;
 
   const names = pending.data ?? [];
-  const result = run.data;
   const refused = run.error instanceof ApiError ? run.error : null;
   const passwordError = !wasSent
     ? undefined
@@ -98,6 +108,8 @@ export function BandMigrationsScreen() {
       : null;
 
   const close = () => {
+    // Not while a run is on its way: its result must be seen.
+    if (run.isPending) return;
     setConfirming(false);
     setPassword('');
     setSent(false);
@@ -123,30 +135,34 @@ export function BandMigrationsScreen() {
       <div className="band-form">
         {pending.isError && <Message kind="danger">{t('errors.unreachable')}</Message>}
 
-        {result?.failed && (
-          <Message kind="danger">
-            {t('band.migrations.failed', { name: result.failed.name })}
-          </Message>
-        )}
-        {result && !result.failed && result.applied.length > 0 && (
-          <Message kind="success">
-            {t('band.migrations.done', { count: result.applied.length })}
-          </Message>
-        )}
-        {result?.failed && (
-          <Sheet title={t('band.migrations.answer')}>
-            {/* What MySQL said, as it said it: the admin repairs the database with it. */}
-            <p className="textBody band-migrationAnswer">{result.failed.message}</p>
-          </Sheet>
-        )}
-        {result && result.applied.length > 0 && (
-          <Sheet title={t('band.migrations.applied')}>
-            <div className="settings-rows">
-              {result.applied.map((name) => (
-                <NavRow key={name} icon="Check" label={name} />
-              ))}
-            </div>
-          </Sheet>
+        {result && (
+          <div className="band-form" ref={outcome} tabIndex={-1}>
+            {result?.failed && (
+              <Message kind="danger">
+                {t('band.migrations.failed', { name: result.failed.name })}
+              </Message>
+            )}
+            {result && !result.failed && result.applied.length > 0 && (
+              <Message kind="success">
+                {t('band.migrations.done', { count: result.applied.length })}
+              </Message>
+            )}
+            {result?.failed && (
+              <Sheet title={t('band.migrations.answer')}>
+                {/* What MySQL said, as it said it: the admin repairs the database with it. */}
+                <p className="textBody band-migrationAnswer">{result.failed.message}</p>
+              </Sheet>
+            )}
+            {result && result.applied.length > 0 && (
+              <Sheet title={t('band.migrations.applied')}>
+                <div className="settings-rows">
+                  {result.applied.map((name) => (
+                    <NavRow key={name} icon="Check" label={name} />
+                  ))}
+                </div>
+              </Sheet>
+            )}
+          </div>
         )}
 
         {names.length > 0 && (
@@ -193,7 +209,7 @@ export function BandMigrationsScreen() {
               ? t('band.migrations.confirm.applying')
               : t('band.migrations.confirm.submit')}
           </Button>
-          <Button kind="quiet" onClick={close}>
+          <Button kind="quiet" onClick={close} disabled={run.isPending}>
             {t('band.migrations.confirm.cancel')}
           </Button>
         </form>

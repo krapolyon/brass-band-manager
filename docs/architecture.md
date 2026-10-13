@@ -888,17 +888,17 @@ database/            migrate.php and the migrations
 3. **Releasing is started by hand** ([.github/workflows/release.yml](../.github/workflows/release.yml), "Run workflow" on GitHub, with `release` typed as a confirmation). It adds one commit to `release` holding exactly the tree of the latest build of `beta`. Nothing is built again: what members get is what was tried.
 4. **Going back** is the same action with the commit of an older build of `beta` in its second field. `release` receives a new commit holding that older tree.
 
-The history of both branches is a plain one, each commit on top of the one before. Neither action ever forces a push, and nobody pushes to these branches by hand. Going back does not undo a migration: a version that needed one is released only once beta has shown it works.
+The history of both branches is a plain one, each commit on top of the one before. Neither action ever forces a push, and nobody pushes to these branches by hand. The two branches are created by the actions, at their first run, never from `main` on GitHub: `release.yml` only accepts a commit that `beta.yml` made, told by its subject ("Build of main at …"). The token that may push is given to the last step alone: the packages installed and run by the build never hold it. Going back does not undo a migration: a version that needed one is released only once beta has shown it works.
 
 ### Migrations without a command line
 
 [Migrations](../api/src/Migrations/Migrations.php) is the only code that applies the scripts of `database/migrations/`, for the three ways to ask:
 
 - **`database/migrate.php`**, from a command line (locally, `npm run db:migrate`). It answers 404 to a request of the web.
-- **The install, on an empty database.** `GET /api/band` and `GET /api/install` answer "not installed" when the tables do not exist. Once the install key is accepted (`POST /api/install/key`, and again `POST /api/install`), the migrations are applied, then the install goes on: one thing to do for whoever installs. A wrong key creates nothing. Once the app is installed, both routes refuse before looking at the key: it opens nothing any more.
+- **The install, on an empty database.** `GET /api/band` and `GET /api/install` answer "not installed" when the tables do not exist, and the manifest gives the neutral name and icons. Once the install key is accepted (`POST /api/install/key`, and again `POST /api/install`), the migrations are applied, then the install goes on: one thing to do for whoever installs. A wrong key creates nothing. A migration that fails there answers `migrationFailed` and nothing of what MySQL said, to someone who is not signed in: the log names the script. Once the app is installed, both routes refuse before looking at the key: it opens nothing any more.
 - **The screen of the admin**, `/band/migrations`, in the band settings (model/band.md, "Updating the database"). `GET /api/migrations` lists what waits; `POST /api/migrations` applies it. Both ask for the `runMigrations` permission, which only `ADMIN` grants, and the second asks for the password again ([CurrentPassword](../api/src/Access/CurrentPassword.php), shared with the change of password: a wrong one counts like a wrong password at sign-in). The answer names what was applied and, when a script failed, which one and what MySQL said. That message goes to the admin only and is never logged. While something waits, an admin sees a notice on the home screen and in the band settings.
 
-One run at a time: a lock held in MySQL (`GET_LOCK`) makes a second one answer `migrationsRunning`.
+One run at a time: a lock held in MySQL (`GET_LOCK`) makes a second one answer `migrationsRunning`. A run goes on when the browser stops waiting, and asks PHP for no time limit; the host still cuts a request after 165 s, so a migration that rewrites a large table is tried on beta with the real data first.
 
 **Not locking oneself out.** The screen needs a session, so it needs the tables of members and sessions to be readable by the new code. Three things keep that true:
 
@@ -916,7 +916,7 @@ It refuses to answer the web whichever way the host starts PHP for a task: a req
 
 ### Beta never writes to real members
 
-Beta is tried with a copy of the real data, and its scheduled task runs. `allowedRecipients` in `config.php` ([AllowedRecipients](../api/src/Mail/AllowedRecipients.php)) lists the email addresses of the members beta may write to. While the list is filled in, an email for another address ([Mailer](../api/src/Mail/Mailer.php)) and a notification for another member ([Push](../api/src/Push/Push.php), by the email of the member) are put aside: not sent, and the log gets one line saying how many and of which kind, never to whom. The API answers as if they had left. Empty, as in production, everyone is written to. Locally, the server of port 8083 has one listed address, for the tests.
+Beta is tried with a copy of the real data, and its scheduled task runs. `allowedRecipients` in `config.php` ([AllowedRecipients](../api/src/Mail/AllowedRecipients.php)) lists the email addresses of the members beta may write to. While the list is filled in, an email for another address ([Mailer](../api/src/Mail/Mailer.php)) and a notification for another member ([Push](../api/src/Push/Push.php), by the email of the member) are put aside: not sent, and the log gets one line saying how many and of which kind, never to whom. The API answers as if they had left. Empty or left out, as in production, everyone is written to. A setting that is neither a list nor empty, or a list that holds no address, is a mistake in the file: nobody is written to, rather than everyone. Locally, the server of port 8083 has one listed address, for the tests.
 
 ### What to back up
 
@@ -927,7 +927,8 @@ Two things hold everything that cannot be built again: **the database**, and **t
 Because it cannot be checked locally. Checked on beta first:
 
 - every address is redirected to HTTPS, without a loop (the four signs above);
-- a file at the root of the deployed folder, and anything under `/web/`, answer 403 through the technical site;
+- a file at the root of the deployed folder, and anything under `/web/` or `//web/`, answer 403 through the technical site;
+- the data folder is found: the host may reach the deployed folder through a link, and PHP then looks beside the folder the link leads to (the app stops with an error rather than start without its configuration);
 - whether a file removed from the branch is removed from the folder (if not, old built files stay in `web/assets/`, which harms nothing);
 - the scheduled task runs and its output says how many gigs were reminded for;
 - the session cookie arrives as `__Host-session` with `Secure`, and sign-in works on an iPhone and an Android phone;

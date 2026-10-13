@@ -6,6 +6,7 @@ namespace BrassBand\Band;
 
 use BrassBand\Http\Json;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Exception\TableNotFoundException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -27,7 +28,12 @@ final class ManifestAction
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $name = $this->database->fetchOne('SELECT name FROM band WHERE id = 1');
+        try {
+            $name = $this->database->fetchOne('SELECT name FROM band WHERE id = 1');
+        } catch (TableNotFoundException) {
+            // An empty database, before the install: the neutral name and icons.
+            $name = false;
+        }
         $name = is_string($name) ? $name : self::NEUTRAL_NAME;
         $icons = $this->logos->urls()['icons'] ?? [
             192 => '/appIcons/icon-192.png',

@@ -63,6 +63,12 @@ final class Migrations
             return ['applied' => [], 'failed' => null, 'busy' => true];
         }
 
+        // A run is not cut short: a script stopped halfway is neither applied
+        // nor undone. It goes on when the browser gives up waiting, and for
+        // as long as the host lets PHP run.
+        ignore_user_abort(true);
+        set_time_limit(0);
+
         try {
             return [...$this->apply(), 'busy' => false];
         } finally {

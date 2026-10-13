@@ -135,7 +135,7 @@ Deployment (details in `docs/architecture.md`, "Deployment"). The hosting is OVH
 | Put on production what beta holds | `gh workflow run release.yml -f confirm=release` (or "Run workflow" on GitHub). Nothing is built again |
 | Go back to an older build | `gh workflow run release.yml -f confirm=release -f build=<commit of beta>`: a new commit on `release`, never a forced push |
 | Apply the migrations on a host | In the app, as an admin: Band settings, "Mise à jour de la base". Beta first, and a backup of the production database before |
-| Never | Push to `beta` or `release` by hand, deploy from `main`, or force a push on either |
+| Never | Create `beta` or `release` by hand, push to them, deploy from `main`, or force a push on either: the two actions create and fill them |
 
 ## Shared layer
 

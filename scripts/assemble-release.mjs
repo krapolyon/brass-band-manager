@@ -18,6 +18,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -77,6 +78,7 @@ execFileSync(
     'composer',
     'install',
     '--no-dev',
+    '--prefer-dist',
     '--optimize-autoloader',
     '--no-interaction',
     '--no-progress',
@@ -84,5 +86,15 @@ execFileSync(
   ],
   { stdio: 'inherit' },
 );
+
+// A library Composer fetched as a Git repository instead of an archive would
+// reach the branch as an empty folder: stop here instead.
+const nested = readdirSync(out, { recursive: true }).filter(
+  (path) => path === '.git' || String(path).endsWith('/.git'),
+);
+if (nested.length > 0) {
+  console.error(`A Git repository was found in the tree: ${nested.join(', ')}`);
+  process.exit(1);
+}
 
 console.log(`\nAssembled in ${out}/`);

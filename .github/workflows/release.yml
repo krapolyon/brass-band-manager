@@ -60,6 +60,15 @@ jobs:
             echo "::error::$build is not a build of beta."
             exit 1
           fi
+          # And one that beta.yml made: a branch created by hand from main
+          # would otherwise bring the commits of the source with it.
+          case "$(git log -1 --format=%s "$build")" in
+            "Build of main at "*) ;;
+            *)
+              echo "::error::$build is not a build made by the Build beta action."
+              exit 1
+              ;;
+          esac
           tree=$(git rev-parse "$build^{tree}")
 
           parent=""

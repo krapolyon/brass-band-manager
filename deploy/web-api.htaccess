@@ -9,7 +9,7 @@ RewriteEngine On
 # The host serves this folder as the root of the app. Reached under /web/, it
 # is being read through a site that serves the whole deployed folder, which
 # exists for the host's own needs (the Git deployment of OVH): refused.
-RewriteCond %{REQUEST_URI} ^/web/
+RewriteCond %{REQUEST_URI} ^/+web/
 RewriteRule ^ - [F]
 
 # Everything goes over HTTPS. A host says in more than one way that a request
