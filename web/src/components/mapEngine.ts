@@ -10,13 +10,15 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 
 setWorkerUrl(workerUrl);
 
-/** The five colours of the map: the variables mapGround… of the scheme, read where the map is. */
+/** The colours of the map: the variables mapGround… of the scheme, read where the map is. */
 export type MapColours = {
   ground: string;
   green: string;
   water: string;
   building: string;
   street: string;
+  /** The main roads. */
+  streetMajor: string;
 };
 
 // What counts as "parks and green spaces" in the land layer of the Shortbread schema.
@@ -139,7 +141,7 @@ function styleOf(tilesUrl: string, colours: MapColours): StyleSpecification {
         filter: ['all', ['!=', ['get', 'tunnel'], true], ['!=', ['get', 'rail'], true]],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': colours.street,
+          'line-color': ['match', ['get', 'kind'], MAJOR, colours.streetMajor, colours.street],
           'line-width': [
             'interpolate',
             ['exponential', 1.6],

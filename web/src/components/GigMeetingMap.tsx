@@ -30,6 +30,7 @@ const coloursAt = (element: HTMLElement): MapColours => {
     water: read('--mapWater'),
     building: read('--mapBuilding'),
     street: read('--mapStreet'),
+    streetMajor: read('--mapStreetMajor'),
   };
 };
 

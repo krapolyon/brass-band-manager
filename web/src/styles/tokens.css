@@ -98,6 +98,10 @@
   --mapStreetLight: #ffffff;
   --mapStreetDarkHighContrast: #9a9a9a;
   --mapStreetLightHighContrast: #5f5f5f;
+  /* The main roads of the map, lighter in the dark scheme: decided by the owner
+     after his prototype, to be added to Figma (mapStreetMajor). The three other
+     modes have the colour of the streets. */
+  --mapStreetMajorDark: #525e70;
 }
 
 /* ---------------------------------------------------------------
@@ -186,6 +190,7 @@
   --mapWater: var(--mapWaterDark);
   --mapBuilding: var(--mapBuildingDark);
   --mapStreet: var(--mapStreetDark);
+  --mapStreetMajor: var(--mapStreetMajorDark);
   /* The opacities of the live setlist, by distance from the song being played (percent in Figma). */
   --fadeNear: 0.6;
   --fadeMid: 0.38;
@@ -225,6 +230,7 @@
   --mapWater: var(--mapWaterLight);
   --mapBuilding: var(--mapBuildingLight);
   --mapStreet: var(--mapStreetLight);
+  --mapStreetMajor: var(--mapStreetLight);
   --fadeNear: 0.6;
   --fadeMid: 0.38;
   --fadeFar: 0.25;
@@ -264,6 +270,7 @@
   --mapWater: var(--mapWaterDarkHighContrast);
   --mapBuilding: var(--mapBuildingDarkHighContrast);
   --mapStreet: var(--mapStreetDarkHighContrast);
+  --mapStreetMajor: var(--mapStreetDarkHighContrast);
   --fadeNear: 1;
   --fadeMid: 0.85;
   --fadeFar: 0.75;
@@ -302,6 +309,7 @@
   --mapWater: var(--mapWaterLightHighContrast);
   --mapBuilding: var(--mapBuildingLightHighContrast);
   --mapStreet: var(--mapStreetLightHighContrast);
+  --mapStreetMajor: var(--mapStreetLightHighContrast);
   --fadeNear: 1;
   --fadeMid: 0.85;
   --fadeFar: 0.75;
