@@ -545,6 +545,31 @@ test.describe('the MIDI player', () => {
     await noOverflow(page);
   });
 
+  test('the rehearsal marks of the score are offered for the loop, each with its measures', async ({
+    page,
+    playwright,
+  }) => {
+    await withScore(playwright, page);
+    await openMidi(page);
+    await page
+      .getByRole('button', { name: /^En boucle/ })
+      .last()
+      .click();
+    const panel = page.getByRole('dialog', { name: 'Lecture en boucle' });
+
+    // The score has one mark, "Refrain", on its third measure of four.
+    const mark = panel.getByRole('radio', { name: /Refrain/ });
+    await expect(mark).toHaveAccessibleName(/Refrain\s*Mesures 3 à 4/);
+    await expect(mark).not.toBeChecked();
+    await mark.check();
+    await expect(panel.getByLabel('De la mesure')).toHaveValue('3');
+    await expect(panel.getByLabel('À la mesure')).toHaveValue('4');
+    await panel.getByRole('button', { name: 'Boucler les mesures 3 à 4' }).click();
+
+    await expect(page.getByText('Mesures 3 à 4, Refrain')).toBeVisible();
+    await expect(page.getByText('Mesure 3 sur 4')).toBeVisible();
+  });
+
   test('the tempo of the band is the one the player starts at, and stays within reach', async ({
     page,
     playwright,

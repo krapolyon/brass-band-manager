@@ -37,6 +37,8 @@ export type MidiSong = {
   measures: number[];
   /** The time signature the song starts with. */
   signature: { numerator: number; denominator: number };
+  /** The rehearsal marks of the score, in the order they are played. */
+  marks: { tick: number; name: string }[];
 };
 
 const DRUM_CHANNEL = 9;
@@ -65,6 +67,7 @@ export function readMidi(file: ArrayBuffer | Uint8Array): MidiSong {
   const tracks: MidiTrack[] = [];
   const tempos: MidiSong['tempos'] = [];
   const signatures: { tick: number; numerator: number; denominator: number }[] = [];
+  const marks: MidiSong['marks'] = [];
   let end = 0;
 
   for (const events of midi.tracks) {
@@ -80,6 +83,9 @@ export function readMidi(file: ArrayBuffer | Uint8Array): MidiSong {
       tick += event.deltaTime;
       if (event.type === 'trackName' && name === '') {
         name = textOf(event.text).trim();
+      } else if (event.type === 'marker') {
+        const mark = textOf(event.text).trim();
+        if (mark !== '') marks.push({ tick, name: mark });
       } else if (event.type === 'setTempo') {
         tempos.push({ tick, bpm: 60_000_000 / event.microsecondsPerBeat });
       } else if (event.type === 'timeSignature') {
@@ -150,6 +156,7 @@ export function readMidi(file: ArrayBuffer | Uint8Array): MidiSong {
     tempos,
     measures,
     signature: { numerator: first.numerator, denominator: first.denominator },
+    marks: marks.sort((one, other) => one.tick - other.tick),
   };
 }
 
@@ -236,4 +243,97 @@ export function withTrackNames(file: Uint8Array, names: string[]): Uint8Array {
   });
 
   return Uint8Array.from(writeMidi(midi));
+}
+
+/** A rehearsal mark as the loop offers it: its name, and the measures up to the next mark. */
+export type MarkRange = { name: string; from: number; to: number };
+
+/** The rehearsal marks of a song, each with the measures it covers. */
+export function markRanges(song: MidiSong): MarkRange[] {
+  const starts = song.marks.map((mark) => ({ name: mark.name, from: measureAt(song, mark.tick) }));
+  return starts.map((mark, index) => ({
+    ...mark,
+    to: Math.max(mark.from, (starts[index + 1]?.from ?? measureCount(song) + 1) - 1),
+  }));
+}
+
+/**
+ * The same MIDI file with the rehearsal marks of the score written in it as
+ * markers, each at the second it is played at. A mark inside a repeat is
+ * played twice, and written twice. MuseScore writes none in the MIDI files it
+ * exports: the worker that reads the score adds them (score.worker.ts).
+ */
+export function withMarks(
+  file: Uint8Array,
+  marks: { seconds: number; name: string }[],
+): Uint8Array {
+  if (marks.length === 0) return file;
+  const song = readMidi(file);
+  const midi = parseMidi(file);
+  const first = midi.tracks[0];
+  if (!first) return file;
+
+  // A mark sits at the start of a measure: the seconds are rounded, the line is not.
+  const nearMeasure = (tick: number) => {
+    const line = measureTicks(song, measureAt(song, tick + song.ticksPerBeat / 4)).start;
+    return Math.abs(line - tick) <= song.ticksPerBeat / 4 ? line : Math.round(tick);
+  };
+  let at = 0;
+  const events = first.map((event) => {
+    at += event.deltaTime;
+    return { tick: at, event };
+  });
+  for (const mark of marks) {
+    const event = { deltaTime: 0, meta: true, type: 'marker', text: bytesOf(mark.name) };
+    events.push({ tick: nearMeasure(tickAt(song, mark.seconds)), event: event as MidiEvent });
+  }
+  // The end of the track stays the last event.
+  const isEnd = (event: MidiEvent) => (event.type === 'endOfTrack' ? 1 : 0);
+  events.sort((one, other) => one.tick - other.tick || isEnd(one.event) - isEnd(other.event));
+  const last = events[events.length - 1];
+  const end = events.find(({ event }) => event.type === 'endOfTrack');
+  if (end && last && end !== last) {
+    end.tick = last.tick;
+    events.sort((one, other) => one.tick - other.tick || isEnd(one.event) - isEnd(other.event));
+  }
+  let before = 0;
+  midi.tracks[0] = events.map(({ tick, event }) => {
+    const moved = { ...event, deltaTime: tick - before };
+    before = tick;
+    return moved;
+  });
+
+  return Uint8Array.from(writeMidi(midi));
+}
+
+/**
+ * The rehearsal marks written in a MusicXML score: for each, its name and the
+ * measure it sits on, counted from 0 in the first part. The marks belong to
+ * the whole score, and MusicXML repeats them in every part.
+ */
+export function rehearsalMarks(musicXml: string): { measure: number; name: string }[] {
+  const start = musicXml.indexOf('<part ');
+  const end = musicXml.indexOf('</part>', start);
+  if (start === -1 || end === -1) return [];
+
+  const marks: { measure: number; name: string }[] = [];
+  const measures = musicXml
+    .slice(start, end)
+    .split(/<measure[\s>]/)
+    .slice(1);
+  measures.forEach((measure, index) => {
+    for (const found of measure.matchAll(/<rehearsal[^>]*>([^<]*)<\/rehearsal>/g)) {
+      const name = (found[1] ?? '')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&amp;/g, '&')
+        .trim();
+      // Written once per staff by some files: one mark all the same.
+      const isKnown = marks.some((mark) => mark.measure === index && mark.name === name);
+      if (name !== '' && !isKnown) marks.push({ measure: index, name });
+    }
+  });
+  return marks;
 }

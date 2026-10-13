@@ -53,6 +53,7 @@ The status labels in French are "Proposé", "Montage en cours", "Au répertoire"
 - **Downloading everything.** From the list of songs, a member downloads in one `.zip` archive the parts of their own instrument, every recording, every MIDI file or every MuseScore file, for the songs the list shows (search and filters included). The server builds the archive on demand; nothing is stored.
 - **The waveform of a recording.** The MP3 mode draws the recording as bars the member touches or drags. Its peaks are computed once per recording, not each time it is played: by the browser that sends the recording, and kept in a small file beside it, which goes when the recording goes.
 - **Generated files.** The MuseScore file is the source of the score. When one is sent, the browser of whoever sends it produces two files from it and sends them with it: the MIDI file, whose tracks are named after the staves of the score, and the score as MusicXML, which the reading mode shows. Both replace the ones in place. MuseScore cannot run on the host, so nothing is converted there.
+- **Rehearsal marks.** The rehearsal marks of the MuseScore file ("Repère", added with Ctrl+M) are kept with the MIDI file, each at the measure it is played at. The MIDI player offers them to choose the range it plays again, and the reading mode to choose where to start. A staff text or a system text is not a mark: it can say anything (owner, 2026-10-13).
 - **When the conversion fails**, the MuseScore file is kept and the import says that the MIDI player and the reading mode have nothing for this song. A `.mid` or a MusicXML file exported by hand from MuseScore and dropped with the others is then used: a file dropped by hand counts only when the MuseScore file gave none. Without one, the MIDI file and the MusicXML the song had from an earlier MuseScore file are removed: they are no longer those of its score.
 
 ### Import
@@ -230,7 +231,7 @@ To settle while the feature is built:
 - The gauge of parts of the management table counts against every instrument of the band, those nobody plays included (confirmed on 2026-10-12).
 - The sound of the MIDI player comes from recorded samples of instruments, served by the app and never fetched from another site. The set of samples and its licence are validated with the dependency; it covers the instruments of a brass band, and another instrument is played with the nearest one.
 - The MIDI file is produced by a MuseScore engine of 2023 (`webmscore`): to listen to on a few real songs. A file saved by a later MuseScore may one day not open: the files exported by hand are the way out.
-- None of the four files of the band tried has rehearsal marks, and their titles are not reliable ("Titre"): the record of a new song is prefilled from the name of the file.
+- The titles written in the files of the band are not reliable ("Titre"): the record of a new song is prefilled from the name of the file.
 
 - Whether the host lets the server fetch an image from another site: to check on the OVH plan. Without it, the cover art stands in for the thumbnail.
 - The `.zip` of "Download everything": its size and the time to build it on the shared hosting, checked with the real repertoire.

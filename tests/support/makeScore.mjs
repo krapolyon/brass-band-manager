@@ -1,5 +1,6 @@
 // Writes a made-up MuseScore file to the standard output, in base64: two
-// staves, "Trompette" and "Tuba", playing a scale over four measures. No music
+// staves, "Trompette" and "Tuba", playing a scale over four measures, with a
+// rehearsal mark, "Refrain", on the third. No music
 // file is kept in the repository, so the tests build this one when they need
 // it, with the same MuseScore engine the app uses (webmscore).
 //
@@ -19,7 +20,9 @@ const part = (id, octave) =>
         `<measure number="${measure + 1}">${
           measure === 0
             ? '<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><direction><sound tempo="120"/></direction>'
-            : ''
+            : measure === 2 && id === 'P1'
+              ? '<direction placement="above"><direction-type><rehearsal>Refrain</rehearsal></direction-type></direction>'
+              : ''
         }${[0, 1, 2, 3]
           .map(
             (beat) =>

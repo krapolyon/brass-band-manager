@@ -16,8 +16,10 @@ import { useMe } from '../../session.ts';
 import type { Song } from '../../songs.ts';
 import {
   countedBpm,
+  type MarkRange,
   type MidiSong,
   type MidiTrack,
+  markRanges,
   measureAt,
   measureCount,
   measureTicks,
@@ -25,6 +27,7 @@ import {
 } from './midi.ts';
 import { MidiEngine } from './midiEngine.ts';
 import { usePlayer } from './Player.tsx';
+import '../../components/Checkbox.css';
 import './songs.css';
 
 // Figma: Songs / Song — MIDI. The MIDI file of the song, one lane per track:
@@ -92,6 +95,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
   const fileBpm = countedBpm(midi);
   const bandBpm = song.bpm ?? Math.round(fileBpm);
   const total = measureCount(midi);
+  const marks = useMemo(() => markRanges(midi), [midi]);
 
   const engine = useRef<MidiEngine | null>(null);
   const [sounds, setSounds] = useState<'loading' | 'ready' | 'failed'>('loading');
@@ -380,7 +384,16 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
           <NavRow
             icon="Repeat"
             label={t('songs.midi.loop')}
-            detail={isLooping && range ? t('songs.midi.loopRange', range) : t('songs.midi.loopOff')}
+            detail={
+              isLooping && range
+                ? [
+                    t('songs.midi.loopRange', range),
+                    marks.find((mark) => mark.from === range.from && mark.to === range.to)?.name,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')
+                : t('songs.midi.loopOff')
+            }
             onClick={() => setChoosing(true)}
             opensPanel
             chevron
@@ -392,6 +405,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
         {isChoosing && (
           <LoopChoice
             total={total}
+            marks={marks}
             range={range ?? { from: measure, to: Math.min(total, measure + 7) }}
             isLooping={isLooping}
             onLoop={(from, to) => {
@@ -411,16 +425,17 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
 
 type LoopChoiceProps = {
   total: number;
+  marks: MarkRange[];
   range: { from: number; to: number };
   isLooping: boolean;
   onLoop: (from: number, to: number) => void;
   onStop: () => void;
 };
 
-// Figma: Songs / Song — MIDI, choosing the loop. The range is typed in
-// measures. The rehearsal marks of the score are not offered yet: the files
-// of the band have none, and the MIDI file does not carry them.
-function LoopChoice({ total, range, isLooping, onLoop, onStop }: LoopChoiceProps) {
+// Figma: Songs / Song — MIDI, choosing the loop. The rehearsal marks of the
+// score come first, each with the measures up to the next one: choosing one
+// fills the range, which can also be typed.
+function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoiceProps) {
   const { t } = useTranslation();
   const [from, setFrom] = useState(String(range.from));
   const [to, setTo] = useState(String(range.to));
@@ -446,6 +461,38 @@ function LoopChoice({ total, range, isLooping, onLoop, onStop }: LoopChoiceProps
       }}
     >
       <p className="songs-muted">{t('songs.midi.loopIntro')}</p>
+      {marks.length > 0 && (
+        <>
+          <h3 className="textLabel">{t('songs.midi.loopMarks')}</h3>
+          <div className="songs-statuses" role="radiogroup" aria-label={t('songs.midi.loopMarks')}>
+            {marks.map((mark, index) => (
+              // A mark played twice comes twice, with other measures.
+              // biome-ignore lint/suspicious/noArrayIndexKey: the marks of a file never change places
+              <label key={index} className="songs-statusRow">
+                <span className="Checkbox">
+                  <input
+                    type="radio"
+                    name="loopMark"
+                    checked={first === mark.from && last === mark.to}
+                    onChange={() => {
+                      setFrom(String(mark.from));
+                      setTo(String(mark.to));
+                    }}
+                  />
+                  <Icon name="Check" size={20} />
+                </span>
+                <span className="songs-statusTexts">
+                  <span className="textBodyLarge">{mark.name}</span>
+                  <span className="textCaption songs-muted">
+                    {t('songs.midi.loopRange', { from: mark.from, to: mark.to })}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <h3 className="textLabel">{t('songs.midi.loopMeasures')}</h3>
+        </>
+      )}
       <div className="songs-midiRange">
         <TextField
           label={t('songs.midi.loopFrom')}
@@ -461,7 +508,9 @@ function LoopChoice({ total, range, isLooping, onLoop, onStop }: LoopChoiceProps
           error={isValid ? undefined : t('songs.midi.loopInvalid', { count: total })}
         />
       </div>
-      <p className="textCaption songs-muted">{t('songs.midi.loopHint', { count: total })}</p>
+      <p className="textCaption songs-muted">
+        {t('songs.midi.loopHint', { count: total })} {t('songs.midi.loopMarksHint')}
+      </p>
       <Button type="submit" disabled={!isValid}>
         {isValid
           ? t('songs.midi.loopStart', { from: first, to: last })

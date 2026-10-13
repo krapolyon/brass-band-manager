@@ -44,6 +44,8 @@ A track whose name matches no instrument, or two, is still shown and played, und
 
 A name cannot always tell: a staff named `Tuba` goes to the instrument that has the spelling `tuba`, whoever plays it. When two instruments share the same kind of staff, name each staff after its instrument of the band.
 
+**Rehearsal marks become the sections of the song.** A rehearsal mark of MuseScore (Add, Text, Rehearsal mark, or Ctrl+M on a note; its text can be anything, "Refrain" as well as "A") is offered by the MIDI player as a range to play again and again, from the mark to the next one. Staff text and system text are not read as marks.
+
 If the app cannot read a MuseScore file (one saved by a version of MuseScore more recent than its engine, for instance), it says so and keeps the file. Export a MIDI file and a MusicXML file from MuseScore and drop them on the song: they are then used instead.
 
 ## Documentation
