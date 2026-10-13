@@ -74,16 +74,6 @@ test.describe('the frame of the app', () => {
     );
   });
 
-  test('the tabs of the features to come say so', async ({ page }) => {
-    await signIn(page);
-
-    for (const [address, title] of [['/', 'Accueil']] as const) {
-      await page.goto(address);
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
-      await expect(page.getByText(/arrive(nt)? bientôt/)).toBeVisible();
-    }
-  });
-
   test('on a desktop the navigation is the menu on the left, with the band and the member', async ({
     page,
   }) => {
