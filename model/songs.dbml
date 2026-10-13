@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.4 — 2026-10-13 — songSpokenName: the phrases the dictation of a setlist learned for a song, migration 011
 // v1.3 — 2026-10-13 — rules of the reading mode and of the rehearsal marks (dictionary only, no schema change)
 // v1.2 — 2026-10-13 — validated, migration 007: musicXmlPath, the score as MusicXML produced with the MIDI file from the MuseScore file by the browser that imports it; an instrument chosen by hand during an import can be remembered as an alias; aliases also read the names of the tracks of the MIDI file
 // v1.1 — 2026-10-12 — rules from the design of the screens (dictionary only, no schema change), validated for the simple version of songs; bpm counts the beat of the time signature (proposed, with the MIDI player)
@@ -72,6 +73,17 @@ Table instrumentAlias {
 }
 
 // ---------------------------------------------------------------
+// What the dictation of a setlist learned
+// ---------------------------------------------------------------
+
+Table songSpokenName {
+  id integer [pk]
+  songId integer [not null, ref: > song.id]
+  phrase varchar [not null, unique, note: 'What the dictation heard for the song, besides its name, for instance "seven nation armee" or "the bay". Cleaned before it is saved: lowercase, accents removed, letters said one by one joined into a word ("d a n c e" becomes "dance"), words separated by one space. 2 to 60 characters. The rule that learns it is in the dictionary, entry 4.']
+  Note: 'A phrase the dictation of a setlist heard for a song, learned when the member chose or corrected the song, so that the song is recognised the next time. 20 per song at most. Not personal data: the text of a title as heard, without who said it.'
+}
+
+// ---------------------------------------------------------------
 // What a member says of a song
 // ---------------------------------------------------------------
 
@@ -109,6 +121,7 @@ TableGroup songs {
   song
   songPart
   instrumentAlias
+  songSpokenName
   memberSong
 }
 

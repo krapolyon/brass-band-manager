@@ -1,5 +1,6 @@
 # Export and import of the data — format 1
 
+> v1.1 — 2026-10-13 · The phrases the dictation learned (`songSpokenName`, Songs v1.4) travel with the songs
 > v1.0 — 2026-10-13 · Decided with the owner during the design of gigs · Not built yet · Screens: Figma, page `Band settings`, section 5
 
 What the export and the import of an instance do, and the exact shape of the file. Read with `model/` (the tables) and `docs/architecture.md` (the storage of files). When this document and the code disagree, the code is wrong.
@@ -27,7 +28,7 @@ A file holds one or several parts. A part depends on others: importing it requir
 | --- | --- | --- | --- |
 | `settings` | `band`, `section`, `instrument`, `instrumentAlias` | the logo | — |
 | `members` | `member`, `memberRole` | profile photos | `settings` |
-| `songs` | `song`, `songPart`, `memberSong` | cover, MuseScore, MIDI, MusicXML, recording, clip thumbnail, PDF parts | `settings`, `members` (for `memberSong`) |
+| `songs` | `song`, `songPart`, `songSpokenName`, `memberSong` | cover, MuseScore, MIDI, MusicXML, recording, clip thumbnail, PDF parts | `settings`, `members` (for `memberSong`) |
 | `gigs` | `costume`, `gig`, `gigOrganizer`, `gigCostume`, `gigSlot`, `gigSlotAttendance`, `setlist`, `setlistSong` | costume pictures | `settings`, `members`, `songs` (for setlists) |
 
 Never exported: `memberSession`, `memberPasswordLink`, `pushSubscription`. The live state of a setlist (`liveStartedAt`, `livePosition`) is exported empty.
@@ -43,6 +44,7 @@ The `id` of a row is local to an installation: it is not in the file. Each row i
 | `instrumentAlias` | `alias` |
 | `member` | `email` |
 | `song` | `name` |
+| `songSpokenName` | `phrase` |
 | `gig` | `name` + `startsOn` |
 | `gigSlot` | its gig + `position` |
 | `setlist` | its gig + `number` |
@@ -52,7 +54,7 @@ A reference to a member is its email, to a song its name, to an instrument its n
 ## What an import changes
 
 - **Add or update, never delete.** A row of the file whose key exists on the server updates it; otherwise it is added. A row of the server that the file does not hold is kept. To remove something, remove it in the app.
-- **Inside an imported row, its own lists are replaced**: the roles of a member, the parts of a song, the slots, organisers, costumes, answers and setlists of a gig. A gig of the file therefore arrives exactly as it was exported.
+- **Inside an imported row, its own lists are replaced**: the roles of a member, the parts and the phrases of a song, the slots, organisers, costumes, answers and setlists of a gig. A gig of the file therefore arrives exactly as it was exported.
 - **`band`** is overwritten, except the settings that only make sense on one host (none today; the Discord settings will be listed here when they exist).
 - **A reference that cannot be found** (an answer from a member who is neither in the file nor on the server) makes the import refuse, with the list of what is missing. Nothing is imported in part.
 - **Passwords** travel as their hashes (`passwordHash`, PHP `password_hash()`): they are never readable, and the members keep their passwords. A member who was invited and has not set one arrives as invited, without a pending link: the admin sends a new invitation.
@@ -137,7 +139,7 @@ One object per table of the part, each holding its rows. Field names are those o
 }
 ```
 
-The lists that belong to a row (slots, answers, organisers, the songs of a setlist in their order) are written inside it, as above, rather than as separate tables. The examples of this document are made up.
+The lists that belong to a row (slots, answers, organisers, the songs of a setlist in their order, the phrases of a song as `"spokenNames": ["seven nation armee"]`) are written inside it, as above, rather than as separate tables. The examples of this document are made up.
 
 ## Checks
 
