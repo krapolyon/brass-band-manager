@@ -39,11 +39,14 @@ use BrassBand\Gigs\DeleteSlotAction;
 use BrassBand\Gigs\Gigs;
 use BrassBand\Gigs\ListCostumesAction;
 use BrassBand\Gigs\ListGigsAction;
+use BrassBand\Gigs\RemindGigAction;
+use BrassBand\Gigs\Reminders;
 use BrassBand\Gigs\RequireGigEditor;
 use BrassBand\Gigs\SaveCostumeAction;
 use BrassBand\Gigs\SaveGigAction;
 use BrassBand\Gigs\SaveSlotAction;
 use BrassBand\Gigs\DeleteSetlistAction;
+use BrassBand\Gigs\LivePush;
 use BrassBand\Gigs\LiveSetlistAction;
 use BrassBand\Gigs\SaveSetlistAction;
 use BrassBand\Gigs\Setlists;
@@ -85,6 +88,8 @@ use BrassBand\Members\ShowMemberAction;
 use BrassBand\Members\ShowPhotoAction;
 use BrassBand\Members\UpdateMemberAction;
 use BrassBand\Members\UpdatePhotoAction;
+use BrassBand\Push\PushAction;
+use BrassBand\Push\PushSetup;
 use BrassBand\Sections\DeleteInstrumentAction;
 use BrassBand\Sections\DeleteSectionAction;
 use BrassBand\Sections\ListSectionsAction;
@@ -95,6 +100,7 @@ use BrassBand\Songs\AddAliasAction;
 use BrassBand\Songs\ChangeSongStatusAction;
 use BrassBand\Songs\ClipThumbnails;
 use BrassBand\Songs\DeleteAliasAction;
+use BrassBand\Songs\DictationAction;
 use BrassBand\Songs\DeleteSongAction;
 use BrassBand\Songs\DownloadArchiveAction;
 use BrassBand\Songs\FileNames;
@@ -109,6 +115,8 @@ use BrassBand\Songs\ShowSongAction;
 use BrassBand\Songs\ShowSongFileAction;
 use BrassBand\Songs\SongFiles;
 use BrassBand\Songs\Songs;
+use BrassBand\Songs\SpokenNames;
+use BrassBand\Songs\SpokenNamesAction;
 use BrassBand\Songs\UpdateSongFileAction;
 use BrassBand\Storage\Files;
 use Doctrine\DBAL\Connection;
@@ -116,7 +124,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>} $config
+ * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -129,6 +137,7 @@ return function (App $app, Connection $database, array $config): void {
     $files = new Files(dirname(__DIR__) . '/storage');
     $logos = new LogoStore($database, $files);
     $mailer = new Mailer($config);
+    $push = PushSetup::from($config, $database);
     $bands = new Bands($database, $logos, $mailer);
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
@@ -138,7 +147,7 @@ return function (App $app, Connection $database, array $config): void {
     $songFiles = new SongFiles($database, $files);
     $songs = new Songs($database, $songFiles);
     $thumbnails = new ClipThumbnails($config);
-    $gigs = new Gigs($database);
+    $gigs = new Gigs($database, is_string($config['mapTilesUrl'] ?? null) ? trim($config['mapTilesUrl']) : Gigs::DEFAULT_MAP_TILES_URL);
     $costumes = new Costumes($database);
     $setlists = new Setlists($database);
     $costumePictures = new CostumePictures($database, $files);
@@ -183,12 +192,18 @@ return function (App $app, Connection $database, array $config): void {
         $setlists,
         $costumes,
         $costumePictures,
+        $push,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
         $group->put('/api/me/password', new ChangePasswordAction($database, $sessions, $links, new SignInFailures($database)));
         $group->delete('/api/session', new SignOutAction($sessions, $cookie, everywhere: false));
         $group->delete('/api/sessions', new SignOutAction($sessions, $cookie, everywhere: true));
+
+        // The notifications of the device that asks: its own, nobody else's.
+        $group->get('/api/push', new PushAction($push));
+        $group->put('/api/push/subscription', new PushAction($push));
+        $group->delete('/api/push/subscription', new PushAction($push));
 
         // The directory of the band: each action shows what the member may see.
         $group->get('/api/members', new ListMembersAction($members));
@@ -237,6 +252,8 @@ return function (App $app, Connection $database, array $config): void {
         $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
+        // "Relancer": a notification to who has not answered for the gig.
+        $group->post('/api/gigs/{id:[0-9]+}/reminder', new RemindGigAction($database, $gigs, new Reminders($database, $push)))->add($editGig);
         // The answer of a member who told them.
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, forAnother: true))
             ->add($editGig);
@@ -290,6 +307,14 @@ return function (App $app, Connection $database, array $config): void {
         $group->post('/api/instruments/{id:[0-9]+}/aliases', new AddAliasAction($aliases))->add($manageSongs);
         $group->delete('/api/instrumentAliases/{id:[0-9]+}', new DeleteAliasAction($database, $aliases))->add($manageSongs);
 
+        // The phrases the dictation of a setlist learned for a song, edited by
+        // hand in the form of the song (model/songs.md, entry 4).
+        $spokenNames = new SpokenNames($database);
+        $songSpokenNames = new SpokenNamesAction($database, $songs, $spokenNames);
+        $group->get('/api/songs/{id:[0-9]+}/spokenNames', $songSpokenNames)->add($manageSongs);
+        $group->post('/api/songs/{id:[0-9]+}/spokenNames', $songSpokenNames)->add($manageSongs);
+        $group->delete('/api/songSpokenNames/{id:[0-9]+}', $songSpokenNames)->add($manageSongs);
+
         // Creating a gig and deleting a draft are for who manages gigs: an
         // organiser edits the gig they were given, nothing more.
         $manageGigs = new RequirePermission(Permission::MANAGE_GIGS);
@@ -301,7 +326,11 @@ return function (App $app, Connection $database, array $config): void {
         $group->post('/api/gigs/{id:[0-9]+}/setlists', new SaveSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
         $group->put('/api/setlists/{id:[0-9]+}', new SaveSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
         $group->delete('/api/setlists/{id:[0-9]+}', new DeleteSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
-        $live = new LiveSetlistAction($database, $setlists);
+        // The dictation of a setlist: what it reads, and what it learns.
+        $dictation = new DictationAction($database, $songs, $spokenNames);
+        $group->get('/api/spokenNames', $dictation)->add($manageSetlists);
+        $group->post('/api/songs/{id:[0-9]+}/spokenNames/learned', $dictation)->add($manageSetlists);
+        $live = new LiveSetlistAction($database, $setlists, new LivePush($database, $push));
         $group->post('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
         $group->put('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
         $group->delete('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);

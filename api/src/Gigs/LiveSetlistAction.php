@@ -23,6 +23,7 @@ final class LiveSetlistAction
     public function __construct(
         private readonly Connection $database,
         private readonly Setlists $setlists,
+        private readonly LivePush $livePush,
     ) {
     }
 
@@ -36,7 +37,7 @@ final class LiveSetlistAction
         $method = $request->getMethod();
         $position = $method === 'PUT' ? Input::from($request, LiveInput::class)->position : null;
 
-        $this->database->transactional(function () use ($setlistId, $method, $position, $me): void {
+        $changed = $this->database->transactional(function () use ($setlistId, $method, $position, $me): bool {
             // One live setlist at most in the band: two starts wait for each
             // other here, on the row of the band, instead of on each other's setlist.
             if ($method === 'POST') {
@@ -47,6 +48,9 @@ final class LiveSetlistAction
             $count = $this->setlists->songCount($setlistId);
 
             if ($method === 'DELETE') {
+                if (!$isLive) {
+                    return false;
+                }
                 $values = ['liveStartedAt' => null, 'livePosition' => null];
             } elseif ($method === 'POST') {
                 if ($count === 0) {
@@ -54,7 +58,7 @@ final class LiveSetlistAction
                 }
                 if ($isLive) {
                     // Pressed twice, or on two phones: it stays where it is.
-                    return;
+                    return false;
                 }
                 // One setlist at most is live in the band.
                 $this->database->executeStatement(
@@ -68,11 +72,22 @@ final class LiveSetlistAction
                 if ($position < 1 || $position > $count) {
                     throw new ApiError(422, 'invalidInput', ['position' => 'invalid']);
                 }
+                if ((int) $setlist['livePosition'] === $position) {
+                    return false;
+                }
                 $values = ['livePosition' => $position];
             }
             $this->database->update('setlist', [...$values, 'updatedByMemberId' => $me->id], ['id' => $setlistId]);
+
+            return true;
         });
 
-        return Json::write($response, $this->setlists->one($setlistId));
+        $setlist = $this->setlists->one($setlistId);
+        // A notification to the followers at each change, none when nothing moved.
+        if ($changed) {
+            $this->livePush->changed($setlist);
+        }
+
+        return Json::write($response, $setlist);
     }
 }

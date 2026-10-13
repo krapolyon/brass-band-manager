@@ -544,12 +544,12 @@ button.gigs-member {
   display: flex;
   flex: 1;
   flex-direction: column;
-  /* 22 between two songs in Figma. */
-  --liveGap: 1.375rem;
-  /* The focus line: 56, then the two songs just played, which stay in sight
-     (156 in Figma; more when the text of the member is larger). */
+  /* Figma: itemSpacing spaceXl, paddingTop spaceXxxl. */
+  --liveGap: var(--spaceXl);
+  /* The focus line: the top padding, then the two songs just played, which
+     stay in sight (more room when the text of the member is larger). */
   --liveLine: calc(
-    3.5rem +
+    var(--spaceXxxl) +
     var(--fontSizeHeading) *
     1.2 +
     var(--fontSizeTitle) *
@@ -611,7 +611,6 @@ button.gigs-member {
   flex-direction: column;
   gap: var(--spaceSm);
   padding: var(--spaceMd) var(--spaceXl) max(var(--spaceMd), env(safe-area-inset-bottom));
-  background: linear-gradient(to bottom, transparent, var(--ground) var(--spaceXl));
 }
 
 .gigs-livePrevious {
@@ -641,4 +640,62 @@ button.gigs-member {
   .gigs-liveSongs li {
     transition: none;
   }
+}
+
+/* ---------------------------------------------------------------
+   The dictation of a setlist (Figma, section 11): the field that adds a song
+   with its microphone, then the card that listens and the one that asks
+   which song was meant.
+   --------------------------------------------------------------- */
+
+.gigs-addSong {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spaceXs);
+}
+
+.gigs-addSong > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.gigs-dictation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.gigs-dictation h2,
+.gigs-dictation p {
+  margin: 0;
+}
+
+.gigs-dictationHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.gigs-dictationHeading h2 {
+  flex: 1;
+}
+
+.gigs-dictationMicrophone {
+  display: flex;
+  flex: none;
+  color: var(--accentText);
+}
+
+.gigs-dictationHeard {
+  color: var(--success);
+}
+
+.gigs-dictationChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
 }

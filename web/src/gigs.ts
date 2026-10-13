@@ -74,6 +74,8 @@ export type Gig = Omit<GigSummary, 'slots'> & {
   streetAddress: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Where the map of the meeting point reads its tiles; null when the gig shows no map. */
+  mapTilesUrl: string | null;
   notes: string | null;
   /** An instant in UTC; null when the members were never reminded. */
   remindedAt: string | null;

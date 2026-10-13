@@ -886,6 +886,43 @@ test.describe('what must not go wrong', () => {
     expect(sql('SELECT name FROM costume ORDER BY position')).toBe('Marins\nJungle\nPaillettes');
   });
 
+  test('a costume is dragged to its place in the list, which says the order is the one of a gig', async ({
+    page,
+  }) => {
+    addCostume('Jungle');
+    addCostume('Paillettes');
+    addCostume('Marins');
+    await signIn(page);
+    await page.goto('/band/costumes');
+    await expect(
+      page.getByText(
+        'L’ordre de la liste est celui des choix d’un plan : fais glisser un déguiz pour le déplacer.',
+      ),
+    ).toBeVisible();
+
+    // Marins, the last, is dragged above Jungle, the first.
+    const from = await page.locator('.band-costume', { hasText: 'Marins' }).boundingBox();
+    const to = await page.locator('.band-costume', { hasText: 'Jungle' }).boundingBox();
+    if (!from || !to) throw new Error('The costumes are not shown');
+    await page.mouse.move(from.x + 120, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 120, from.y + from.height / 2 - 10, { steps: 3 });
+    await page.mouse.move(to.x + 120, to.y + 4, { steps: 12 });
+    await page.mouse.up();
+
+    await expect(page.locator('.band-costume .textBodyStrong')).toHaveText([
+      'Marins',
+      'Jungle',
+      'Paillettes',
+    ]);
+    await expect
+      .poll(() => sql('SELECT name FROM costume ORDER BY position'))
+      .toBe('Marins\nJungle\nPaillettes');
+    // A click on its pencil still opens it: a press is not a drag.
+    await page.getByRole('button', { name: 'Modifier Marins' }).click();
+    await expect(page.getByRole('dialog', { name: 'Marins' })).toBeVisible();
+  });
+
   test('on a tablet the list is a grid of two, and a gig takes the whole screen without the tab bar', async ({
     page,
   }) => {
@@ -981,6 +1018,84 @@ test.describe('what must not go wrong', () => {
 
     await page.getByRole('button', { name: 'Voir le lieu' }).click();
     expect((await opened())[1]).toBe('https://example.org/lieu');
+  });
+
+  test('a gig with coordinates shows the map: its credit, its zoom between 12 and 19, a press that opens the maps app', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Vide-grenier', {
+      status: 'CONFIRMED',
+      startsOn: day(5),
+      meetingTime: '09:30',
+      placeName: 'Métro Croix-Rousse',
+      city: 'Lyon',
+    });
+    // The tiles are answered here: the tests ask nothing of another site.
+    const asked: { address: string; referer: string | undefined }[] = [];
+    const elsewhere: string[] = [];
+    await page.route('**/testTiles/**', (route) => {
+      const request = route.request();
+      asked.push({ address: request.url(), referer: request.headers().referer });
+      if (request.url().endsWith('tilejson.json')) {
+        return route.fulfill({
+          json: {
+            tilejson: '3.0.0',
+            tiles: ['http://localhost:8081/testTiles/{z}/{x}/{y}.mvt'],
+            minzoom: 0,
+            maxzoom: 14,
+            vector_layers: [],
+          },
+        });
+      }
+      return route.fulfill({ status: 204 });
+    });
+    page.on('request', (request) => {
+      if (
+        !request.url().startsWith('http://localhost:8081') &&
+        !request.url().startsWith('blob:')
+      ) {
+        elsewhere.push(request.url());
+      }
+    });
+    await page.addInitScript(() => {
+      const opened: string[] = [];
+      Object.assign(window, { opened, open: (address: string) => opened.push(address) });
+    });
+    await asMember(page, 'Zaza');
+
+    // Without coordinates: no map, and no tile asked.
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByRole('button', { name: 'Y aller' })).toBeVisible();
+    await expect(page.locator('.GigMeetingMap')).toHaveCount(0);
+    expect(asked).toEqual([]);
+
+    sql(`UPDATE gig SET latitude = 45.7743, longitude = 4.8320 WHERE id = ${gigId}`);
+    await page.reload();
+    const map = page.locator('.GigMeetingMap');
+    await expect(map).toBeVisible();
+    await expect(map.getByText('© OpenStreetMap')).toBeVisible();
+    await expect(map).toHaveAttribute('data-zoom', '17');
+    // The tiles come from the address of the instance, with a Referer.
+    await expect.poll(() => asked.some((one) => one.address.endsWith('.mvt'))).toBe(true);
+    expect(asked[0]?.address).toBe('http://localhost:8081/testTiles/tilejson.json');
+    expect(asked.every((one) => one.referer?.startsWith('http://localhost:8081'))).toBe(true);
+
+    const zoomIn = page.getByRole('button', { name: 'Agrandir la carte' });
+    const zoomOut = page.getByRole('button', { name: 'Réduire la carte' });
+    await zoomIn.click();
+    await zoomIn.click();
+    await expect(map).toHaveAttribute('data-zoom', '19');
+    await expect(zoomIn).toBeDisabled();
+    for (let step = 0; step < 7; step++) await zoomOut.click();
+    await expect(map).toHaveAttribute('data-zoom', '12');
+    await expect(zoomOut).toBeDisabled();
+
+    // A press on the map does what “Y aller” does.
+    await map.locator('.GigMeetingMap-canvas').click({ position: { x: 20, y: 150 } });
+    const opened = await page.evaluate(() => (window as unknown as { opened: string[] }).opened);
+    expect(decodeURIComponent(opened[0] ?? '')).toContain('45.7743,4.832');
+    // Nothing was asked of another site: no CDN, no font, no other map server.
+    expect(elsewhere).toEqual([]);
   });
 
   test('“Copier l’adresse” copies the address and says so, in sight and to screen readers', async ({

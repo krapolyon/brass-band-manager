@@ -241,6 +241,45 @@ test.describe('the live setlist', () => {
     expect(sql('SELECT id FROM setlist WHERE liveStartedAt IS NOT NULL')).toBe(String(second));
   });
 
+  test('two managers who start two setlists at the same instant: one is live, the other ended cleanly', async ({
+    playwright,
+  }) => {
+    const sissi = await deviceOf(playwright, email('Sissi'));
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const { gigId, slotId } = confirmed();
+    const toxic = addSong('Toxic');
+    const [first, second] = [
+      addSetlist(gigId, slotId, [toxic, toxic]),
+      addSetlist(gigId, slotId, [toxic, toxic]),
+    ];
+
+    // Several rounds: the order in which the two requests reach the server changes.
+    for (let round = 0; round < 8; round++) {
+      const answers = await Promise.all([
+        sissi.post(`/api/setlists/${first}/live`),
+        jibe.post(`/api/setlists/${second}/live`),
+      ]);
+      // Neither fails nor waits for ever, and each answers a setlist that is whole.
+      expect(answers.map((answer) => answer.status())).toEqual([200, 200]);
+      // Exactly one is live, on its first song; the other has no trace of a live left.
+      const rows = sql(
+        'SELECT id, liveStartedAt IS NOT NULL, IFNULL(livePosition, 0) FROM setlist ORDER BY id',
+      ).split('\n');
+      const live = rows.filter((row) => row.split('\t')[1] === '1');
+      expect(live).toHaveLength(1);
+      expect(live[0]?.split('\t')[2]).toBe('1');
+      expect(
+        rows.filter((row) => row.split('\t')[1] === '0').every((row) => row.endsWith('\t0')),
+      ).toBe(true);
+      // Who lost is told so by the answer of the setlist, read afterwards.
+      const ended = rows.find((row) => row.split('\t')[1] === '0')?.split('\t')[0];
+      const read = await sissi.get(`/api/setlists/${ended}`);
+      expect((await read.json()).liveStartedAt).toBeNull();
+      await sissi.delete(`/api/setlists/${first}/live`);
+      await jibe.delete(`/api/setlists/${second}/live`);
+    }
+  });
+
   test('a live setlist that is edited keeps its position, never beyond its last song', async ({
     playwright,
   }) => {

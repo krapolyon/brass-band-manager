@@ -1,0 +1,23 @@
+/* The handle of a row that is dragged: 44 by 44, as an IconButton. */
+.SortableHandle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+  border-radius: var(--radiusFull);
+  color: var(--textMuted);
+  cursor: grab;
+  /* The finger moves the row, not the page. */
+  touch-action: none;
+}
+
+/* The row being dragged stays above the others. */
+[data-dragging="true"] {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+  cursor: grabbing;
+}

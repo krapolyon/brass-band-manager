@@ -39,6 +39,17 @@ return [
     // test server fetches a file of its own instead (docker-compose.yml).
     ...(getenv('BRASS_BAND_CLIP_THUMBNAIL_URL') ? ['clipThumbnailUrls' => [getenv('BRASS_BAND_CLIP_THUMBNAIL_URL')]] : []),
 
+    // A key pair made for the local stack only: it is public, like the rest
+    // of this file. The test server (port 8081) records the notifications in
+    // a file instead of sending them.
+    'push' => [
+        'publicKey' => 'BPVjeNfgr_yJsrN4IaNlfldXO6r7qVveK23-TNk8ay5jkpqndtzN0F98VVAKG3XUTWDFPOE5BQiym0Cz0PCRt7Y',
+        'privateKey' => 'ILLY9TvTFQGBXKJiHw_boqBAwqopGIOU6C0fgX9m7ds',
+        'recordTo' => getenv('BRASS_BAND_PUSH_LOG') ?: '',
+    ],
+    // The test server reads the tiles of the map at an address of its own,
+    // which the tests answer: they ask nothing of another site.
+    ...(getenv('BRASS_BAND_MAP_TILES_URL') !== false ? ['mapTilesUrl' => getenv('BRASS_BAND_MAP_TILES_URL')] : []),
     'session' => [
         // The local stack has no HTTPS, and a browser refuses a secure cookie without it.
         'secureCookie' => false,

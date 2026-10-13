@@ -10,6 +10,11 @@ type Props = {
   message?: ReactNode;
   /** Figma: the Content slot and "Show content": the share of answers, then one SectionAttendanceRow per section. */
   children?: ReactNode;
+  /**
+   * Figma: "Show reminder", "Pending" and "Last reminder": how many have not
+   * answered, when they were last reminded, and "Relancer", a Button.
+   */
+  reminder?: { pending: string; last?: string; action: ReactNode };
   /** The way to every answer: a Button. */
   action?: ReactNode;
   /** The level of its heading: 2 on the screen of the gig, 3 beside the list. */
@@ -17,13 +22,14 @@ type Props = {
 };
 
 // Figma: GigSlot/WhoComes. Who comes to a slot. Used on a gig with one slot,
-// and in the panel of a slot of a gig of several days. The reminder row of
-// Figma waits for the push notifications.
+// and in the panel of a slot of a gig of several days. The reminder row is
+// for who may edit the gig.
 export function GigSlotWhoComes({
   title,
   count,
   message,
   children,
+  reminder,
   action,
   headingLevel = 2,
 }: Props) {
@@ -36,6 +42,15 @@ export function GigSlotWhoComes({
       </div>
       {message}
       {children && <div className="GigSlotWhoComes-content">{children}</div>}
+      {reminder && (
+        <div className="GigSlotWhoComes-reminder">
+          <p>
+            <span className="textBodyStrong">{reminder.pending}</span>
+            {reminder.last && <span className="textCaption">{reminder.last}</span>}
+          </p>
+          {reminder.action}
+        </div>
+      )}
       {action}
     </section>
   );

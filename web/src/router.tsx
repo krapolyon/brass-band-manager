@@ -28,6 +28,7 @@ import { ManageMemberScreen } from './screens/members/ManageMemberScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
 import { AccessibilityScreen } from './screens/settings/AccessibilityScreen.tsx';
 import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
+import { NotificationsScreen } from './screens/settings/NotificationsScreen.tsx';
 import { PasswordScreen } from './screens/settings/PasswordScreen.tsx';
 import { ProfileScreen } from './screens/settings/ProfileScreen.tsx';
 import { SettingsScreen } from './screens/settings/SettingsScreen.tsx';
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
       { path: '/settings/password', element: <PasswordScreen /> },
       { path: '/settings/appearance', element: <AppearanceScreen /> },
       { path: '/settings/accessibility', element: <AccessibilityScreen /> },
+      { path: '/settings/notifications', element: <NotificationsScreen /> },
     ],
   },
   {

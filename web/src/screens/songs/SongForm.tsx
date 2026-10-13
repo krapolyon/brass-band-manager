@@ -71,11 +71,13 @@ type Props = {
   isNew?: boolean;
   /** The card of the files, which the edit screen shows after the version. */
   files?: ReactNode;
+  /** The card of the dictation, which the edit screen shows after "Le morceau". */
+  afterSong?: ReactNode;
 };
 
 // Figma: Songs / Edit and Songs / Import — step 2: the three cards of the
 // record of a song.
-export function SongFormFields({ draft, onChange, errors, isNew, files }: Props) {
+export function SongFormFields({ draft, onChange, errors, isNew, files, afterSong }: Props) {
   const { t } = useTranslation();
   const set = (field: keyof SongDraft) => (value: string) => onChange({ ...draft, [field]: value });
   const typed = (field: keyof SongDraft) => ({
@@ -145,6 +147,7 @@ export function SongFormFields({ draft, onChange, errors, isNew, files }: Props)
           }))}
         />
       </Sheet>
+      {afterSong}
       <Sheet title={t('songs.form.version')}>
         <TextField
           type="date"

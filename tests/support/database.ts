@@ -6,6 +6,7 @@ import { execFileSync } from 'node:child_process';
 
 const tables = [
   'setlistSong',
+  'songSpokenName',
   'setlist',
   'gigSlotAttendance',
   'gigSlot',

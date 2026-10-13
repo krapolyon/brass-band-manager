@@ -6,4 +6,5 @@ parameters:
         - routes.php
         - public
         - src
+        - tasks
         - ../database/migrate.php

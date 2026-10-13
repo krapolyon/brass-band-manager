@@ -10,6 +10,7 @@ import { ImageField } from '../../components/ImageField.tsx';
 import { ListRow } from '../../components/ListRow.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
+import { SortableList, useSortableRow } from '../../components/Sortable.tsx';
 import { TextField } from '../../components/TextField.tsx';
 import { type Costume, useCostumes } from '../../gigs.ts';
 import { AppLayout } from '../AppLayout.tsx';
@@ -27,6 +28,31 @@ export function BandCostumesScreen() {
   const canManage = useCanManageBand();
   const costumes = useCostumes();
   const [opened, setOpened] = useState<Costume | 'new' | null>(null);
+  const queryClient = useQueryClient();
+  const [said, setSaid] = useState('');
+  const [failed, setFailed] = useState(false);
+
+  // Dropped at its new place: shown there at once, saved, and put back if that fails.
+  const place = async (costume: Costume, to: number) => {
+    const before = costumes.data ?? [];
+    const list = before.filter((one) => one.id !== costume.id);
+    list.splice(to, 0, costume);
+    queryClient.setQueryData(['costumes'], list);
+    setFailed(false);
+    try {
+      queryClient.setQueryData(
+        ['costumes'],
+        await api<Costume[]>(`/api/costumes/${costume.id}`, {
+          method: 'PUT',
+          body: { name: costume.name, position: to + 1 },
+        }),
+      );
+      setSaid(t('band.costumes.moved', { name: costume.name, position: to + 1 }));
+    } catch {
+      queryClient.setQueryData(['costumes'], before);
+      setFailed(true);
+    }
+  };
 
   if (canManage === null) return null;
   if (!canManage) return <AdminsOnlyScreen />;
@@ -47,38 +73,63 @@ export function BandCostumesScreen() {
         </p>
       )}
       {costumes.data && (
-        <ul className="band-costumes">
-          {costumes.data.map((costume) => (
-            <li key={costume.id} className="band-costume">
-              <span className="band-costumePicture">
-                {costume.pictureUrl ? (
-                  <GigPicture status="PROPOSED" costumePictures={[costume.pictureUrl]} />
-                ) : (
-                  <Icon name="Image" />
-                )}
-              </span>
-              <span className="band-costumeTexts">
-                <span className="textBodyStrong">{costume.name}</span>
-                <span className="band-muted textCaption">
-                  {t('band.costumes.gigs', { count: costume.gigCount })}
-                </span>
-              </span>
-              <IconButton
-                icon="Pencil"
-                label={t('band.costumes.edit', { name: costume.name })}
-                aria-haspopup="dialog"
-                onClick={() => setOpened(costume)}
-              />
-            </li>
-          ))}
-          <li>
-            <ListRow add label={t('band.costumes.add')} onPress={() => setOpened('new')} />
-          </li>
-        </ul>
+        <>
+          <SortableList
+            by="row"
+            ids={costumes.data.map((costume) => String(costume.id))}
+            onMove={(from, to) => place(costumes.data[from] as Costume, to)}
+          >
+            <ul className="band-costumes">
+              {costumes.data.map((costume) => (
+                <CostumeLine key={costume.id} costume={costume} onEdit={() => setOpened(costume)} />
+              ))}
+              <li>
+                <ListRow add label={t('band.costumes.add')} onPress={() => setOpened('new')} />
+              </li>
+            </ul>
+          </SortableList>
+          {failed && <Message kind="danger">{t('band.costumes.failed')}</Message>}
+          {costumes.data.length > 1 && (
+            <p className="band-muted textCaption">{t('band.costumes.orderHint')}</p>
+          )}
+          <p className="visuallyHidden" role="status">
+            {said}
+          </p>
+        </>
       )}
 
       <CostumePanel costume={opened} onClose={() => setOpened(null)} onCreated={setOpened} />
     </AppLayout>
+  );
+}
+
+/** A costume of the list, dragged by its whole row: no handle is drawn. */
+function CostumeLine({ costume, onEdit }: { costume: Costume; onEdit: () => void }) {
+  const { t } = useTranslation();
+  const sortable = useSortableRow(String(costume.id));
+
+  return (
+    <li className="band-costume" {...sortable.row} {...sortable.handle} ref={sortable.row.ref}>
+      <span className="band-costumePicture">
+        {costume.pictureUrl ? (
+          <GigPicture status="PROPOSED" costumePictures={[costume.pictureUrl]} />
+        ) : (
+          <Icon name="Image" />
+        )}
+      </span>
+      <span className="band-costumeTexts">
+        <span className="textBodyStrong">{costume.name}</span>
+        <span className="band-muted textCaption">
+          {t('band.costumes.gigs', { count: costume.gigCount })}
+        </span>
+      </span>
+      <IconButton
+        icon="Pencil"
+        label={t('band.costumes.edit', { name: costume.name })}
+        aria-haspopup="dialog"
+        onClick={onEdit}
+      />
+    </li>
   );
 }
 

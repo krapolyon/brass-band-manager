@@ -32,6 +32,7 @@ import {
   type SongErrors,
   SongFormFields,
 } from './SongForm.tsx';
+import { SpokenNamesCard } from './SpokenNames.tsx';
 import './songs.css';
 
 /** Why a file was not taken, in a few words. */
@@ -211,6 +212,7 @@ export function SongEditScreen() {
               draft={draft}
               onChange={setDraft}
               errors={errors}
+              afterSong={<SpokenNamesCard songId={data.id} />}
               files={
                 <Sheet title={t('songs.edit.files')}>
                   <p className="songs-muted">

@@ -8,6 +8,7 @@ import { Button } from '../../components/Button.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
+import { usePush } from '../../push.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { AdminsOnlyScreen, useCanManageBand } from './BandSettingsScreen.tsx';
 import './band.css';
@@ -25,6 +26,7 @@ function daysOf(text: string): number | null | false {
 // sent yet: the screen says so.
 export function BandRemindersScreen() {
   const { t } = useTranslation();
+  const push = usePush();
   const queryClient = useQueryClient();
   const canManage = useCanManageBand();
   const band = useGigReminders(canManage === true).data;
@@ -100,7 +102,8 @@ export function BandRemindersScreen() {
       }
     >
       <div className="band-form">
-        <Message>{t('band.reminders.notYet')}</Message>
+        {/* An instance without push keys sends nothing: the settings are kept all the same. */}
+        {push.data?.publicKey === null && <Message>{t('band.reminders.notYet')}</Message>}
         {outcome === 'saved' && <Message kind="success">{t('band.reminders.saved')}</Message>}
         {outcome === 'failed' && <Message kind="danger">{t('band.reminders.failed')}</Message>}
         <Sheet title={t('band.reminders.first')}>

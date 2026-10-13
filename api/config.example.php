@@ -40,6 +40,29 @@ return [
         'password' => '',
     ],
 
+    // The time zone of the band, as PHP names it. The hour of the automatic
+    // reminders of gigs is read on this clock. Left empty, the clock is the
+    // one PHP is set to on the host.
+    'timeZone' => 'Europe/Paris',
+
+    // Push notifications (the live setlist, the reminders of gigs). The two
+    // keys identify this instance to the push services of the browsers
+    // (VAPID). Create them once, on a computer, with "npm run push:keys", and
+    // never change them afterwards: every device would have to accept
+    // notifications again. The private key is a secret. While one of them is
+    // empty, the app sends no notification and does not offer them.
+    'push' => [
+        'publicKey' => '',
+        'privateKey' => '',
+    ],
+
+    // The map of the meeting point of a gig: the TileJSON address of vector
+    // tiles in the Shortbread schema. Left out, it is the one of the
+    // OpenStreetMap Foundation, whose policy the app follows (credit shown, no
+    // bulk download). '' shows no map. Opening a gig that has coordinates
+    // sends the address of the member's device to that server.
+    // 'mapTilesUrl' => 'https://vector.openstreetmap.org/shortbread_v1/tilejson.json',
+
     // There is deliberately no "session" setting here: without one, the
     // session cookie only travels over HTTPS, which is what the host must do.
 ];

@@ -1,0 +1,15 @@
+{
+  "live.title": "{position}/{count} · Prochain : {name}",
+  "live.titleLast": "{position}/{count} · Dernier : {name}",
+  "live.then": "Puis : {names}",
+  "live.ended": "Setlist terminée",
+  "live.next": "Suivant",
+  "reminder.title": "{band} – Présence manquante",
+  "reminder.line": "{name} – {date} – {time}",
+  "reminder.lineNoTime": "{name} – {date}",
+  "reminder.date": "{day} {number} {month}",
+  "reminder.time": "{hour} h {minutes}",
+  "reminder.timeSharp": "{hour} h",
+  "days": "dim.,lun.,mar.,mer.,jeu.,ven.,sam.",
+  "months": "janv.,févr.,mars,avr.,mai,juin,juil.,août,sept.,oct.,nov.,déc."
+}

@@ -14,13 +14,16 @@ import { MemberRecordFields, type PhotoDraft } from '../members/MemberRecordFiel
 import { draftOf, useRecordErrors } from '../members/record.ts';
 import { saveMember } from '../members/save.ts';
 
-// After a form was refused: puts the focus on its first faulty field.
+// After a form was refused: puts the focus on its first faulty field. Two
+// frames later: the first one may come before the screen has drawn the error.
 export function focusFirstFieldError() {
-  requestAnimationFrame(() => {
-    document
-      .querySelector<HTMLElement>('.TextField[data-error="true"] :is(input, select, button)')
-      ?.focus();
-  });
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('.TextField[data-error="true"] :is(input, select, button)')
+        ?.focus();
+    }),
+  );
 }
 
 // Figma: Members / Settings — profile. What the other members see of the

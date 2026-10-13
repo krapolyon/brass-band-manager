@@ -27,8 +27,17 @@ final class Gigs
 
     private readonly Setlists $setlists;
 
-    public function __construct(private readonly Connection $database)
-    {
+    // Where the map of the meeting point reads its tiles when the
+    // configuration names no other source (docs/scoping.md, "The map").
+    public const DEFAULT_MAP_TILES_URL = 'https://vector.openstreetmap.org/shortbread_v1/tilejson.json';
+
+    /**
+     * @param string $mapTilesUrl The TileJSON address of vector tiles in the Shortbread schema; empty, gigs show no map
+     */
+    public function __construct(
+        private readonly Connection $database,
+        private readonly string $mapTilesUrl = self::DEFAULT_MAP_TILES_URL,
+    ) {
         $this->setlists = new Setlists($database);
     }
 
@@ -151,6 +160,8 @@ final class Gigs
             'streetAddress' => $gig['streetAddress'],
             'latitude' => $gig['latitude'] === null ? null : (float) $gig['latitude'],
             'longitude' => $gig['longitude'] === null ? null : (float) $gig['longitude'],
+            // The map of the meeting point: only a gig that has coordinates has one.
+            'mapTilesUrl' => $gig['latitude'] === null || $gig['longitude'] === null || $this->mapTilesUrl === '' ? null : $this->mapTilesUrl,
             'notes' => $gig['notes'],
             // Stored in UTC, sent as an instant the browser reads in its own zone.
             'remindedAt' => $gig['remindedAt'] === null ? null : str_replace(' ', 'T', (string) $gig['remindedAt']) . 'Z',

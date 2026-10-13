@@ -4,7 +4,12 @@
   },
   "common": {
     "close": "Fermer",
-    "back": "Retour"
+    "back": "Retour",
+    "leave": {
+      "title": "Quitter sans enregistrer ?",
+      "leave": "Quitter sans enregistrer",
+      "stay": "Continuer"
+    }
   },
   "errors": {
     "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
@@ -407,6 +412,29 @@
   },
   "settings": {
     "account": "Mon compte",
+    "notifications": {
+      "title": "Notifications",
+      "lead": "Réglées appareil par appareil.",
+      "detailOn": "Activées sur cet appareil",
+      "detailOff": "Pas sur cet appareil",
+      "thisDevice": "Sur cet appareil",
+      "reminders": "Rappels de présence",
+      "remindersHint": "Quand un plan attend ta réponse, avant la date.",
+      "powerMembers": "Note : les power members ne sont jamais relancés : le réglage reste, mais aucun rappel ne part.",
+      "needsInstall": "Sur iPhone, les notifs n’arrivent que si l’app est sur ton écran d’accueil. Ajoute-la, rouvre-la depuis là, puis active les rappels.",
+      "install": "Ajouter l’app à l’écran d’accueil",
+      "installSteps": "Dans Safari, touche le bouton Partager, puis « Sur l’écran d’accueil ». Rouvre ensuite l’app depuis son icône.",
+      "denied": "Les notifications sont bloquées pour l’app sur cet appareil. Autorise-les dans les réglages du téléphone, puis reviens ici.",
+      "unavailable": "Les notifications ne sont pas disponibles ici.",
+      "failed": "Le réglage n’a pas changé. Réessaie dans un instant.",
+      "ask": {
+        "title": "Ok pour les notifs ?",
+        "lead": "Quand un plan attend ta réponse, on te prévient sur cet appareil.",
+        "accept": "Activer les rappels",
+        "refuse": "Pas sur cet appareil",
+        "later": "Tu peux changer d’avis dans ton compte, rubrique Notifications."
+      }
+    },
     "band": "La fanfare",
     "save": "Enregistrer",
     "profile": {
@@ -667,6 +695,8 @@
       "edit": "Modifier {{name}}",
       "newTitle": "Nouveau déguiz",
       "order": "Ordre dans la liste",
+      "orderHint": "L’ordre de la liste est celui des choix d’un plan : fais glisser un déguiz pour le déplacer.",
+      "moved": "{{name}} est maintenant en position {{position}}.",
       "picture": "Image",
       "pictureHint": "JPEG, PNG ou WebP. Elle s’affiche en haut des plans qui portent ce déguiz.",
       "name": "Nom",
@@ -696,7 +726,7 @@
       "detailOne_other": "{{count}} jours avant, à partir de {{hour}} h",
       "detailNone": "Aucun rappel",
       "lead": "Ceux qui n’ont pas répondu reçoivent une notification avant le plan. Les power members ne sont jamais relancés.",
-      "notYet": "Les notifications ne sont pas encore en service : ces réglages sont gardés pour le jour où elles le seront.",
+      "notYet": "Cette installation n’envoie pas encore de notifications : ces réglages sont gardés pour le jour où elle le fera.",
       "first": "Premier rappel",
       "second": "Second rappel",
       "days": "Jours avant le plan",
@@ -716,6 +746,22 @@
     }
   },
   "songs": {
+    "spokenNames": {
+      "title": "Dictée",
+      "lead": "Ce que la dictée d’une setlist reconnaît pour ce morceau, en plus de son nom. Elle l’apprend quand quelqu’un choisit ou corrige le morceau qu’elle a compris.",
+      "ways": "Façons de le dire",
+      "edit": "Modifier les façons de le dire",
+      "delete": "Supprimer « {{phrase}} »",
+      "add": "Ajouter une façon de le dire",
+      "label": "Nouvelle façon de le dire",
+      "confirm": "Ajouter",
+      "note": "Une façon de le dire ne désigne qu’un morceau : apprise pour un autre, elle passe à cet autre.",
+      "taken": "Déjà apprise pour {{name}} : la passer à ce morceau ?",
+      "move": "La passer à ce morceau",
+      "required": "Il faut au moins une lettre ou un chiffre.",
+      "tooShort": "Une façon de le dire compte au moins 2 caractères.",
+      "tooLong": "Une façon de le dire compte 60 caractères au plus."
+    },
     "status": {
       "PROPOSED": "Proposé",
       "IN_PROGRESS": "Montage en cours",
@@ -1124,6 +1170,22 @@
         "description": "Description",
         "songs": "Morceaux",
         "noSong": "Pas encore de morceau. Tape le premier.",
+        "noSongOrDictate": "Pas encore de morceau. Tape ou dicte le premier.",
+        "dictation": {
+          "start": "Dicter les morceaux",
+          "listening": "J’écoute…",
+          "stop": "Arrêter",
+          "lead": "Dis les morceaux dans l’ordre, un par un. Chacun s’ajoute dès qu’il est reconnu.",
+          "heard": "Entendu : « {{heard}} » → {{name}}",
+          "heardOnly": "Entendu : « {{heard}} »",
+          "unknown": "« {{heard}} » : ni au répertoire ni temporaire. Pas ajouté.",
+          "which": "Tu as dit « {{heard}} » : lequel ?",
+          "whichLead": "Deux morceaux que la fanfare joue lui ressemblent. Je continue d’écouter pendant que tu choisis.",
+          "choose": "Ajouter {{name}}",
+          "neither": "Aucun des deux",
+          "denied": "Le micro est refusé pour l’app. Autorise-le dans les réglages du téléphone, ou tape les morceaux.",
+          "failed": "La dictée s’est arrêtée. Relance-la, ou tape les morceaux."
+        },
         "addSong": "Ajouter un morceau",
         "suggestions": "Suggestions",
         "suggestion": "Ajouter {{name}}",
@@ -1148,6 +1210,7 @@
         "songTitle": "{{name}} · n° {{position}}",
         "moveUp": "Monter",
         "moveDown": "Descendre",
+        "dragHint": "Pour le déplacer, tu peux aussi le faire glisser par sa poignée.",
         "remove": "Retirer de la setlist",
         "delete": "Supprimer la setlist",
         "deleteTitle": "Supprimer la setlist n° {{number}} ?",
@@ -1155,10 +1218,7 @@
         "deleteLead_one": "Son morceau part avec elle ; le morceau lui-même reste au répertoire. Les autres setlists du plan gardent leur numéro.",
         "deleteLead_other": "Ses {{count}} morceaux partent avec elle ; les morceaux eux-mêmes restent au répertoire. Les autres setlists du plan gardent leur numéro.",
         "cancel": "Annuler",
-        "leaveTitle": "Quitter sans enregistrer ?",
-        "leaveLead": "Les changements faits depuis l’ouverture de la setlist seront perdus.",
-        "leave": "Quitter sans enregistrer",
-        "stay": "Continuer"
+        "leaveLead": "Les changements faits depuis l’ouverture de la setlist seront perdus."
       },
       "liveScreen": {
         "next": "Suivant",
@@ -1276,6 +1336,8 @@
       "allDay": "Toute la journée",
       "meeting": "Rendez-vous",
       "go": "Y aller",
+      "zoomIn": "Agrandir la carte",
+      "zoomOut": "Réduire la carte",
       "copyAddress": "Copier l’adresse",
       "addressCopied": "Adresse copiée.",
       "placeLink": "Voir le lieu",
@@ -1308,6 +1370,12 @@
       "manage": "Gérer le plan"
     },
     "whoComes": {
+      "pending_one": "1 n’a pas répondu",
+      "pending_other": "{{count}} n’ont pas répondu",
+      "lastReminder": "Dernière relance : {{day}}, {{time}}.",
+      "remind": "Relancer",
+      "reminded": "La relance est partie.",
+      "remindFailed": "La relance n’est pas partie. Réessaie dans un instant.",
       "title": "Qui vient",
       "titleFor": "Qui vient · {{slot}}",
       "yesCount_one": "{{count}} oui",

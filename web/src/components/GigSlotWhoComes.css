@@ -90,3 +90,25 @@
 .AnswerShares [data-answer="none"] {
   background: var(--border);
 }
+
+/* The reminder: who has not answered and when they were last told, then
+   "Relancer", which goes under the texts when the text grows. */
+.GigSlotWhoComes-reminder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.GigSlotWhoComes-reminder p {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.GigSlotWhoComes-reminder p .textCaption {
+  color: var(--textMuted);
+}

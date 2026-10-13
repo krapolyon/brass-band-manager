@@ -10,6 +10,8 @@ type Props = {
   spot?: string;
   /** Figma: "Address". */
   address?: string;
+  /** Figma: "Show map": the map of the meeting point, a GigMeetingMap. */
+  map?: ReactNode;
   /** "Y aller" and "Copier l'adresse", as Buttons. */
   children?: ReactNode;
   /** The level of its heading: 2 on the screen of the gig, 3 beside the list. */
@@ -17,8 +19,8 @@ type Props = {
 };
 
 // Figma: Gig/Meeting. Where and when the band meets: first on a confirmed
-// gig. The map of Figma is not drawn here yet: its provider is not chosen.
-export function GigMeeting({ label, time, spot, address, children, headingLevel = 2 }: Props) {
+// gig, with the map of the place when the gig has coordinates.
+export function GigMeeting({ label, time, spot, address, map, children, headingLevel = 2 }: Props) {
   const Heading = `h${headingLevel}` as const;
   return (
     <section className="GigMeeting">
@@ -28,6 +30,7 @@ export function GigMeeting({ label, time, spot, address, children, headingLevel 
         {spot && <p className="textBodyStrong">{spot}</p>}
         {address && <p className="GigMeeting-address textBody">{address}</p>}
       </div>
+      {map}
       {children && <div className="GigMeeting-actions">{children}</div>}
     </section>
   );

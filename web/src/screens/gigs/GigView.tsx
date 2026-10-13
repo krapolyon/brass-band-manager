@@ -9,6 +9,7 @@ import { Chip } from '../../components/Chip.tsx';
 import { GigHeader } from '../../components/GigHeader.tsx';
 import { GigInfos } from '../../components/GigInfos.tsx';
 import { GigMeeting } from '../../components/GigMeeting.tsx';
+import { GigMeetingMap } from '../../components/GigMeetingMap.tsx';
 import { GigPicture } from '../../components/GigPicture.tsx';
 import { GigSlotCard } from '../../components/GigSlotCard.tsx';
 import { AnswerShares, GigSlotWhoComes } from '../../components/GigSlotWhoComes.tsx';
@@ -116,6 +117,11 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
     return () => clearTimeout(timer);
   }, [hasCopied]);
 
+  // "Relancer": a notification at once to who has not answered, and when it left.
+  const remind = useMutation({
+    mutationFn: () => api<Gig>(`/api/gigs/${gigId}/reminder`, { method: 'POST' }),
+    onSuccess: (saved) => queryClient.setQueryData(['gig', gigId], saved),
+  });
   const status = useMutation({
     mutationFn: (next: string) =>
       api<Gig>(`/api/gigs/${gigId}/status`, { method: 'PUT', body: { status: next } }),
@@ -420,6 +426,21 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
     </section>
   );
 
+  const remindedAt = gig.remindedAt ? new Date(gig.remindedAt) : null;
+  const lastReminder = remindedAt
+    ? t('gigs.whoComes.lastReminder', {
+        day: remindedAt.toLocaleDateString(i18n.language, {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }),
+        time: timeText(
+          t,
+          `${String(remindedAt.getHours()).padStart(2, '0')}:${String(remindedAt.getMinutes()).padStart(2, '0')}`,
+        ),
+      })
+    : undefined;
+
   const allAnswers = (slot?: GigSlot) => (
     <Button
       kind="secondary"
@@ -441,7 +462,34 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
         message={
           <PlayableMessage slot={slot} names={sectionNames(sections, slot.missingSectionIds)} />
         }
-        action={allAnswers(slot)}
+        reminder={
+          gig.canEdit && isOpen(gig) && who.counts.NONE > 0
+            ? {
+                pending: t('gigs.whoComes.pending', { count: who.counts.NONE }),
+                last: lastReminder,
+                action: (
+                  <Button
+                    kind="secondary"
+                    size="small"
+                    icon="Send"
+                    disabled={remind.isPending}
+                    onClick={() => remind.mutate()}
+                  >
+                    {t('gigs.whoComes.remind')}
+                  </Button>
+                ),
+              }
+            : undefined
+        }
+        action={
+          <>
+            {remind.isError && <Message kind="danger">{t('gigs.whoComes.remindFailed')}</Message>}
+            <p className="visuallyHidden" role="status">
+              {remind.isSuccess ? t('gigs.whoComes.reminded') : ''}
+            </p>
+            {allAnswers(slot)}
+          </>
+        }
         headingLevel={cardLevel}
       >
         {!collapsed && <WhoComesContent attendance={who} ownSectionId={ownSectionId} />}
@@ -484,6 +532,21 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       spot={gig.placeName ?? undefined}
       address={address || undefined}
       headingLevel={cardLevel}
+      map={
+        gig.mapTilesUrl !== null &&
+        gig.latitude !== null &&
+        gig.longitude !== null &&
+        maps && (
+          <GigMeetingMap
+            latitude={gig.latitude}
+            longitude={gig.longitude}
+            tilesUrl={gig.mapTilesUrl}
+            onOpen={() => window.open(maps, '_blank', 'noopener,noreferrer')}
+            zoomInLabel={t('gigs.gig.zoomIn')}
+            zoomOutLabel={t('gigs.gig.zoomOut')}
+          />
+        )
+      }
     >
       {maps && (
         <Button icon="MapPin" onClick={() => window.open(maps, '_blank', 'noopener,noreferrer')}>
