@@ -61,6 +61,8 @@ export type GigSummary = {
   postalCode: string | null;
   city: string | null;
   isPlayable: boolean;
+  /** An instant in UTC: when members first saw the gig. Null for a gig that has only been a draft. */
+  proposedAt: string | null;
   /** The member manages gigs, or organises this one. */
   canEdit: boolean;
   slots: GigSlotSummary[];

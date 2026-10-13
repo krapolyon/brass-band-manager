@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.4 — 2026-10-13 — migration 012, decided with the design of the home screen: gig.proposedAt, the instant a gig first reaches a status members see; a gig is marked as new for 15 days after it.
 // v1.3 — 2026-10-13 — validated, migration 010: the live setlist (decided with the design): a setlist belongs to a slot of its gig, whose members who said yes follow it live; the position of the song being played and the start of the live session.
 // v1.2 — 2026-10-13 — decided with the design: a setlist is numbered within its gig (1, 2, 3…), not across the band; only a song in the repertoire or a temporary one is added to a setlist. Migration 009
 // v1.1 — 2026-10-13 — rules found while writing the API (dictionary only, no schema change)
@@ -46,6 +47,7 @@ Table gig {
   notes text [note: 'Anything else members need to know, as free text over several lines. No contact details of the client: they have no field in the first version.']
   discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this gig: digits only. Empty for a band without Discord. Stored, and shown by no screen before the Discord feature, as for a song.']
   remindedAt timestamp [note: 'Last time the members who have not answered were reminded, by the app or by the button. Empty when they never were. No automatic reminder is sent on a day one was already sent.']
+  proposedAt timestamp [note: 'The instant the gig first reaches a status members see (PROPOSED, ACCEPTED or CONFIRMED). Empty while it has only been a draft. Set once, never changed afterwards, even when the gig is cancelled then reopened. The home screen marks the gig as new for 15 days after it.']
   Note: 'A concert the band is asked to play, from the first contact to the day itself (a "plan" in the French locale). Has one slot at least.'
 }
 

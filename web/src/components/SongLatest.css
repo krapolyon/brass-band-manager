@@ -1,0 +1,56 @@
+.SongLatest {
+  display: flex;
+  flex-direction: column;
+  padding: var(--spaceXxs) 0 var(--spaceSm) var(--spaceSm);
+  overflow: hidden;
+  border: var(--borderWidth) solid var(--border);
+  border-radius: var(--radiusLg);
+  background: var(--ground);
+  color: var(--text);
+}
+
+.SongLatest-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  padding-inline: var(--spaceXxs);
+}
+
+.SongLatest-title > :first-child {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The songs side by side: the list scrolls sideways and stops on a song. */
+.SongLatest-songs {
+  display: flex;
+  gap: var(--spaceXxs);
+  margin: 0;
+  padding: 0 var(--spaceSm) 0 0;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+/* 208 wide in Figma. */
+.SongLatest-songs > li {
+  flex: none;
+  width: 13rem;
+  scroll-snap-align: start;
+}
+
+/* With a larger text a song takes more room, so that its name is not cut short. */
+:root:is([data-text-size="160"], [data-text-size="180"], [data-text-size="200"])
+  .SongLatest-songs
+  > li {
+  width: 18rem;
+  max-width: 80%;
+}
+
+/* The focus of a song is drawn inside its row: the list cuts what goes beyond. */
+.SongLatest-songs .SongRow:focus-visible {
+  outline-offset: calc(-1 * var(--focusWidth));
+}

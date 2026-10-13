@@ -191,6 +191,17 @@
   }
 }
 
+/* Desktop, a centred screen: the title and the content share one column in
+   the middle of the pane. */
+@media (min-width: 1024px) {
+  .AppLayout[data-width="centred"] .AppLayout-header,
+  .AppLayout[data-width="centred"] .AppLayout-body {
+    width: 100%;
+    max-width: 74rem; /* 1184 */
+    margin-inline: auto;
+  }
+}
+
 /* The question a form with changes asks before it is left (useLeaveGuard). */
 .LeaveGuard {
   display: flex;

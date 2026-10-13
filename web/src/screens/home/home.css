@@ -1,0 +1,133 @@
+/* Figma: page Home. Layout only: what is drawn belongs to the components. */
+
+.home {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+/* The mini-player floats above the tab bar: the list keeps its height free. */
+.home[data-playing="true"] {
+  padding-bottom: 3.75rem; /* 60: its 68 and 8 of air, less the 16 already free */
+}
+
+.home-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXl);
+}
+
+.home-gigs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+}
+
+.home-gigs > h2 {
+  margin: 0;
+  padding-inline: var(--spaceXs);
+}
+
+/* The title takes the focus when the card just answered for leaves the list. */
+.home-gigs > h2:focus {
+  outline: none;
+}
+
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-cards > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+/* Nothing to come: an icon, a title and one line, centred. */
+.home-nothing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceSm);
+  padding: var(--spaceXl);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+  text-align: center;
+}
+
+.home-nothing > * {
+  margin: 0;
+}
+
+.home-nothing > .Icon,
+.home-nothing > p {
+  color: var(--textMuted);
+}
+
+/* The latest songs: pinned above the tab bar (its 68, what it keeps under
+   itself, and 8 of air), 12 from the sides as the tab bar is; the list
+   scrolls under them. At the end of the list they stay where they are
+   pinned: the 16 that the content keeps free beyond are given back. On a
+   screen shorter than the window they sit at its bottom. */
+.home-latest {
+  position: sticky;
+  bottom: calc(4.25rem + max(var(--spaceSm), env(safe-area-inset-bottom)) + var(--spaceXs));
+  z-index: 1;
+  margin: auto calc(var(--spaceSm) - var(--spaceMd)) calc(-1 * var(--spaceMd));
+}
+
+/* Tablet: the cards two by two, each keeping its own height; the latest
+   songs as wide as the tab bar, centred. */
+@media (min-width: 768px) {
+  .home-latest {
+    width: 100%;
+    max-width: 30rem; /* 480 */
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023.98px), (min-width: 1920px) {
+  .home-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* Desktop: the latest songs in a column on the right. Provisional: Figma,
+   section 5, says this screen is to come back to. */
+@media (min-width: 1024px) {
+  .home[data-playing="true"] {
+    padding-bottom: 0;
+  }
+
+  /* Without the latest songs the list keeps the whole width. */
+  .home:has(> .home-latest) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--spaceLg);
+  }
+
+  /* No sideways scroll with a mouse: the songs that do not fit go under. */
+  .home-latest .SongLatest-songs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .home-latest .SongLatest-songs > li {
+    flex: 1 1 13rem;
+  }
+
+  .home-latest {
+    position: static;
+    max-width: none;
+    margin: 0;
+  }
+}

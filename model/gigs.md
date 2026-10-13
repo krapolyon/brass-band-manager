@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.4 — 2026-10-13 · Decided with the design of the home screen (Figma, page `Home`): `gig.proposedAt`, the instant a gig first reaches a status members see; a gig is new for 15 days after it; the gig of the day and the answers in place on the home screen · Migration: `012_gigProposedAt.sql`
 > v1.3 — 2026-10-13 · Validated by the owner · The live setlist, decided with the design: a setlist belongs to a slot; the setlist manager starts it live, moves it on song by song and ends it; the members who said yes to the slot follow it by notification · Migration: `010_setlistLive.sql`
 > v1.2 — 2026-10-13 · Decided with the design of gigs: a setlist is numbered within its gig (1, 2, 3…); only a song in the repertoire or a temporary one is added to a setlist · Migration: `009_setlistNumberPerGig.sql`
 > v1.1 — 2026-10-13 · Rules found while writing the API (no schema change): a draft that has answers is not deleted; when the server holds a gig for over; when the app looks whether an accepted gig is playable; an organiser who left stays on a gig that is saved again
@@ -33,6 +34,7 @@ A concert the band is asked to play, from the first contact to the day itself. I
 | `notes` | Information | Infos diverses | No | Parking behind the town hall, meal provided | A few lines | Free text |
 | `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per gig |
 | `remindedAt` | Last reminder | Dernière relance | — | 2026-11-20 18:00 | — | Never typed: set when a reminder is sent |
+| `proposedAt` | Proposed | Proposé | — | 2026-10-12 21:14 | — | Never typed: set once, the first time the gig reaches `PROPOSED`, `ACCEPTED` or `CONFIRMED`. Empty for a gig that has only been a draft |
 
 ### Life cycle
 | Status | Meaning | Goes to | Trigger | Effects |
@@ -64,6 +66,9 @@ A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the l
 - **Playable if needed.** The screen also tells when a slot would be playable if the members who answered `IF_NEEDED` came.
 - **What my answer changes.** A member who has not answered yes is told when their yes alone would make the slot playable: their section is the last one without a yes.
 - **The list.** It shows the gigs to come, the nearest first. Cancelled and past gigs are added on request. Each row shows the status, the answer of the signed-in member and, while the gig is not `CONFIRMED`, whether it is playable.
+- **New.** `proposedAt` is set the first time the gig reaches a status members see (`PROPOSED`, `ACCEPTED` or `CONFIRMED`), and never changed afterwards: a gig that is cancelled then reopened keeps it, and does not become new again. A gig is new ("Nouveau") for 15 days after that instant, counted on the clock of the device. The home screen shows it, with the day in relative words ("Proposé hier").
+- **The home screen.** It lists the gigs to come that the member sees in the list of gigs, the nearest first, without the gigs to close. A gig with one slot the member has not answered, in `PROPOSED`, `ACCEPTED` or `CONFIRMED`, shows the four answers under its card; a gig with several slots opens the gig. An alert counts the gigs that wait for an answer of the member on one slot at least, and can narrow the list to them.
+- **The gig of the day.** On the home screen a `CONFIRMED` gig comes first, in a larger form, from the start of its first day until it is past: every day of a gig of several days. It says in how long the band meets on the first day, until the meeting time; then that the gig is in progress. Two gigs on the same day are both shown, the one that meets first before the other. The gig of the day is not in the list: the alert does not count it, and the member answers for it on its own screen.
 - **Deleting a gig** is for a draft only, and for a draft nobody answered for. It deletes its slots, its organisers and its list of costumes. A gig that was cancelled then reopened as a draft keeps the answers it had: it cannot be deleted, it is cancelled again.
 - **The screen of a gig** changes with its state: the answers, the date, the time and the address first while it is not playable; the meeting information and the notes once it is `CONFIRMED`; the setlists, when it has some, once it is in progress.
 - **Costumes of the gig** (`gigCostume`): the costumes to bring, none or several, chosen in the list of the band. A slot chooses its own among them. Taking a costume off the gig empties it on the slots that had it.
@@ -95,7 +100,8 @@ The right of an organiser depends on the gig, not on a role: the shared layer ch
 - Dates through `Intl`, in the language of the member: "ven. 4 – dim. 6 déc." for several days.
 - A gig with only a postal code and a city shows them as its place.
 - The coordinates open the map application of the device.
-- Representations in the design library (Figma, page `Gigs`): `Gig/Card`, `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row`.
+- The gig of the day shows its place on one line, as the screen of the gig does: the name of the place, the street when there is one, then the postal code and the city, "Boulevard de la Croix-Rousse, 69004 Lyon".
+- Representations in the design library (Figma, pages `Gigs` and `Home`): `Gig/Card` (with `Show new` and `New text`, the line "Nouveau" above the card, and `Show answers`, the four answers under it: both on the home screen only), `Gig/Hero` (the confirmed gig of the day, on the home screen), `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row`.
 - The count of a slot is "x oui sur y", y being the current members of the band.
 
 ## 2. Slot (`gigSlot`, `gigSlotAttendance`)

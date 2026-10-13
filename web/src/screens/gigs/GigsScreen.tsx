@@ -4,25 +4,17 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Button } from '../../components/Button.tsx';
 import { FilterChip } from '../../components/FilterChip.tsx';
-import { GigCard, GigCardLoading } from '../../components/GigCard.tsx';
+import { GigCardLoading } from '../../components/GigCard.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { Message } from '../../components/Message.tsx';
-import {
-  type GigSummary,
-  isOpen,
-  momentOf,
-  nearestSlot,
-  sectionNames,
-  showsPlayable,
-  useGigs,
-} from '../../gigs.ts';
-import { type Section, useSections } from '../../members.ts';
+import { type GigSummary, isOpen, momentOf, useGigs } from '../../gigs.ts';
+import { useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { useIsDesktop } from '../songs/device.ts';
-import { OwnAnswerChip, StatusChip } from './chips.tsx';
-import { dateBlock, meetingText, monthTitle, shortPlace } from './format.ts';
+import { monthTitle } from './format.ts';
 import { GigView } from './GigView.tsx';
+import { ListedGig } from './ListedGig.tsx';
 import './gigs.css';
 
 /** A gig that waits for who may edit it: a draft, or a gig that was not played and whose date has passed. */
@@ -219,71 +211,5 @@ export function GigsScreen() {
         )}
       </div>
     </AppLayout>
-  );
-}
-
-type ListedProps = {
-  gig: GigSummary;
-  sections: Section[] | undefined;
-  language: string;
-  selected: boolean;
-};
-
-// A gig as its card in the list: what the card says is decided here.
-function ListedGig({ gig, sections, language, selected }: ListedProps) {
-  const { t } = useTranslation();
-  const moment = momentOf(gig);
-  const place = shortPlace(gig);
-  const count = gig.slots.length;
-
-  // The place, with what makes this gig particular: several slots, a date behind us.
-  const placeLine =
-    moment === 'toClose' || moment === 'outdated'
-      ? place
-        ? t('gigs.card.datePassed', { place })
-        : t('gigs.card.datePassedOnly')
-      : count > 1
-        ? place
-          ? t('gigs.card.slots', { place, count })
-          : t('gigs.card.slotsOnly', { count })
-        : place;
-  const timeLine =
-    gig.status === 'DRAFT'
-      ? t('gigs.card.draftSeenBy')
-      : (meetingText(t, gig, language) ??
-        (gig.status === 'CANCELLED' || moment !== null ? undefined : t('gigs.time.toCome')));
-
-  // The banner, while playability matters.
-  let playable: 'none' | 'playable' | 'missing' = 'none';
-  let playableText: string | undefined;
-  if (showsPlayable(gig)) {
-    const playableSlots = gig.slots.filter((slot) => slot.isPlayable).length;
-    if (playableSlots > 0) {
-      playable = 'playable';
-      playableText =
-        count > 1 ? t('gigs.playable.onSlots', { count: playableSlots }) : t('gigs.playable.yes');
-    } else {
-      playable = 'missing';
-      const missing = sectionNames(sections, nearestSlot(gig.slots)?.missingSectionIds ?? []);
-      playableText =
-        missing.length > 0
-          ? t('gigs.playable.missing', { sections: missing.join(', ') })
-          : t('gigs.playable.notYet');
-    }
-  }
-
-  return (
-    <GigCard
-      {...dateBlock(gig, language)}
-      name={gig.name}
-      place={placeLine || undefined}
-      time={timeLine}
-      playable={playable}
-      playableText={playableText}
-      state={selected ? 'selected' : 'default'}
-    >
-      <StatusChip gig={gig} />
-      <OwnAnswerChip gig={gig} />
-    </GigCard>
   );
 }

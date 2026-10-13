@@ -46,7 +46,7 @@ type Props = {
 };
 
 /** Saves an answer of the member and puts what the API answers in the memory of the page. */
-function useAnswer(gigId: number) {
+export function useAnswer(gigId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ slotId, answer }: { slotId: number; answer: AttendanceAnswer }) =>
@@ -59,7 +59,7 @@ function useAnswer(gigId: number) {
 }
 
 /** The address that opens the maps of the device on the place of a gig. */
-function mapsUrl(gig: Gig): string | null {
+export function mapsUrl(gig: Gig): string | null {
   const address = whereText(gig);
   const point =
     gig.latitude !== null && gig.longitude !== null ? `${gig.latitude},${gig.longitude}` : null;

@@ -88,6 +88,7 @@ test.describe('who may do what', () => {
       [
         'bpm',
         'coverUrl',
+        'createdAt',
         'enjoyment',
         'fileSizes',
         'id',

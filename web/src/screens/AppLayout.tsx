@@ -30,8 +30,12 @@ type Props = {
   action?: ReactNode;
   /** What narrows or sorts the content: filters. Under the title on a phone, beside it on a desktop. */
   toolbar?: ReactNode;
-  /** How far the content spreads: a form or a record stops earlier than a grid or a table. */
-  width?: 'form' | 'wide';
+  /**
+   * How far the content spreads: a form or a record stops earlier than a grid
+   * or a table. Centred: on a desktop the title and the content stop at 1184
+   * and sit in the middle of the pane.
+   */
+  width?: 'form' | 'wide' | 'centred';
   children: ReactNode;
   /** The BottomBar of the screen. */
   actions?: ReactNode;

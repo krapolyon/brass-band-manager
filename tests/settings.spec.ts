@@ -32,6 +32,9 @@ async function signIn(page: Page, email = 'zaza@example.org', password = memberP
   await page.getByLabel('Adresse email').fill(email);
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Se connecter' }).click();
+  // Signing in leads to the home screen; these tests start from the directory.
+  await expect(page).toHaveURL('/');
+  await page.goto('/members');
   await expect(page).toHaveURL('/members');
   await page.goto('/settings');
 }
