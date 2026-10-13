@@ -92,13 +92,13 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 - **A tempo counts the beat of the time signature**: the quarter note in 4/4, the dotted quarter in compound time (6/8, 12/8). A member who taps the tempo in compound time taps the eighth notes, and the app shows the tempo converted (186 to the eighth is 62 to the dotted quarter).
 - **Rehearsal marks and time signature come from the MuseScore file**, through what the reading mode reads of it. The reading mode offers the marks (A, B, Coda…) as starting points only when the file has some.
 - **The version is typed, not deduced.** Replacing a file does not change `versionOn`: whoever manages songs says when the arrangement really changed, and what changed. Only the current version is kept: there is no history of versions.
-- **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. Once setlists exist, a song used by a setlist cannot be deleted.
+- **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. A song used by a setlist cannot be deleted (Gigs domain, `setlistSong`).
 - **Deleting always asks first**, says what goes with the song and that it cannot be undone, and offers to set the status to `ABANDONED` instead.
 
 ### Relations
 - Part: a song has zero to several parts, one per instrument at most (entry 2).
 - Member: a member gives a song a mastery level and an enjoyment level (entry 3).
-- Setlists and rehearsals refer to songs (later features, overview model).
+- Setlists refer to songs (Gigs domain, `model/gigs.md`). Rehearsals will too (later feature, overview model).
 
 ### Access rights
 | Who | View | Create | Edit | Change status | Delete |

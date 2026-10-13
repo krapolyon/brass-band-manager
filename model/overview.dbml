@@ -1,5 +1,6 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
+// v0.7 — 2026-10-13 — aligned with Gigs v1.0, validated: dates and place on the gig, five statuses, slots without dates, no stops, costumes, setlists tied to a gig and no longer a later feature, reminders of the band, push subscription tied to a session
 // v0.6 — 2026-10-12 — aligned with Songs v1.0, validated: five statuses, one field per file instead of songFile, Discord channel, aliases moved to songs, levels of a member on a song
 // v0.5 — 2026-10-11 — aligned with Members v1.14 and Band v1.5, both validated: country of the band
 // v0.4 — 2026-10-11 — pictogram of a section, default accent theme of the band, photo of a member
@@ -23,6 +24,7 @@ Table band {
   defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr']
   defaultAccentTheme varchar [not null, note: 'Accent theme shown to members who have not chosen one']
   defaultCountryCode varchar [not null, note: 'Country of the band: reads phone numbers typed without a prefix']
+  gigFirstReminderDays integer [note: 'Days before a gig of its first reminder. With the second one and the hour, detailed in band.dbml.']
   discordServerId varchar [note: 'Discord server of the band. The bot token stays in the server configuration.']
   Note: 'The band this instance belongs to. Holds a single row. Colours and other display settings are detailed in the band domain.'
 }
@@ -43,7 +45,7 @@ Enum role {
   MEMBER_MANAGER [note: 'Manages members and their status']
   SONG_MANAGER [note: 'Manages songs and their files']
   GIG_MANAGER [note: 'Manages gigs']
-  SETLIST_MANAGER [note: 'Later feature. Manages setlists.']
+  SETLIST_MANAGER [note: 'Manages the setlists of gigs']
   QUOTE_MANAGER [note: 'Later feature. Manages quotes.']
 }
 
@@ -101,9 +103,9 @@ Table memberPasswordLink {
 
 Table pushSubscription {
   id integer [pk]
-  memberId integer [not null, ref: > member.id]
+  memberSessionId integer [not null, unique, ref: - memberSession.id]
   endpoint varchar [not null, unique]
-  Note: 'A device that accepted push notifications.'
+  Note: 'A signed-in device that accepted push notifications. Deleted with its session.'
 }
 
 // ---------------------------------------------------------------
@@ -159,45 +161,46 @@ Table memberSong {
 
 // ---------------------------------------------------------------
 // Gigs
-// A gig always has at least one slot. A simple concert is a gig with
-// one slot; a weekend away is a gig with one slot per day or per part
-// of the day. Dates, meeting points and attendance live on the slot.
+// A gig carries its dates, its meeting time and its place. It always
+// has at least one slot, where members answer: a simple concert has
+// one, a weekend away has one per day or per part of the day.
 // ---------------------------------------------------------------
+
+Enum gigStatus {
+  DRAFT [note: 'Noted down, seen by those who manage gigs only']
+  PROPOSED [note: 'Under discussion; members answer']
+  ACCEPTED [note: 'Agreed with whoever asked, the band is not playable yet']
+  CONFIRMED [note: 'The gig takes place: accepted and playable, or forced by hand']
+  CANCELLED
+}
 
 Table gig {
   id integer [pk]
-  title varchar [not null]
-  Note: 'A concert, an outing or a several-day event of the band (a "plan" in the French locale). Its dates are those of its slots.'
+  name varchar [not null]
+  status gigStatus [not null]
+  startsOn date [not null]
+  endsOn date
+  meetingTime time
+  placeName varchar
+  Note: 'A concert the band is asked to play (a "plan" in the French locale). Detailed in gigs.dbml: address, coordinates, notes, Discord channel, last reminder. In progress and past are read from its dates, never stored.'
+}
+
+Table gigOrganizer {
+  gigId integer [not null, ref: > gig.id]
+  memberId integer [not null, ref: > member.id]
+  Note: 'A member who organises the gig ("qui brasse" in the French locale) and may edit it. A gig can have several.'
+
+  indexes {
+    (gigId, memberId) [pk]
+  }
 }
 
 Table gigSlot {
   id integer [pk]
   gigId integer [not null, ref: > gig.id]
   name varchar [note: 'Optional, for instance "Saturday evening"']
-  startsAt timestamp [not null]
-  endsAt timestamp
-  meetingAt timestamp
-  meetingPlace varchar
-  Note: 'A time slot of a gig: a day, or a part of a day (midday, afternoon, evening). Members answer for each slot. TODO: confirm whether a slot is declared playable by an organiser or computed from the answers.'
-}
-
-Table gigStop {
-  id integer [pk]
-  gigSlotId integer [not null, ref: > gigSlot.id]
-  position integer [not null]
-  place varchar [not null]
-  startsAt timestamp
-  Note: 'A place and a time where the band plays during a slot.'
-}
-
-Table gigOrganizer {
-  gigId integer [not null, ref: > gig.id]
-  memberId integer [not null, ref: > member.id]
-  Note: 'A member who organises the gig ("qui brasse" in the French locale). A gig can have several.'
-
-  indexes {
-    (gigId, memberId) [pk]
-  }
+  costumeId integer [ref: > costume.id, note: 'One of the costumes of the gig']
+  Note: 'A moment of a gig for which members answer (a "présence" in the French locale). Playable as soon as every section has a yes; a gig is playable as soon as one of its slots is. Computed, never stored.'
 }
 
 Enum attendanceAnswer {
@@ -218,28 +221,44 @@ Table gigSlotAttendance {
   }
 }
 
-// ---------------------------------------------------------------
-// Later features: place reserved, not detailed
-// Song stats need no table: they are computed from setlists and gigs.
-// ---------------------------------------------------------------
+Table costume {
+  id integer [pk]
+  name varchar [not null, unique]
+  Note: 'An outfit the band wears at a gig (a "déguiz" in the French locale). The list is managed by the band.'
+}
+
+Table gigCostume {
+  gigId integer [not null, ref: > gig.id]
+  costumeId integer [not null, ref: > costume.id]
+  Note: 'A costume to bring to the gig.'
+
+  indexes {
+    (gigId, costumeId) [pk]
+  }
+}
 
 Table setlist {
   id integer [pk]
-  gigId integer [ref: > gig.id, note: 'Empty for a setlist not tied to a gig. Whether it ties to the gig or to a slot is decided when the feature is designed.']
+  gigId integer [not null, ref: > gig.id]
   number integer [not null, unique]
-  Note: 'Later feature. An ordered list of songs, usually played at a gig.'
+  Note: 'An ordered list of songs played at a gig. A gig can have several.'
 }
 
 Table setlistSong {
   setlistId integer [not null, ref: > setlist.id]
   songId integer [not null, ref: > song.id]
   position integer [not null]
-  Note: 'Later feature. A song at a given position in a setlist.'
+  Note: 'A song at a given position in a setlist.'
 
   indexes {
     (setlistId, position) [pk]
   }
 }
+
+// ---------------------------------------------------------------
+// Later features: place reserved, not detailed
+// Song stats need no table: they are computed from setlists and gigs.
+// ---------------------------------------------------------------
 
 Table rehearsal {
   id integer [pk]
@@ -292,15 +311,16 @@ TableGroup songs {
 
 TableGroup gigs {
   gig
-  gigSlot
-  gigStop
   gigOrganizer
+  gigSlot
   gigSlotAttendance
+  costume
+  gigCostume
+  setlist
+  setlistSong
 }
 
 TableGroup later {
-  setlist
-  setlistSong
   rehearsal
   rehearsalSong
   quote

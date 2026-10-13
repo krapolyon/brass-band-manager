@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.16 — 2026-10-12 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`
+> v1.17 — 2026-10-13 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`, `008_gigs.sql` · Push subscriptions; what leaving changes for gigs
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -45,7 +45,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `INVITED` | | deleted | A member manager cancels the invitation | The row is deleted: nothing refers to it yet |
 | `ACTIVE` | Plays regularly, can sign in | `POWER_MEMBER` | A member manager sets it by hand | Nothing is erased; roles, sessions and password are kept. The member is no longer reminded to answer for gigs |
 | `POWER_MEMBER` | Was active and plays less: comes to help out on some gigs. Can sign in, answers for gigs, counts in whether a gig is playable | `ACTIVE` | A member manager sets it by hand | Reminders resume |
-| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo, the roles and the levels the member gave to songs (Songs domain, `memberSong`) are erased. Names, nickname, email and instrument are kept |
+| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo, the roles and the levels the member gave to songs (Songs domain, `memberSong`) are erased. The member is taken off the gigs they organise that are not over (Gigs domain, `gigOrganizer`); they stay organiser of the gigs already played, and their answers stay. Names, nickname, email and instrument are kept |
 | `LEFT` | Has left the band | `INVITED` | A member manager brings the member back | A new password link is created; the old password is not reused |
 
 The status labels in French are "Invité", "Actif", "Power member" and "Parti". For those who manage members, an `INVITED` member whose password link is no longer valid is shown as "Invitation expirée": this is a display, not a status. No status changes by itself: `POWER_MEMBER` in particular is never deduced from how often a member answers or plays.
@@ -96,11 +96,12 @@ A role is a named set of **permissions**. The code never asks "is this member a 
 | Manage sections and instruments | `ADMIN` |
 | Manage band settings | `ADMIN` |
 | Manage songs | `SONG_MANAGER`, `ADMIN` |
-| Manage gigs | `GIG_MANAGER`, `ADMIN` |
-| Manage setlists (later feature) | `SETLIST_MANAGER`, `ADMIN` |
+| Manage gigs | `GIG_MANAGER`, `ADMIN`; and, for one gig, its organisers (`model/gigs.md`) |
+| Manage costumes | `ADMIN` |
+| Manage setlists | `SETLIST_MANAGER`, `ADMIN` |
 | Manage quotes (later feature) | `QUOTE_MANAGER`, `ADMIN` |
 
-The role labels are "Admin" (`ADMIN`, the same in French), "Manages members" / "Gère les fanfarons" (`MEMBER_MANAGER`), "Manages songs" / "Gère les morceaux" (`SONG_MANAGER`) and "Manages gigs" / "Gère les plans" (`GIG_MANAGER`). The roles of later features are not offered before their feature exists.
+The role labels are "Admin" (`ADMIN`, the same in French), "Manages members" / "Gère les fanfarons" (`MEMBER_MANAGER`), "Manages songs" / "Gère les morceaux" (`SONG_MANAGER`) "Manages gigs" / "Gère les plans" (`GIG_MANAGER`) and "Manages setlists" / "Gère les setlists" (`SETLIST_MANAGER`). The roles of later features are not offered before their feature exists.
 
 The permissions of the other domains are detailed in their own dictionaries. There is no table of permissions in the database: bands do not define their own roles. If that need appears, the checks in the code stay as they are and only the source of the table changes.
 
@@ -217,7 +218,7 @@ Each instrument of a library also comes with its aliases, the spellings that nam
 - Where one instrument is chosen (the instrument of a member), instruments are listed flat, in that same order. Sections are not shown as group titles: many hold a single instrument, and the section follows from the instrument.
 - Representations in the design library: `Instrument/Row` (listed with its actions, to tick, or the one chosen in a list) and `Section/Card` (a section with its instruments, to pick and to manage them). Expected: mention (the instrument beside a member's nickname).
 
-## 3. Session and password link (`memberSession`, `memberPasswordLink`)
+## 3. Session and password link (`memberSession`, `memberPasswordLink`, `pushSubscription`)
 
 ### Definition
 A session is a device on which a member is signed in. A password link is a single-use address that lets a member choose a password: it serves for the invitation of a new member and for a forgotten password.
@@ -241,8 +242,15 @@ A session is a device on which a member is signed in. A password link is a singl
 | A member | Nothing is listed | A session, by signing in | Their own sessions, by signing out |
 | `MEMBER_MANAGER`, `ADMIN` | Whether a link is pending for a member, and until when it is valid; the link itself only at the moment it is created | A password link for any member they may act on (entry 1, rule "Nobody acts on the access of someone who may do more than them") | A pending link; all sessions of a member, by marking them `LEFT` |
 
+### Push notifications
+- A member accepts notifications device by device, when they ask for it in the app: the browser is never made to ask by itself. The device then gives the app an address and two keys (`pushSubscription`), which is all the app needs to write to it.
+- A subscription belongs to a session. Signing the device out, an expired session, a changed password and leaving the band all delete the session, and the subscription with it.
+- The member turns notifications off on a device from the app, which deletes the subscription. A subscription the push service reports as gone is deleted too.
+- A notification carries the name of a gig and nothing about a member.
+
 ### Personal data
 - No IP address and no device name is stored.
+- `pushSubscription`: the address and the keys of a device. Purpose: reminding the member to answer for a gig. Seen by no one, the member included; never sent to the front, never written to a log.
 
 ## 4. Storage conventions
 
@@ -274,5 +282,4 @@ Noted for later domains:
 
 - How presence per section makes a gig slot playable: Gigs domain. `POWER_MEMBER` members count in it like `ACTIVE` ones.
 - Reminders to answer for a gig are sent to `ACTIVE` members only, never to `POWER_MEMBER` ones: Gigs domain.
-- Push subscriptions (`pushSubscription` in the overview model): later.
 - The Discord account of a member (`discordUserId`), so that the directory can open their Discord profile: Discord feature. The directory screens reserve the button; it is not to be built before.

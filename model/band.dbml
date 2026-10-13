@@ -1,4 +1,5 @@
 // Domain: Band
+// v1.6 — 2026-10-13 — validated with Gigs v1.0, migration 008: the two reminders of a gig and the hour they are sent at
 // v1.5 — 2026-10-11 — validated: defaultAccentTheme; country of the band (defaultCountryCode), migration 004
 // v1.4 — 2026-10-11 — default accent theme of the band (defaultAccentTheme)
 // v1.3 — 2026-10-11 — no change to the table: how the icons are produced and which SVG files are refused (dictionary)
@@ -19,6 +20,9 @@ Table band {
   defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr. Set at install to the language the install was done in.']
   defaultAccentTheme varchar [not null, note: 'Key of the accent theme shown to members who have not chosen one, for instance copper. One of the accent themes shipped with the app; the API refuses any other value. Set at install to the first theme of the list.']
   defaultCountryCode varchar [not null, note: 'Two-letter ISO 3166-1 code of the country of the band, for instance FR. A phone number typed without its country prefix is read as a number of this country. Set at install from the language the install was done in.']
+  gigFirstReminderDays integer [default: 15, note: 'How many days before a gig the members who have not answered are reminded a first time, from 1 to 90. Empty: no first reminder.']
+  gigSecondReminderDays integer [default: 5, note: 'How many days before a gig they are reminded a second time: fewer than the first. Empty: no second reminder.']
+  gigReminderHour integer [not null, default: 18, note: 'Hour of the day from which the reminders are sent, from 0 to 23, on the clock of the server, which is set to the time zone of the band.']
   Note: 'The band this instance belongs to, and its settings. The name and the logo are public: they are shown before sign-in. Secrets never go here; they stay in the server configuration.'
 }
 

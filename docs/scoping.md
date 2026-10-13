@@ -90,17 +90,21 @@ Between 40 and 50 songs, each with a MuseScore file. Every song is a cover, so e
 
 ### Gigs
 
-- Dates and times. A gig can last several days: it is split into slots (a day, or midday, afternoon, evening).
-- Meeting and playing places and times, for each slot.
-- Who organises.
-- Members' attendance, per slot: yes, no, maybe, if needed.
-- Push notifications: first used here.
+Decided on 2026-10-13 with the model of gigs (`model/gigs.md`), which replaces the first outline: the date, the meeting time and the place are those of the gig, no longer of each slot.
+
+- A life cycle: draft (seen by those who manage gigs only), proposed, accepted, confirmed, cancelled. A gig is confirmed once it is accepted and playable, or forced by hand.
+- Date or dates, meeting time, place, address, information.
+- Who organises: the organisers may edit their gig.
+- Slots: one by default, several with a name for a gig of several days. Members answer per slot: yes, no, maybe, if needed. A slot is playable once every section has a yes.
+- Costumes: a list managed by the band, those to bring to a gig, the one of each slot.
+- Setlists: order of songs, setlist number, tied to a gig. Built last in this step.
+- Push notifications, first used here: two automatic reminders before a gig, and a button to remind at once.
 
 ## Later features
 
 They are not built in the first version, but the model and the design reserve a place for them from the start.
 
-- **Setlists**: order of songs, link to a gig, setlist number, Discord interaction. Song suggestion to be studied.
+- **Setlists, further**: following a setlist during the gig, the next songs on the lock screen, Discord interaction. Song suggestion to be studied. The setlists themselves are built with the gigs (decided on 2026-10-13).
 - **Rehearsals**: songs to work on.
 - **Song statistics**.
 - **Quotes**: quotes for paid gigs.
@@ -139,7 +143,7 @@ The MuseScore file is the source of each song: it holds what makes a score reada
 
 The design is thought out for the whole app before features are built: adding a feature to a design that did not plan for it rarely gives a smooth result.
 
-- **Scope**: the navigation and the screens of every feature of the first version, plus the place of later features (setlists, rehearsals, statistics).
+- **Scope**: the navigation and the screens of every feature of the first version, plus the place of later features (rehearsals, statistics, quotes).
 - **Phone first**: the main use is on a phone; the web version follows from it.
 - **On a computer** (decided on 2026-10-11): the navigation is a floating menu on the left, and the install follows the same floating panel. A list that is managed, the members first, is a table; a list that is browsed stays a grid of cards.
 - **Accessibility** (decided on 2026-10-11): the options are offered behind a button on every screen before sign-in, the invitation included, and in the settings afterwards. Setting them is never a step to go through.
@@ -169,7 +173,7 @@ The app goes live after step 6. Steps 7 to 9, more ambitious, are built while me
 3. **Overall design**: navigation, screens, design system.
 4. **Members**.
 5. **Songs, simple version**: record, files, mp3 playback, PDF scores, import of the repertoire.
-6. **Gigs and attendance**, with notifications. **Go-live**: migration of the data from the old tools, installation guide for iPhone and Android.
+6. **Gigs and attendance**, with notifications, then setlists. **Go-live**: migration of the data from the old tools, installation guide for iPhone and Android.
 7. **MIDI player**.
 8. **Reading mode**.
 9. **Discord**.

@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.17 — 2026-10-13 — validated with Gigs v1.0, migration 008: pushSubscription, a device that accepted push notifications; a member who leaves is taken off the gigs to come they organise (dictionary)
 // v1.16 — 2026-10-12 — no change to the tables: the levels a member gave to songs are erased when they leave; the starting library carries the aliases of its instruments (dictionary, with Songs v1.0)
 // v1.15 — 2026-10-12 — memberPasswordLink.refusedCount (migration 005): an invitation tolerates ten refusals; the members counted on an instrument are the current ones (dictionary)
 // v1.14 — 2026-10-11 — validated: section.icon and memberPasswordLink.emailedAt (migration 004); an invitation is completed in one request (dictionary)
@@ -108,7 +109,7 @@ Enum role {
   MEMBER_MANAGER [note: 'Creates and edits members, changes their status, creates their password links']
   SONG_MANAGER [note: 'Creates, edits and archives songs and their files']
   GIG_MANAGER [note: 'Creates, edits and cancels gigs']
-  SETLIST_MANAGER [note: 'Later feature. Creates and edits setlists.']
+  SETLIST_MANAGER [note: 'Creates and edits the setlists of gigs']
   QUOTE_MANAGER [note: 'Later feature. Manages quotes.']
 }
 
@@ -145,6 +146,15 @@ Table memberPasswordLink {
   Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a forgotten password. A member manager copies the link and sends it to the member himself; a link asked from the sign-in screen is sent by the app, by email. Deleted once used.'
 }
 
+Table pushSubscription {
+  id integer [pk]
+  memberSessionId integer [not null, unique, ref: - memberSession.id, note: 'The signed-in device that accepted notifications, which gives the member. Deleted with the session: a device that is signed out receives nothing.']
+  endpoint varchar [not null, unique, note: 'Address given by the browser, at its push service, to send a notification to this device. Whoever holds it can write to the device: never sent to the front, never logged.']
+  p256dhKey varchar [not null, note: 'Public key given by the browser, which encrypts the notification for this device']
+  authKey varchar [not null, note: 'Secret given by the browser with the key. Never sent to the front, never logged.']
+  Note: 'A device on which a member accepted push notifications. One per signed-in device at most. First used by the reminders of gigs (Gigs domain).'
+}
+
 // ---------------------------------------------------------------
 // Groups
 // ---------------------------------------------------------------
@@ -156,4 +166,5 @@ TableGroup members {
   instrument
   memberSession
   memberPasswordLink
+  pushSubscription
 }
