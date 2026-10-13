@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../api.ts';
@@ -7,6 +7,7 @@ import { Button } from '../../components/Button.tsx';
 import { Icon, type IconName } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
 import { LevelScale } from '../../components/LevelScale.tsx';
+import { ListRow } from '../../components/ListRow.tsx';
 import { Message } from '../../components/Message.tsx';
 import { ModeBar, type SongMode } from '../../components/ModeBar.tsx';
 import { NavRow } from '../../components/NavRow.tsx';
@@ -27,15 +28,14 @@ import {
 } from '../../songs.ts';
 import { keep, kept, useIsTablet } from './device.ts';
 import { average, duration as clock, day } from './format.ts';
+import { LiveView } from './LiveView.tsx';
 import { MidiView } from './MidiView.tsx';
 import { PdfView } from './PdfView.tsx';
 import { usePlayer } from './Player.tsx';
-import '../../components/Checkbox.css';
 import './songs.css';
 
-// The Live mode is step 8 of the scoping document: its mode is shown, and
-// cannot be opened yet.
-const NOT_BUILT: SongMode[] = ['live'];
+// Every mode is built: none is shown as unavailable.
+const NOT_BUILT: SongMode[] = [];
 
 type Props = {
   songId: number;
@@ -67,14 +67,18 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
   const asked = search.get('mode') as SongMode | null;
   const [mode, setMode] = useState<SongMode>(() => {
     const first = asked ?? kept('songs.mode', 'mp3');
-    return NOT_BUILT.includes(first) ? 'mp3' : first;
+    return NOT_BUILT.includes(first) || first === 'live' ? 'mp3' : first;
   });
   useEffect(() => {
     if (asked && !NOT_BUILT.includes(asked)) setMode(asked);
   }, [asked]);
+  // The Live mode takes the whole screen: leaving it comes back to the mode before.
+  const beforeLive = useRef<SongMode>('mp3');
   const changeMode = (next: SongMode) => {
+    if (next === 'live' && mode !== 'live') beforeLive.current = mode;
     setMode(next);
-    keep('songs.mode', next);
+    // The Live mode is entered on purpose each time: never the mode a song opens in.
+    if (next !== 'live') keep('songs.mode', next);
     if (asked) setSearch({}, { replace: true });
   };
 
@@ -133,6 +137,21 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
     (instrument) => instrument.id === shownPart?.instrumentId,
   );
 
+  if (mode === 'live' && data.musicXml) {
+    return (
+      <LiveView
+        song={data}
+        onClose={() => {
+          changeMode(beforeLive.current);
+          // The focus goes back to where the member came from: the mode bar.
+          window.requestAnimationFrame(() =>
+            document.querySelector<HTMLElement>('.ModeBar [aria-current="true"]')?.focus(),
+          );
+        }}
+      />
+    );
+  }
+
   return (
     <div className="songs-view">
       <SongHeader
@@ -181,6 +200,15 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
                 action={canManage ? { label: t('songs.song.addMidi'), onPress: edit } : undefined}
               />
             ))}
+
+          {mode === 'live' && !data.musicXml && (
+            <NothingYet
+              icon="BookOpen"
+              title={t('songs.song.noScoreTitle')}
+              text={t(canManage ? 'songs.song.noScoreManager' : 'songs.song.noScoreMember')}
+              action={canManage ? { label: t('songs.song.addMidi'), onPress: edit } : undefined}
+            />
+          )}
 
           {mode === 'pdf' &&
             (shownPart ? (
@@ -397,25 +425,17 @@ export function StatusPanel({ open, onClose, status, onChange, hasFailed }: Stat
     <Panel open={open} onClose={onClose} title={t('songs.song.statusTitle')}>
       <div className="songs-panel">
         {hasFailed && <Message kind="danger">{t('errors.unreachable')}</Message>}
-        {/* Figma draws the five statuses with the check of a Checkbox; one
-            only can be chosen, so each is a radio button, drawn the same. */}
+        {/* One status among five: a group of radios (Figma: ListRow, Leading=Selected / Unselected). */}
         <div className="songs-statuses" role="radiogroup" aria-label={t('songs.song.statusTitle')}>
           {songStatuses.map((value) => (
-            <label key={value} className="songs-statusRow">
-              <span className="Checkbox">
-                <input
-                  type="radio"
-                  name="songStatus"
-                  checked={value === chosen}
-                  onChange={() => setChosen(value)}
-                />
-                <Icon name="Check" size={20} />
-              </span>
-              <span className="songs-statusTexts">
-                <span className="textBodyLarge">{t(`songs.status.${value}`)}</span>
-                <span className="textCaption songs-muted">{t(`songs.statusHint.${value}`)}</span>
-              </span>
-            </label>
+            <ListRow
+              key={value}
+              group="songStatus"
+              label={t(`songs.status.${value}`)}
+              detail={t(`songs.statusHint.${value}`)}
+              selected={value === chosen}
+              onSelect={() => setChosen(value)}
+            />
           ))}
         </div>
         <p className="songs-muted textCaption">{t('songs.song.statusNote')}</p>

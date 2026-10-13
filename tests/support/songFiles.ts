@@ -32,22 +32,28 @@ export const museScore = Buffer.concat([
   Buffer.alloc(20),
 ]);
 
-let builtScore: Buffer | null = null;
+const builtScores = new Map<string, Buffer>();
 
 /**
  * A MuseScore file the MuseScore engine can read: two staves, "Trompette" and
- * "Tuba", four measures. Built on demand (makeScore.mjs), never kept.
+ * "Tuba", four measures, a rehearsal mark on the third. Built on demand
+ * (makeScore.mjs), never kept. With "repeat", the first two measures are
+ * played twice; with "lastEid", the file is written as MuseScore 4.4 does.
  */
-export function readableScore(): Buffer {
-  builtScore ??= Buffer.from(
-    execFileSync('node', [path.join(import.meta.dirname, 'makeScore.mjs')], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      maxBuffer: 20_000_000,
-    }),
-    'base64',
-  );
-  return builtScore;
+export function readableScore(variant: '' | 'repeat' | 'lastEid' = ''): Buffer {
+  let built = builtScores.get(variant);
+  if (!built) {
+    built = Buffer.from(
+      execFileSync('node', [path.join(import.meta.dirname, 'makeScore.mjs'), variant], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        maxBuffer: 20_000_000,
+      }),
+      'base64',
+    );
+    builtScores.set(variant, built);
+  }
+  return built;
 }
 
 // The start of a score written as MusicXML.

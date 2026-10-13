@@ -20,6 +20,13 @@
   color: var(--text);
 }
 
+/* Figma: Own=Yes. The disc takes the accent: a shape and a weight tell the
+   member's own track, in every scheme and in high contrast. */
+.SongPartTrack[data-own="true"] .SongPartTrack-pictogram {
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
 .SongPartTrack-name {
   color: var(--text);
   /* A long name goes on a second line: two trombones must be told apart. */
@@ -39,9 +46,10 @@
   height: 100%;
 }
 
-/* A cut track stands back: its pictogram, its name and its notes. */
-.SongPartTrack[data-muted="true"] > :not(.SongPartTrack-mute) {
-  opacity: 0.45;
+/* Figma: Muted=Yes. The name stands back; the notes are dimmed where they
+   are drawn (MidiView). */
+.SongPartTrack[data-muted="true"] .SongPartTrack-name {
+  color: var(--textMuted);
 }
 
 .SongPartTrack-mute {

@@ -8,7 +8,7 @@ type Props = {
   name: string;
   /** The pictogram of the section of the instrument (section.icon). */
   pictogram: string | null;
-  /** The track of the member's own instrument: its notes take the accent. */
+  /** The track of the member's own instrument: its pictogram on the accent, its name stronger, its notes thicker and in the accent. */
   own?: boolean;
   /** Said to screen readers after the name of the member's own track: the accent alone tells nobody. */
   ownLabel?: string;
@@ -34,7 +34,7 @@ export function SongPartTrack(props: Props) {
       <span className="SongPartTrack-pictogram">
         <Pictogram name={pictogram} size={16} />
       </span>
-      <span className="SongPartTrack-name textLabel">
+      <span className={`SongPartTrack-name ${own ? 'textBodyStrong' : 'textLabel'}`}>
         {name}
         {own && ownLabel && <span className="visuallyHidden">, {ownLabel}</span>}
       </span>

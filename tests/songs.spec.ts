@@ -203,15 +203,11 @@ test.describe('a song', () => {
     await expect(page.getByText('Seven Nation Army')).toBeVisible();
     await expect(page.getByText('124 bpm')).toBeVisible();
 
-    // The five modes are always there; the one that is not built cannot be opened.
+    // The five modes are always there.
     const modes = page.getByRole('group', { name: 'Modes du morceau' });
     await expect(modes.getByRole('button')).toHaveText(['MP3', 'MIDI', 'PDF', 'Clip', 'Live']);
     await expect(modes.getByRole('button', { name: 'MP3' })).toHaveAttribute(
       'aria-current',
-      'true',
-    );
-    await expect(modes.getByRole('button', { name: 'Live' })).toHaveAttribute(
-      'aria-disabled',
       'true',
     );
 
@@ -481,6 +477,29 @@ test.describe('the MIDI player', () => {
     ).toBeVisible();
   });
 
+  test('a file written by MuseScore 4.4, with a line the engine does not know, is read all the same', async ({
+    page,
+  }) => {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: 'Sledge.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore('lastEid'),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Sledge');
+    await page.getByLabel('Interprète original').fill('Dance with the Dead');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Sledge', level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+    await openMidi(page);
+    await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+  });
+
   test('one lane per staff, named after its instrument; a track is cut, the tempo slowed, a range looped', async ({
     page,
     playwright,
@@ -625,6 +644,225 @@ test.describe('the MIDI player', () => {
     await expect(page.getByText(/Mesure [2-4] sur 4/)).toBeVisible({ timeout: 20_000 });
 
     expect(elsewhere).toEqual([]);
+  });
+});
+
+test.describe('the Live mode', () => {
+  // A song imported with a MuseScore file the app can read: "Trompette" and
+  // "Tuba", four measures of four beats at 120, a mark "Refrain" on the third.
+  async function withScore(page: Page, variant: '' | 'repeat' = '') {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: 'Hey Ya.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore(variant),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Hey Ya!');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+  }
+  const openLive = (page: Page) =>
+    page
+      .getByRole('group', { name: 'Modes du morceau' })
+      .getByRole('button', { name: 'Live' })
+      .click();
+  const measure = (page: Page) => page.locator('[data-tile="measure"]');
+
+  test('without a score, a member is told so and who manages songs is offered to add the MuseScore file', async ({
+    page,
+  }) => {
+    const crazy = sql("SELECT id FROM song WHERE name = 'Crazy'");
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${crazy}`);
+    await openLive(page);
+    await expect(
+      page.getByRole('heading', { name: 'Pas encore de partition à suivre' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Ajouter le fichier MuseScore' })).toHaveCount(0);
+
+    await page.context().clearCookies();
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${crazy}`);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Ajouter le fichier MuseScore' })).toBeVisible();
+  });
+
+  test('shows the part of the member’s instrument, starts where asked, follows the tempo and comes back at the end', async ({
+    page,
+    baseURL,
+  }) => {
+    const elsewhere: string[] = [];
+    page.on('request', (request) => {
+      const url = request.url();
+      if (!url.startsWith(baseURL ?? '') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+        elsewhere.push(url);
+      }
+    });
+    await withScore(page);
+    await openLive(page);
+
+    // Sisi plays the trumpet: its part, drawn by the app, every measure of it.
+    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible();
+    await expect(page.getByText('Mode live')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Changer de partition : Trompette' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.locator('.songs-liveSheet g.measure')).toHaveCount(4);
+    await expect(page.locator('[data-tile="tempo"]')).toContainText('120');
+
+    // Where to start: a measure that does not exist is refused, a mark fills the number.
+    await page.getByRole('button', { name: /On démarre à/ }).click();
+    const panel = page.getByRole('dialog', { name: 'On démarre où ?' });
+    await panel.getByRole('textbox', { name: 'Mesure' }).fill('9');
+    await expect(panel.getByRole('button', { name: 'Démarrer', exact: true })).toBeDisabled();
+    await panel.getByRole('button', { name: 'Refrain · 3' }).click();
+    await expect(panel.getByRole('textbox', { name: 'Mesure' })).toHaveValue('3');
+    await panel.getByRole('button', { name: 'Mesure suivante' }).click();
+    await panel.getByRole('button', { name: 'Mesure précédente' }).click();
+    await panel.getByRole('button', { name: 'Démarrer à la mesure 3' }).click();
+    await expect(page.getByRole('button', { name: /On démarre à/ })).toContainText(
+      'Mesure 3 · Refrain',
+    );
+
+    // Playing: a measure of four beats at 120 lasts two seconds.
+    await page.getByRole('button', { name: 'Lire' }).click();
+    await expect(measure(page)).toContainText('3');
+    await expect(
+      page.getByText('Décalé ? Fais glisser la partition pour te recaler.'),
+    ).toBeVisible();
+    await expect(measure(page)).toContainText('4', { timeout: 4000 });
+    // The end of the score: ready again, from its start.
+    await expect(page.getByRole('button', { name: /On démarre à/ })).toContainText('Mesure 1', {
+      timeout: 6000,
+    });
+
+    // Pause keeps the place.
+    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+    await expect(page.getByRole('button', { name: /On démarre à/ })).toContainText('Mesure 1');
+
+    await noOverflow(page);
+    expect(elsewhere).toEqual([]);
+  });
+
+  test('another part can be chosen, and leaving comes back to the mode before', async ({
+    page,
+  }) => {
+    await withScore(page);
+    await page
+      .getByRole('group', { name: 'Modes du morceau' })
+      .getByRole('button', { name: 'PDF' })
+      .click();
+    await openLive(page);
+    await page.getByRole('button', { name: 'Changer de partition : Trompette' }).click();
+    // "Tuba" is a known spelling of the Souba.
+    await page.getByRole('dialog').getByRole('button', { name: 'Souba' }).click();
+    await expect(page.getByRole('button', { name: 'Changer de partition : Souba' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+
+    await page.getByRole('button', { name: 'Quitter le mode live' }).click();
+    await expect(
+      page.getByRole('group', { name: 'Modes du morceau' }).getByRole('button', { name: 'PDF' }),
+    ).toHaveAttribute('aria-current', 'true');
+  });
+
+  test('a repeat is followed: the measures come again, and the score with them', async ({
+    page,
+  }) => {
+    // The first two measures are played twice: 1 2 1 2 3 4.
+    await withScore(page, 'repeat');
+    // Fast, so that the test is short: a measure lasts one second.
+    sql("UPDATE song SET bpm = 240 WHERE name = 'Hey Ya'");
+    await page.reload();
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    // The tempo of the band comes before the one written in the score (120).
+    await expect(page.locator('[data-tile="tempo"]')).toContainText('240');
+
+    const seen: string[] = [];
+    await page.getByRole('button', { name: 'Lire' }).click();
+    const tile = page.locator('[data-tile="measure"] .textTitle');
+    for (let look = 0; look < 80 && (await tile.count()) > 0; look++) {
+      const now = await tile.textContent().catch(() => null);
+      if (now && seen[seen.length - 1] !== now) seen.push(now);
+      await page.waitForTimeout(100);
+    }
+    expect(seen).toEqual(['1', '2', '1', '2', '3', '4']);
+  });
+
+  test('the part shown first is the one of the member’s instrument, wherever it is in the score', async ({
+    page,
+  }) => {
+    await withScore(page);
+    // Zaza now plays the Souba: the second staff of the score, named "Tuba".
+    sql(
+      "UPDATE member SET instrumentId = (SELECT id FROM instrument WHERE name = 'Souba') WHERE nickname = 'Zaza'",
+    );
+    const song = sql("SELECT id FROM song WHERE name = 'Hey Ya'");
+    await page.context().clearCookies();
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${song}`);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Changer de partition : Souba' })).toBeVisible();
+  });
+
+  test('the page behind cannot be reached, Escape leaves, and the focus comes back to the mode bar', async ({
+    page,
+  }) => {
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Quitter le mode live' })).toBeFocused();
+    // The mode is a modal dialog: nothing of the song screen is offered behind it.
+    await expect(page.getByRole('dialog', { name: 'Mode live : Hey Ya' })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Modes du morceau' })).toHaveCount(0);
+
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByRole('group', { name: 'Modes du morceau' }).getByRole('button', { name: 'MP3' }),
+    ).toBeFocused();
+    // The Live mode is never the mode a song opens in.
+    await page.reload();
+    await expect(page.getByRole('group', { name: 'Modes du morceau' })).toBeVisible();
+  });
+
+  test('the tempo is given by tapping one measure: the song starts on the next beat, at that tempo', async ({
+    page,
+  }) => {
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'Donner le tempo' }).click();
+
+    const zone = page.getByRole('button', { name: /Tape le tempo/ });
+    await expect(page.getByText('Tape 4 fois, et ça part sur le 1 suivant.')).toBeVisible();
+    // Four taps, half a second apart: 120 to the minute, give or take.
+    for (let beat = 0; beat < 3; beat++) {
+      await zone.click();
+      await page.waitForTimeout(480);
+    }
+    await expect(page.getByText(/bpm pour l’instant\. Encore un temps/)).toBeVisible();
+    await zone.click();
+
+    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeVisible();
+    // The score is still there once the tempo is given.
+    await expect(page.locator('.songs-liveSheet g.measure')).toHaveCount(4);
+    const tempo = Number(await page.locator('[data-tile="tempo"] .textTitle').textContent());
+    expect(tempo).toBeGreaterThan(95);
+    expect(tempo).toBeLessThan(135);
+
+    // Cancelling gives the tempo up and changes nothing.
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+    await page.getByRole('button', { name: 'Donner le tempo' }).click();
+    await page.getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByRole('button', { name: 'Lire' })).toBeVisible();
   });
 });
 

@@ -7,17 +7,58 @@
 // Run apart from the tests (songFiles.ts): the engine expects an older Node,
 // and what it needs changed here would change it for every test.
 import { createRequire } from 'node:module';
+import { crc32 } from 'node:zlib';
 
 Object.defineProperty(globalThis, 'navigator', { value: {}, writable: true, configurable: true });
 // With no fetch, the engine reads its own files from the disk.
 delete globalThis.fetch;
+
+// "repeat" as the first argument: the first two measures are played twice.
+const hasRepeat = process.argv[2] === 'repeat';
+const repeatOf = (measure) =>
+  !hasRepeat
+    ? ['', '']
+    : [
+        measure === 0 ? '<barline location="left"><repeat direction="forward"/></barline>' : '',
+        measure === 1 ? '<barline location="right"><repeat direction="backward"/></barline>' : '',
+      ];
+
+// "lastEid" as the first argument: the file as MuseScore 4.4 writes it, with
+// a line the engine does not know, which makes it open an empty score.
+const withLastEid = (mscx) =>
+  Buffer.from(
+    Buffer.from(mscx).toString('utf8').replace('<Score>', '<LastEID>1</LastEID>\n  <Score>'),
+  );
+
+// A zip archive of one file, not compressed.
+function zipOf(name, data) {
+  const title = Buffer.from(name);
+  const common = Buffer.alloc(26);
+  common.writeUInt16LE(20, 0);
+  common.writeUInt32LE(crc32(data), 10);
+  common.writeUInt32LE(data.length, 14);
+  common.writeUInt32LE(data.length, 18);
+  common.writeUInt16LE(title.length, 22);
+  const local = Buffer.concat([Buffer.from('PK\x03\x04', 'latin1'), common, title, data]);
+  const listed = Buffer.alloc(46);
+  listed.write('PK\x01\x02', 'latin1');
+  listed.writeUInt16LE(20, 4);
+  common.copy(listed, 6);
+  const end = Buffer.alloc(22);
+  end.write('PK\x05\x06', 'latin1');
+  end.writeUInt16LE(1, 8);
+  end.writeUInt16LE(1, 10);
+  end.writeUInt32LE(46 + title.length, 12);
+  end.writeUInt32LE(local.length, 16);
+  return Buffer.concat([local, listed, title, end]);
+}
 
 const scale = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'C'];
 const part = (id, octave) =>
   `<part id="${id}">${[0, 1, 2, 3]
     .map(
       (measure) =>
-        `<measure number="${measure + 1}">${
+        `<measure number="${measure + 1}">${repeatOf(measure)[0]}${
           measure === 0
             ? '<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><direction><sound tempo="120"/></direction>'
             : measure === 2 && id === 'P1'
@@ -28,7 +69,7 @@ const part = (id, octave) =>
             (beat) =>
               `<note><pitch><step>${scale[(measure * 4 + beat) % 8]}</step><octave>${octave}</octave></pitch><duration>1</duration><type>quarter</type></note>`,
           )
-          .join('')}</measure>`,
+          .join('')}${repeatOf(measure)[1]}</measure>`,
     )
     .join('')}</part>`;
 const musicXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -40,5 +81,8 @@ const musicXml = `<?xml version="1.0" encoding="UTF-8"?>
 const WebMscore = createRequire(import.meta.url)('webmscore');
 await WebMscore.ready;
 const score = await WebMscore.load('musicxml', new TextEncoder().encode(musicXml), [], true);
-const file = await score.saveMsc('mscz');
+const file =
+  process.argv[2] === 'lastEid'
+    ? zipOf('score.mscx', withLastEid(await score.saveMsc('mscx')))
+    : await score.saveMsc('mscz');
 process.stdout.write(Buffer.from(file).toString('base64'), () => process.exit(0));

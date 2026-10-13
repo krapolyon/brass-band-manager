@@ -1,4 +1,5 @@
 import { rehearsalMarks, withMarks, withTrackNames } from './midi.ts';
+import { unzipped } from './score.ts';
 
 // Reads a MuseScore file with the MuseScore engine (webmscore) and gives back
 // what the app keeps beside it: the MIDI file, its tracks named after the
@@ -23,8 +24,32 @@ type Score = {
 type Engine = {
   ready: Promise<void>;
   // The last argument lays the score out: MusicXML is empty without it.
-  load(format: 'mscz', data: Uint8Array, fonts: Uint8Array[], doLayout: boolean): Promise<Score>;
+  load(
+    format: 'mscz' | 'mscx',
+    data: Uint8Array,
+    fonts: Uint8Array[],
+    doLayout: boolean,
+  ): Promise<Score>;
 };
+
+// Some versions of MuseScore (4.4 for one) write a line, <LastEID>, that the
+// engine does not know: it then opens the file as an empty score, with no
+// error. Such a file is given to the engine as its score alone (the .mscx at
+// the root of the archive), without that line. Its styles and its separate
+// parts are left behind: neither the MIDI file nor the MusicXML needs them.
+const UNKNOWN_LINE = /<LastEID>[^<]*<\/LastEID>\s*/;
+
+async function whatToLoad(file: Uint8Array): Promise<['mscz' | 'mscx', Uint8Array]> {
+  try {
+    const main = await unzipped(file, (name) => !name.includes('/') && name.endsWith('.mscx'));
+    const text = new TextDecoder().decode(main);
+    if (!UNKNOWN_LINE.test(text)) return ['mscz', file];
+    return ['mscx', new TextEncoder().encode(text.replace(UNKNOWN_LINE, ''))];
+  } catch {
+    // Not an archive the app can open by itself: the engine has the last word.
+    return ['mscz', file];
+  }
+}
 
 self.onmessage = async (message: MessageEvent<Uint8Array>) => {
   let answer: ScoreAnswer = { ok: false };
@@ -35,7 +60,8 @@ self.onmessage = async (message: MessageEvent<Uint8Array>) => {
     const engine: Engine = (await import(/* @vite-ignore */ address)).default;
     await engine.ready;
 
-    const score = await engine.load('mscz', message.data, [], true);
+    const [format, data] = await whatToLoad(message.data);
+    const score = await engine.load(format, data, [], true);
     const { parts } = await score.metadata();
     const named = withTrackNames(
       await score.saveMidi(),

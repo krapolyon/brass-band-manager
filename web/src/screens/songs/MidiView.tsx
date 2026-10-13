@@ -5,6 +5,7 @@ import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
+import { ListRow } from '../../components/ListRow.tsx';
 import { Message } from '../../components/Message.tsx';
 import { NavRow } from '../../components/NavRow.tsx';
 import { Panel } from '../../components/Panel.tsx';
@@ -27,7 +28,6 @@ import {
 } from './midi.ts';
 import { MidiEngine } from './midiEngine.ts';
 import { usePlayer } from './Player.tsx';
-import '../../components/Checkbox.css';
 import './songs.css';
 
 // Figma: Songs / Song — MIDI. The MIDI file of the song, one lane per track:
@@ -255,7 +255,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
       window.removeEventListener('resize', draw);
       look.disconnect();
     };
-  }, [draw, isPlaying, placed.data, me?.instrumentId, isLooping, range, bpm]);
+  }, [draw, isPlaying, placed.data, me?.instrumentId, isLooping, range, bpm, muted]);
 
   const mutedPercent = t('songs.midi.percent', { value: mutedStep * 5 });
   const hasMuted = muted.some(Boolean);
@@ -276,7 +276,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
           )}
         </div>
         <ul className="songs-midiLanes">
-          {tracks.map(({ track, name, pictogram, own }, index) => (
+          {tracks.map(({ name, pictogram, own }, index) => (
             // The tracks of a file never change places.
             // biome-ignore lint/suspicious/noArrayIndexKey: two tracks may carry the same name
             <li key={index}>
@@ -294,7 +294,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
                     lanes.current[index] = canvas;
                   }}
                   data-own={own}
-                  data-drums={track.isDrums}
+                  data-muted={muted[index]}
                 />
               </SongPartTrack>
             </li>
@@ -465,29 +465,19 @@ function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoi
         <>
           <h3 className="textLabel">{t('songs.midi.loopMarks')}</h3>
           <div className="songs-statuses" role="radiogroup" aria-label={t('songs.midi.loopMarks')}>
-            {marks.map((mark, index) => (
-              // A mark played twice comes twice, with other measures.
-              // biome-ignore lint/suspicious/noArrayIndexKey: the marks of a file never change places
-              <label key={index} className="songs-statusRow">
-                <span className="Checkbox">
-                  <input
-                    type="radio"
-                    name="loopMark"
-                    checked={first === mark.from && last === mark.to}
-                    onChange={() => {
-                      setFrom(String(mark.from));
-                      setTo(String(mark.to));
-                    }}
-                  />
-                  <Icon name="Check" size={20} />
-                </span>
-                <span className="songs-statusTexts">
-                  <span className="textBodyLarge">{mark.name}</span>
-                  <span className="textCaption songs-muted">
-                    {t('songs.midi.loopRange', { from: mark.from, to: mark.to })}
-                  </span>
-                </span>
-              </label>
+            {marks.map((mark) => (
+              // A mark played twice comes twice, from another measure.
+              <ListRow
+                key={`${mark.from}-${mark.name}`}
+                group="loopMark"
+                label={mark.name}
+                detail={t('songs.midi.loopRange', { from: mark.from, to: mark.to })}
+                selected={first === mark.from && last === mark.to}
+                onSelect={() => {
+                  setFrom(String(mark.from));
+                  setTo(String(mark.to));
+                }}
+              />
             ))}
           </div>
           <h3 className="textLabel">{t('songs.midi.loopMeasures')}</h3>
@@ -543,15 +533,18 @@ function drawLane(canvas: HTMLCanvasElement, song: MidiSong, track: MidiTrack, t
 
   const style = getComputedStyle(canvas);
   const isOwn = canvas.dataset.own === 'true';
+  const isMuted = canvas.dataset.muted === 'true';
   context.fillStyle = style.getPropertyValue(isOwn ? '--accent' : '--text').trim();
-  // The notes of the others stand back, except in high contrast.
+  // Figma: the notes of the others stand back, those of a cut track more;
+  // the member's own are whole. In high contrast nothing is dimmed.
   const isHighContrast = document.documentElement.dataset.contrast === 'more';
-  context.globalAlpha = isOwn || isHighContrast ? 1 : 0.55;
+  context.globalAlpha = isHighContrast || (isOwn && !isMuted) ? 1 : isMuted ? 0.15 : 0.55;
 
   const span = song.ticksPerBeat * LANE_BEATS;
   const from = tick - span * PLAYHEAD;
   const perTick = width / span;
-  const bar = 8;
+  // The notes of the member's own track are thicker: the accent alone tells nobody.
+  const bar = isOwn ? 10 : 8;
   const pitches = Math.max(1, track.highest - track.lowest);
 
   for (const note of track.notes) {

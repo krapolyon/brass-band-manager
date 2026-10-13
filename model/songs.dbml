@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.3 — 2026-10-13 — rules of the reading mode and of the rehearsal marks (dictionary only, no schema change)
 // v1.2 — 2026-10-13 — validated, migration 007: musicXmlPath, the score as MusicXML produced with the MIDI file from the MuseScore file by the browser that imports it; an instrument chosen by hand during an import can be remembered as an alias; aliases also read the names of the tracks of the MIDI file
 // v1.1 — 2026-10-12 — rules from the design of the screens (dictionary only, no schema change), validated for the simple version of songs; bpm counts the beat of the time signature (proposed, with the MIDI player)
 // v1.0 — 2026-10-12 — validated, migration 006
