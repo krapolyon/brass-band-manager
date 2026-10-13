@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.1 — 2026-10-13 · Rules found while writing the API (no schema change): a draft that has answers is not deleted; when the server holds a gig for over; when the app looks whether an accepted gig is playable; an organiser who left stays on a gig that is saved again
 > v1.0 — 2026-10-13 · Model: `gigs.dbml` · Validated by the owner on 2026-10-13 · Migration: `008_gigs.sql`, with the reminders of the band (Band v1.6) and the push subscriptions (Members v1.17)
 > v0.3 — 2026-10-13 · DRAFT, no question left · No field for the quote, `ACCEPTED` is set by hand; two automatic reminders, a number of days before the gig; a member who leaves stays organiser of the gigs already played; a gig not confirmed whose date has passed is to close; setlists are built with this domain, last
 > v0.2 — 2026-10-13 · DRAFT · Model: `gigs.dbml` · No migration yet · Answers of the owner: a gig is confirmed by the app once accepted and playable, or forced by hand; a cancelled gig can be reopened; organisers edit their gig and answer for others; coordinates of the place; the costumes of the gig are the list a slot chooses from; costumes managed by the admin; a reminder button
@@ -42,7 +43,7 @@ A concert the band is asked to play, from the first contact to the day itself. I
 
 The status labels in French are "Brouillon", "Proposition", "Accepté", "Validé" and "Annulé".
 
-- **Confirmed by the app.** A gig goes from `ACCEPTED` to `CONFIRMED` by itself in two cases: an answer makes it playable while it is accepted, or it becomes accepted while it is already playable. This is the only change of status the app makes.
+- **Confirmed by the app.** A gig goes from `ACCEPTED` to `CONFIRMED` by itself in two cases: an answer makes it playable while it is accepted, or it becomes accepted while it is already playable. This is the only change of status the app makes. The app looks at it when an answer is saved and when the gig becomes accepted, at no other moment: an accepted gig that becomes playable because a member left the band is confirmed at the next answer, or by hand.
 - **Forced by hand.** Whoever may edit the gig can set `CONFIRMED` although a section has no yes: a member of another section fills in. The screen asks to confirm, and says which sections are missing.
 - **No way back by itself.** A confirmed gig stays confirmed when an answer changes afterwards. If it is no longer playable, the gig shows a warning with the missing sections.
 - **Accepted by hand.** Quotes are not managed yet: the gig has no field for one, and whoever may edit the gig sets `ACCEPTED` once the band and whoever asked agree. A gig without a quote goes the same way, or is forced to `CONFIRMED` straight from `PROPOSED`.
@@ -52,6 +53,8 @@ Two more states are shown and never stored, because they come from the clock. Th
 - **In progress** ("En cours"): from 20 minutes after the meeting time on the first day, until the end of the last day. Without a meeting time, from the start of the first day.
 - **Past** ("Passé"): after the last day. Hidden from the list by default, like the cancelled gigs.
 
+The screen reads these two states on the clock of the device. The server only decides when a gig is over, to stop the answers, to shorten the list and to know which gigs a member who leaves no longer organises: the day after its last day has ended on its own clock, so that no time zone closes a gig early.
+
 A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the list of drafts marks it as out of date. A gig in `PROPOSED` or `ACCEPTED` whose date has passed was not played: it leaves the list of the gigs to come, and those who may edit it see it marked as to close ("À clore"), to cancel it.
 
 ### Rules
@@ -59,14 +62,14 @@ A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the l
 - **Playable if needed.** The screen also tells when a slot would be playable if the members who answered `IF_NEEDED` came.
 - **What my answer changes.** A member who has not answered yes is told when their yes alone would make the slot playable: their section is the last one without a yes.
 - **The list.** It shows the gigs to come, the nearest first. Cancelled and past gigs are added on request. Each row shows the status, the answer of the signed-in member and, while the gig is not `CONFIRMED`, whether it is playable.
-- **Deleting a gig** is for a draft only. It deletes its slots, its organisers and its list of costumes; a draft has no answer.
+- **Deleting a gig** is for a draft only, and for a draft nobody answered for. It deletes its slots, its organisers and its list of costumes. A gig that was cancelled then reopened as a draft keeps the answers it had: it cannot be deleted, it is cancelled again.
 - **The screen of a gig** changes with its state: the answers, the date, the time and the address first while it is not playable; the meeting information and the notes once it is `CONFIRMED`; the setlists, when it has some, once it is in progress.
 - **Costumes of the gig** (`gigCostume`): the costumes to bring, none or several, chosen in the list of the band. A slot chooses its own among them. Taking a costume off the gig empties it on the slots that had it.
 - **Reminder.** A button "Remind" ("Relancer") sends a push notification at once to the `ACTIVE` members who have not answered for one slot at least of the gig. Offered on a gig in `PROPOSED`, `ACCEPTED` or `CONFIRMED` that is not past. The screen shows when the last reminder was sent.
 - **Automatic reminders.** Two per gig, each a number of days before `startsOn`, sent from a given hour on that day to the same members as the button. They concern the gigs in `PROPOSED` and `ACCEPTED`. None is sent on a day a reminder was already sent for the gig, by the button or by the app: `remindedAt` says so. A gig created after the day of a reminder does not get it. The two numbers of days and the hour are settings of the band; an empty number of days means that this reminder is not sent. The hour is read on the clock of the server, which is set to the time zone of the band.
 
 ### Relations
-- Organisers (`gigOrganizer`): none or several current members. A member who leaves the band is taken off the gigs that are not over yet, and stays organiser of those already played, shown by nickname.
+- Organisers (`gigOrganizer`): none or several members, current when they are added. A member who leaves the band is taken off the gigs that are not over yet, and stays organiser of those already played, shown by nickname.
 - Slots (`gigSlot`): one at least, created with the gig.
 - Costumes to bring (`gigCostume`): none or several.
 - Setlists (`setlist`): none or several.

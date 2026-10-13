@@ -21,6 +21,7 @@ enum Permission: string
     case MANAGE_BAND = 'manageBand';
     case MANAGE_SONGS = 'manageSongs';
     case MANAGE_GIGS = 'manageGigs';
+    case MANAGE_COSTUMES = 'manageCostumes';
     case MANAGE_SETLISTS = 'manageSetlists';
     case MANAGE_QUOTES = 'manageQuotes';
 
@@ -39,6 +40,7 @@ enum Permission: string
             self::MANAGE_BAND => [],
             self::MANAGE_SONGS => [Role::SONG_MANAGER],
             self::MANAGE_GIGS => [Role::GIG_MANAGER],
+            self::MANAGE_COSTUMES => [],
             self::MANAGE_SETLISTS => [Role::SETLIST_MANAGER],
             self::MANAGE_QUOTES => [Role::QUOTE_MANAGER],
         };

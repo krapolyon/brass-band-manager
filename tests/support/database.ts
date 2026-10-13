@@ -5,6 +5,15 @@ import { execFileSync } from 'node:child_process';
 // state, moving a date into the past, looking at what was saved.
 
 const tables = [
+  'setlistSong',
+  'setlist',
+  'gigSlotAttendance',
+  'gigSlot',
+  'gigCostume',
+  'gigOrganizer',
+  'gig',
+  'costume',
+  'pushSubscription',
   'memberSong',
   'songPart',
   'song',

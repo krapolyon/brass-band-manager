@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.1 — 2026-10-13 — rules found while writing the API (dictionary only, no schema change)
 // v1.0 — 2026-10-13 — validated, migration 008
 // v0.3 — 2026-10-13 — DRAFT, no question left: no field for the quote, ACCEPTED is set by hand; two automatic reminders, a number of days before the gig; a member who leaves stays organiser of the gigs already played; setlists are built with this domain
 // v0.2 — 2026-10-13 — DRAFT: answers of the owner. A gig is confirmed by the app once accepted and playable, or forced by hand; organisers edit their gig; coordinates of the place; the costumes of the gig are the list a slot chooses from; last reminder of a gig; costumes managed by the admin

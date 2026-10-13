@@ -27,6 +27,20 @@ use BrassBand\Access\SignOutAction;
 use BrassBand\Band\Bands;
 use BrassBand\Band\ShowBandAction;
 use BrassBand\Band\UpdateBandAction;
+use BrassBand\Gigs\AnswerAction;
+use BrassBand\Gigs\ChangeGigStatusAction;
+use BrassBand\Gigs\Costumes;
+use BrassBand\Gigs\DeleteCostumeAction;
+use BrassBand\Gigs\DeleteGigAction;
+use BrassBand\Gigs\DeleteSlotAction;
+use BrassBand\Gigs\Gigs;
+use BrassBand\Gigs\ListCostumesAction;
+use BrassBand\Gigs\ListGigsAction;
+use BrassBand\Gigs\RequireGigEditor;
+use BrassBand\Gigs\SaveCostumeAction;
+use BrassBand\Gigs\SaveGigAction;
+use BrassBand\Gigs\SaveSlotAction;
+use BrassBand\Gigs\ShowGigAction;
 use BrassBand\Health\HealthAction;
 use BrassBand\Band\DeleteLogoAction;
 use BrassBand\Band\LogoStore;
@@ -114,6 +128,8 @@ return function (App $app, Connection $database, array $config): void {
     $songFiles = new SongFiles($database, $files);
     $songs = new Songs($database, $songFiles);
     $thumbnails = new ClipThumbnails($config);
+    $gigs = new Gigs($database);
+    $costumes = new Costumes($database);
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -151,6 +167,8 @@ return function (App $app, Connection $database, array $config): void {
         $songFiles,
         $songs,
         $thumbnails,
+        $gigs,
+        $costumes,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
@@ -177,8 +195,16 @@ return function (App $app, Connection $database, array $config): void {
         // The instrument each track of a MIDI file is, for the MIDI player. Changes nothing.
         $group->post('/api/songs/trackNames', new PlaceFilesAction(new FileNames($database), tracks: true));
 
+        // Gigs: every member sees every gig but the drafts, which each
+        // action hides from who cannot edit them, and answers for themself.
+        $group->get('/api/gigs', new ListGigsAction($gigs));
+        $group->get('/api/gigs/{id:[0-9]+}', new ShowGigAction($gigs));
+        // One's own answer for a slot: the address names no member.
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, forAnother: false));
+        $group->get('/api/costumes', new ListCostumesAction($costumes));
+
         // ---------------------------------------------------------------
-        // 3. One's own record, or a permission
+        // 3. One's own record or one's own gig, or a permission
         // ---------------------------------------------------------------
         $selfOrManager = new RequireSelfOrPermission(Permission::MANAGE_MEMBERS);
         $group->put('/api/members/{id:[0-9]+}', new UpdateMemberAction($database, $members, $record))
@@ -187,6 +213,17 @@ return function (App $app, Connection $database, array $config): void {
             ->add($selfOrManager);
         $group->delete('/api/members/{id:[0-9]+}/photo', new UpdatePhotoAction($members, $photos, removes: true))
             ->add($selfOrManager);
+
+        // A gig is edited by whoever manages gigs and by its organisers.
+        $editGig = new RequireGigEditor($gigs);
+        $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs))->add($editGig);
+        $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
+        $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
+        // The answer of a member who told them.
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, forAnother: true))
+            ->add($editGig);
 
         // ---------------------------------------------------------------
         // 4. Permission
@@ -236,6 +273,17 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/instrumentAliases', new ListAliasesAction($aliases))->add($manageSongs);
         $group->post('/api/instruments/{id:[0-9]+}/aliases', new AddAliasAction($aliases))->add($manageSongs);
         $group->delete('/api/instrumentAliases/{id:[0-9]+}', new DeleteAliasAction($database, $aliases))->add($manageSongs);
+
+        // Creating a gig and deleting a draft are for who manages gigs: an
+        // organiser edits the gig they were given, nothing more.
+        $manageGigs = new RequirePermission(Permission::MANAGE_GIGS);
+        $group->post('/api/gigs', new SaveGigAction($database, $gigs))->add($manageGigs);
+        $group->delete('/api/gigs/{id:[0-9]+}', new DeleteGigAction($database, $gigs))->add($manageGigs);
+
+        $manageCostumes = new RequirePermission(Permission::MANAGE_COSTUMES);
+        $group->post('/api/costumes', new SaveCostumeAction($database, $costumes))->add($manageCostumes);
+        $group->put('/api/costumes/{id:[0-9]+}', new SaveCostumeAction($database, $costumes))->add($manageCostumes);
+        $group->delete('/api/costumes/{id:[0-9]+}', new DeleteCostumeAction($database, $costumes))->add($manageCostumes);
 
         $manageBand = new RequirePermission(Permission::MANAGE_BAND);
         $group->patch('/api/band', new UpdateBandAction($database, $bands))->add($manageBand);

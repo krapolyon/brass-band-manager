@@ -291,13 +291,13 @@ Secrets (database password, password of the mail server, later the Discord bot t
 
 ### Who can call a route
 
-Decided in [api/routes.php](../api/routes.php), by the block a route is written in. There are three, and nothing else decides access:
+Decided in [api/routes.php](../api/routes.php), by the block a route is written in. There are four, and nothing else decides access:
 
 | Block | Who | How |
 |---|---|---|
 | 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in, checking and using a password link. Adding a route here is a decision to justify |
 | 2. Signed in | Any current member (`ACTIVE` or `POWER_MEMBER`) | Inside the group that carries `RequireSession` |
-| 3. Oneself, or a permission | The member the address names, or a member holding a permission | A route of block 2 with `->add(new RequireSelfOrPermission(Permission::...))` |
+| 3. Oneself or one's own gig, or a permission | The member the address names, or a member holding a permission; for a gig, its organisers or who manages gigs | A route of block 2 with `->add(new RequireSelfOrPermission(Permission::...))`, or `->add(new RequireGigEditor($gigs))` |
 | 4. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
 
 A new route goes in block 2 unless there is a reason. An action behind `RequireSession` gets the member with `CurrentMember::of($request)`: its `id`, and `can(Permission::...)` for a finer check inside the action.
@@ -459,8 +459,37 @@ The app sends one email so far: the link of a forgotten password ([ForgotPasswor
 - **The archive** is refused above 600 MB of files, more than a whole repertoire. It is built with PHP's `ZipArchive` (the `zip` extension, added to the local image) in the temporary folder, files stored as they are, and removed from the folder as soon as it is opened for sending. Its name is given by the screen (`download` attribute): the server writes no sentence.
 - **A member who leaves** loses the levels they gave ([ChangeStatusAction](../api/src/Members/ChangeStatusAction.php)); an instrument that has a part cannot be deleted (the database refuses, `instrumentInUse`).
 
+### Gigs
+
+`api/src/Gigs/`. Rules: [model/gigs.md](../model/gigs.md). Every line of its tables of rights is a test in `tests/api/gigs.spec.ts`. Only the API exists: the screens wait for the page of gigs in Figma.
+
+| Address | Who | What |
+|---|---|---|
+| `GET /api/gigs` | Signed in | The gigs to come, the nearest first, each with its slots, the answer of the member who asks and whether it is playable. With `?all`, the cancelled gigs and those already played too |
+| `GET /api/gigs/{id}` | Signed in | One gig: its record, its organisers, its costumes, its slots and the answer of every member |
+| `PUT /api/gigs/{id}/slots/{slotId}/answer` | Oneself | The answer of the member who asks, from `{ answer }`. The address names no member |
+| `PUT /api/gigs/{id}` | Who may edit the gig | Saves its whole record, with `organizerIds` and `costumeIds` |
+| `PUT /api/gigs/{id}/status` | Who may edit the gig | Moves the gig along its life cycle |
+| `POST /api/gigs/{id}/slots`, `PUT`, `DELETE /api/gigs/{id}/slots/{slotId}` | Who may edit the gig | Adds, saves or deletes a slot |
+| `PUT /api/gigs/{id}/slots/{slotId}/answers/{memberId}` | Who may edit the gig | The answer of a member who told them |
+| `POST /api/gigs`, `DELETE /api/gigs/{id}` | `MANAGE_GIGS` | Creates a gig, in `DRAFT` with one slot; deletes a draft |
+| `GET /api/costumes` | Signed in | The costumes of the band, in its order |
+| `POST /api/costumes`, `PUT`, `DELETE /api/costumes/{id}` | `MANAGE_COSTUMES` | Adds, renames, moves or deletes a costume. Answers with the whole list |
+
+- **Who may edit a gig** is whoever holds `MANAGE_GIGS` and the organisers of that gig. It is the one right of the app that depends on the object and not only on a role, so it has its own check, [RequireGigEditor](../api/src/Gigs/RequireGigEditor.php), set on every route that changes a gig; `Gigs::mayEdit()` is the only place that says it. Each gig is answered with `canEdit`, for the screen.
+- **A draft does not exist for who cannot edit it**: it is left out of the list, and its address answers 404, the same as a gig that is not there. An organiser who takes themself off a draft gets `{ id, canEdit: false }` as the answer of that save. Who may edit a gig keeps it in the list once its date has passed while it is a draft, proposed or accepted: it waits to be deleted or cancelled.
+- **[Gigs](../api/src/Gigs/Gigs.php)** builds what is answered about a gig, from columns listed one by one. The Discord channel is sent to who may edit the gig only.
+- **Playable** is computed from the answers each time, never stored: a slot is playable when every section that has a current member has a yes from a current member, a gig when one of its slots is. Each slot is answered with `isPlayable`, `isPlayableIfNeeded` (counting the "if needed" answers), `missingSectionIds` and `ownYesMakesPlayable` (the section of the member who asks is the last one without a yes).
+- **The status** follows `GigStatus::next()`, the table of the dictionary; anything else is 409 `invalidTransition`. The app changes a status by itself in one case, `Gigs::confirmIfPlayable()`: an accepted gig that is playable becomes confirmed, after an answer or when it becomes accepted. It then writes no author (`updatedByMemberId` empty). A confirmed gig never goes back by itself.
+- **"In progress" and "past" are not statuses** and the server does not answer them: the screen reads them from `startsOn`, `endsOn` and `meetingTime`, on the clock of the device. The server only needs to know that a gig is over, to stop the answers and to shorten the list, and it is generous about it: a gig is over once the day after its last day has ended by the clock of the server (UTC), so that no time zone closes it early. `Gigs::firstOpenDay()` is the only place that says it.
+- **Answers** are accepted while the gig is proposed, accepted or confirmed and not over (409 `gigNotOpen` otherwise), from current members and for current members.
+- **Slots.** A gig always has one: the last one is not deleted (409 `lastSlot`). A slot needs a name as soon as its gig has several, so the only slot of a gig is named before a second one is added (409 `slotWithoutName`). The costume of a slot is one of the costumes of its gig, which the database checks too (a reference from `gigSlot` to `gigCostume`); taking a costume off a gig empties it on its slots first.
+- **Deleting** is for a draft (409 `gigNotDraft`) nobody answered for (409 `gigHasAnswers`: a cancelled gig reopened as a draft keeps its answers). A costume a gig has, even a gig already played, is not deleted (409 `costumeInUse`).
+- **A member who leaves** no longer organises the gigs that are not over, and stays on those already played, with their answers ([ChangeStatusAction](../api/src/Members/ChangeStatusAction.php)). An organiser and an answer are sent with the nickname, so that they still read once the member is out of the directory.
+
 ### Not written yet
 
+- **Gigs**: the picture of a costume, the reminders and the push notifications (`pushSubscription`, the three reminder settings of the band), the setlists. Their tables exist (migration 008).
 - **The export of the directory**, which asks for the password again: not drawn, not built.
 
 ## The front
@@ -622,7 +651,7 @@ The schema is described in `model/` (DBML, one file per domain), and created by 
 
 Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code (about 60 lines).
 
-Two migrations exist: `001_members.sql` (sections, instruments, members, roles, sessions and password links) and `002_band.sql` (the band and its settings).
+The migrations are listed at the top of each dictionary of `model/`, with the version of the model they come from.
 
 ### Conventions of every table
 
@@ -801,7 +830,8 @@ In the order of the scoping document:
 1. Deployment to OVH Perso: the GitHub Action that fills the `release` branch, and the way to run a migration without a command line.
 2. What the Members feature leaves for later: the export of the directory, the Discord action of a member's sheet, sending an invitation by email, a prettier email, and the screens Figma has not drawn (see below).
 3. What the Songs feature leaves for later: in the Live mode, the jumps written in words (D.S., D.C., coda), the system texts of the score, the tempo and the measure tiles that Figma means to open a picker (not drawn), the halo and the glass panel of the controls; the landscape layout of the MIDI player as drawn; the Discord place on the song; reading the name of a song inside the MuseScore file; and what Figma does not draw: the empty MIDI, Live, PDF and Clip modes (their wording is provisional), the desktop list with its actions (add, manage, download, filters are kept from the phone screen), the management table below the desktop width.
-4. The next features: gigs, and the later ones. Their tabs say "coming soon" until then.
+4. Gigs: the API of gigs, slots, answers and costumes is written (see "Gigs"). To come, in this order: the screens, once Figma draws them; the picture of a costume; push notifications and reminders; setlists. The tab says "coming soon" until the screens exist.
+5. The later features.
 
 Screens that were deduced from the phone screens, because Figma does not draw them yet. Each follows the rules of the design skill (a larger screen derives from the phone screen, a sheet becomes a dialog from 1024 px, a flow takes the floating panel), and is to be checked when it is drawn:
 
