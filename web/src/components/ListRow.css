@@ -61,3 +61,17 @@ button.ListRow {
 .ListRow[data-selected="false"] .ListRow-texts > :first-child {
   color: var(--textMuted);
 }
+
+/* Figma: State=Disabled. The choice stays in the list, with its reason. */
+.ListRow[data-disabled="true"] .ListRow-check {
+  cursor: default;
+}
+
+.ListRow[data-disabled="true"] .Radio {
+  opacity: 0.4;
+}
+
+.ListRow[data-disabled="true"] .ListRow-texts > :first-child {
+  color: var(--textMuted);
+  opacity: 0.5;
+}

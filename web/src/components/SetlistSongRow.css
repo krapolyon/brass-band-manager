@@ -1,0 +1,33 @@
+.SetlistSongRow,
+.SetlistSongRow-link {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-width: 0;
+}
+
+.SetlistSongRow[data-mode="view"]:not(:has(.SetlistSongRow-link)),
+.SetlistSongRow-link {
+  padding-block: var(--spaceXs);
+}
+
+.SetlistSongRow-link {
+  flex: 1;
+  border-radius: var(--radiusSm);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* 24 in Figma: room for two digits, aligned on their right. */
+.SetlistSongRow-position {
+  flex: none;
+  min-width: 1.5rem;
+  color: var(--textMuted);
+  text-align: right;
+}
+
+.SetlistSongRow-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

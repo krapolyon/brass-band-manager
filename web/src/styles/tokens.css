@@ -73,8 +73,35 @@
   --red700A10: rgb(179 38 30 / 0.1);
   --blue300: #8fa5ff;
   --blue600: #3a56c4;
+  --blue400A16: rgb(111 134 240 / 0.16);
+  --blue600A12: rgb(58 86 196 / 0.12);
   --violet300: #c9a6f2;
   --violet600: #6b3fa8;
+  /* The map preview of a gig (Figma: map/ground-dark is --mapGroundDark). */
+  --mapGroundDark: #161c27;
+  --mapGroundLight: #eeeeec;
+  --mapGroundDarkHighContrast: #000000;
+  --mapGroundLightHighContrast: #ffffff;
+  --mapGreenDark: #1b2330;
+  --mapGreenLight: #e2e5e0;
+  --mapGreenDarkHighContrast: #101418;
+  --mapGreenLightHighContrast: #eef0ec;
+  --mapWaterDark: #26354a;
+  --mapWaterLight: #c9d3dd;
+  --mapWaterDarkHighContrast: #2b3d55;
+  --mapWaterLightHighContrast: #b4c3d2;
+  --mapBuildingDark: #222b38;
+  --mapBuildingLight: #dcdcd8;
+  --mapBuildingDarkHighContrast: #1c1c1c;
+  --mapBuildingLightHighContrast: #e3e3e3;
+  --mapStreetDark: #3a4556;
+  --mapStreetLight: #ffffff;
+  --mapStreetDarkHighContrast: #9a9a9a;
+  --mapStreetLightHighContrast: #5f5f5f;
+  /* The main roads of the map, lighter in the dark scheme: decided by the owner
+     after his prototype, to be added to Figma (mapStreetMajor). The three other
+     modes have the colour of the streets. */
+  --mapStreetMajorDark: #525e70;
 }
 
 /* ---------------------------------------------------------------
@@ -155,6 +182,20 @@
   --warningSoft: var(--amber300A16);
   --danger: var(--red300);
   --dangerSoft: var(--red400A16);
+  --info: var(--blue300);
+  --infoSoft: var(--blue400A16);
+  /* The map preview of a gig. */
+  --mapGround: var(--mapGroundDark);
+  --mapGreen: var(--mapGreenDark);
+  --mapWater: var(--mapWaterDark);
+  --mapBuilding: var(--mapBuildingDark);
+  --mapStreet: var(--mapStreetDark);
+  --mapStreetMajor: var(--mapStreetMajorDark);
+  /* The opacities of the live setlist, by distance from the song being played (percent in Figma). */
+  --fadeNear: 0.6;
+  --fadeMid: 0.38;
+  --fadeFar: 0.25;
+  --fadeFaint: 0.15;
   --haloAccent: var(--themeAccent);
   --haloCool: var(--blue600);
   --haloDeep: var(--violet600);
@@ -181,6 +222,19 @@
   --warningSoft: var(--amber600A16);
   --danger: var(--red700);
   --dangerSoft: var(--red700A10);
+  --info: var(--blue600);
+  --infoSoft: var(--blue600A12);
+  /* The map preview of a gig. */
+  --mapGround: var(--mapGroundLight);
+  --mapGreen: var(--mapGreenLight);
+  --mapWater: var(--mapWaterLight);
+  --mapBuilding: var(--mapBuildingLight);
+  --mapStreet: var(--mapStreetLight);
+  --mapStreetMajor: var(--mapStreetLight);
+  --fadeNear: 0.6;
+  --fadeMid: 0.38;
+  --fadeFar: 0.25;
+  --fadeFaint: 0.15;
   --haloAccent: var(--themeAccent);
   --haloCool: var(--blue300);
   --haloDeep: var(--violet300);
@@ -208,6 +262,19 @@
   --warningSoft: var(--amber300A16);
   --danger: var(--red300);
   --dangerSoft: var(--red400A16);
+  --info: var(--blue300);
+  --infoSoft: var(--blue400A16);
+  /* The map preview of a gig. */
+  --mapGround: var(--mapGroundDarkHighContrast);
+  --mapGreen: var(--mapGreenDarkHighContrast);
+  --mapWater: var(--mapWaterDarkHighContrast);
+  --mapBuilding: var(--mapBuildingDarkHighContrast);
+  --mapStreet: var(--mapStreetDarkHighContrast);
+  --mapStreetMajor: var(--mapStreetDarkHighContrast);
+  --fadeNear: 1;
+  --fadeMid: 0.85;
+  --fadeFar: 0.75;
+  --fadeFaint: 0.7;
   --haloAccent: var(--neutral1000);
   --haloCool: var(--neutral1000);
   --haloDeep: var(--neutral1000);
@@ -234,6 +301,19 @@
   --warningSoft: var(--amber600A16);
   --danger: var(--red700);
   --dangerSoft: var(--red700A10);
+  --info: var(--blue600);
+  --infoSoft: var(--blue600A12);
+  /* The map preview of a gig. */
+  --mapGround: var(--mapGroundLightHighContrast);
+  --mapGreen: var(--mapGreenLightHighContrast);
+  --mapWater: var(--mapWaterLightHighContrast);
+  --mapBuilding: var(--mapBuildingLightHighContrast);
+  --mapStreet: var(--mapStreetLightHighContrast);
+  --mapStreetMajor: var(--mapStreetLightHighContrast);
+  --fadeNear: 1;
+  --fadeMid: 0.85;
+  --fadeFar: 0.75;
+  --fadeFaint: 0.7;
   --haloAccent: var(--neutral100);
   --haloCool: var(--neutral100);
   --haloDeep: var(--neutral100);

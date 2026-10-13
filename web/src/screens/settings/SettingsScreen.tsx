@@ -13,6 +13,7 @@ import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import i18n, { languageName } from '../../i18n.ts';
 import { instrumentsOf, useMembers, useSections } from '../../members.ts';
+import { forgetAsked, usePush } from '../../push.ts';
 import { useMe, useSetMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { useSavePreferences } from './preferences.ts';
@@ -29,6 +30,7 @@ export function SettingsScreen() {
   const me = useMe().data;
   const setMe = useSetMe();
   const save = useSavePreferences();
+  const push = usePush().data;
   const [isLanguageOpen, setLanguageOpen] = useState(false);
   const [isConfirmOpen, setConfirmOpen] = useState(false);
 
@@ -48,6 +50,8 @@ export function SettingsScreen() {
     mutationFn: (everywhere: boolean) =>
       api(everywhere ? '/api/sessions' : '/api/session', { method: 'DELETE' }),
     onSuccess: () => {
+      // The next member of this device is asked about notifications in their turn.
+      forgetAsked();
       setMe(null);
       navigate('/sign-in', { replace: true });
     },
@@ -110,6 +114,20 @@ export function SettingsScreen() {
               label={t('accessibility.title')}
               detail={options.length > 0 ? sentence(options) : t('settings.accessibility.none')}
               to="/settings/accessibility"
+            />
+            <NavRow
+              icon="Notification"
+              label={t('settings.notifications.title')}
+              detail={
+                push
+                  ? t(
+                      push.isSubscribed
+                        ? 'settings.notifications.detailOn'
+                        : 'settings.notifications.detailOff',
+                    )
+                  : undefined
+              }
+              to="/settings/notifications"
             />
             <NavRow
               icon="Languages"

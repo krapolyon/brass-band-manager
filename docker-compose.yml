@@ -37,6 +37,10 @@ services:
       # The thumbnail of a clip is fetched from this server itself, never
       # from YouTube: the tests ask nothing of another site.
       BRASS_BAND_CLIP_THUMBNAIL_URL: http://localhost/appIcons/icon-192.png?video={id}
+      # Notifications are written to this file, never sent (tests/support/push.ts).
+      BRASS_BAND_PUSH_LOG: /var/www/storage/pushLog.jsonl
+      # The tiles of the map are asked at this address, which the tests answer.
+      BRASS_BAND_MAP_TILES_URL: http://localhost:8081/testTiles/tilejson.json
     depends_on:
       db:
         condition: service_healthy

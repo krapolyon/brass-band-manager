@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet } from 'react-router';
 import { useBand } from '../../band.ts';
 import { HOME, useMe } from '../../session.ts';
+import { AskNotifications } from '../settings/AskNotifications.tsx';
 import { PlayerProvider } from '../songs/Player.tsx';
 
 // While the app does not know yet who is in front of it, or when the server
@@ -36,6 +37,8 @@ export function MembersOnly() {
   return (
     <PlayerProvider>
       <Outlet />
+      {/* Asked once on a device that was never asked. */}
+      <AskNotifications />
     </PlayerProvider>
   );
 }

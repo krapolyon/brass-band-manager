@@ -5,7 +5,13 @@ import type { Me } from '../../session.ts';
 // What the screens that manage members share.
 
 /** The roles an admin can give today. Those of later features are not offered before their feature exists. */
-export const roles = ['ADMIN', 'MEMBER_MANAGER', 'SONG_MANAGER', 'GIG_MANAGER'] as const;
+export const roles = [
+  'ADMIN',
+  'MEMBER_MANAGER',
+  'SONG_MANAGER',
+  'GIG_MANAGER',
+  'SETLIST_MANAGER',
+] as const;
 export type RoleName = (typeof roles)[number];
 
 /** What a member looks like to who manages members: their status, or "expired" for an invitation whose link no longer works. */

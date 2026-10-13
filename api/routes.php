@@ -26,7 +26,34 @@ use BrassBand\Access\SignInAction;
 use BrassBand\Access\SignOutAction;
 use BrassBand\Band\Bands;
 use BrassBand\Band\ShowBandAction;
+use BrassBand\Band\ShowGigRemindersAction;
 use BrassBand\Band\UpdateBandAction;
+use BrassBand\Band\UpdateGigRemindersAction;
+use BrassBand\Gigs\AnswerAction;
+use BrassBand\Gigs\ChangeGigStatusAction;
+use BrassBand\Gigs\CostumePictures;
+use BrassBand\Gigs\Costumes;
+use BrassBand\Gigs\DeleteCostumeAction;
+use BrassBand\Gigs\DeleteGigAction;
+use BrassBand\Gigs\DeleteSlotAction;
+use BrassBand\Gigs\Gigs;
+use BrassBand\Gigs\ListCostumesAction;
+use BrassBand\Gigs\ListGigsAction;
+use BrassBand\Gigs\RemindGigAction;
+use BrassBand\Gigs\Reminders;
+use BrassBand\Gigs\RequireGigEditor;
+use BrassBand\Gigs\SaveCostumeAction;
+use BrassBand\Gigs\SaveGigAction;
+use BrassBand\Gigs\SaveSlotAction;
+use BrassBand\Gigs\DeleteSetlistAction;
+use BrassBand\Gigs\LivePush;
+use BrassBand\Gigs\LiveSetlistAction;
+use BrassBand\Gigs\SaveSetlistAction;
+use BrassBand\Gigs\Setlists;
+use BrassBand\Gigs\ShowCostumePictureAction;
+use BrassBand\Gigs\ShowSetlistAction;
+use BrassBand\Gigs\ShowGigAction;
+use BrassBand\Gigs\UpdateCostumePictureAction;
 use BrassBand\Health\HealthAction;
 use BrassBand\Band\DeleteLogoAction;
 use BrassBand\Band\LogoStore;
@@ -61,6 +88,8 @@ use BrassBand\Members\ShowMemberAction;
 use BrassBand\Members\ShowPhotoAction;
 use BrassBand\Members\UpdateMemberAction;
 use BrassBand\Members\UpdatePhotoAction;
+use BrassBand\Push\PushAction;
+use BrassBand\Push\PushSetup;
 use BrassBand\Sections\DeleteInstrumentAction;
 use BrassBand\Sections\DeleteSectionAction;
 use BrassBand\Sections\ListSectionsAction;
@@ -71,6 +100,7 @@ use BrassBand\Songs\AddAliasAction;
 use BrassBand\Songs\ChangeSongStatusAction;
 use BrassBand\Songs\ClipThumbnails;
 use BrassBand\Songs\DeleteAliasAction;
+use BrassBand\Songs\DictationAction;
 use BrassBand\Songs\DeleteSongAction;
 use BrassBand\Songs\DownloadArchiveAction;
 use BrassBand\Songs\FileNames;
@@ -85,6 +115,8 @@ use BrassBand\Songs\ShowSongAction;
 use BrassBand\Songs\ShowSongFileAction;
 use BrassBand\Songs\SongFiles;
 use BrassBand\Songs\Songs;
+use BrassBand\Songs\SpokenNames;
+use BrassBand\Songs\SpokenNamesAction;
 use BrassBand\Songs\UpdateSongFileAction;
 use BrassBand\Storage\Files;
 use Doctrine\DBAL\Connection;
@@ -92,7 +124,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>} $config
+ * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -105,6 +137,7 @@ return function (App $app, Connection $database, array $config): void {
     $files = new Files(dirname(__DIR__) . '/storage');
     $logos = new LogoStore($database, $files);
     $mailer = new Mailer($config);
+    $push = PushSetup::from($config, $database);
     $bands = new Bands($database, $logos, $mailer);
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
@@ -114,6 +147,10 @@ return function (App $app, Connection $database, array $config): void {
     $songFiles = new SongFiles($database, $files);
     $songs = new Songs($database, $songFiles);
     $thumbnails = new ClipThumbnails($config);
+    $gigs = new Gigs($database, is_string($config['mapTilesUrl'] ?? null) ? trim($config['mapTilesUrl']) : Gigs::DEFAULT_MAP_TILES_URL);
+    $costumes = new Costumes($database);
+    $setlists = new Setlists($database);
+    $costumePictures = new CostumePictures($database, $files);
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -151,12 +188,22 @@ return function (App $app, Connection $database, array $config): void {
         $songFiles,
         $songs,
         $thumbnails,
+        $gigs,
+        $setlists,
+        $costumes,
+        $costumePictures,
+        $push,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
         $group->put('/api/me/password', new ChangePasswordAction($database, $sessions, $links, new SignInFailures($database)));
         $group->delete('/api/session', new SignOutAction($sessions, $cookie, everywhere: false));
         $group->delete('/api/sessions', new SignOutAction($sessions, $cookie, everywhere: true));
+
+        // The notifications of the device that asks: its own, nobody else's.
+        $group->get('/api/push', new PushAction($push));
+        $group->put('/api/push/subscription', new PushAction($push));
+        $group->delete('/api/push/subscription', new PushAction($push));
 
         // The directory of the band: each action shows what the member may see.
         $group->get('/api/members', new ListMembersAction($members));
@@ -177,8 +224,18 @@ return function (App $app, Connection $database, array $config): void {
         // The instrument each track of a MIDI file is, for the MIDI player. Changes nothing.
         $group->post('/api/songs/trackNames', new PlaceFilesAction(new FileNames($database), tracks: true));
 
+        // Gigs: every member sees every gig but the drafts, which each
+        // action hides from who cannot edit them, and answers for themself.
+        $group->get('/api/gigs', new ListGigsAction($gigs));
+        $group->get('/api/gigs/{id:[0-9]+}', new ShowGigAction($gigs));
+        // One's own answer for a slot: the address names no member.
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, forAnother: false));
+        $group->get('/api/setlists/{id:[0-9]+}', new ShowSetlistAction($gigs, $setlists));
+        $group->get('/api/costumes', new ListCostumesAction($costumes));
+        $group->get('/api/costumes/{id:[0-9]+}/picture', new ShowCostumePictureAction($costumePictures));
+
         // ---------------------------------------------------------------
-        // 3. One's own record, or a permission
+        // 3. One's own record or one's own gig, or a permission
         // ---------------------------------------------------------------
         $selfOrManager = new RequireSelfOrPermission(Permission::MANAGE_MEMBERS);
         $group->put('/api/members/{id:[0-9]+}', new UpdateMemberAction($database, $members, $record))
@@ -187,6 +244,19 @@ return function (App $app, Connection $database, array $config): void {
             ->add($selfOrManager);
         $group->delete('/api/members/{id:[0-9]+}/photo', new UpdatePhotoAction($members, $photos, removes: true))
             ->add($selfOrManager);
+
+        // A gig is edited by whoever manages gigs and by its organisers.
+        $editGig = new RequireGigEditor($gigs);
+        $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs, $setlists))->add($editGig);
+        $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
+        $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
+        // "Relancer": a notification to who has not answered for the gig.
+        $group->post('/api/gigs/{id:[0-9]+}/reminder', new RemindGigAction($database, $gigs, new Reminders($database, $push)))->add($editGig);
+        // The answer of a member who told them.
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, forAnother: true))
+            ->add($editGig);
 
         // ---------------------------------------------------------------
         // 4. Permission
@@ -237,8 +307,45 @@ return function (App $app, Connection $database, array $config): void {
         $group->post('/api/instruments/{id:[0-9]+}/aliases', new AddAliasAction($aliases))->add($manageSongs);
         $group->delete('/api/instrumentAliases/{id:[0-9]+}', new DeleteAliasAction($database, $aliases))->add($manageSongs);
 
+        // The phrases the dictation of a setlist learned for a song, edited by
+        // hand in the form of the song (model/songs.md, entry 4).
+        $spokenNames = new SpokenNames($database);
+        $songSpokenNames = new SpokenNamesAction($database, $songs, $spokenNames);
+        $group->get('/api/songs/{id:[0-9]+}/spokenNames', $songSpokenNames)->add($manageSongs);
+        $group->post('/api/songs/{id:[0-9]+}/spokenNames', $songSpokenNames)->add($manageSongs);
+        $group->delete('/api/songSpokenNames/{id:[0-9]+}', $songSpokenNames)->add($manageSongs);
+
+        // Creating a gig and deleting a draft are for who manages gigs: an
+        // organiser edits the gig they were given, nothing more.
+        $manageGigs = new RequirePermission(Permission::MANAGE_GIGS);
+        $group->post('/api/gigs', new SaveGigAction($database, $gigs))->add($manageGigs);
+        $group->delete('/api/gigs/{id:[0-9]+}', new DeleteGigAction($database, $gigs))->add($manageGigs);
+
+        // Setlists are written and played live by who manages setlists.
+        $manageSetlists = new RequirePermission(Permission::MANAGE_SETLISTS);
+        $group->post('/api/gigs/{id:[0-9]+}/setlists', new SaveSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
+        $group->put('/api/setlists/{id:[0-9]+}', new SaveSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
+        $group->delete('/api/setlists/{id:[0-9]+}', new DeleteSetlistAction($database, $gigs, $setlists))->add($manageSetlists);
+        // The dictation of a setlist: what it reads, and what it learns.
+        $dictation = new DictationAction($database, $songs, $spokenNames);
+        $group->get('/api/spokenNames', $dictation)->add($manageSetlists);
+        $group->post('/api/songs/{id:[0-9]+}/spokenNames/learned', $dictation)->add($manageSetlists);
+        $live = new LiveSetlistAction($database, $setlists, new LivePush($database, $push));
+        $group->post('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
+        $group->put('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
+        $group->delete('/api/setlists/{id:[0-9]+}/live', $live)->add($manageSetlists);
+
+        $manageCostumes = new RequirePermission(Permission::MANAGE_COSTUMES);
+        $group->post('/api/costumes', new SaveCostumeAction($database, $costumes))->add($manageCostumes);
+        $group->put('/api/costumes/{id:[0-9]+}', new SaveCostumeAction($database, $costumes))->add($manageCostumes);
+        $group->delete('/api/costumes/{id:[0-9]+}', new DeleteCostumeAction($database, $costumes, $costumePictures))->add($manageCostumes);
+        $group->put('/api/costumes/{id:[0-9]+}/picture', new UpdateCostumePictureAction($costumes, $costumePictures, removes: false))->add($manageCostumes);
+        $group->delete('/api/costumes/{id:[0-9]+}/picture', new UpdateCostumePictureAction($costumes, $costumePictures, removes: true))->add($manageCostumes);
+
         $manageBand = new RequirePermission(Permission::MANAGE_BAND);
         $group->patch('/api/band', new UpdateBandAction($database, $bands))->add($manageBand);
+        $group->get('/api/band/gigReminders', new ShowGigRemindersAction($bands))->add($manageBand);
+        $group->put('/api/band/gigReminders', new UpdateGigRemindersAction($database, $bands))->add($manageBand);
         $group->put('/api/band/logo', new UpdateLogoAction($logos))->add($manageBand);
         $group->delete('/api/band/logo', new DeleteLogoAction($logos))->add($manageBand);
     })->add(new RequireSession($sessions, $cookie));

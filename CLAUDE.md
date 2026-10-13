@@ -40,7 +40,7 @@ These are decided when a feature is modelled and designed, not added after it wo
 | Database | MySQL | Table names are case-sensitive on the Linux host and not on macOS |
 | Hosting | OVH Perso shared hosting | No Node at runtime, no long-running process, no websockets. No SSH: no command line on the host. Scheduled tasks at most hourly. PHP mail limited to 100 per hour |
 | Sign-in | Email and password, long server-side sessions that can be revoked | No magic link |
-| Tests | Playwright, end to end | Each feature ships with its tests |
+| Tests | Playwright, end to end | Each feature ships with its tests. The domain in progress while building, everything before a merge |
 | Code checks | TypeScript, Biome, PHPStan | `npm run check` passes before a commit |
 | Deploy | OVH Git deployment of a `release` branch built by a GitHub Action | No build step on the host. Never deploy from `main` directly |
 
@@ -118,7 +118,8 @@ Features are built one at a time, in the order set by the scoping document.
 | Start / stop the local stack | `npm run stack:up` / `npm run stack:down`. The app is at http://localhost:8080 |
 | Work on the front | `npm run dev`, then http://localhost:5173 |
 | Build the front | `npm run build`. Needed before testing a change of the front |
-| Test | `npm test`. Runs against the test server (port 8081) and its own database, never the data of 8080 |
+| Test everything | `npm test` (about 25 minutes). Runs against the test server (port 8081) and its own database, never the data of 8080 |
+| Test one domain | `npx playwright test tests/gigs.spec.ts --project=android` (projects: `api`, `android`, `iphone`). Run `npm run test:prepare` first after a new migration |
 | Check the code | `npm run check` (Biome, TypeScript, PHPStan). `npm run format` fixes the layout |
 | Apply the migrations | `npm run db:migrate`, on the local database only |
 | Empty the local database | `npm run db:reset`. Deletes local data: ask first |
@@ -147,7 +148,7 @@ A route is public only by decision: the list is short and written at the top of 
 
 ## How a feature is checked before it is committed
 
-1. `npm run check` and `npm test` pass.
+1. `npm run check` passes, and so do the tests of the domain being worked on, with those of the domains a change of the shared layer can break. The whole suite (`npm test`) is not run at each commit: it runs once, before the branch is merged, and the merge waits for it to pass. A commit says which tests were run.
 2. Its tests come from the dictionary: each line of the "Access rights" and "Roles and permissions" tables of `model/` is a test, refusals included.
 3. An independent review, by an agent that did not write the code, read-only: security and privacy against the dictionary, and, when there are screens, conformity to Figma with the six accessibility options on. Figma shows three options as variable modes (text size, legible font, high contrast): section 9 of the `Members` page holds screens under them, to compare with. The three others are checked for what they do: spacing follows the four measures written in `base.css`, motion stops, notifications stay. Its findings are fixed, each with a test, or reported to the owner.
 

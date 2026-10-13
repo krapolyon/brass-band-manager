@@ -190,3 +190,14 @@
     max-width: none;
   }
 }
+
+/* The question a form with changes asks before it is left (useLeaveGuard). */
+.LeaveGuard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.LeaveGuard > p {
+  margin: 0;
+}

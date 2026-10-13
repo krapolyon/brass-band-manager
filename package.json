@@ -16,6 +16,7 @@
     "stack:logs": "docker compose logs -f web",
     "api:install": "docker compose run --rm php composer install",
     "db:migrate": "docker compose exec web php /var/www/database/migrate.php",
+    "push:keys": "docker compose run --rm php php tasks/pushKeys.php",
     "db:reset": "docker compose down -v && npm run stack:up && npm run db:migrate",
     "check": "biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
     "format": "biome check --write .",
@@ -25,9 +26,12 @@
     "test:install": "playwright install chromium webkit"
   },
   "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
     "@tanstack/react-query": "5.104.1",
     "i18next": "26.4.3",
     "libphonenumber-js": "1.13.14",
+    "maplibre-gl": "6.14.0",
     "midi-file": "1.2.4",
     "pdfjs-dist": "6.4.299",
     "react": "19.3.0",

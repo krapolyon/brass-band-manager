@@ -1,0 +1,52 @@
+/* Figma: the Map frame of Gig/Meeting. 190 high, and what sits on it is 10
+   from its edges (raw values in Figma). */
+.GigMeetingMap {
+  position: relative;
+  height: 11.875rem;
+  overflow: hidden;
+  border-radius: var(--radiusMd);
+  background: var(--mapGround);
+}
+
+/* Named twice: the map library gives the element a position of its own. */
+.GigMeetingMap .GigMeetingMap-canvas {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+/* The tip of the pin on the centre of the map: 36 wide, its bottom on the middle. */
+.GigMeetingMap-pin {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  display: flex;
+  color: var(--accent);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.GigMeetingMap-pin .Icon {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.GigMeetingMap-zoom {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.GigMeetingMap-credit {
+  position: absolute;
+  right: 0.625rem;
+  bottom: 0.625rem;
+  padding: 2px var(--spaceXs);
+  border-radius: var(--radiusXs);
+  background: var(--sheet);
+  color: var(--textMuted);
+  text-decoration: none;
+}

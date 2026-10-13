@@ -1,0 +1,20 @@
+.SectionAttendanceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+  padding-block: var(--spaceXs);
+}
+
+.SectionAttendanceRow-texts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  /* Below this the count goes to the next line rather than squeezing the names. */
+  min-width: 8rem;
+}
+
+.SectionAttendanceRow-texts .textCaption {
+  color: var(--textMuted);
+}

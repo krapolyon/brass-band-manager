@@ -7,6 +7,7 @@ namespace BrassBand\Members;
 use BrassBand\Access\CurrentMember;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\Sessions;
+use BrassBand\Gigs\Gigs;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
@@ -101,6 +102,12 @@ final class ChangeStatusAction
         // What they said of each song served while they played: it goes too
         // (model/songs.md, entry 3).
         $this->database->delete('memberSong', ['memberId' => $memberId]);
+        // They no longer organise the gigs that are not over; they stay on
+        // those already played (model/gigs.md, entry 1).
+        $this->database->executeStatement(
+            'DELETE o FROM gigOrganizer o JOIN gig g ON g.id = o.gigId WHERE o.memberId = ? AND COALESCE(g.endsOn, g.startsOn) >= ?',
+            [$memberId, Gigs::firstOpenDay()],
+        );
         $this->sessions->closeAll($memberId);
         $this->links->cancel($memberId);
 

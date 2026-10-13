@@ -33,7 +33,7 @@ test.describe('on an installed app', () => {
   });
 
   test('an address inside the app is answered by the app', async ({ page }) => {
-    const response = await page.goto('/gigs/12');
+    const response = await page.goto('/rehearsals/12');
 
     // No screen exists there yet: the app itself says so, with a way back.
     expect(response?.status()).toBe(200);

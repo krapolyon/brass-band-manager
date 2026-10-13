@@ -10,6 +10,8 @@
         "ext-zip": "*",
         "cuyz/valinor": "2.6.0",
         "doctrine/dbal": "4.5.0",
+        "guzzlehttp/guzzle": "8.2.0",
+        "minishlink/web-push": "11.0.0",
         "phpmailer/phpmailer": "7.1.1",
         "slim/psr7": "1.8.0",
         "slim/slim": "4.15.3"
@@ -20,7 +22,10 @@
         }
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": false
+        }
     },
     "require-dev": {
         "phpstan/phpstan": "2.3.1"

@@ -42,3 +42,32 @@
 .settings-swatches > * {
   flex: 1;
 }
+
+/* Notifications: the sheet that asks on a new device, and the help of an iPhone. */
+.settings-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--spaceMd);
+}
+
+.settings-ask p,
+.settings-help {
+  margin: 0;
+}
+
+/* 40 in Figma: larger than the sizes of Icon. */
+.settings-askIcon {
+  display: flex;
+  color: var(--accentText);
+}
+
+.settings-askIcon .Icon {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.settings-muted {
+  margin: 0;
+  color: var(--textMuted);
+}

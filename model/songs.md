@@ -1,5 +1,6 @@
 # Business dictionary — Songs domain
 
+> v1.4 — 2026-10-13 · Dictation of a setlist, decided with the owner after its prototype: the phrases it learns for a song (`songSpokenName`, entry 4), edited by whoever manages songs in the form of the song (Figma, page `Songs`, section 7) · Migration: `011_songSpokenName.sql`
 > v1.3 — 2026-10-13 · The reading mode ("Live") and the rehearsal marks, settled with the owner while they were built: only real rehearsal marks count; the part of the member's instrument; repeats and voltas followed, jumps in words not; the tempo of the band, else the one of the score, or tapped. No change to the schema
 > v1.2 — 2026-10-13 · Validated by the owner on 2026-10-13 · The MIDI file and the MusicXML of a song are produced from its MuseScore file by the browser that imports it (`song.musicXmlPath`); an instrument chosen by hand during an import can be remembered as an alias; the aliases are managed in the band settings by whoever manages songs; the tracks of the MIDI player are read with the same aliases · Migration: `007_songMusicXml.sql`
 > v1.1 — 2026-10-12 · Model: `songs.dbml` · Rules settled with the design of the screens, no change to the schema. Validated by the owner on 2026-10-12 for what the simple version of songs uses (last file wins, files changed by dropping, download everything, peaks computed once by the browser, deletion asks first); the two rules about the tempo and the rehearsal marks wait for the MIDI player and the reading mode · Migrations: `006_songs.sql`
@@ -92,13 +93,13 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 - **A tempo counts the beat of the time signature**: the quarter note in 4/4, the dotted quarter in compound time (6/8, 12/8). A member who taps the tempo in compound time taps the eighth notes, and the app shows the tempo converted (186 to the eighth is 62 to the dotted quarter).
 - **Rehearsal marks and time signature come from the MuseScore file**, through what the reading mode reads of it. The reading mode offers the marks (A, B, Coda…) as starting points only when the file has some.
 - **The version is typed, not deduced.** Replacing a file does not change `versionOn`: whoever manages songs says when the arrangement really changed, and what changed. Only the current version is kept: there is no history of versions.
-- **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. Once setlists exist, a song used by a setlist cannot be deleted.
+- **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. A song used by a setlist cannot be deleted (Gigs domain, `setlistSong`).
 - **Deleting always asks first**, says what goes with the song and that it cannot be undone, and offers to set the status to `ABANDONED` instead.
 
 ### Relations
 - Part: a song has zero to several parts, one per instrument at most (entry 2).
 - Member: a member gives a song a mastery level and an enjoyment level (entry 3).
-- Setlists and rehearsals refer to songs (later features, overview model).
+- Setlists refer to songs (Gigs domain, `model/gigs.md`); their dictation learns phrases for a song (entry 4). Rehearsals will too (later feature, overview model).
 
 ### Access rights
 | Who | View | Create | Edit | Change status | Delete |
@@ -222,7 +223,44 @@ What a member says of a song: how well they play it (mastery) and how much they 
 - `masteryLevel`, `enjoymentLevel`: what a member thinks of their own playing and of a song. Purpose: knowing which songs the band masters and enjoys least, to decide which ones leave the repertoire. Given by the member, optional, seen by the member only, shown to the others as an average, erased when the member leaves, never in an export, never written to a log.
 - Known limit: with very few answers, an average tells a level. With one answer it is the level of whoever answered, whom nothing names.
 
-## 4. Open questions
+## 4. What the dictation learned (`songSpokenName`)
+
+### Definition
+A phrase the dictation of a setlist heard for a song, besides its name, kept so that it recognises the song the next time: “seven nation armee” for Seven Nation, “the bay” for a short title it keeps mishearing. In the French locale a “façon de le dire”.
+
+### Fields
+| Field | Label (en) | Label (fr) | Required | Example | Realistic length | Rules |
+|---|---|---|---|---|---|---|
+| `phrase` | Way to say it | Façon de le dire | Yes | seven nation armee · the bay · dance | 2 to 60 | Cleaned before it is saved: lowercase, accents removed, letters said one by one joined into one word, words separated by one space. Unique across all songs |
+
+### Rules
+- **The dictation runs in the browser** (the speech recognition of the device). On an iPhone the sound goes to Apple, in Chrome to Google unless the device recognises it itself: the privacy notice says so. Only text reaches the app, and only the phrases it learns are kept.
+- **What is offered**: the songs a setlist can hold (Gigs domain: in the repertoire or temporary). The dictation compares what it heard with their names and with their phrases. A phrase heard exactly wins at once; otherwise the closest name or phrase is added when it is clearly ahead, the member chooses when two are close (“Tu as dit « crazy » : lequel ?”), and nothing is added when nothing is close.
+- **Learned from a choice, never from typing.** The phrase heard is saved for a song when the member who dictates chooses it among songs that sound alike, or replaces, right after, the song the dictation added by another one. A phrase equal to the cleaned name of the song is not saved: the name already counts.
+- **One phrase names one song.** Learned again for another song, it moves to that song: the last choice wins. Added by hand while another song has it, the app asks first, then moves it.
+- **20 phrases per song at most.** Learning one more drops the oldest learned.
+- **Edited by hand** in the form of the song, in “Façons de le dire”: deleted one by one, added one by one, saved at once, as the known spellings. A phrase is not edited: it is deleted and added again.
+- Deleting a song deletes its phrases. A change of status keeps them.
+
+### Relations
+- A song has zero to twenty phrases; a phrase names one song.
+
+### Access rights
+| Who | View | Learn (by dictating) | Add, delete by hand |
+|---|---|---|---|
+| Any signed-in member | No | No | No |
+| `SETLIST_MANAGER` | The phrases of the songs a setlist can hold, for the dictation | Yes | No |
+| `SONG_MANAGER` | Every phrase, in the form of the song | Yes, when they also manage setlists | Yes |
+| `ADMIN` | Every phrase | Yes | Yes |
+
+### Personal data
+- None. A phrase is the text of a title as the dictation heard it; who said it is not kept (`updatedByMemberId` is the technical trace of every table, emptied when the member is deleted). No sound is ever sent to the app.
+
+### Display
+- The form of the song (Figma, page `Songs`, section 7): a card “Dictée” after “Le morceau”, one `ListRow` “Façons de le dire” with the phrases in its detail, comma separated, as stored; it opens a `BottomSheet` (a `Dialog` from 1024) listing them, each with the trash, and “Ajouter une façon de le dire” as the last row.
+- The dictation itself: Gigs domain, the form of a setlist (Figma, page `Gigs`, section 11).
+
+## 5. Open questions
 
 None blocking. Validated by the owner on 2026-10-12 (v1.0).
 
@@ -243,5 +281,7 @@ To settle while the feature is built:
 - The aliases of the starting library are written here; the library file of the app (`api/resources/instrumentLibrary.fr.json`) receives them with the feature. An instance installed before has none: whoever manages songs adds them.
 
 Decided by the owner on 2026-10-12: the five statuses and the meaning of `TEMPORARY`; the recording is one of the band, optional; one PDF per instrument, no full score; levels seen as averages only, to decide which songs leave the repertoire; only the current version is kept; the Discord channel is stored and not shown before the Discord feature; a song can be deleted; the cover art is cropped to a square of 1024 pixels; the clip is played inside the app, YouTube only for now, and its thumbnail is fetched and kept by the server; every song has a MuseScore file and NoteWorthy files are not kept; the rule that reads the name of a file and the starting aliases; an instrument chosen by hand during an import adds no alias by itself (changed in v1.2: it can be remembered).
+
+Decided by the owner on 2026-10-13 (v1.4): the dictation of setlists is built with them, and learns from the choices of whoever dictates.
 
 Proposed with the design of the screens on 2026-10-12 (v1.1, to validate): two files for the same place, the last one wins; the files of a song are changed by dropping, never one field per part; download everything as a `.zip`; the peaks of a recording computed once; a tempo counts the beat of the time signature; rehearsal marks and time signature read from the MuseScore file; deleting asks first and offers `ABANDONED` instead.

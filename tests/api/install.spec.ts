@@ -88,6 +88,7 @@ test('install creates the band, its sections and instruments, and the admin', as
     'manageBand',
     'manageSongs',
     'manageGigs',
+    'manageCostumes',
     'manageSetlists',
     'manageQuotes',
   ]);

@@ -1,0 +1,189 @@
+// Domain: Gigs
+// v1.3 — 2026-10-13 — validated, migration 010: the live setlist (decided with the design): a setlist belongs to a slot of its gig, whose members who said yes follow it live; the position of the song being played and the start of the live session.
+// v1.2 — 2026-10-13 — decided with the design: a setlist is numbered within its gig (1, 2, 3…), not across the band; only a song in the repertoire or a temporary one is added to a setlist. Migration 009
+// v1.1 — 2026-10-13 — rules found while writing the API (dictionary only, no schema change)
+// v1.0 — 2026-10-13 — validated, migration 008
+// v0.3 — 2026-10-13 — DRAFT, no question left: no field for the quote, ACCEPTED is set by hand; two automatic reminders, a number of days before the gig; a member who leaves stays organiser of the gigs already played; setlists are built with this domain
+// v0.2 — 2026-10-13 — DRAFT: answers of the owner. A gig is confirmed by the app once accepted and playable, or forced by hand; organisers edit their gig; coordinates of the place; the costumes of the gig are the list a slot chooses from; last reminder of a gig; costumes managed by the admin
+// v0.1 — 2026-10-13 — DRAFT: gig and its life cycle, organisers, slots and answers, costumes, setlists
+
+Project brassBand {
+  database_type: 'MySQL'
+  Note: 'Brass band app — Gigs domain'
+}
+
+// ---------------------------------------------------------------
+// Gig
+// The date, the meeting time and the place are those of the gig.
+// A slot carries the answers of members only: it has a name and a
+// note, no date and no place of its own.
+// "In progress" and "past" are not statuses: they are read from the
+// dates of the gig when it is displayed (see the dictionary).
+// ---------------------------------------------------------------
+
+Enum gigStatus {
+  DRAFT [note: 'Someone contacted the band and it is noted down. Seen by those who manage gigs only; nobody answers yet.']
+  PROPOSED [note: 'The conditions are being discussed with whoever asked. Members see the gig and say whether they come.']
+  ACCEPTED [note: 'The band and whoever asked agree, with or without a quote, and the band is not playable yet ("accepté" in the French locale). Set by hand: quotes are not managed yet.']
+  CONFIRMED [note: 'The gig takes place: it is accepted and the band is playable ("validé" in the French locale). Set by the app as soon as an accepted gig is playable, or forced by hand when the band knows it will play although a section has no yes: a member of another section fills in. Stays confirmed if an answer changes afterwards.']
+  CANCELLED [note: 'The gig does not take place. Kept for history, hidden from the list by default.']
+}
+
+Table gig {
+  id integer [pk]
+  name varchar [not null, note: 'The name the band gives to the gig, for instance "Fête des Lumières". Never translated.']
+  status gigStatus [not null, default: 'DRAFT']
+  startsOn date [not null, note: 'First day of the gig, or its only day']
+  endsOn date [note: 'Last day of a gig of several days. Empty for a gig of one day. Never before startsOn.']
+  meetingTime time [note: 'Time the band meets on the first day, on the clock of the place: no time zone. Empty until it is known. One for the whole gig: the note of a slot says the rest.']
+  placeName varchar [note: 'Name of the place, for instance "Place des Terreaux". Never translated.']
+  placeUrl varchar [note: 'Link to the place: its site, or its page on a map']
+  streetAddress varchar [note: 'Number and street; can hold several lines. 🔒 Personal data when the gig is at someone\'s home — purpose: getting to the gig.']
+  postalCode varchar [note: 'Often known before the street, with the city']
+  city varchar
+  latitude decimal [note: 'Exact point of the meeting, in decimal degrees, for instance 45.767300. For a place that is hard to find. Filled with longitude or not at all. 🔒 Personal data when the gig is at someone\'s home, as the address.']
+  longitude decimal [note: 'In decimal degrees, for instance 4.834400. Filled with latitude or not at all.']
+  notes text [note: 'Anything else members need to know, as free text over several lines. No contact details of the client: they have no field in the first version.']
+  discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this gig: digits only. Empty for a band without Discord. Stored, and shown by no screen before the Discord feature, as for a song.']
+  remindedAt timestamp [note: 'Last time the members who have not answered were reminded, by the app or by the button. Empty when they never were. No automatic reminder is sent on a day one was already sent.']
+  Note: 'A concert the band is asked to play, from the first contact to the day itself (a "plan" in the French locale). Has one slot at least.'
+}
+
+Table gigOrganizer {
+  gigId integer [not null, ref: > gig.id]
+  memberId integer [not null, ref: > member.id]
+  Note: 'A member who organises the gig: has the information and takes care of it ("qui brasse le plan", a "brasseur", in the French locale). A gig can have none or several. An organiser edits the gig, changes its status and answers for other members, as whoever manages gigs does, for this gig only. A member who leaves the band is taken off the gigs to come and stays on those already played.'
+
+  indexes {
+    (gigId, memberId) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Slots and answers
+// A gig is created with one slot, without a name. A gig of several
+// days can have several, each with a name. Most gigs keep one.
+// ---------------------------------------------------------------
+
+Table gigSlot {
+  id integer [pk]
+  gigId integer [not null, ref: > gig.id]
+  name varchar [note: 'For instance "Samedi midi". Empty for the only slot of a gig; required as soon as the gig has several. Never translated.']
+  position integer [not null, note: 'Order of the slots of a gig, starting at 1']
+  note varchar [note: 'Information specific to this slot, for instance "Parade, no amplification". Can hold several lines.']
+  costumeId integer [ref: > costume.id, note: 'The costume worn at this slot, one of the costumes of the gig (gigCostume). Empty when none is decided.']
+  Note: 'A moment of a gig for which members say whether they come: a roll call (a "présence" in the French locale). Playable as soon as every section has one member who answered yes; a gig is playable as soon as one of its slots is. Never stored: computed from the answers.'
+
+  indexes {
+    (id, gigId) [unique, note: 'Target of the reference of a setlist to its slot, which keeps the slot in the gig of the setlist']
+  }
+}
+
+Enum attendanceAnswer {
+  YES
+  NO
+  MAYBE
+  IF_NEEDED [note: 'Would rather not come, but can make the effort if that saves the gig ("si besoin" in the French locale). Does not count as a yes.']
+}
+
+Table gigSlotAttendance {
+  gigSlotId integer [not null, ref: > gigSlot.id]
+  memberId integer [not null, ref: > member.id]
+  answer attendanceAnswer [not null, note: '🔒 Personal data — purpose: knowing whether the band can play the gig, and who comes']
+  Note: 'The answer of a member for a slot. No row means the member has not answered yet. Kept when the member leaves the band: the past gigs keep who played.'
+
+  indexes {
+    (gigSlotId, memberId) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Costumes
+// A reference list managed by each band.
+// ---------------------------------------------------------------
+
+Table costume {
+  id integer [pk]
+  name varchar [not null, unique, note: 'In the band\'s own words, for instance "Paillettes" or "Libre". Never translated.']
+  imagePath varchar [note: 'Picture shown with the costume, relative to the storage folder of the app. Empty when it has none.']
+  position integer [not null, note: 'Order in which costumes are listed, starting at 1']
+  Note: 'An outfit the band wears at a gig (a "déguisement", or "déguiz", in the French locale). The list is managed by the admin of the band.'
+}
+
+Table gigCostume {
+  gigId integer [not null, ref: > gig.id]
+  costumeId integer [not null, ref: > costume.id]
+  Note: 'A costume to bring to the gig. This list is the reference: a slot chooses its costume in it. Taking a costume off the gig empties it on the slots that had it.'
+
+  indexes {
+    (gigId, costumeId) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Setlists
+// Written before the gig, or more often once it has started, and
+// still editable after it: they say what was played.
+// ---------------------------------------------------------------
+
+Table setlist {
+  id integer [pk]
+  gigId integer [not null, ref: > gig.id, note: 'The gig this setlist is played at. A gig can have none or several.']
+  gigSlotId integer [not null, note: 'The slot of the gig this setlist is played at: its members who answered yes follow it live. Chosen when the gig has several slots, the only slot otherwise. A slot that has setlists is not deleted.']
+  number integer [not null, note: 'Given by the app: one more than the highest number of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig. Deleting a setlist does not renumber the others.']
+  description varchar [note: 'A short text, for instance "Parade, 45 minutes"']
+  liveStartedAt timestamp [note: 'When the setlist was started live. Empty when it is not live. One setlist at most is live in the band: starting one ends the one that was.']
+  livePosition integer [note: 'While the setlist is live, the position (setlistSong.position) of the song being played, the one the notification announces. Filled with liveStartedAt or not at all.']
+  Note: 'An ordered list of songs played at a gig, followed live by the members who play it. The count of how often a song is played comes later.'
+
+  indexes {
+    (gigId, number) [unique]
+  }
+}
+
+Table setlistSong {
+  setlistId integer [not null, ref: > setlist.id]
+  songId integer [not null, ref: > song.id, note: 'A song whose status is IN_REPERTOIRE or TEMPORARY when it is added: the band plays them. A song whose status changes afterwards stays in the setlists that hold it.']
+  position integer [not null, note: 'Rank of the song in the setlist, starting at 1. A song can come twice.']
+  Note: 'A song at a given position in a setlist.'
+
+  indexes {
+    (setlistId, position) [pk]
+  }
+}
+
+// ---------------------------------------------------------------
+// Tables of other domains
+// ---------------------------------------------------------------
+
+Table member {
+  id integer [pk]
+  Note: 'Members domain: see members.dbml'
+}
+
+Table song {
+  id integer [pk]
+  Note: 'Songs domain: see songs.dbml'
+}
+
+// ---------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------
+
+Ref setlistSlotOfGig: setlist.(gigSlotId, gigId) > gigSlot.(id, gigId)
+
+TableGroup gigs {
+  gig
+  gigOrganizer
+  gigSlot
+  gigSlotAttendance
+  costume
+  gigCostume
+  setlist
+  setlistSong
+}
+
+TableGroup external {
+  member
+  song
+}

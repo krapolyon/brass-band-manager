@@ -1,0 +1,701 @@
+/* The screens of gigs: layout only. What a gig looks like is in its
+   components (GigCard, GigHeader, GigSlotCard…). */
+
+/* ---------------------------------------------------------------
+   The list
+   --------------------------------------------------------------- */
+
+.gigs-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXl);
+  min-width: 0;
+}
+
+.gigs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.gigs-month {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.gigs-month h2 {
+  margin: 0;
+  padding-inline: var(--spaceXs);
+  color: var(--textMuted);
+}
+
+.gigs-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gigs-cardLink {
+  display: block;
+  border-radius: var(--radiusLg);
+  color: inherit;
+  text-decoration: none;
+}
+
+/* An empty list: an icon, a title and one line that says what to do. */
+.gigs-nothing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spaceSm);
+  padding: var(--spaceXl);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.gigs-nothing > * {
+  margin: 0;
+}
+
+.gigs-nothing > .Icon,
+.gigs-nothing p {
+  color: var(--textMuted);
+}
+
+/* Tablet: the cards two by two, each keeping its own height. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .gigs-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* Desktop: the list on the left, the gig beside it. The list is 300 wide at
+   1024 and grows with the window to 390 at 1280, then 440 from 1920: it is
+   never narrower than on a phone. */
+@media (min-width: 1024px) {
+  .gigs-split {
+    display: grid;
+    grid-template-columns: clamp(18.75rem, calc(18.75rem + (100vw - 64rem) * 0.3516), 24.375rem) minmax(
+        0,
+        1fr
+      );
+    align-items: start;
+    gap: var(--spaceXl);
+  }
+
+  .gigs-list {
+    gap: var(--spaceMd);
+  }
+}
+
+@media (min-width: 1920px) {
+  .gigs-split {
+    grid-template-columns: 27.5rem minmax(0, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------------
+   A gig
+   --------------------------------------------------------------- */
+
+.gigs-screen {
+  min-height: 100dvh;
+}
+
+.gigs-view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gigs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceMd) var(--spaceMd) var(--spaceXxxl);
+}
+
+.gigs-panel > .Button {
+  align-self: stretch;
+}
+
+/* A card of the gig that is not a component of its own: a title and its content. */
+.gigs-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.gigs-card[data-gap="small"] {
+  gap: var(--spaceSm);
+}
+
+.gigs-card > *,
+.gigs-cardHeading > * {
+  margin: 0;
+}
+
+.gigs-cardHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.gigs-cardHeading :is(h2, h3) {
+  flex: 1;
+}
+
+.gigs-muted {
+  color: var(--textMuted);
+  overflow-wrap: anywhere;
+}
+
+.gigs-notes {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* A sentence and the small action that goes with it: the action goes to the next line when the text grows. */
+.gigs-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.gigs-inline > p {
+  flex: 1;
+  min-width: 10rem;
+  margin: 0;
+}
+
+/* A costume of a confirmed gig: its picture, 56, its name and when it is worn. */
+.gigs-costume {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.gigs-costumePicture {
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
+  overflow: hidden;
+  border-radius: var(--radiusSm);
+}
+
+.gigs-costumeTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gigs-mentions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+/* From the tablet width the header is compact, under a bar with the way back
+   and the actions, over the halo of the gig: its picture, blurred. */
+.gigs-topBar {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+}
+
+.gigs-halo {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 22.5rem;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 45%, transparent);
+  mask-image: linear-gradient(#000 45%, transparent);
+}
+
+/* Figma: a blur of 120, which is 60 in CSS, at 40 %. */
+.gigs-halo > .GigPicture {
+  position: absolute;
+  inset: -40% -12%;
+  width: auto;
+  height: auto;
+  opacity: 0.4;
+  filter: blur(60px);
+}
+
+/* In high contrast the halo disappears, as everywhere. */
+:root[data-contrast="more"] .gigs-halo {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .gigs-view[data-size="compact"] {
+    gap: var(--spaceMd);
+    padding: max(var(--spaceXl), calc(env(safe-area-inset-top) + var(--spaceXs))) var(--spaceMd)
+      var(--spaceXxxl);
+  }
+
+  .gigs-view[data-size="compact"] > * {
+    position: relative;
+  }
+
+  .gigs-view[data-size="compact"] > .gigs-halo {
+    position: absolute;
+  }
+
+  .gigs-view[data-size="compact"] .gigs-panel {
+    padding: 0;
+  }
+}
+
+/* Desktop: the gig is a sheet beside the list, and its cards take the colour
+   of a control, a sheet being already under them. */
+@media (min-width: 1024px) {
+  .gigs-pane {
+    min-width: 0;
+    overflow: hidden;
+    border-radius: var(--radiusLg);
+    background: var(--sheet);
+  }
+
+  .gigs-pane .gigs-view[data-size="compact"] {
+    gap: var(--spaceLg);
+    padding: var(--spaceXl);
+  }
+
+  .gigs-pane .gigs-card,
+  .gigs-pane .SetlistCard,
+  .gigs-pane .GigSlotWhoComes,
+  .gigs-pane .GigInfos,
+  .gigs-pane .GigMeeting {
+    background: var(--control);
+    --badgeRing: var(--ground);
+  }
+}
+
+/* Large desktop: two columns, capped at 960 and centred. What the member
+   does on the left, who comes on the right. */
+@media (min-width: 1920px) {
+  .gigs-pane .gigs-view[data-size="compact"] > :not(.gigs-halo) {
+    width: 100%;
+    max-width: 60rem;
+    margin-inline: auto;
+  }
+
+  .gigs-pane .gigs-panel[data-columns="2"] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .gigs-pane .gigs-panel[data-columns="2"] > .gigs-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spaceMd);
+  }
+}
+
+@media (max-width: 1919.98px) {
+  .gigs-column {
+    display: contents;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Who comes, in detail
+   --------------------------------------------------------------- */
+
+.gigs-answers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXl);
+}
+
+.gigs-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.gigs-sectionHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+  padding-inline: var(--spaceXs);
+}
+
+.gigs-sectionHeading h2 {
+  flex: 1;
+  margin: 0;
+  color: var(--textMuted);
+}
+
+.gigs-members {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--spaceXs);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+  list-style: none;
+}
+
+.gigs-member {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs) var(--spaceSm);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: var(--spaceXs) var(--spaceSm) var(--spaceXs) var(--spaceXs);
+  border: 0;
+  border-radius: var(--radiusMd);
+  background: none;
+  color: inherit;
+  text-align: start;
+}
+
+.gigs-member > .MemberMention {
+  flex: 1;
+  min-width: 9rem;
+}
+
+button.gigs-member {
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------
+   Panels and the form
+   --------------------------------------------------------------- */
+
+.gigs-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.gigs-sheet > p {
+  margin: 0;
+}
+
+.gigs-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.gigs-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXl);
+}
+
+.gigs-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceSm);
+}
+
+.gigs-pair > :first-child {
+  flex: 1 1 7.5rem;
+}
+
+.gigs-pair > :last-child {
+  flex: 2 1 11rem;
+}
+
+.gigs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+.gigs-organiser {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.gigs-organiser > .MemberMention {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The more menu of a gig: its rows, 8 apart. */
+.gigs-menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+/* ---------------------------------------------------------------
+   The form of a setlist
+   --------------------------------------------------------------- */
+
+.gigs-setlistForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.gigs-setlistForm > p {
+  margin: 0;
+}
+
+.gigs-setlistSongs {
+  padding: var(--spaceSm) var(--spaceMd);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.gigs-setlistSongs > p {
+  margin: 0;
+}
+
+.gigs-setlistSongs ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gigs-suggestions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--spaceXs);
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+  list-style: none;
+}
+
+.gigs-suggestions li.gigs-muted {
+  padding: var(--spaceSm);
+}
+
+.gigs-suggestions button {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  min-height: var(--controlHeightSm);
+  padding: var(--spaceSm);
+  border: 0;
+  border-radius: var(--radiusSm);
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The one Enter adds. */
+.gigs-suggestions button[data-first="true"] {
+  background: var(--control);
+}
+
+.gigs-suggestions button .Icon {
+  flex: none;
+  color: var(--accentText);
+}
+
+/* ---------------------------------------------------------------
+   The live setlist: the whole window, no menu, one column of 560 at most.
+   The paddings of the list are those of Figma (section 15): its top padding
+   IS the focus line, where the song being played sits.
+   --------------------------------------------------------------- */
+
+.gigs-live {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.gigs-liveColumn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 35rem;
+  min-height: 0;
+}
+
+.gigs-liveNote {
+  padding: var(--spaceMd) var(--spaceXl) 0;
+}
+
+.gigs-liveSongs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  /* Figma: itemSpacing spaceXl, paddingTop spaceXxxl. */
+  --liveGap: var(--spaceXl);
+  /* The focus line: the top padding, then the two songs just played, which
+     stay in sight (more room when the text of the member is larger). */
+  --liveLine: calc(
+    var(--spaceXxxl) +
+    var(--fontSizeHeading) *
+    1.2 +
+    var(--fontSizeTitle) *
+    1.1 +
+    2 *
+    var(--liveGap)
+  );
+  gap: var(--liveGap);
+  min-height: 0;
+  margin: 0;
+  /* Below, room for the last song to come up to the line. */
+  padding: var(--liveLine) var(--spaceXl) 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-top: var(--liveLine);
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  list-style: none;
+}
+
+.gigs-liveSongs li {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  scroll-snap-align: start;
+  transition: opacity 0.3s;
+}
+
+.gigs-liveSongs li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gigs-liveSongs li[data-offset="-2"] {
+  opacity: var(--fadeFaint);
+}
+
+.gigs-liveSongs li[data-offset="-1"],
+.gigs-liveSongs li[data-offset="2"] {
+  opacity: var(--fadeMid);
+}
+
+.gigs-liveSongs li[data-offset="1"] {
+  opacity: var(--fadeNear);
+}
+
+.gigs-liveSongs li[data-offset="3"] {
+  opacity: var(--fadeFar);
+}
+
+/* The one button, where the thumb rests, over the end of the list. */
+.gigs-liveBar {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceMd) var(--spaceXl) max(var(--spaceMd), env(safe-area-inset-bottom));
+}
+
+.gigs-livePrevious {
+  position: absolute;
+  bottom: 100%;
+  left: var(--spaceXl);
+  min-height: var(--controlHeightSm);
+  padding: 0 var(--spaceMd);
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--sheet);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gigs-livePrevious:focus {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+:root[data-motion="reduced"] .gigs-liveSongs li {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gigs-liveSongs li {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------
+   The dictation of a setlist (Figma, section 11): the field that adds a song
+   with its microphone, then the card that listens and the one that asks
+   which song was meant.
+   --------------------------------------------------------------- */
+
+.gigs-addSong {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spaceXs);
+}
+
+.gigs-addSong > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.gigs-dictation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.gigs-dictation h2,
+.gigs-dictation p {
+  margin: 0;
+}
+
+.gigs-dictationHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.gigs-dictationHeading h2 {
+  flex: 1;
+}
+
+.gigs-dictationMicrophone {
+  display: flex;
+  flex: none;
+  color: var(--accentText);
+}
+
+.gigs-dictationHeard {
+  color: var(--success);
+}
+
+.gigs-dictationChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}

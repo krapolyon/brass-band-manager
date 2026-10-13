@@ -1,6 +1,6 @@
 # Business dictionary — Band domain
 
-> v1.5 — 2026-10-11 · Model: `band.dbml` · Validated · Migrations: `002_band.sql`, `004_pictogramsAndBandDefaults.sql`
+> v1.6 — 2026-10-13 · Model: `band.dbml` · Validated · Migrations: `002_band.sql`, `004_pictogramsAndBandDefaults.sql`, `008_gigs.sql` · The reminders of a gig
 
 Examples in this document are made up, except the name of the band that started the project.
 
@@ -17,6 +17,9 @@ The band this instance of the app belongs to, and the settings that make the app
 | `defaultLanguage` | Default language | Langue par défaut | Yes | fr | 2 to 5 | One of the languages shipped with the app |
 | `defaultAccentTheme` | Accent colour | Couleur d'accent | Yes | copper | — | One of the accent themes of the design system |
 | `defaultCountryCode` | Country | Pays | Yes | FR | 2 | Two-letter ISO code. The country a phone number belongs to when it is typed without its prefix |
+| `gigFirstReminderDays` | First reminder | Première relance | No | 15 | — | Days before the gig, from 1 to 90. Empty: no first reminder |
+| `gigSecondReminderDays` | Second reminder | Deuxième relance | No | 5 | — | Days before the gig, fewer than the first. Empty: no second reminder |
+| `gigReminderHour` | Hour of the reminders | Heure des relances | Yes | 18 | — | From 0 to 23 |
 
 ### Rules
 - **Created at install, never deleted.** Install asks for the name and, optionally, the logo. Both can be changed later in the settings.
@@ -26,6 +29,7 @@ The band this instance of the app belongs to, and the settings that make the app
 - **Replacing the logo** replaces the file and the icons. A phone that has already installed the app may keep the old icon until the app is installed again: this is how phones behave.
 - **Default accent theme.** The accent colour of the band: the one shown before sign-in, and to every member who has not chosen their own (`member.accentTheme` empty). Install does not ask for it: it starts as the first theme of the list. An admin changes it in the settings; the change applies at once to the members who follow the colour of the band. A band cannot define its own colours for now.
 - **Country.** Install does not ask for it: it starts as the country of the language the install was done in (France for French). No screen changes it yet; the API lets an admin do it.
+- **Reminders of a gig.** The members who have not answered for a gig are reminded twice, a number of days before it, from a given hour (Gigs domain, `model/gigs.md`, rule "Automatic reminders"). Install does not ask for the three values: they start at 15 days, 5 days and 18 h. An admin changes them in the settings, the three together; an empty number of days means that this reminder is not sent, and the second number is smaller than the first. The hour is read on the clock of the server, set in its configuration to the time zone of the band.
 - **Default language.** The install opens in French, and its first screen offers the other languages shipped with the app. `defaultLanguage` is set to the language the install was done in, and given to each new member.
 
 ### Relations

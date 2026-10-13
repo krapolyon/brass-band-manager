@@ -1,0 +1,50 @@
+.TextArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 0;
+}
+
+.TextArea textarea {
+  display: block;
+  width: 100%;
+  padding: var(--spaceSm) var(--spaceMd);
+  border: 0;
+  border-radius: var(--radiusSm);
+  background: var(--control);
+  /* The line is drawn inside the box: going from 1 to 2 px on focus or on
+     error does not move anything. */
+  box-shadow: inset 0 0 0 var(--borderWidth) var(--border);
+  color: var(--text);
+  /* Its height is its number of lines; the member reads the rest by scrolling. */
+  resize: none;
+}
+
+.TextArea textarea::placeholder {
+  color: var(--textMuted);
+  opacity: 1;
+}
+
+.TextArea textarea:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 var(--focusWidth) var(--accent);
+}
+
+.TextArea[data-error="true"] textarea {
+  box-shadow: inset 0 0 0 var(--focusWidth) var(--danger);
+}
+
+.TextArea-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spaceXxs);
+  color: var(--textMuted);
+}
+
+.TextArea-hint:empty {
+  display: none;
+}
+
+.TextArea[data-error="true"] .TextArea-hint {
+  color: var(--danger);
+}

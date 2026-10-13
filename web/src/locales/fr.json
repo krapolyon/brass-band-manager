@@ -4,7 +4,12 @@
   },
   "common": {
     "close": "Fermer",
-    "back": "Retour"
+    "back": "Retour",
+    "leave": {
+      "title": "Quitter sans enregistrer ?",
+      "leave": "Quitter sans enregistrer",
+      "stay": "Continuer"
+    }
   },
   "errors": {
     "unreachable": "Le serveur ne répond pas. Réessaie dans un instant."
@@ -381,8 +386,7 @@
   },
   "comingSoon": {
     "home": "L’accueil arrive bientôt. En attendant, va voir du côté des fanfarons.",
-    "songs": "Les morceaux arrivent bientôt : enregistrements, partitions et tout le reste.",
-    "gigs": "Les plans arrivent bientôt. Garde tes dimanches libres, on ne sait jamais."
+    "songs": "Les morceaux arrivent bientôt : enregistrements, partitions et tout le reste."
   },
   "directory": {
     "all_one": "1 fanfaron. Touche une tête pour l’appeler, lui écrire ou passer la voir.",
@@ -408,6 +412,29 @@
   },
   "settings": {
     "account": "Mon compte",
+    "notifications": {
+      "title": "Notifications",
+      "lead": "Réglées appareil par appareil.",
+      "detailOn": "Activées sur cet appareil",
+      "detailOff": "Pas sur cet appareil",
+      "thisDevice": "Sur cet appareil",
+      "reminders": "Rappels de présence",
+      "remindersHint": "Quand un plan attend ta réponse, avant la date.",
+      "powerMembers": "Note : les power members ne sont jamais relancés : le réglage reste, mais aucun rappel ne part.",
+      "needsInstall": "Sur iPhone, les notifs n’arrivent que si l’app est sur ton écran d’accueil. Ajoute-la, rouvre-la depuis là, puis active les rappels.",
+      "install": "Ajouter l’app à l’écran d’accueil",
+      "installSteps": "Dans Safari, touche le bouton Partager, puis « Sur l’écran d’accueil ». Rouvre ensuite l’app depuis son icône.",
+      "denied": "Les notifications sont bloquées pour l’app sur cet appareil. Autorise-les dans les réglages du téléphone, puis reviens ici.",
+      "unavailable": "Les notifications ne sont pas disponibles ici.",
+      "failed": "Le réglage n’a pas changé. Réessaie dans un instant.",
+      "ask": {
+        "title": "Ok pour les notifs ?",
+        "lead": "Quand un plan attend ta réponse, on te prévient sur cet appareil.",
+        "accept": "Activer les rappels",
+        "refuse": "Pas sur cet appareil",
+        "later": "Tu peux changer d’avis dans ton compte, rubrique Notifications."
+      }
+    },
     "band": "La fanfare",
     "save": "Enregistrer",
     "profile": {
@@ -546,6 +573,10 @@
       "GIG_MANAGER": {
         "label": "Gère les plans",
         "detail": "Crée, modifie, annule"
+      },
+      "SETLIST_MANAGER": {
+        "label": "Gère les setlists",
+        "detail": "Écrit, modifie, lance le direct"
       }
     },
     "member": {
@@ -650,9 +681,87 @@
       "required": "Il faut au moins une lettre ou un chiffre.",
       "tooShort": "Une orthographe compte au moins 2 caractères.",
       "tooLong": "Une orthographe compte 25 caractères au plus."
+    },
+    "costumes": {
+      "title": "Déguiz",
+      "detail_zero": "Aucun déguiz pour l’instant",
+      "detail_one": "1 déguiz, pour les plans",
+      "detail_other": "{{count}} déguiz, pour les plans",
+      "lead": "Ce que la fanfare porte en plan. Chaque plan dit lesquels apporter, chaque présence choisit le sien.",
+      "gigs_zero": "Aucun plan pour l’instant",
+      "gigs_one": "1 plan",
+      "gigs_other": "{{count}} plans",
+      "add": "Ajouter un déguiz",
+      "edit": "Modifier {{name}}",
+      "newTitle": "Nouveau déguiz",
+      "order": "Ordre dans la liste",
+      "orderHint": "L’ordre de la liste est celui des choix d’un plan : fais glisser un déguiz pour le déplacer.",
+      "moved": "{{name}} est maintenant en position {{position}}.",
+      "picture": "Image",
+      "pictureHint": "JPEG, PNG ou WebP. Elle s’affiche en haut des plans qui portent ce déguiz.",
+      "name": "Nom",
+      "nameHint": "Comme la fanfare le dit. Deux déguiz ne peuvent pas avoir le même nom.",
+      "save": "Enregistrer le déguiz",
+      "delete": "Supprimer le déguiz",
+      "inUse_one": "Porté par 1 plan, peut-être passé : il ne peut pas être supprimé. Tu peux le renommer.",
+      "inUse_other": "Porté par {{count}} plans, dont des plans passés : il ne peut pas être supprimé. Tu peux le renommer.",
+      "deleteTitle": "Supprimer « {{name}} » ?",
+      "deleteLead": "Le déguiz et son image sont effacés. Ça ne se rattrape pas.",
+      "keep": "Garder le déguiz",
+      "loading": "On ouvre la malle à déguiz…",
+      "failed": "Le déguiz n’est pas enregistré. Réessaie dans un instant.",
+      "pictureFailed": "Le déguiz est enregistré, mais pas son image : réessaie avec une autre.",
+      "errors": {
+        "name": {
+          "required": "Il manque le nom du déguiz.",
+          "duplicate": "Un autre déguiz porte déjà ce nom.",
+          "tooLong": "Ce nom est trop long : 40 caractères au plus."
+        }
+      }
+    },
+    "reminders": {
+      "title": "Rappels des plans",
+      "detail": "{{first}} et {{second}} jours avant, à partir de {{hour}} h",
+      "detailOne_one": "{{count}} jour avant, à partir de {{hour}} h",
+      "detailOne_other": "{{count}} jours avant, à partir de {{hour}} h",
+      "detailNone": "Aucun rappel",
+      "lead": "Ceux qui n’ont pas répondu reçoivent une notification avant le plan. Les power members ne sont jamais relancés.",
+      "notYet": "Cette installation n’envoie pas encore de notifications : ces réglages sont gardés pour le jour où elle le fera.",
+      "first": "Premier rappel",
+      "second": "Second rappel",
+      "days": "Jours avant le plan",
+      "firstHint": "De 1 à 90. Vide : pas de premier rappel.",
+      "secondHint": "Moins que le premier. Vide : pas de second rappel.",
+      "hourTitle": "Heure d’envoi",
+      "hour": "À partir de",
+      "hourHint": "À l’heure de la fanfare. Pas de rappel un jour où quelqu’un a déjà relancé le plan.",
+      "hourOption": "{{hour}} h",
+      "save": "Enregistrer les rappels",
+      "saved": "Les rappels sont enregistrés.",
+      "failed": "Les rappels ne sont pas enregistrés. Réessaie dans un instant.",
+      "errors": {
+        "days": "Un nombre de 1 à 90.",
+        "order": "Le second rappel vient après le premier : moins de jours avant le plan."
+      }
     }
   },
   "songs": {
+    "spokenNames": {
+      "title": "Dictée",
+      "lead": "Ce que la dictée d’une setlist reconnaît pour ce morceau, en plus de son nom. Elle l’apprend quand quelqu’un choisit ou corrige le morceau qu’elle a compris.",
+      "ways": "Façons de le dire",
+      "edit": "Modifier les façons de le dire",
+      "delete": "Supprimer « {{phrase}} »",
+      "add": "Ajouter une façon de le dire",
+      "label": "Nouvelle façon de le dire",
+      "confirm": "Ajouter",
+      "note": "Une façon de le dire ne désigne qu’un morceau : apprise pour un autre, elle passe à cet autre.",
+      "taken": "Déjà apprise pour {{name}} : la passer à ce morceau ?",
+      "move": "La passer à ce morceau",
+      "required": "Il faut au moins une lettre ou un chiffre.",
+      "tooShort": "Une façon de le dire compte au moins 2 caractères.",
+      "tooLong": "Une façon de le dire compte 60 caractères au plus."
+    },
     "status": {
       "PROPOSED": "Proposé",
       "IN_PROGRESS": "Montage en cours",
@@ -1037,6 +1146,434 @@
       "noRatingLabel": "{{kind}} : pas de réponse",
       "noVersion": "—",
       "phoneOnlyDesktop": "Le tableau de gestion s’affiche sur un écran plus large. Sur téléphone, gère un morceau depuis sa fiche."
+    }
+  },
+  "gigs": {
+    "setlist": {
+      "title": "Setlist n° {{number}}",
+      "name": "Setlist",
+      "songs_zero": "aucun morceau",
+      "songs_one": "{{count}} morceau",
+      "songs_other": "{{count}} morceaux",
+      "described": "{{description}} · {{songs}}",
+      "live": "En direct · {{position}}/{{count}}",
+      "startLive": "Lancer en direct",
+      "resumeLive": "Reprendre le direct",
+      "followLive": "Suivre en direct",
+      "startFailed": "Le direct n’a pas démarré. Réessaie dans un instant.",
+      "edit": "Modifier la setlist",
+      "add": "Nouvelle setlist",
+      "none": "Pas encore de setlist pour ce plan. Les fanfarons la verront ici, et pourront la suivre en direct.",
+      "form": {
+        "slot": "Présence",
+        "slotHint": "Ceux qui ont dit oui à cette présence suivent la setlist en direct.",
+        "description": "Description",
+        "songs": "Morceaux",
+        "noSong": "Pas encore de morceau. Tape le premier.",
+        "noSongOrDictate": "Pas encore de morceau. Tape ou dicte le premier.",
+        "dictation": {
+          "language": "fr-FR",
+          "start": "Dicter les morceaux",
+          "listening": "J’écoute…",
+          "stop": "Arrêter",
+          "lead": "Dis les morceaux dans l’ordre, un par un. Chacun s’ajoute dès qu’il est reconnu.",
+          "heard": "Entendu : « {{heard}} » → {{name}}",
+          "heardOnly": "Entendu : « {{heard}} »",
+          "unknown": "« {{heard}} » : ni au répertoire ni temporaire. Pas ajouté.",
+          "which": "Tu as dit « {{heard}} » : lequel ?",
+          "whichLead": "Deux morceaux que la fanfare joue lui ressemblent. Je continue d’écouter pendant que tu choisis.",
+          "choose": "Ajouter {{name}}",
+          "neither": "Aucun des deux",
+          "denied": "Le micro est refusé pour l’app. Autorise-le dans les réglages du téléphone, ou tape les morceaux.",
+          "failed": "La dictée s’est arrêtée. Relance-la, ou tape les morceaux."
+        },
+        "addSong": "Ajouter un morceau",
+        "suggestions": "Suggestions",
+        "suggestion": "Ajouter {{name}}",
+        "alreadyAt": "{{name}} · déjà en n° {{position}}",
+        "noMatch": "Aucun morceau au répertoire ni temporaire ne ressemble à ça.",
+        "help": "Tape quelques lettres : les morceaux au répertoire et les temporaires s’affichent. Entrée ajoute la première suggestion, et le champ reste prêt pour le suivant. Un morceau peut revenir : l’app dit où il est déjà.",
+        "added": "{{name}} ajouté en n° {{position}}.",
+        "moved": "{{name}} passe en n° {{position}}.",
+        "removed": "{{name}} retiré de la setlist.",
+        "suggestionCount_one": "{{count}} suggestion : Entrée ajoute {{first}}.",
+        "suggestionCount_other": "{{count}} suggestions : Entrée ajoute {{first}}.",
+        "save": "Enregistrer la setlist",
+        "failed": "La setlist n’est pas enregistrée. Réessaie dans un instant.",
+        "notConfirmed": "Une setlist s’écrit une fois le plan en « Validé ».",
+        "noRight": "Écrire une setlist, c’est pour celles et ceux qui gèrent les setlists. Tu penses devoir y être ? Vois ça avec un admin.",
+        "errors": {
+          "description": {
+            "tooLong": "La description est trop longue."
+          }
+        },
+        "more": "Actions de {{name}}",
+        "songTitle": "{{name}} · n° {{position}}",
+        "moveUp": "Monter",
+        "moveDown": "Descendre",
+        "dragHint": "Pour le déplacer, tu peux aussi le faire glisser par sa poignée.",
+        "remove": "Retirer de la setlist",
+        "delete": "Supprimer la setlist",
+        "deleteTitle": "Supprimer la setlist n° {{number}} ?",
+        "deleteLead_zero": "Les autres setlists du plan gardent leur numéro.",
+        "deleteLead_one": "Son morceau part avec elle ; le morceau lui-même reste au répertoire. Les autres setlists du plan gardent leur numéro.",
+        "deleteLead_other": "Ses {{count}} morceaux partent avec elle ; les morceaux eux-mêmes restent au répertoire. Les autres setlists du plan gardent leur numéro.",
+        "cancel": "Annuler",
+        "leaveLead": "Les changements faits depuis l’ouverture de la setlist seront perdus."
+      },
+      "liveScreen": {
+        "next": "Suivant",
+        "previous": "Morceau précédent",
+        "end": "Terminer la setlist",
+        "songs": "Les morceaux de la setlist",
+        "playing": "{{position}}/{{count}} · {{name}}",
+        "openSong": "Ouvrir {{name}} en mode live",
+        "stale": "Le serveur ne répond pas : ce que tu vois date peut-être un peu.",
+        "notStarted": "Cette setlist n’est pas en direct.",
+        "failed": "Le changement n’est pas passé. Réessaie.",
+        "notFound": "Cette setlist n’existe pas, ou plus.",
+        "manage": "Gérer le direct",
+        "back": "Retour au plan"
+      }
+    },
+    "status": {
+      "DRAFT": "Brouillon",
+      "PROPOSED": "Proposition",
+      "ACCEPTED": "Accepté",
+      "CONFIRMED": "Validé",
+      "CANCELLED": "Annulé",
+      "toClose": "À clore",
+      "inProgress": "En cours",
+      "past": "Passé"
+    },
+    "answer": {
+      "YES": "Oui",
+      "NO": "Non",
+      "MAYBE": "Peut-être",
+      "IF_NEEDED": "Si besoin",
+      "toAnswer": "À répondre",
+      "none": "Pas répondu",
+      "yesOf": "Oui à {{yes}} sur {{count}}",
+      "label": "Ta réponse",
+      "labelFor": "Ta réponse pour {{slot}}"
+    },
+    "time": {
+      "sharp": "{{hours}} h",
+      "withMinutes": "{{hours}} h {{minutes}}",
+      "meeting": "RDV {{time}}",
+      "meetingOn": "RDV {{time}} le {{weekday}}",
+      "toCome": "Heure à venir",
+      "toComeLower": "heure à venir",
+      "range": "Du {{from}} au {{to}}"
+    },
+    "playable": {
+      "yes": "Jouable",
+      "onSlots_one": "Jouable sur {{count}} présence",
+      "onSlots_other": "Jouable sur {{count}} présences",
+      "missing": "Manque : {{sections}}",
+      "notYet": "Pas encore jouable",
+      "ifNeeded_one": "Jouable si {{names}} vient (si besoin)",
+      "ifNeeded_other": "Jouable si {{names}} viennent (si besoin)"
+    },
+    "list": {
+      "title": "Plans",
+      "coming_zero": "Aucun plan à venir",
+      "coming_one": "1 plan à venir",
+      "coming_other": "{{count}} plans à venir",
+      "toAnswer_one": "{{coming}}, dont 1 qui attend ta réponse.",
+      "toAnswer_other": "{{coming}}, dont {{count}} qui attendent ta réponse.",
+      "noneToAnswer": "{{coming}}.",
+      "toHandle_one": "{{coming}}, et 1 à traiter. Les plans annulés et passés sont rangés.",
+      "toHandle_other": "{{coming}}, et {{count}} à traiter. Les plans annulés et passés sont rangés.",
+      "noneToHandle": "{{coming}}. Les plans annulés et passés sont rangés.",
+      "filterCancelled": "Annulés",
+      "filterPast": "Passés",
+      "toHandle": "À traiter",
+      "add": "Ajouter",
+      "addDesktop": "Nouveau plan",
+      "loading": "On regarde l’agenda…",
+      "emptyTitle": "Pas de plan à l’horizon",
+      "emptyMember": "Profites-en pour bosser tes morceaux. On te prévient dès qu’un plan tombe.",
+      "emptyManager": "Quelqu’un a appelé ? Note le plan ici, même s’il n’est pas encore sûr : il restera en brouillon.",
+      "emptyAdd": "Ajouter un plan",
+      "error": "Impossible de charger les plans. Vérifie ta connexion, puis réessaie.",
+      "retry": "Réessayer"
+    },
+    "card": {
+      "slots": "{{place}} · {{count}} présences",
+      "slotsOnly": "{{count}} présences",
+      "datePassed": "{{place}} · date passée",
+      "datePassedOnly": "Date passée",
+      "draftSeenBy": "Vu par les brasseurs seulement"
+    },
+    "gig": {
+      "back": "Retour aux plans",
+      "more": "Gérer le plan",
+      "loading": "On sort le plan…",
+      "notFound": "Ce plan n’existe pas, ou plus.",
+      "yourAnswer": "Ta réponse",
+      "yourAnswers": "Tes réponses",
+      "answeredOf": "{{answered}} sur {{count}}",
+      "left_one": "Il te reste 1 présence.",
+      "left_other": "Il te reste {{count}} présences.",
+      "yesEverywhere": "Oui partout",
+      "onlySlot": "Présence",
+      "yourYesMakesPlayable": "Il ne manque plus que {{section}} : ton oui rend le plan jouable.",
+      "nowConfirmed": "Avec ta réponse, le plan est jouable : il passe en « Validé ».",
+      "saved": "C’est noté.",
+      "saveFailed": "Ta réponse n’est pas partie. Réessaie dans un instant.",
+      "summary": {
+        "YES": "Tu viens. On compte sur toi !",
+        "NO": "Tu ne viens pas. Dommage !",
+        "MAYBE": "Tu ne sais pas encore.",
+        "IF_NEEDED": "Tu viens si ça sauve le plan."
+      },
+      "change": "Changer",
+      "infos": "Infos",
+      "costumes": "Déguiz",
+      "noCostume": "Pas de déguiz prévu",
+      "organisers": "Brasseurs",
+      "notes": "Infos diverses",
+      "allDay": "Toute la journée",
+      "meeting": "Rendez-vous",
+      "go": "Y aller",
+      "zoomIn": "Agrandir la carte",
+      "zoomOut": "Réduire la carte",
+      "copyAddress": "Copier l’adresse",
+      "addressCopied": "Adresse copiée.",
+      "placeLink": "Voir le lieu",
+      "draft": "Brouillon : seuls les brasseurs et ceux qui gèrent les plans le voient. Personne ne répond encore.",
+      "propose": "Proposer à la fanfare",
+      "deleteDraft": "Supprimer le brouillon",
+      "outdated": "La date de ce brouillon est passée : supprime-le, ou change sa date.",
+      "toClose": "La date est passée et le plan n’a jamais été validé : il n’a pas été joué. Annule-le pour le ranger.",
+      "notPlayed": "La date est passée et le plan n’a jamais été validé : il n’a pas été joué.",
+      "cancel": "Annuler le plan",
+      "whoAnswered": "Qui avait répondu",
+      "whoAnsweredDetail": "{{count}}.",
+      "whoAnsweredMissing": "{{count}} · il manquait {{sections}}.",
+      "cancelled": "Ce plan est annulé : pas besoin de répondre. Les réponses sont gardées au cas où il revient.",
+      "reopen": "Rouvrir le plan",
+      "past": "Ce plan est passé : les réponses ne bougent plus.",
+      "whoCame": "Qui est venu",
+      "whoCameAll_one": "{{count}} fanfaron, tous les pupitres.",
+      "whoCameAll_other": "{{count}} fanfarons, tous les pupitres.",
+      "whoCame_zero": "Personne n’avait dit oui.",
+      "whoCame_one": "{{count}} fanfaron.",
+      "whoCame_other": "{{count}} fanfarons.",
+      "yourAnswerWas": "Ta réponse : {{answer}}.",
+      "youDidNotAnswer": "Tu n’avais pas répondu.",
+      "notPlayableAnymore": "Le plan est validé, mais il n’est plus jouable : il manque {{sections}}.",
+      "edit": "Modifier le plan",
+      "changeStatus": "Changer le statut",
+      "delete": "Supprimer le plan",
+      "deleteDetail": "Seulement un brouillon sans réponse",
+      "manage": "Gérer le plan"
+    },
+    "whoComes": {
+      "pending_one": "1 n’a pas répondu",
+      "pending_other": "{{count}} n’ont pas répondu",
+      "lastReminder": "Dernière relance : {{day}}, {{time}}.",
+      "remind": "Relancer",
+      "reminded": "La relance est partie.",
+      "remindFailed": "La relance n’est pas partie. Réessaie dans un instant.",
+      "title": "Qui vient",
+      "titleFor": "Qui vient · {{slot}}",
+      "yesCount_one": "{{count}} oui",
+      "yesCount_other": "{{count}} oui",
+      "yesCount_zero": "0 oui",
+      "yesOf": "{{yes}} oui sur {{count}}",
+      "nobodyYes": "Personne en oui",
+      "nobodyYet": "Personne pour l’instant",
+      "yourSection": "{{section}} · ton pupitre",
+      "you": "(toi)",
+      "maybe": "{{nickname}} peut-être",
+      "ifNeeded": "{{nickname}} si besoin",
+      "share": {
+        "yes": "{{count}} oui",
+        "maybe": "{{count}} peut-être",
+        "ifNeeded": "{{count}} si besoin",
+        "no": "{{count}} non",
+        "none": "{{count}} pas répondu"
+      },
+      "notPlayable": "Pas encore jouable : personne en {{sections}}, même en comptant les « si besoin ».",
+      "playableIfNeeded": "Pas encore jouable : il manque {{sections}}, sauf si les « si besoin » viennent.",
+      "playable": "On est jouables !",
+      "all": "Voir toutes les réponses",
+      "detailSubtitle": "{{gig}}, {{date}}.",
+      "detailSubtitleEditor": "{{gig}}, {{date}}. Tu brasses ce plan : touche un fanfaron pour noter sa réponse.",
+      "answerOf": "Réponse de {{nickname}}",
+      "answerFor": "{{nickname}} t’a donné sa réponse ? Note-la pour lui. Elle compte tout de suite, comme s’il l’avait donnée.",
+      "currentAnswer": "Sa réponse actuelle : {{answer}}.",
+      "noCurrentAnswer": "Il n’a pas encore répondu.",
+      "noteAnswer": "Noter la réponse de {{nickname}}, {{answer}}",
+      "slots": "Présence",
+      "detailSubtitleManager": "{{gig}}, {{date}}. Touche un fanfaron pour noter sa réponse."
+    },
+    "statusPanel": {
+      "title": "Statut du plan",
+      "lead": "Les fanfarons voient le plan dès qu’il est en proposition.",
+      "save": "Enregistrer le statut",
+      "detail": {
+        "DRAFT": "Noté, visible des brasseurs seulement",
+        "PROPOSED": "On discute ; les fanfarons répondent",
+        "ACCEPTED": "D’accord avec la personne qui demande",
+        "CONFIRMED": "Le plan a lieu. Se fait tout seul dès qu’il est jouable",
+        "CANCELLED": "Le plan n’a pas lieu ; les réponses sont gardées"
+      },
+      "notAllowed": "Pas depuis « {{status}} »",
+      "forceTitle": "Valider sans {{sections}} ?",
+      "forceLead": "Personne n’a répondu oui en {{sections}}. Valide quand même si quelqu’un d’un autre pupitre remplace : le plan passe en « Validé » pour toute la fanfare.",
+      "forceMissing": "Pupitre sans oui : {{sections}}.",
+      "said": {
+        "YES": "{{nickname}} a dit oui",
+        "NO": "{{nickname}} a dit non",
+        "MAYBE": "{{nickname}} a dit peut-être",
+        "IF_NEEDED": "{{nickname}} a dit si besoin",
+        "NONE": "{{nickname}} n’a pas répondu"
+      },
+      "force": "Valider quand même",
+      "keep": "Garder « {{status}} »",
+      "failed": "Le statut n’a pas changé. Réessaie dans un instant.",
+      "deleteTitle": "Supprimer ce brouillon ?",
+      "deleteLead": "Le plan, ses présences et ses brasseurs sont effacés. Ça ne se rattrape pas.",
+      "delete": "Supprimer le brouillon",
+      "keepDraft": "Garder le brouillon",
+      "hasAnswers": "Des fanfarons ont déjà répondu pour ce plan : il ne peut plus être supprimé. Annule-le."
+    },
+    "form": {
+      "newTitle": "Nouveau plan",
+      "newLead": "Il démarre en brouillon : seuls les brasseurs et ceux qui gèrent les plans le voient.",
+      "editTitle": "Modifier le plan",
+      "editLead": "Ce que tu changes ici se voit tout de suite dans le plan.",
+      "theGig": "Le plan",
+      "name": "Nom du plan",
+      "nameHint": "Comme la fanfare l’appelle. Il peut revenir chaque année.",
+      "when": "Quand",
+      "startsOn": "Date de début",
+      "endsOn": "Date de fin",
+      "endsOnHint": "Seulement pour un plan sur plusieurs jours.",
+      "meetingTime": "Heure de rendez-vous",
+      "meetingTimeHint": "Le premier jour. La note d’une présence dit le reste.",
+      "where": "Où",
+      "placeName": "Lieu",
+      "placeUrl": "Lien du lieu",
+      "placeUrlHint": "Son site, ou sa page sur une carte.",
+      "streetAddress": "Adresse",
+      "streetAddressPlaceholder": "Numéro et rue",
+      "postalCode": "Code postal",
+      "city": "Ville",
+      "coordinates": "Coordonnées GPS",
+      "coordinatesHint": "Pour un lieu difficile à trouver : colle-les depuis ton app de cartes.",
+      "slots": "Présences",
+      "slotsLead": "Un plan d’une soirée garde une seule présence, sans nom. Sur plusieurs jours, découpe-le : les fanfarons répondent pour chacune.",
+      "onlySlot": "Une seule présence, sans nom",
+      "addSlot": "Ajouter une présence",
+      "editSlot": "Modifier la présence {{slot}}",
+      "costumes": "Déguiz",
+      "costumesLead": "Les déguiz à apporter. Chaque présence choisit le sien parmi eux.",
+      "noCostumes": "La fanfare n’a pas encore de déguiz. Un admin les ajoute dans les réglages de la fanfare.",
+      "organisers": "Brasseurs",
+      "addOrganiser": "Ajouter un brasseur",
+      "removeOrganiser": "Retirer {{nickname}} des brasseurs",
+      "notes": "Infos diverses",
+      "notesHint": "Pas de téléphone ni d’e-mail du client ici.",
+      "createCaption": "Il démarrera en brouillon.",
+      "create": "Créer le plan",
+      "save": "Enregistrer le plan",
+      "toFix_one": "1 champ à corriger",
+      "toFix_other": "{{count}} champs à corriger",
+      "toFixBeforeCreating_one": "1 champ à corriger avant de créer le plan.",
+      "toFixBeforeCreating_other": "{{count}} champs à corriger avant de créer le plan.",
+      "toFixBeforeSaving_one": "1 champ à corriger avant d’enregistrer le plan.",
+      "toFixBeforeSaving_other": "{{count}} champs à corriger avant d’enregistrer le plan.",
+      "failed": "Le plan n’est pas enregistré. Réessaie dans un instant.",
+      "slotsFailed": "Le plan est enregistré, mais une présence n’a pas pu l’être : vérifie-les, puis enregistre à nouveau.",
+      "errors": {
+        "name": {
+          "required": "Il manque le nom du plan.",
+          "tooLong": "Ce nom est trop long : 80 caractères au plus."
+        },
+        "startsOn": {
+          "required": "Il manque la date de début.",
+          "invalid": "Cette date n’existe pas."
+        },
+        "endsOn": {
+          "invalid": "La fin ne peut pas être avant le début."
+        },
+        "meetingTime": {
+          "invalid": "Écris l’heure comme 18:30."
+        },
+        "placeName": {
+          "tooLong": "Ce nom est trop long : 80 caractères au plus."
+        },
+        "placeUrl": {
+          "invalid": "Il faut une adresse qui commence par https://.",
+          "tooLong": "Ce lien est trop long."
+        },
+        "streetAddress": {
+          "tooLong": "Cette adresse est trop longue."
+        },
+        "postalCode": {
+          "tooLong": "Ce code postal est trop long."
+        },
+        "city": {
+          "tooLong": "Ce nom de ville est trop long."
+        },
+        "coordinates": {
+          "invalid": "Écris la latitude puis la longitude, séparées par une virgule : 45.7673, 4.8344."
+        },
+        "notes": {
+          "tooLong": "C’est trop long : 4 000 caractères au plus."
+        },
+        "discordChannelId": {
+          "invalid": "L’identifiant d’un salon Discord fait 17 à 20 chiffres.",
+          "duplicate": "Ce salon est déjà celui d’un autre plan."
+        },
+        "organizerIds": {
+          "invalid": "Un brasseur n’est plus dans la fanfare : retire-le."
+        },
+        "costumeIds": {
+          "invalid": "Un déguiz n’existe plus : recharge la page."
+        }
+      },
+      "noRight": "Créer ou modifier un plan, c’est pour ceux qui gèrent les plans et pour ses brasseurs. Tu penses devoir y être ? Vois ça avec un admin."
+    },
+    "slot": {
+      "newTitle": "Nouvelle présence",
+      "name": "Nom",
+      "nameHint": "Obligatoire dès que le plan a plusieurs présences.",
+      "note": "Note",
+      "noteHint": "Le programme, l’heure, ce qui change ce jour-là.",
+      "costume": "Déguiz",
+      "noCostume": "Aucun",
+      "save": "Enregistrer la présence",
+      "delete": "Supprimer la présence",
+      "deleteNote": "Supprimer une présence efface ses réponses : on te le redemandera.",
+      "deleteTitle": "Supprimer « {{slot}} » ?",
+      "deleteLead": "Les réponses données pour cette présence sont effacées. Ça ne se rattrape pas.",
+      "keep": "Garder la présence",
+      "nameFirst": "Donne d’abord un nom à la première présence : un plan qui en a plusieurs les nomme toutes.",
+      "failed": "La présence n’est pas enregistrée. Réessaie dans un instant.",
+      "errors": {
+        "name": {
+          "required": "Il manque le nom de la présence.",
+          "duplicate": "Une autre présence de ce plan porte déjà ce nom.",
+          "tooLong": "Ce nom est trop long : 40 caractères au plus."
+        },
+        "note": {
+          "tooLong": "Cette note est trop longue : 1 000 caractères au plus."
+        }
+      }
+    },
+    "organisers": {
+      "title": "Brasseurs",
+      "search": "Chercher un fanfaron",
+      "searchPlaceholder": "Surnom ou instrument",
+      "validate_zero": "Aucun brasseur",
+      "validate_one": "Valider le brasseur",
+      "validate_other": "Valider les {{count}} brasseurs",
+      "nobody": "Aucun fanfaron à ce nom."
     }
   }
 }

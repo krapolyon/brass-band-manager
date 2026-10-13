@@ -1159,3 +1159,14 @@ button.songs-liveTile:disabled,
   flex-wrap: wrap;
   gap: var(--spaceXs);
 }
+
+/* The sheet "Façons de le dire": its rows, the field that adds one, its note. */
+.songs-spokenNames {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.songs-spokenNames p {
+  margin: 0;
+}

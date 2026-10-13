@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Songs;
 
+use BrassBand\Http\ApiError;
 use BrassBand\Http\Json;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
@@ -29,6 +30,10 @@ final class DeleteSongAction
     {
         $paths = $this->database->transactional(function () use ($arguments): array {
             $song = $this->songs->row((int) $arguments['id'], lock: true);
+            // A song used by a setlist is not deleted (model/gigs.md, entry 4).
+            if ($this->database->fetchOne('SELECT 1 FROM setlistSong WHERE songId = ? LIMIT 1', [$song['id']]) !== false) {
+                throw new ApiError(409, 'songInSetlist');
+            }
             $parts = $this->database->fetchFirstColumn('SELECT pdfPath FROM songPart WHERE songId = ?', [$song['id']]);
             // The parts and the levels go with the row: the database deletes them.
             $this->database->delete('song', ['id' => $song['id']]);
