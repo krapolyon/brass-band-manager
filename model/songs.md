@@ -1,5 +1,6 @@
 # Business dictionary — Songs domain
 
+> v1.5 — 2026-10-13 · Decided with the design of the home screen (Figma, page `Home`): the latest songs of the repertoire. No change to the schema
 > v1.4 — 2026-10-13 · Dictation of a setlist, decided with the owner after its prototype: the phrases it learns for a song (`songSpokenName`, entry 4), edited by whoever manages songs in the form of the song (Figma, page `Songs`, section 7) · Migration: `011_songSpokenName.sql`
 > v1.3 — 2026-10-13 · The reading mode ("Live") and the rehearsal marks, settled with the owner while they were built: only real rehearsal marks count; the part of the member's instrument; repeats and voltas followed, jumps in words not; the tempo of the band, else the one of the score, or tapped. No change to the schema
 > v1.2 — 2026-10-13 · Validated by the owner on 2026-10-13 · The MIDI file and the MusicXML of a song are produced from its MuseScore file by the browser that imports it (`song.musicXmlPath`); an instrument chosen by hand during an import can be remembered as an alias; the aliases are managed in the band settings by whoever manages songs; the tracks of the MIDI player are read with the same aliases · Migration: `007_songMusicXml.sql`
@@ -93,6 +94,7 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 - **A tempo counts the beat of the time signature**: the quarter note in 4/4, the dotted quarter in compound time (6/8, 12/8). A member who taps the tempo in compound time taps the eighth notes, and the app shows the tempo converted (186 to the eighth is 62 to the dotted quarter).
 - **Rehearsal marks and time signature come from the MuseScore file**, through what the reading mode reads of it. The reading mode offers the marks (A, B, Coda…) as starting points only when the file has some.
 - **The version is typed, not deduced.** Replacing a file does not change `versionOn`: whoever manages songs says when the arrangement really changed, and what changed. Only the current version is kept: there is no history of versions.
+- **The latest songs.** The home screen shows the three songs in `IN_REPERTOIRE` that were created last (the creation date of the technical audit trail, `createdAt`), the latest first. Two songs created at the same instant, by one import, are told apart by their identifier, the highest first. No field says when a song entered the repertoire: a song created long ago and put in the repertoire today is not one of them. Nothing is shown when the repertoire is empty.
 - **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. A song used by a setlist cannot be deleted (Gigs domain, `setlistSong`).
 - **Deleting always asks first**, says what goes with the song and that it cannot be undone, and offers to set the status to `ABANDONED` instead.
 
@@ -117,7 +119,7 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 - The internal name is the name shown in every representation. The original title and the original artist appear on the sheet of the song.
 - Missing cover art: the placeholder of `Song/Tile` (the music icon on a plain square).
 - Missing tempo, version, clip or file: the line is not shown.
-- Representations in the design library (Figma, checked on 2026-10-12): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import). Missing: none needed yet.
+- Representations in the design library (Figma, checked on 2026-10-13): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/Latest` (the latest songs of the repertoire, pinned on the home screen: a slot of three `Song/Row` without their status), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import). Missing: none needed yet.
 
 ## 2. Part and alias (`songPart`, `instrumentAlias`)
 
