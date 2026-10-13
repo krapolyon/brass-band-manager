@@ -6,6 +6,7 @@ import { SignInScreen } from './screens/access/SignInScreen.tsx';
 import { BandAppearanceScreen } from './screens/band/BandAppearanceScreen.tsx';
 import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
 import { BandSettingsScreen } from './screens/band/BandSettingsScreen.tsx';
+import { BandSpellingsScreen } from './screens/band/BandSpellingsScreen.tsx';
 import { ComingSoonScreen } from './screens/ComingSoonScreen.tsx';
 import { BandScreen } from './screens/install/BandScreen.tsx';
 import { DoneScreen } from './screens/install/DoneScreen.tsx';
@@ -23,6 +24,10 @@ import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
 import { PasswordScreen } from './screens/settings/PasswordScreen.tsx';
 import { ProfileScreen } from './screens/settings/ProfileScreen.tsx';
 import { SettingsScreen } from './screens/settings/SettingsScreen.tsx';
+import { ImportScreen } from './screens/songs/ImportScreen.tsx';
+import { ManageSongsScreen } from './screens/songs/ManageSongsScreen.tsx';
+import { SongEditScreen } from './screens/songs/SongEditScreen.tsx';
+import { SongsScreen } from './screens/songs/SongsScreen.tsx';
 
 // Every address of the app and the screen it shows, in one place.
 export const router = createBrowserRouter([
@@ -31,7 +36,11 @@ export const router = createBrowserRouter([
     element: <MembersOnly />,
     children: [
       { path: '/', element: <ComingSoonScreen tab="home" /> },
-      { path: '/songs', element: <ComingSoonScreen tab="songs" /> },
+      { path: '/songs', element: <SongsScreen /> },
+      { path: '/songs/new', element: <ImportScreen /> },
+      { path: '/songs/manage', element: <ManageSongsScreen /> },
+      { path: '/songs/:id', element: <SongsScreen /> },
+      { path: '/songs/:id/edit', element: <SongEditScreen /> },
       { path: '/gigs', element: <ComingSoonScreen tab="gigs" /> },
       { path: '/members', element: <DirectoryScreen /> },
       { path: '/members/manage', element: <ManageListScreen /> },
@@ -40,6 +49,7 @@ export const router = createBrowserRouter([
       { path: '/band', element: <BandSettingsScreen /> },
       { path: '/band/appearance', element: <BandAppearanceScreen /> },
       { path: '/band/sections', element: <BandSectionsScreen /> },
+      { path: '/band/spellings', element: <BandSpellingsScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/settings/profile', element: <ProfileScreen /> },
       { path: '/settings/password', element: <PasswordScreen /> },

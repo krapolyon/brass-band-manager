@@ -7,7 +7,7 @@ import './TabBar.css';
 type Props = { current: NavKey };
 
 // Figma: TabBar. The navigation of the app on a phone and a tablet: it floats
-// above the content. The current tab is told by its filled pill and by its
+// above the content. The current tab is told by its filled icon and by its
 // colour, and to screen readers by aria-current. From a text size of 160 %
 // the labels no longer fit: only the icons show (TabBar.css), and each entry
 // keeps its name for screen readers.
@@ -22,7 +22,7 @@ export function TabBar({ current }: Props) {
           to={entry.to}
           aria-current={entry.key === current ? 'page' : undefined}
         >
-          <Icon name={entry.icon} />
+          <Icon name={entry.icon} filled={entry.key === current} />
           <span className="textMicro">{t(`nav.${entry.key}`)}</span>
         </Link>
       ))}

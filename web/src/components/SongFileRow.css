@@ -1,0 +1,30 @@
+/* 60 high in Figma: the button of 44 and 8 around. The role is a column of
+   180, so that the names of the files line up from one row to the next. */
+.SongFileRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceMd);
+  min-height: calc(var(--controlHeightSm) + var(--spaceMd));
+  padding: var(--spaceXs) 0;
+  color: var(--text);
+}
+
+.SongFileRow > .Icon {
+  color: var(--success);
+}
+
+.SongFileRow-role {
+  flex: 0 1 11.25rem; /* 180 */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Figma: one line, cut with an ellipsis. */
+.SongFileRow-file {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--textMuted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

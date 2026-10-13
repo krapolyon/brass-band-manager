@@ -98,6 +98,9 @@ final class ChangeStatusAction
             'signInLockedUntil' => null,
         ], $me);
         $this->database->delete('memberRole', ['memberId' => $memberId]);
+        // What they said of each song served while they played: it goes too
+        // (model/songs.md, entry 3).
+        $this->database->delete('memberSong', ['memberId' => $memberId]);
         $this->sessions->closeAll($memberId);
         $this->links->cancel($memberId);
 

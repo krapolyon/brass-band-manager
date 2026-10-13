@@ -34,6 +34,9 @@ services:
     environment:
       BRASS_BAND_DATABASE: brassBandTest
       BRASS_BAND_APP_URL: http://localhost:8081
+      # The thumbnail of a clip is fetched from this server itself, never
+      # from YouTube: the tests ask nothing of another site.
+      BRASS_BAND_CLIP_THUMBNAIL_URL: http://localhost/appIcons/icon-192.png?video={id}
     depends_on:
       db:
         condition: service_healthy

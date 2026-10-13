@@ -1,5 +1,6 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
+// v0.6 — 2026-10-12 — aligned with Songs v1.0, validated: five statuses, one field per file instead of songFile, Discord channel, aliases moved to songs, levels of a member on a song
 // v0.5 — 2026-10-11 — aligned with Members v1.14 and Band v1.5, both validated: country of the band
 // v0.4 — 2026-10-11 — pictogram of a section, default accent theme of the band, photo of a member
 // v0.3 — 2026-10-10 — aligned with the validated Members domain: sections, nickname, required names and instrument, POWER_MEMBER status, member and setlist roles, password links
@@ -83,13 +84,6 @@ Table instrument {
   Note: 'An instrument played in the band. The list is managed by the band. Detailed in members.dbml.'
 }
 
-Table instrumentAlias {
-  id integer [pk]
-  instrumentId integer [not null, ref: > instrument.id]
-  alias varchar [not null, unique, note: 'A track name found in score files, for instance "Sax Mib" or "sax-m"']
-  Note: 'Known spellings of an instrument in score files, used to attach each track to its instrument at import.'
-}
-
 Table memberSession {
   id integer [pk]
   memberId integer [not null, ref: > member.id]
@@ -117,47 +111,50 @@ Table pushSubscription {
 // ---------------------------------------------------------------
 
 Enum songStatus {
-  PROPOSED [note: 'In the backlog of songs proposed for the repertoire']
+  PROPOSED [note: 'Proposed for the repertoire, not started']
   IN_PROGRESS [note: 'Being arranged and learned ("montage en cours" in the French locale)']
-  ACTIVE [note: 'In the current repertoire']
-  ARCHIVED [note: 'No longer played, kept for history']
+  IN_REPERTOIRE [note: 'Played by the band']
+  TEMPORARY [note: 'Learned for one occasion and playable, but not meant to stay in the repertoire']
+  ABANDONED [note: 'No longer played, or given up before it was ready. Kept for history.']
 }
 
 Table song {
   id integer [pk]
-  title varchar [not null]
-  originalArtist varchar
-  clipUrl varchar
-  bpm integer [note: 'Default tempo, taken from the score']
-  discordThreadId varchar [note: 'Discord thread where the band discusses this song']
+  name varchar [not null, unique, note: 'The name the band gives to the song, shown everywhere']
+  originalTitle varchar [not null]
+  originalArtist varchar [not null]
+  bpm integer [note: 'Tempo of the band, when it differs from the one of the MuseScore file']
   status songStatus [not null]
-  isOneOff boolean [not null, note: 'TODO: confirm. A song learned for a single event and not meant to join the repertoire.']
-  Note: 'A piece the band plays, is learning or considers playing.'
+  clipUrl varchar [note: 'YouTube video of the original, played inside the app']
+  discordChannelId varchar [note: 'Discord channel where the band discusses this song']
+  Note: 'A piece the band plays, is learning or considers learning. Detailed in songs.dbml: version, and its files (cover art, MuseScore, MIDI, recording), one field per file.'
 }
 
 Table songPart {
   id integer [pk]
   songId integer [not null, ref: > song.id]
   instrumentId integer [not null, ref: > instrument.id]
-  trackName varchar [not null, note: 'Track name exactly as written in the score file']
-  Note: 'The part of one instrument in a song. Links a track of the score and of the MIDI file to an instrument.'
+  pdfPath varchar [not null]
+  Note: 'The part of one instrument in a song: its score as a PDF. One per instrument and per song at most. Its track in the MuseScore and MIDI files, and its MusicXML, come with the MIDI player and the reading mode.'
 }
 
-Enum songFileKind {
-  MSCZ [note: 'MuseScore source file']
-  MP3
-  MIDI
-  PDF
-  MUSICXML
-}
-
-Table songFile {
+Table instrumentAlias {
   id integer [pk]
+  instrumentId integer [not null, ref: > instrument.id]
+  alias varchar [not null, unique, note: 'One or several words that name the instrument in file names, for instance "sax mib" or "sxm"']
+  Note: 'A known spelling of an instrument in the names of files, used to attach each part to its instrument at import. Detailed in songs.dbml.'
+}
+
+Table memberSong {
+  memberId integer [not null, ref: > member.id]
   songId integer [not null, ref: > song.id]
-  songPartId integer [ref: > songPart.id, note: 'Set when the file belongs to one part (a PDF or MusicXML part). Empty for a file of the whole song.']
-  kind songFileKind [not null]
-  path varchar [not null]
-  Note: 'A file attached to a song or to one of its parts.'
+  masteryLevel integer [note: '🔒 Personal data — purpose: deciding which songs leave the repertoire. From 1 to 5.']
+  enjoymentLevel integer [note: '🔒 Personal data — purpose: deciding which songs leave the repertoire. From 1 to 5.']
+  Note: 'What a member says of a song: how well they play it and how much they like playing it. The others see the average of the band only.'
+
+  indexes {
+    (memberId, songId) [pk]
+  }
 }
 
 // ---------------------------------------------------------------
@@ -281,7 +278,6 @@ TableGroup members {
   memberRole
   section
   instrument
-  instrumentAlias
   memberSession
   memberPasswordLink
   pushSubscription
@@ -290,7 +286,8 @@ TableGroup members {
 TableGroup songs {
   song
   songPart
-  songFile
+  instrumentAlias
+  memberSong
 }
 
 TableGroup gigs {

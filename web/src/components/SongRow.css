@@ -1,0 +1,61 @@
+/* 72 high in Figma: the cover of 56 and 8 around. */
+.SongRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "tile texts status";
+  align-items: center;
+  column-gap: var(--spaceSm);
+  min-height: 4.5rem; /* 72 */
+  padding: var(--spaceXs);
+  border-radius: var(--radiusMd);
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* Figma: State=Selected. Told to screen readers by aria-current. */
+.SongRow[data-state="selected"] {
+  background: var(--control);
+}
+
+.SongRow > .SongTile {
+  grid-area: tile;
+}
+
+.SongRow-texts {
+  grid-area: texts;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem; /* 2 */
+  min-width: 0;
+}
+
+/* Figma: one line each, cut with an ellipsis. */
+.SongRow-name,
+.SongRow-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.SongRow-artist {
+  color: var(--textMuted);
+}
+
+.SongRow-status {
+  grid-area: status;
+  display: flex;
+  min-width: 0;
+}
+
+/* From a text size of 160 % the status goes under the artist. */
+:root:is([data-text-size="160"], [data-text-size="180"], [data-text-size="200"]) .SongRow {
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "tile texts"
+    "tile status";
+}
+
+:root:is([data-text-size="160"], [data-text-size="180"], [data-text-size="200"]) .SongRow-status {
+  justify-self: start;
+  margin-top: var(--spaceXxs);
+}

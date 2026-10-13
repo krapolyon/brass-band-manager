@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 
 // The storage folder of the test server: what the app keeps of the files it is given.
 
-/** The files kept in an area ("band", "members"), as paths relative to the storage folder. */
+/** The files kept in an area ("band", "members", "songs"), as paths relative to the storage folder. */
 export function storedFiles(area: string): string[] {
   return execFileSync(
     'docker',
@@ -30,6 +30,6 @@ export function emptyStorage(): void {
     'web-test',
     'sh',
     '-c',
-    'rm -rf /var/www/storage/band /var/www/storage/members',
+    'rm -rf /var/www/storage/band /var/www/storage/members /var/www/storage/songs',
   ]);
 }

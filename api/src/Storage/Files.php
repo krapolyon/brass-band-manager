@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Storage;
 
 // The files members give to the app (the logo of the band, the photos of
-// members, later the songs), in the storage folder: a folder next to api/
+// members, the files of songs), in the storage folder: a folder next to api/
 // that the web server does not serve. A file leaves it only through an action
 // of the API, which decides who may read it.
 //
@@ -14,6 +14,7 @@ namespace BrassBand\Storage;
 //
 //   <storage>/band/3f9c0a1b2c4d5e6f/logo.svg
 //   <storage>/members/9a8b7c6d5e4f3a2b/photo.jpg
+//   <storage>/songs/5d4c3b2a1f0e9d8c/audio.mp3
 //
 // The database holds the path of the file, relative to the storage folder.
 // Nothing in a path comes from what was sent: the area and the file names are
@@ -49,6 +50,16 @@ final class Files
         }
 
         return $path;
+    }
+
+    // Writes one more file beside a file already kept, in its folder: what
+    // is computed from a file and goes when it goes (the peaks of a
+    // recording). Returns false when the first file is no longer there.
+    public function add(string $path, string $name, string $content): bool
+    {
+        $file = $this->find($path);
+
+        return $file !== null && file_put_contents(dirname($file) . "/{$name}", $content) !== false;
     }
 
     // Deletes the folder a path is in, with everything written with it. The

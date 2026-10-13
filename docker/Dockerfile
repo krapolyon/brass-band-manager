@@ -2,11 +2,13 @@
 # Keep the PHP version equal to the one selected on the host.
 FROM php:8.4-apache
 
-# unzip is what Composer uses to unpack the libraries it downloads.
+# unzip is what Composer uses to unpack the libraries it downloads. The zip
+# extension builds the archive of "download everything" (songs): the host has
+# it, and it needs libzip here.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends unzip \
+    && apt-get install -y --no-install-recommends unzip libzip-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install pdo_mysql zip \
     && a2enmod rewrite \
     && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     # The storage folder belongs to the web server, as on the host. The

@@ -1,6 +1,7 @@
 import { type ReactNode, useId } from 'react';
 import { Checkbox } from './Checkbox.tsx';
 import { Icon } from './Icon.tsx';
+import { Radio } from './Radio.tsx';
 import './ListRow.css';
 
 type Props = {
@@ -18,6 +19,13 @@ type Props = {
   /** Figma: Leading=Checked or Unchecked. The row starts with a checkbox, and pressing its label ticks it. */
   checked?: boolean;
   onCheck?: (checked: boolean) => void;
+  /**
+   * Figma: Leading=Selected or Unselected. The row starts with a radio: one
+   * choice among the rows that share `group`, inside a `radiogroup`.
+   */
+  selected?: boolean;
+  onSelect?: () => void;
+  group?: string;
 };
 
 // Figma: ListRow. One line of a list: a label, an optional detail and an
@@ -31,6 +39,9 @@ export function ListRow({
   current,
   checked,
   onCheck,
+  selected,
+  onSelect,
+  group,
 }: Props) {
   const id = useId();
   const texts = (
@@ -39,6 +50,19 @@ export function ListRow({
       {detail && <span className="ListRow-detail textCaption">{detail}</span>}
     </span>
   );
+
+  if (onSelect) {
+    return (
+      <div className="ListRow" data-selected={selected ?? false}>
+        {/* The label is the touch target of the radio and gives it its name. */}
+        <label className="ListRow-check" htmlFor={id}>
+          <Radio id={id} name={group} checked={selected ?? false} onChange={onSelect} />
+          {texts}
+        </label>
+        {trailing}
+      </div>
+    );
+  }
 
   if (onCheck) {
     return (

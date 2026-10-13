@@ -31,9 +31,14 @@
   text-decoration: none;
 }
 
+/* Figma: the current tab has no pill. Its icon is the filled one, in the
+   accent; its label takes the accent of texts. */
 .TabBar a[aria-current="page"] {
-  background: var(--control);
   color: var(--accentText);
+}
+
+.TabBar a[aria-current="page"] .Icon {
+  color: var(--accent);
 }
 
 .TabBar span {

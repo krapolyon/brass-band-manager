@@ -76,7 +76,6 @@ test.describe('the frame of the app', () => {
 
     for (const [address, title] of [
       ['/', 'Accueil'],
-      ['/songs', 'Morceaux'],
       ['/gigs', 'Plans'],
     ] as const) {
       await page.goto(address);

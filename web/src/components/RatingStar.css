@@ -1,0 +1,19 @@
+.RatingStar {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  color: var(--textMuted);
+}
+
+.RatingStar[data-fill="full"] {
+  color: var(--accent);
+}
+
+/* Figma: "Half", the left half of the filled star over the outlined one. */
+.RatingStar-half {
+  position: absolute;
+  inset: 0 50% 0 0;
+  display: flex;
+  overflow: hidden;
+  color: var(--accent);
+}

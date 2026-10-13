@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.16 — 2026-10-12 — no change to the tables: the levels a member gave to songs are erased when they leave; the starting library carries the aliases of its instruments (dictionary, with Songs v1.0)
 // v1.15 — 2026-10-12 — memberPasswordLink.refusedCount (migration 005): an invitation tolerates ten refusals; the members counted on an instrument are the current ones (dictionary)
 // v1.14 — 2026-10-11 — validated: section.icon and memberPasswordLink.emailedAt (migration 004); an invitation is completed in one request (dictionary)
 // v1.13 — 2026-10-11 — no change to the tables: the text size has six steps, 100 to 200 by 20 (decided); a field label corrected (dictionary)

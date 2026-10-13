@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet } from 'react-router';
 import { useBand } from '../../band.ts';
 import { HOME, useMe } from '../../session.ts';
+import { PlayerProvider } from '../songs/Player.tsx';
 
 // While the app does not know yet who is in front of it, or when the server
 // does not answer. No loading screen is designed: this says it in words.
@@ -30,7 +31,13 @@ export function MembersOnly() {
   if (me.isError || band.isError) return <Waiting isError />;
   if (me.data === null) return <Navigate to="/sign-in" replace />;
 
-  return <Outlet />;
+  // The recording that plays goes on from a screen to another, and stops
+  // with the session.
+  return (
+    <PlayerProvider>
+      <Outlet />
+    </PlayerProvider>
+  );
 }
 
 // Around the screens shown before sign-in: a member already signed in on this

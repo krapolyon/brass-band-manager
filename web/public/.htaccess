@@ -5,3 +5,8 @@ RewriteCond %{REQUEST_URI} !^/api/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ /index.html [L]
+
+# The MuseScore engine is a module and a compiled program: said as such,
+# or a browser refuses to run them (web/src/screens/songs/score.worker.ts).
+AddType text/javascript .mjs
+AddType application/wasm .wasm

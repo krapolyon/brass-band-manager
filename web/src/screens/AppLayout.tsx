@@ -20,8 +20,12 @@ type Props = {
    * a tab (a form, a record) hides the TabBar and shows a way back.
    */
   back?: string;
+  /** When going back is not going to another address: the previous step of a flow held by one screen. */
+  onBack?: () => void;
   /** The name of that screen, shown beside the way back on a desktop: "Fanfarons". */
   backLabel?: string;
+  /** Where the member is in a flow of several steps: a StepIndicator, above the title. */
+  step?: ReactNode;
   /** One action of the page, beside its title. */
   action?: ReactNode;
   /** What narrows or sorts the content: filters. Under the title on a phone, beside it on a desktop. */
@@ -49,7 +53,9 @@ export function AppLayout({
   title,
   subtitle,
   back,
+  onBack,
   backLabel,
+  step,
   action,
   toolbar,
   width = 'wide',
@@ -81,11 +87,22 @@ export function AppLayout({
                       kind="glass"
                       icon="ChevronLeft"
                       label={t('common.back')}
-                      onClick={() => navigate(back)}
+                      onClick={() => (onBack ? onBack() : navigate(back))}
                     />
                   </span>
                   {/* On a desktop the way back is a line of text that names where it leads. */}
-                  <Link className="AppLayout-backLink textLabel" to={back}>
+                  <Link
+                    className="AppLayout-backLink textLabel"
+                    to={back}
+                    onClick={
+                      onBack
+                        ? (event) => {
+                            event.preventDefault();
+                            onBack();
+                          }
+                        : undefined
+                    }
+                  >
                     <Icon name="ChevronLeft" size={20} />
                     {backLabel ?? t('common.back')}
                   </Link>
@@ -93,6 +110,7 @@ export function AppLayout({
               )
             }
             action={action}
+            band={step}
             title={title}
             subtitle={subtitle}
           />

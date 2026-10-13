@@ -1,0 +1,1161 @@
+/* Layout of the screens about songs. Widths drawn in Figma are written in
+   rem (pixels / 16) and used as maximums. */
+
+.songs-muted {
+  color: var(--textMuted);
+}
+
+.songs-desktopOnly {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .songs-desktopOnly {
+    display: block;
+  }
+
+  .songs-belowDesktop {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------
+   The list
+   --------------------------------------------------------------- */
+
+.songs-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.songs-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  min-width: 0;
+}
+
+.songs-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+/* The switch between rows and grid, at the end of the line of filters. */
+.songs-viewSwitch {
+  margin-inline-start: auto;
+}
+
+.songs-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Two columns on a phone, four from the tablet width. */
+.songs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spaceSm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.songs-grid > li {
+  display: grid;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .songs-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* An empty list, a search with no result, a mode with nothing yet: an icon,
+   a title and one line that says what to do. */
+.songs-nothing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceXs);
+  padding: var(--spaceXl) var(--spaceMd);
+  text-align: center;
+}
+
+.songs-nothing[data-surface="sheet"] {
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.songs-nothing > .Icon {
+  color: var(--textMuted);
+}
+
+.songs-nothing > .Button {
+  margin-top: var(--spaceXs);
+}
+
+/* What is loading: grey shapes of the size of what comes. */
+.songs-skeleton {
+  border-radius: var(--radiusMd);
+  background: var(--control);
+}
+
+.songs-skeleton[data-shape="row"] {
+  height: 3.5rem;
+}
+
+.songs-skeleton[data-shape="header"] {
+  height: 14rem;
+}
+
+.songs-skeleton[data-shape="card"] {
+  height: 10rem;
+  margin: var(--spaceMd);
+}
+
+/* Desktop: the list on the left, the song beside it (Figma: option C). The
+   rows sit on the ground, and the song is a sheet as tall as the window. */
+@media (min-width: 1024px) {
+  .songs-split {
+    display: grid;
+    grid-template-columns: minmax(16rem, 18.75rem) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--spaceXl);
+  }
+
+  .songs-list > .Sheet {
+    padding: 0;
+    background: none;
+  }
+
+  .songs-viewSwitch {
+    display: none;
+  }
+
+  .songs-pane {
+    position: sticky;
+    top: var(--spaceMd);
+    max-height: calc(100dvh - 2 * var(--spaceMd));
+    overflow: auto;
+    border-radius: var(--radiusLg);
+    background: var(--sheet);
+  }
+}
+
+/* Wide: the content of the song stops at 960. */
+@media (min-width: 1920px) {
+  .songs-pane .songs-content {
+    width: 100%;
+    max-width: 60rem;
+    margin-inline: auto;
+  }
+}
+
+/* ---------------------------------------------------------------
+   The song
+   --------------------------------------------------------------- */
+
+.songs-screen {
+  min-height: 100dvh;
+}
+
+.songs-view {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.songs-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  min-width: 0;
+  padding: 0 max(var(--spaceMd), env(safe-area-inset-right))
+    max(var(--spaceXl), env(safe-area-inset-bottom)) max(var(--spaceMd), env(safe-area-inset-left));
+}
+
+@media (min-width: 768px) {
+  .songs-content {
+    padding: var(--spaceLg);
+  }
+
+  /* A song that takes the whole screen keeps the top margin of a screen:
+     32, or the safe area of the device plus 8 when that is more. */
+  .songs-screen .SongHeader-top {
+    padding-top: max(var(--spaceXxl), calc(env(safe-area-inset-top) + var(--spaceXs)));
+  }
+}
+
+.songs-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+/* "À propos" beside "Toi et ce morceau" when there is room for both. */
+@media (min-width: 768px) {
+  .songs-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/* The recording: a glass card on a phone, a sheet on larger screens. */
+.songs-audio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.songs-audioCaption {
+  display: none;
+  color: var(--textMuted);
+}
+
+@media (min-width: 768px) {
+  .songs-audio {
+    background: var(--control);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* Drawn on a phone only: the status, the reminder that levels are private,
+     the "10 s" under the two skip buttons, the tint behind the version. */
+  .songs-phoneOnly,
+  .songs-audioSkip > span {
+    display: none;
+  }
+
+  .songs-version {
+    padding: 0;
+    background: none;
+  }
+
+  .songs-audioCaption {
+    display: block;
+  }
+}
+
+.songs-audioError {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spaceXs);
+}
+
+.songs-audioTimes {
+  display: flex;
+  justify-content: space-between;
+  color: var(--textMuted);
+}
+
+.songs-audioControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxl);
+}
+
+.songs-audioPlay,
+.songs-audioSkip {
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.songs-audioPlay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--radiusFull);
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.songs-audioSkip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  min-width: var(--controlHeightSm);
+  min-height: var(--controlHeightSm);
+  border-radius: var(--radiusMd);
+}
+
+.songs-audioSkip:disabled {
+  color: var(--textMuted);
+  cursor: default;
+}
+
+.songs-audioPlay:focus-visible,
+.songs-audioSkip:focus-visible,
+.songs-partPicker:focus-visible,
+.songs-clipPlay:focus-visible,
+.songs-clipLink:focus-visible {
+  outline: var(--focusWidth) solid var(--accentText);
+  outline-offset: var(--focusWidth);
+}
+
+/* "À propos". */
+.songs-version {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  padding: var(--spaceMd);
+  border-radius: var(--radiusMd);
+  background: var(--control);
+}
+
+.songs-versionDate,
+.songs-average {
+  color: var(--accentText);
+}
+
+.songs-version p {
+  margin: 0;
+}
+
+/* A note typed on several lines keeps them. */
+.songs-versionNote {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.songs-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  margin: 0;
+}
+
+.songs-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--spaceXxs) var(--spaceMd);
+}
+
+.songs-facts dt {
+  color: var(--textMuted);
+}
+
+.songs-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: end;
+}
+
+/* The part: which one is shown, and the button that reads it full screen. */
+.songs-partBar {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+}
+
+.songs-partPicker {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spaceXs);
+  min-width: 0;
+  min-height: var(--controlHeightSm);
+  padding: var(--spaceXs) var(--spaceMd);
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.songs-pdf {
+  overflow: hidden;
+  border-radius: var(--radiusMd);
+}
+
+.songs-pdfPages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.songs-pdfPages canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The part over the whole screen. */
+.songs-pdfFull {
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  border: 0;
+  background: var(--ground);
+}
+
+.songs-pdfFull::backdrop {
+  background: var(--ground);
+}
+
+.songs-pdfFullClose {
+  position: fixed;
+  top: max(var(--spaceMd), env(safe-area-inset-top));
+  right: max(var(--spaceMd), env(safe-area-inset-right));
+  z-index: 1;
+}
+
+/* The clip: the shape of a video. */
+.songs-clip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spaceMd);
+}
+
+.songs-clipFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radiusLg);
+  background: var(--control);
+}
+
+.songs-clipFrame iframe,
+.songs-clipPlay,
+.songs-clipPlay img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.songs-clipPlay {
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.songs-clipPlay img {
+  object-fit: cover;
+}
+
+.songs-clipPlay span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  margin: auto;
+  border-radius: var(--radiusFull);
+  background: var(--scrim);
+  color: var(--text);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+
+.songs-clipLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  min-height: var(--controlHeightSm);
+  color: var(--accentText);
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------
+   Panels
+   --------------------------------------------------------------- */
+
+.songs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.songs-panel p {
+  margin: 0;
+}
+
+.songs-panelGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.songs-panelGroup > h3 {
+  margin: 0;
+}
+
+.songs-panelActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+}
+
+/* On a desktop the actions end the dialog, the one that goes forward at the right. */
+@media (min-width: 1024px) {
+  .songs-panelActions {
+    flex-direction: row-reverse;
+  }
+}
+
+.songs-statuses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+/* ---------------------------------------------------------------
+   The mini-player: above the tab bar, on every screen of the app
+   --------------------------------------------------------------- */
+
+.songs-miniPlayer {
+  position: fixed;
+  right: max(var(--spaceSm), env(safe-area-inset-right));
+  /* Over the TabBar: its 68, what it keeps under itself, and 8 of air. */
+  bottom: calc(4.25rem + max(var(--spaceSm), env(safe-area-inset-bottom)) + var(--spaceXs));
+  left: max(var(--spaceSm), env(safe-area-inset-left));
+  z-index: 2;
+}
+
+/* The screen of a song has no tab bar. */
+.songs-screen .songs-miniPlayer {
+  bottom: max(var(--spaceSm), env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .songs-miniPlayer {
+    right: 0;
+    left: 0;
+    width: 30rem;
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .songs-miniPlayer {
+    right: var(--spaceXl);
+    bottom: var(--spaceXl);
+    left: auto;
+    width: 22.5rem;
+    margin: 0;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Import and edit
+   --------------------------------------------------------------- */
+
+.songs-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--spaceXs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.songs-summary > li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spaceXs);
+  padding: var(--spaceSm) var(--spaceMd);
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+}
+
+.songs-summary > li > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+}
+
+.songs-summary > li[data-kind="questions"] > .Icon {
+  color: var(--warning);
+}
+
+/* What has to be answered before going on: a sheet with a line around it. */
+.songs-questions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+  box-shadow: inset 0 0 0 var(--borderWidth) var(--accent);
+}
+
+.songs-questions > h2,
+.songs-question > p {
+  margin: 0;
+}
+
+.songs-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.songs-sending {
+  padding: var(--spaceMd);
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+}
+
+.songs-delete {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceXs);
+  padding-block: var(--spaceMd);
+  text-align: center;
+}
+
+.songs-delete > .Button {
+  color: var(--danger);
+}
+
+.songs-delete > p {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   The table of those who manage songs
+   --------------------------------------------------------------- */
+
+.songs-table {
+  width: 100%;
+  max-width: 80rem;
+  overflow-x: auto;
+}
+
+/* Import: the box that keeps the name of a file as a known spelling. */
+.songs-remember {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  padding: var(--spaceXs) 0 var(--spaceSm);
+}
+
+.songs-remember > label {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+  cursor: pointer;
+}
+
+.songs-remember > p {
+  margin: 0;
+}
+
+/* ---- MIDI player (Figma: Songs / Song — MIDI) ---- */
+
+.songs-midi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.songs-midiTracks,
+.songs-midiSettings {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.songs-midiTracks {
+  gap: var(--spaceXxs);
+  padding: var(--spaceMd);
+}
+
+.songs-midiHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+}
+
+.songs-textButton {
+  min-height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accentText);
+  cursor: pointer;
+}
+
+.songs-accent {
+  color: var(--accentText);
+}
+
+/* The lanes share the width of the name, so that they line up, and one
+   playhead crosses them all: a little after the start of the lane. */
+.songs-midiLanes {
+  --trackName: 6rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.songs-midiPlayhead {
+  --laneStart: calc(1.75rem + var(--trackName) + 2 * var(--spaceSm));
+  --laneWidth: calc(100% - var(--laneStart) - var(--spaceSm) - var(--controlHeightSm));
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--laneStart) + var(--laneWidth) * 0.28);
+  width: 2px;
+  border-radius: var(--radiusFull);
+  background: var(--accent);
+  pointer-events: none;
+}
+
+.songs-midiControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
+}
+
+.songs-midiTransport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXl);
+}
+
+.songs-midiPlay:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.songs-midiLoop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--controlHeightSm);
+  height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.songs-midiLoop[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.songs-midiStatus {
+  margin: 0;
+  text-align: center;
+}
+
+.songs-midiSettings {
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+}
+
+.songs-midiTempo {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.songs-midiTempoTexts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.songs-midiTempoValue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.5rem;
+}
+
+.songs-midiVolume {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.songs-midiVolumeLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spaceSm);
+}
+
+.songs-midiRange {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spaceSm);
+}
+
+/* From the tablet: the lanes above, the transport beside the settings. */
+@media (min-width: 768px) {
+  .songs-midiControls {
+    display: grid;
+    grid-template-columns: 1fr minmax(0, 20rem);
+    align-items: center;
+  }
+
+  .songs-midiStatus {
+    grid-column: 1 / -1;
+  }
+
+  .songs-midiSettings {
+    background: none;
+    padding: 0;
+  }
+}
+
+/* A phone on its side: the lanes on the left, everything else beside them. */
+@media (orientation: landscape) and (max-height: 32rem) {
+  .songs-midi {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    align-items: start;
+  }
+
+  .songs-midi > .Message {
+    grid-column: 1 / -1;
+  }
+
+  .songs-midiControls {
+    display: flex;
+  }
+
+  .songs-midiSettings {
+    padding: var(--spaceMd);
+    background: var(--sheet);
+  }
+}
+
+/* ---- Live mode (Figma: Songs / Song — Live) ---- */
+
+/* The whole screen, over everything else, in the dark scheme. It is a modal
+   <dialog>: what a browser gives one (a frame, margins, a size) is undone. */
+.songs-live {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--ground);
+  color: var(--text);
+}
+
+.songs-live[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The score and its controls; the taps of a tempo are counted over them. */
+.songs-liveBody {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.songs-liveTapping {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ground);
+}
+
+.songs-liveWait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  margin: auto;
+  padding: var(--spaceMd);
+  text-align: center;
+}
+
+.songs-liveTop {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  padding: max(var(--spaceXxl), env(safe-area-inset-top) + var(--spaceXs)) var(--spaceMd)
+    var(--spaceSm);
+}
+
+.songs-liveTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+.songs-liveTitle > * {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.songs-livePart {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  min-height: var(--controlHeightSm);
+  padding: 0 var(--spaceSm);
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* The score: only its lines move, by a drag, the wheel or the arrow keys. */
+.songs-liveScore {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.songs-liveSheet {
+  transition: transform 0.4s ease;
+  /* Verovio draws in the colour of the text: the one of the screen. */
+  color: var(--text);
+}
+
+.songs-liveSheet[data-dragging="true"] {
+  transition: none;
+}
+
+/* Verovio draws the lines in the current colour and leaves the notes to the
+   default of a drawing, black: both take the colour of the screen. */
+.songs-liveSheet svg {
+  display: block;
+  /* From the tablet the lines are moved side by side, out of the page
+     Verovio drew them on. */
+  overflow: visible;
+  color: inherit;
+  fill: currentColor;
+}
+
+/* The few rules Verovio writes in its drawing, which is shown without them. */
+.songs-liveSheet :is(ellipse, path, polygon, polyline, rect) {
+  stroke: currentColor;
+}
+
+.songs-liveSheet :is(g.ending, g.fing, g.reh, g.tempo) {
+  font-weight: bold;
+}
+
+.songs-liveSheet :is(g.dir, g.dynam, g.mNum) {
+  font-style: italic;
+}
+
+.songs-liveSheet g.system {
+  transition: opacity 0.4s ease;
+}
+
+.songs-liveSheet g.system[data-played] {
+  opacity: 0.3;
+}
+
+/* In high contrast a line already played stays readable. */
+:root[data-contrast="more"] .songs-liveSheet g.system[data-played] {
+  opacity: 0.6;
+}
+
+.songs-liveControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: var(--spaceSm) var(--spaceMd) max(var(--spaceMd), env(safe-area-inset-bottom));
+}
+
+.songs-liveHint {
+  align-self: center;
+  margin: 0;
+  padding: var(--spaceXs) var(--spaceSm);
+  border-radius: var(--radiusFull);
+  background: var(--sheet);
+  text-align: center;
+}
+
+.songs-liveBar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--spaceSm);
+}
+
+.songs-liveTile,
+.songs-liveStart {
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
+  padding: var(--spaceXs) var(--spaceSm);
+  border: 0;
+  border-radius: var(--radiusMd);
+  background: var(--sheet);
+  color: var(--text);
+  font: inherit;
+}
+
+.songs-liveTile {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--spaceXxs);
+  margin: 0;
+  text-align: center;
+}
+
+button.songs-liveTile,
+.songs-liveStart {
+  cursor: pointer;
+}
+
+button.songs-liveTile:disabled,
+.songs-live .songs-audioPlay:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.songs-liveStart {
+  gap: var(--spaceSm);
+  min-height: var(--controlHeightSm);
+  text-align: left;
+}
+
+.songs-liveStartTexts {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Giving the tempo: the whole zone is the button. */
+.songs-liveTap {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceMd);
+  min-height: 0;
+  padding: var(--spaceMd);
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.songs-liveTapCount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 12.5rem;
+  max-width: 60vw;
+  aspect-ratio: 1;
+  border-radius: var(--radiusFull);
+  background: var(--sheet);
+}
+
+.songs-liveTapDots {
+  display: flex;
+  gap: var(--spaceSm);
+}
+
+.songs-liveTapDot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid var(--textMuted);
+  border-radius: var(--radiusFull);
+}
+
+.songs-liveTapDot[data-done="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.songs-liveTapSaid {
+  max-width: 20rem;
+  margin: 0 auto;
+  padding: 0 var(--spaceMd);
+  text-align: center;
+}
+
+.songs-liveCancel {
+  display: flex;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: var(--spaceSm) var(--spaceMd) max(var(--spaceMd), env(safe-area-inset-bottom));
+}
+
+.songs-liveCancel > * {
+  flex: 1;
+}
+
+.songs-liveMeasure {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spaceSm);
+}
+
+.songs-liveMeasure > :first-child {
+  flex: 1;
+}
+
+.songs-liveMarks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}

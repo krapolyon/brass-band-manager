@@ -1,0 +1,45 @@
+/* 68 high in Figma: the cover of 44 and 12 around. */
+.SongMention {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-height: 4.25rem; /* 68 */
+  padding: var(--spaceSm);
+  border-radius: var(--radiusLg);
+  background: var(--glass);
+  /* Figma: the effect style "glass", its native glass, 60. A blur of the
+     backdrop stands in for it, counted as half of the value of Figma. No
+     stroke. */
+  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(30px);
+}
+
+.SongMention-song {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--spaceSm);
+  min-width: 0;
+  border-radius: var(--radiusSm);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.SongMention-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem; /* 2 */
+  min-width: 0;
+}
+
+/* Figma: one line each, cut with an ellipsis. */
+.SongMention-name,
+.SongMention-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.SongMention-detail {
+  color: var(--textMuted);
+}

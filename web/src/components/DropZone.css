@@ -1,0 +1,42 @@
+/* A dashed line of 2, dashes of 8, inside the zone. Large is at least 240
+   high; its hint is a column of 440. */
+.DropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceMd);
+  width: 100%;
+  padding: var(--spaceXl) var(--spaceLg);
+  border: 2px dashed var(--border);
+  border-radius: var(--radiusLg);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.DropZone[data-size="large"] {
+  min-height: 15rem; /* 240 */
+  padding: var(--spaceXxl) var(--spaceXl);
+}
+
+.DropZone > .Icon {
+  color: var(--textMuted);
+}
+
+/* Figma: the icon is 48 in the large zone, 32 in the compact one. */
+.DropZone[data-size="large"] > .Icon {
+  width: calc(var(--iconSize) * 2);
+  height: calc(var(--iconSize) * 2);
+}
+
+.DropZone-hint {
+  max-width: 27.5rem; /* 440 */
+  color: var(--textMuted);
+}
+
+/* Files hover over the zone: the border takes the accent. The line also
+   becomes solid, so that the state is not told by colour alone. */
+.DropZone[data-dragging="true"] {
+  border-style: solid;
+  border-color: var(--accent);
+}

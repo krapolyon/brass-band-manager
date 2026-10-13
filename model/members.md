@@ -1,6 +1,6 @@
 # Business dictionary — Members domain
 
-> v1.15 — 2026-10-12 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`
+> v1.16 — 2026-10-12 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`
 
 Examples in this document are made up. No real member appears in the repository.
 
@@ -45,7 +45,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `INVITED` | | deleted | A member manager cancels the invitation | The row is deleted: nothing refers to it yet |
 | `ACTIVE` | Plays regularly, can sign in | `POWER_MEMBER` | A member manager sets it by hand | Nothing is erased; roles, sessions and password are kept. The member is no longer reminded to answer for gigs |
 | `POWER_MEMBER` | Was active and plays less: comes to help out on some gigs. Can sign in, answers for gigs, counts in whether a gig is playable | `ACTIVE` | A member manager sets it by hand | Reminders resume |
-| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo and the roles are erased. Names, nickname, email and instrument are kept |
+| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo, the roles and the levels the member gave to songs (Songs domain, `memberSong`) are erased. Names, nickname, email and instrument are kept |
 | `LEFT` | Has left the band | `INVITED` | A member manager brings the member back | A new password link is created; the old password is not reused |
 
 The status labels in French are "Invité", "Actif", "Power member" and "Parti". For those who manage members, an `INVITED` member whose password link is no longer valid is shown as "Invitation expirée": this is a display, not a status. No status changes by itself: `POWER_MEMBER` in particular is never deduced from how often a member answers or plays.
@@ -191,8 +191,10 @@ Each section of a library comes with its pictogram: in the French library, in th
 
 The first six lines are the organisation of the band that started the project. Their instruments are the ones preselected at install, except the Sax Baryton: a band unticks what it does not play and ticks the rest. Each library says, instrument by instrument, which ones are preselected.
 
+Each instrument of a library also comes with its aliases, the spellings that name it in the files of songs. They are copied with the instruments that are kept, and listed in the Songs domain (`songs.md`, entry 2).
+
 ### Rules
-- A section with instruments cannot be deleted. An instrument played by a member, or used by a part of a song, cannot be deleted. Both can be renamed and moved.
+- A section with instruments cannot be deleted. An instrument played by a member, or used by a part of a song, cannot be deleted. Deleting an instrument deletes its aliases. Both can be renamed and moved.
 - **The members counted on an instrument are the current ones.** An invited member and a member who left are not counted as playing it. Their record still holds the instrument, so it cannot be deleted either: an admin is told so, apart from the count, and the others are told nothing about them.
 - Moving an instrument to another section moves its members with it: the section of a member is always the one of their instrument.
 - After install, an admin can add sections and instruments at any time.
@@ -201,7 +203,7 @@ The first six lines are the organisation of the band that started the project. T
 
 ### Relations
 - A section holds one to several instruments; an instrument belongs to one section.
-- Parts of songs refer to an instrument (Songs domain). The known spellings of an instrument in score files (`instrumentAlias` in the overview model) are detailed with the Songs domain.
+- Parts of songs refer to an instrument (Songs domain). The known spellings of an instrument in the names of files (`instrumentAlias`) are in the Songs domain.
 - **A section is present at a gig slot as soon as one of its members is.** How this makes a slot playable is detailed with the Gigs domain; it is the reason why sections are an object and not a label.
 
 ### Access rights

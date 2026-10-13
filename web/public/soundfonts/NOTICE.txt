@@ -1,0 +1,14 @@
+The files of FluidR3_GM/ are recorded samples of instruments, one file per
+instrument, used by the MIDI player of the app.
+
+They come from the Fluid R3 General MIDI SoundFont (FluidR3_GM.sf2) by Frank
+Wen, released under the Creative Commons Attribution 3.0 licence
+(https://creativecommons.org/licenses/by/3.0/).
+
+They were rendered to one mp3 per note by:
+- MIDI.js Soundfonts, Benjamin Gleitzman
+  (https://github.com/gleitz/midi-js-soundfonts), for the instruments;
+- its fork by Paul Rosen (https://github.com/paulrosen/midi-js-soundfonts),
+  for percussion-mp3.js, the General MIDI drum kit.
+
+The files are unchanged.

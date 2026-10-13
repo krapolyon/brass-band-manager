@@ -55,3 +55,9 @@ button.ListRow {
   min-height: var(--controlHeightSm);
   cursor: pointer;
 }
+
+/* Figma: Leading=Unselected. The label of a choice that is not the one made
+   stands back; the radio tells which one is, not this colour. */
+.ListRow[data-selected="false"] .ListRow-texts > :first-child {
+  color: var(--textMuted);
+}

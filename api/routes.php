@@ -67,13 +67,32 @@ use BrassBand\Sections\ListSectionsAction;
 use BrassBand\Sections\SaveInstrumentAction;
 use BrassBand\Sections\SaveSectionAction;
 use BrassBand\Sections\Sections;
+use BrassBand\Songs\AddAliasAction;
+use BrassBand\Songs\ChangeSongStatusAction;
+use BrassBand\Songs\ClipThumbnails;
+use BrassBand\Songs\DeleteAliasAction;
+use BrassBand\Songs\DeleteSongAction;
+use BrassBand\Songs\DownloadArchiveAction;
+use BrassBand\Songs\FileNames;
+use BrassBand\Songs\InstrumentAliases;
+use BrassBand\Songs\ListAliasesAction;
+use BrassBand\Songs\ListSongsAction;
+use BrassBand\Songs\PlaceFilesAction;
+use BrassBand\Songs\SavePeaksAction;
+use BrassBand\Songs\SaveSongAction;
+use BrassBand\Songs\SetLevelsAction;
+use BrassBand\Songs\ShowSongAction;
+use BrassBand\Songs\ShowSongFileAction;
+use BrassBand\Songs\SongFiles;
+use BrassBand\Songs\Songs;
+use BrassBand\Songs\UpdateSongFileAction;
 use BrassBand\Storage\Files;
 use Doctrine\DBAL\Connection;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>} $config
+ * @param array{installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -92,6 +111,9 @@ return function (App $app, Connection $database, array $config): void {
     $members = new Members($database);
     $record = new MemberRecord($database);
     $sections = new Sections($database);
+    $songFiles = new SongFiles($database, $files);
+    $songs = new Songs($database, $songFiles);
+    $thumbnails = new ClipThumbnails($config);
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -126,6 +148,9 @@ return function (App $app, Connection $database, array $config): void {
         $members,
         $record,
         $sections,
+        $songFiles,
+        $songs,
+        $thumbnails,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
@@ -138,6 +163,19 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/members/{id:[0-9]+}', new ShowMemberAction($members));
         $group->get('/api/members/{id:[0-9]+}/photo', new ShowPhotoAction($members, $photos));
         $group->get('/api/sections', new ListSectionsAction($sections));
+
+        // Songs: every member sees every song and every file of it.
+        $group->get('/api/songs', new ListSongsAction($songs));
+        $group->get('/api/songs/archive', new DownloadArchiveAction($database, $songs, $songFiles));
+        $group->get('/api/songs/{id:[0-9]+}', new ShowSongAction($songs));
+        foreach (['cover', 'clipThumbnail', 'audio', 'midi', 'musicXml', 'museScore'] as $kind) {
+            $group->get("/api/songs/{id:[0-9]+}/{$kind}", new ShowSongFileAction($database, $songs, $songFiles, $kind));
+        }
+        $group->get('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new ShowSongFileAction($database, $songs, $songFiles, 'part'));
+        // One's own levels on a song: the address names no member.
+        $group->put('/api/songs/{id:[0-9]+}/levels', new SetLevelsAction($database, $songs));
+        // The instrument each track of a MIDI file is, for the MIDI player. Changes nothing.
+        $group->post('/api/songs/trackNames', new PlaceFilesAction(new FileNames($database), tracks: true));
 
         // ---------------------------------------------------------------
         // 3. One's own record, or a permission
@@ -175,6 +213,29 @@ return function (App $app, Connection $database, array $config): void {
         $group->post('/api/instruments', new SaveInstrumentAction($database, $sections))->add($manageSections);
         $group->put('/api/instruments/{id:[0-9]+}', new SaveInstrumentAction($database, $sections))->add($manageSections);
         $group->delete('/api/instruments/{id:[0-9]+}', new DeleteInstrumentAction($database, $sections))->add($manageSections);
+
+        $manageSongs = new RequirePermission(Permission::MANAGE_SONGS);
+        $group->post('/api/songs', new SaveSongAction($database, $songs, $songFiles, $thumbnails))->add($manageSongs);
+        $group->post('/api/songs/fileNames', new PlaceFilesAction(new FileNames($database)))->add($manageSongs);
+        $group->put('/api/songs/{id:[0-9]+}', new SaveSongAction($database, $songs, $songFiles, $thumbnails))->add($manageSongs);
+        $group->put('/api/songs/{id:[0-9]+}/status', new ChangeSongStatusAction($database, $songs))->add($manageSongs);
+        $group->delete('/api/songs/{id:[0-9]+}', new DeleteSongAction($database, $songs, $songFiles))->add($manageSongs);
+        $group->put('/api/songs/{id:[0-9]+}/audio/peaks', new SavePeaksAction($songs, $songFiles))->add($manageSongs);
+        // The files of a song, each sent alone as the body of its request
+        // (FileBody). BodyLimit knows these addresses: keep the two in step.
+        foreach (array_keys(SongFiles::COLUMNS) as $kind) {
+            $group->put("/api/songs/{id:[0-9]+}/{$kind}", new UpdateSongFileAction($songs, $songFiles, $kind, removes: false))->add($manageSongs);
+            $group->delete("/api/songs/{id:[0-9]+}/{$kind}", new UpdateSongFileAction($songs, $songFiles, $kind, removes: true))->add($manageSongs);
+        }
+        $group->put('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, 'part', removes: false))->add($manageSongs);
+        $group->delete('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, 'part', removes: true))->add($manageSongs);
+
+        // The known spellings of the instruments. They are listed in the band
+        // settings, but belong to whoever manages songs (model/songs.md, entry 2).
+        $aliases = new InstrumentAliases($database);
+        $group->get('/api/instrumentAliases', new ListAliasesAction($aliases))->add($manageSongs);
+        $group->post('/api/instruments/{id:[0-9]+}/aliases', new AddAliasAction($aliases))->add($manageSongs);
+        $group->delete('/api/instrumentAliases/{id:[0-9]+}', new DeleteAliasAction($database, $aliases))->add($manageSongs);
 
         $manageBand = new RequirePermission(Permission::MANAGE_BAND);
         $group->patch('/api/band', new UpdateBandAction($database, $bands))->add($manageBand);

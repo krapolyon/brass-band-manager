@@ -53,6 +53,13 @@
   gap: var(--spaceXs);
 }
 
+/* The sheet of the known spellings: its note, a row per spelling, what adds one. */
+.band-spellings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
 .band-muted {
   color: var(--textMuted);
 }

@@ -1,3 +1,5 @@
+import { IconShapes } from './Icon.tsx';
+import { iconPaths } from './iconPaths.ts';
 import './Icon.css';
 
 // The pictograms of sections (Figma: Icon/Trumpet, Icon/Saxophone…): filled
@@ -45,9 +47,9 @@ export type PictogramName = keyof typeof shapes;
 
 export const pictogramNames = Object.keys(shapes) as PictogramName[];
 
-// The generic pictogram, for a section that has none (Figma: Icon/Music).
-const generic =
-  'M9 18V6L19 4V16M9 18C9 18.663 8.73661 19.2989 8.26777 19.7678C7.79893 20.2366 7.16304 20.5 6.5 20.5C5.83696 20.5 5.20107 20.2366 4.73223 19.7678C4.26339 19.2989 4 18.663 4 18C4 17.337 4.26339 16.7011 4.73223 16.2322C5.20107 15.7634 5.83696 15.5 6.5 15.5C7.16304 15.5 7.79893 15.7634 8.26777 16.2322C8.73661 16.7011 9 17.337 9 18ZM19 16C19 16.663 18.7366 17.2989 18.2678 17.7678C17.7989 18.2366 17.163 18.5 16.5 18.5C15.837 18.5 15.2011 18.2366 14.7322 17.7678C14.2634 17.2989 14 16.663 14 16C14 15.337 14.2634 14.7011 14.7322 14.2322C15.2011 13.7634 15.837 13.5 16.5 13.5C17.163 13.5 17.7989 13.7634 18.2678 14.2322C18.7366 14.7011 19 15.337 19 16Z';
+// The generic pictogram, for a section that has none (Figma: Icon/Music,
+// Style=Outline).
+const generic = iconPaths.Music.outline;
 
 type Props = {
   /** The value of section.icon. Null, or a key this version does not know: the generic pictogram. */
@@ -65,13 +67,7 @@ export function Pictogram({ name, size = 24 }: Props) {
       {shape ? (
         <path d={shape.d} fill="currentColor" fillRule={shape.evenOdd ? 'evenodd' : 'nonzero'} />
       ) : (
-        <path
-          d={generic}
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <IconShapes drawing={generic} />
       )}
     </svg>
   );
