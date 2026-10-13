@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.2 — 2026-10-13 · Decided with the design of gigs: a setlist is numbered within its gig (1, 2, 3…); only a song in the repertoire is added to a setlist · Migration: `009_setlistNumberPerGig.sql`
 > v1.1 — 2026-10-13 · Rules found while writing the API (no schema change): a draft that has answers is not deleted; when the server holds a gig for over; when the app looks whether an accepted gig is playable; an organiser who left stays on a gig that is saved again
 > v1.0 — 2026-10-13 · Model: `gigs.dbml` · Validated by the owner on 2026-10-13 · Migration: `008_gigs.sql`, with the reminders of the band (Band v1.6) and the push subscriptions (Members v1.17)
 > v0.3 — 2026-10-13 · DRAFT, no question left · No field for the quote, `ACCEPTED` is set by hand; two automatic reminders, a number of days before the gig; a member who leaves stays organiser of the gigs already played; a gig not confirmed whose date has passed is to close; setlists are built with this domain, last
@@ -158,11 +159,14 @@ An ordered list of songs played at a gig. A gig can have several: one per set, o
 ### Fields
 | Field | Label (en) | Label (fr) | Required | Real example | Realistic length | Rules |
 |---|---|---|---|---|---|---|
-| `number` | Number | Numéro | Yes | 142 | — | Given by the app: one more than the highest. Never typed |
+| `number` | Number | Numéro | Yes | 2 | — | Given by the app: one more than the highest of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig |
 | `description` | Description | Description | No | Parade, 45 minutes | Up to 60 characters | |
 | `position` | — | — | Yes | 7 | — | A song can come twice in a setlist |
+| `songId` | Song | Morceau | Yes | Seven Nation Army | — | A song whose status is `IN_REPERTOIRE` when it is added |
 
 ### Rules
+- Setlists are numbered within their gig: the Fête des Lumières has its setlists 1, 2 and 3, and the next gig starts again at 1. Deleting a setlist does not renumber the others.
+- Only a song in the repertoire (`IN_REPERTOIRE`) can be added to a setlist; the songs offered while typing or dictating are those. A song that leaves the repertoire afterwards stays in the setlists that already hold it.
 - A setlist is written before the gig or, more often, once it has started. It stays editable after the gig: it says what was played.
 - A song used by a setlist cannot be deleted (Songs domain).
 - Later, not modelled: how far the band is in the setlist during the gig, with a button to move on; the next songs on the lock screen of the phone; how often each song is played, counted from the setlists of past gigs.
