@@ -112,7 +112,11 @@ test.describe('writing a setlist', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Setlist n° 1' })).toBeVisible();
     await expect(page.getByText('Pas encore de morceau.')).toBeVisible();
     await page.getByLabel('Présence').selectOption({ label: 'Samedi soir' });
-    await page.getByLabel('Description').fill('Place des Terreaux, 21 h');
+    // Over two lines: the field grows with its text.
+    const description = page.getByLabel('Description');
+    const before = (await description.boundingBox())?.height ?? 0;
+    await description.fill('Place des Terreaux, 21 h\nPuis le défilé\njusqu’à la mairie');
+    expect((await description.boundingBox())?.height ?? 0).toBeGreaterThan(before);
 
     // A few letters, without their case: only the songs the band plays.
     const field = page.getByLabel('Ajouter un morceau');
@@ -158,11 +162,13 @@ test.describe('writing a setlist', () => {
 
     await page.getByRole('button', { name: 'Enregistrer la setlist' }).click();
     await expect(page).toHaveURL(`/gigs/${gigId}`);
-    await expect(page.getByRole('button', { name: /Setlist n° 1/ })).toContainText(
-      'Place des Terreaux, 21 h · 2 morceaux',
+    // The line breaks are kept where the description is shown.
+    const card = page.locator('.SetlistCard-description');
+    expect(await card.innerText()).toBe(
+      'Place des Terreaux, 21 h\nPuis le défilé\njusqu’à la mairie · 2 morceaux',
     );
-    expect(sql('SELECT gigSlotId, number, description FROM setlist')).toBe(
-      `${slotIds[1]}\t1\tPlace des Terreaux, 21 h`,
+    expect(sql("SELECT gigSlotId, number, REPLACE(description, '\\n', '|') FROM setlist")).toBe(
+      `${slotIds[1]}\t1\tPlace des Terreaux, 21 h|Puis le défilé|jusqu’à la mairie`,
     );
     expect(sql('SELECT songId FROM setlistSong ORDER BY position')).toBe(`${valerie}\n${toxic}`);
   });

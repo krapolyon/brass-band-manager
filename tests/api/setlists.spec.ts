@@ -132,9 +132,18 @@ test.describe('writing a setlist', () => {
     expect(songsOf(setlistId)).toBe(`${toxic}\n${toxic}`);
 
     const long = await sissi.put(`/api/setlists/${setlistId}`, {
-      data: { songIds: [], description: 'x'.repeat(61) },
+      data: { songIds: [], description: 'x'.repeat(121) },
     });
     expect((await long.json()).fields).toEqual({ description: 'tooLong' });
+
+    // Up to 120 characters, over several lines: the line breaks are kept.
+    const lines = await sissi.put(`/api/setlists/${setlistId}`, {
+      data: { songIds: [], description: `  Parade, 45 minutes \r\nPuis apéro ${'x'.repeat(80)}` },
+    });
+    expect(lines.status()).toBe(200);
+    expect(sql(`SELECT REPLACE(description, '\n', '|') FROM setlist WHERE id = ${setlistId}`)).toBe(
+      `Parade, 45 minutes|Puis apéro ${'x'.repeat(80)}`,
+    );
   });
 
   test('setlists exist from “Validé” on: not written before, not shown before', async ({

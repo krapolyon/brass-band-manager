@@ -424,10 +424,12 @@ export function GigFormScreen() {
             value={draft.placeUrl}
             onChange={(event) => set('placeUrl', event.target.value)}
           />
-          <TextField
+          <TextArea
             label={t('gigs.form.streetAddress')}
             placeholder={t('gigs.form.streetAddressPlaceholder')}
             autoComplete="off"
+            lines={2}
+            maxLength={200}
             error={errors.streetAddress}
             value={draft.streetAddress}
             onChange={(event) => set('streetAddress', event.target.value)}

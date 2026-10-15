@@ -11,6 +11,7 @@ import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { SetlistSongRow } from '../../components/SetlistSongRow.tsx';
 import { SortableHandle, SortableList, useSortableRow } from '../../components/Sortable.tsx';
+import { TextArea } from '../../components/TextArea.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
 import { type Gig, useGig } from '../../gigs.ts';
 import { useMe } from '../../session.ts';
@@ -326,13 +327,14 @@ export function SetlistFormScreen() {
             options={gig.slots.map((slot) => ({ value: String(slot.id), label: slot.name ?? '' }))}
           />
         )}
-        <TextField
+        <TextArea
           label={t('gigs.setlist.form.description')}
+          lines={2}
           error={
             failure === 'tooLong' ? t('gigs.setlist.form.errors.description.tooLong') : undefined
           }
           value={draft.description}
-          maxLength={60}
+          maxLength={120}
           onChange={(event) => {
             setDraft({ ...draft, description: event.target.value });
             setFailure(null);

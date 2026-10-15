@@ -536,7 +536,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       label={t('gigs.gig.meeting')}
       time={gig.meetingTime ? timeText(t, gig.meetingTime) : t('gigs.time.toCome')}
       spot={gig.placeName ?? undefined}
-      address={address || undefined}
+      address={addressText(gig, true) || undefined}
       headingLevel={cardLevel}
       map={
         gig.mapTilesUrl !== null &&

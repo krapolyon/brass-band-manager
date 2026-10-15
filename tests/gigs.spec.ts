@@ -1178,6 +1178,32 @@ test.describe('what must not go wrong', () => {
     expect(elsewhere).toEqual([]);
   });
 
+  test('the address is typed over several lines, and shown with them (#15)', async ({ page }) => {
+    const { gigId } = addGig('Vide-grenier', {
+      status: 'CONFIRMED',
+      startsOn: day(5),
+      city: 'Lyon',
+    });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/edit`);
+
+    const address = page.getByLabel('Adresse', { exact: true });
+    const before = (await address.boundingBox())?.height ?? 0;
+    await address.fill('12 rue des Capucins\nDerrière la grille verte\nSonner au 3');
+    // The field grows with its text: its three lines are read without scrolling.
+    expect((await address.boundingBox())?.height ?? 0).toBeGreaterThan(before);
+    await page.getByRole('button', { name: 'Enregistrer le plan' }).click();
+    await expect(page).toHaveURL(`/gigs/${gigId}`);
+    expect(sql(`SELECT REPLACE(streetAddress, '\n', '|') FROM gig WHERE id = ${gigId}`)).toBe(
+      '12 rue des Capucins|Derrière la grille verte|Sonner au 3',
+    );
+
+    // The meeting of the confirmed gig shows it as it was typed.
+    expect(await page.locator('.GigMeeting-address').innerText()).toBe(
+      '12 rue des Capucins\nDerrière la grille verte\nSonner au 3, Lyon',
+    );
+  });
+
   test('“Copier l’adresse” copies the address and says so, in sight and to screen readers', async ({
     page,
   }) => {
