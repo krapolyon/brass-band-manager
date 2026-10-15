@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
+import { keepAboveKeyboard } from '../../aboveKeyboard.ts';
 import { ApiError, api } from '../../api.ts';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
@@ -125,6 +126,12 @@ export function SetlistFormScreen() {
   const number =
     existing?.number ?? Math.max(0, ...(gig?.setlists ?? []).map((one) => one.number)) + 1;
   const title = t('gigs.setlist.title', { number });
+
+  // On a phone, the field of the songs goes to the top of what the keyboard
+  // leaves visible, with room under it for the suggestions (#19).
+  const [keyboardRoom, setKeyboardRoom] = useState(0);
+  const leaveKeyboard = useRef<() => void>(() => {});
+  useEffect(() => () => leaveKeyboard.current(), []);
 
   if (me && !canManage) {
     return (
@@ -459,6 +466,14 @@ export function SetlistFormScreen() {
                   setQuery(event.target.value);
                   setSaid('');
                 }}
+                onFocus={(event) => {
+                  leaveKeyboard.current();
+                  leaveKeyboard.current = keepAboveKeyboard(event.currentTarget, setKeyboardRoom);
+                }}
+                onBlur={() => {
+                  leaveKeyboard.current();
+                  leaveKeyboard.current = () => {};
+                }}
                 onKeyDown={(event) => {
                   // Enter adds the first suggestion, and never sends the form from here.
                   if (event.key !== 'Enter') return;
@@ -510,6 +525,10 @@ export function SetlistFormScreen() {
                         className="textBodyLarge"
                         data-first={index === 0}
                         aria-label={t('gigs.setlist.form.suggestion', { name: label })}
+                        // The field keeps the focus while a suggestion is
+                        // pressed: on a phone the keyboard stays up, and
+                        // nothing moves under the finger.
+                        onMouseDown={(event) => event.preventDefault()}
                         onClick={() => add(song)}
                       >
                         <Icon name="Plus" />
@@ -524,6 +543,9 @@ export function SetlistFormScreen() {
               </ul>
             )}
             <p className="gigs-muted textCaption">{t('gigs.setlist.form.help')}</p>
+            {/* Under the keyboard, never seen: the page is long enough for the
+                field to reach the top of what is visible. */}
+            {keyboardRoom > 0 && <div aria-hidden="true" style={{ height: keyboardRoom }} />}
           </>
         )}
         <p className="visuallyHidden" role="status">

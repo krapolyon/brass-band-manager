@@ -173,6 +173,26 @@ test.describe('writing a setlist', () => {
     expect(sql('SELECT songId FROM setlistSong ORDER BY position')).toBe(`${valerie}\n${toxic}`);
   });
 
+  test('on a phone, the song field goes to the top of the screen so that its suggestions show (#19)', async ({
+    page,
+  }) => {
+    const { gigId, slotIds } = confirmed('Fête des Lumières', ['Vendredi soir']);
+    const songs = Array.from({ length: 12 }, (_, index) => addSong(`Morceau ${index + 1}`));
+    const setlistId = addSetlist(gigId, slotIds[0] as number, songs);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/${setlistId}`);
+
+    // Far down the page, under a long setlist.
+    const field = page.getByLabel('Ajouter un morceau');
+    await expect(field).toBeVisible();
+    await field.focus();
+
+    await expect.poll(async () => (await field.boundingBox())?.y ?? -1).toBeLessThan(80);
+    await field.fill('Morceau');
+    const suggestions = page.getByRole('list', { name: 'Suggestions' });
+    await expect(suggestions.getByRole('button').first()).toBeInViewport();
+  });
+
   test('a song is dragged by its handle to its place; the handle is not a control of the keyboard', async ({
     page,
   }) => {
