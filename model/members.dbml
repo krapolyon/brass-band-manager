@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.20 — 2026-10-15 — no migration: the text size is a setting of the device (issue #18); textSizePercent is no longer read nor written from 0.1.1 and is dropped in the next release, as the rule for member requires (docs/architecture.md, "Not locking oneself out")
 // v1.18 — 2026-10-13 — no change to the tables: a device that accepted notifications also receives the live setlist of a gig (dictionary, with Gigs v1.3)
 // v1.17 — 2026-10-13 — validated with Gigs v1.0, migration 008: pushSubscription, a device that accepted push notifications; a member who leaves is taken off the gigs to come they organise (dictionary)
 // v1.16 — 2026-10-12 — no change to the tables: the levels a member gave to songs are erased when they leave; the starting library carries the aliases of its instruments (dictionary, with Songs v1.0)
@@ -89,14 +90,14 @@ Table member {
   language varchar [not null, note: 'Locale of the interface for this member, for instance fr. Set from band.defaultLanguage at creation.']
   colorScheme colorScheme [not null, default: 'AUTO', note: 'Light or dark interface']
   accentTheme varchar [note: 'Key of one of the accent themes shipped with the app, for instance copper. Empty means the default theme of the band. The list of themes is the one of the design system; the API refuses any other value.']
-  textSizePercent integer [not null, default: 100, note: 'Accessibility option: size of all text, in percent of the normal size. One of 100, 120, 140, 160, 180, 200: the six steps of the design.']
+  textSizePercent integer [not null, default: 100, note: 'Deprecated since 0.1.1: no longer read nor written, the text size is kept on each device. Dropped in the next release (0.2.0): a column of member goes in two releases.']
   hasHighContrast boolean [not null, default: false, note: 'Accessibility option: stronger contrast between text and background, opaque surfaces instead of translucent ones. Also applied when the device asks for it.']
   hasIncreasedSpacing boolean [not null, default: false, note: 'Accessibility option: more space between letters, words and lines']
   hasLegibleFont boolean [not null, default: false, note: 'Accessibility option: replaces the typefaces of the app with one designed to tell similar characters apart']
   hasReducedMotion boolean [not null, default: false, note: 'Accessibility option: no animation or transition of large amplitude. Also applied when the device asks for it.']
   hasExtendedTimeouts boolean [not null, default: false, note: 'Accessibility option: notifications and tooltips stay on screen until the member closes them']
 
-  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account in the app: the two are the same object. Display and accessibility preferences are on the account, so that they follow the member from one device to another.'
+  Note: 'A person who plays or has played in the band (a "fanfaron" in the French locale), and their account in the app: the two are the same object. Display and accessibility preferences are on the account, so that they follow the member from one device to another; the text size is the exception, kept on each device (see the dictionary).'
 }
 
 // ---------------------------------------------------------------

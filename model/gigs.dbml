@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.5 — 2026-10-15 — no change to the tables: a confirmed gig can be put back to ACCEPTED or PROPOSED by hand (issue #17); streetAddress and setlist.description are typed over several lines (issue #15); the end date of a gig can be removed (issue #16) (dictionary)
 // v1.4 — 2026-10-13 — migration 012, decided with the design of the home screen: gig.proposedAt, the instant a gig first reaches a status members see; a gig is marked as new for 15 days after it.
 // v1.3 — 2026-10-13 — validated, migration 010: the live setlist (decided with the design): a setlist belongs to a slot of its gig, whose members who said yes follow it live; the position of the song being played and the start of the live session.
 // v1.2 — 2026-10-13 — decided with the design: a setlist is numbered within its gig (1, 2, 3…), not across the band; only a song in the repertoire or a temporary one is added to a setlist. Migration 009
@@ -26,7 +27,7 @@ Enum gigStatus {
   DRAFT [note: 'Someone contacted the band and it is noted down. Seen by those who manage gigs only; nobody answers yet.']
   PROPOSED [note: 'The conditions are being discussed with whoever asked. Members see the gig and say whether they come.']
   ACCEPTED [note: 'The band and whoever asked agree, with or without a quote, and the band is not playable yet ("accepté" in the French locale). Set by hand: quotes are not managed yet.']
-  CONFIRMED [note: 'The gig takes place: it is accepted and the band is playable ("validé" in the French locale). Set by the app as soon as an accepted gig is playable, or forced by hand when the band knows it will play although a section has no yes: a member of another section fills in. Stays confirmed if an answer changes afterwards.']
+  CONFIRMED [note: 'The gig takes place: it is accepted and the band is playable ("validé" in the French locale). Set by the app as soon as an accepted gig is playable, or forced by hand when the band knows it will play although a section has no yes: a member of another section fills in. Stays confirmed if an answer changes afterwards. Put back to ACCEPTED or PROPOSED by hand when it was confirmed by mistake.']
   CANCELLED [note: 'The gig does not take place. Kept for history, hidden from the list by default.']
 }
 
@@ -133,7 +134,7 @@ Table setlist {
   gigId integer [not null, ref: > gig.id, note: 'The gig this setlist is played at. A gig can have none or several.']
   gigSlotId integer [not null, note: 'The slot of the gig this setlist is played at: its members who answered yes follow it live. Chosen when the gig has several slots, the only slot otherwise. A slot that has setlists is not deleted.']
   number integer [not null, note: 'Given by the app: one more than the highest number of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig. Deleting a setlist does not renumber the others.']
-  description varchar [note: 'A short text, for instance "Parade, 45 minutes"']
+  description varchar [note: 'A short text, for instance "Parade, 45 minutes". Can hold two or three lines.']
   liveStartedAt timestamp [note: 'When the setlist was started live. Empty when it is not live. One setlist at most is live in the band: starting one ends the one that was.']
   livePosition integer [note: 'While the setlist is live, the position (setlistSong.position) of the song being played, the one the notification announces. Filled with liveStartedAt or not at all.']
   Note: 'An ordered list of songs played at a gig, followed live by the members who play it. The count of how often a song is played comes later.'

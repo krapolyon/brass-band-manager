@@ -890,6 +890,18 @@ database/            migrate.php and the migrations
 
 The history of both branches is a plain one, each commit on top of the one before. Neither action ever forces a push, and nobody pushes to these branches by hand. The two branches are created by the actions, at their first run, never from `main` on GitHub: `release.yml` only accepts a commit that `beta.yml` made, told by its subject ("Build of main at …"). The token that may push is given to the last step alone: the packages installed and run by the build never hold it. Going back does not undo a migration: a version that needed one is released only once beta has shown it works.
 
+### Versions and the changelog
+
+Decided on 2026-10-15, with the first beta (issue #24). The beta carries `0.1.0`; the first version that follows this rule is `0.1.1`.
+
+- **One number, in `package.json`.** It is the only place a version is typed. Semantic versioning while the app is in `0.x`: `0.1.x` for fixes and improvements, `0.2.0` when a feature arrives, `1.0.0` when the band moves to the app. The owner decides which one a change deserves.
+- **The build writes `version.json`** at the root of the front (`web/dist/`): the version, the instant of the build and the commit of `main` it was built from. The front reads it at start, as a static file; the API does not need it. The local stack writes it in `npm run setup` and `npm run build`, with `local` as the commit.
+- **The release action tags the commit of `main`** a build came from with `v<version>` when it promotes that build, so that `git tag` lists what the members received. Releasing the same version twice does not move its tag: a fix changes the number.
+- **The changelog is data, in two languages**, apart from the interface text of `locales/`: `web/src/changelog/en.json` is the source, written in English; `web/src/changelog/fr.json` holds the French of each line. One entry per version: `version`, `date` (the day it is merged into `main`, so the day it reaches beta) and `changes`, a list of lines, each with a `kind` (`added`, `changed`, `fixed`) and its text. The app shows the language of the member, and the English line when a translation is missing.
+- **The entry of a version is written in the pull request that makes the change**, with its date. A check of `npm run check` refuses a build whose `package.json` version has no entry in `en.json`, or whose entry has a line without French.
+- **`CHANGELOG.md` at the root is generated** from `en.json` by `npm run changelog`, and committed with it: it is what GitHub and other bands read. It is never edited by hand.
+- **The app shows it** in the settings, under "À propos": the version and the day of its build ("Publiée le": the day it reached beta, since promoting it to production builds nothing again), then the changes of that version grouped by kind, and the earlier versions folded. Figma: page `Members`, section 5, `Members / Settings — about`.
+
 ### Migrations without a command line
 
 [Migrations](../api/src/Migrations/Migrations.php) is the only code that applies the scripts of `database/migrations/`, for the three ways to ask:
