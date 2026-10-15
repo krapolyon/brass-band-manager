@@ -77,7 +77,6 @@ test('install creates the band, its sections and instruments, and the admin', as
     status: 'ACTIVE',
     language: 'fr',
     colorScheme: 'AUTO',
-    textSizePercent: 100,
     hasHighContrast: false,
     roles: ['ADMIN'],
   });

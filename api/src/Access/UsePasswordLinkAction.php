@@ -52,10 +52,6 @@ final class UsePasswordLinkAction
         }
         $errors = new FieldErrors();
         Passwords::check($errors, 'password', $input->password);
-        if ($input->accessibility !== null
-            && !in_array($input->accessibility->textSizePercent, AccessibilityInput::TEXT_SIZES, true)) {
-            $errors->add('accessibility.textSizePercent', 'invalid');
-        }
         $photo = $input->photo === null ? null : $this->photos->read($errors, 'photo', $input->photo);
         $errors->throwIfAny();
         // The record is checked once here, so that its faults are said before

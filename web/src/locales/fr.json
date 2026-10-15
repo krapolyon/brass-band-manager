@@ -192,7 +192,7 @@
     "textSize": {
       "label": "Taille du texte",
       "value": "{{percent}} %",
-      "description": "Agrandit les textes sans modifier la mise en page."
+      "description": "Agrandit les textes sans modifier la mise en page. Ce réglage n’affecte que cet appareil."
     },
     "highContrast": {
       "label": "Contraste élevé",

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addCostume, addGig, answerOf, day, organise, plays } from './support/gigs.ts';
 import { png } from './support/images.ts';
@@ -690,9 +691,8 @@ test.describe('accessibility', () => {
       placeName: 'Place Joffre, Saint-Genis-Laval',
     });
     answerOf('Lulu', slotId, 'YES');
-    sql(
-      `UPDATE member SET textSizePercent = 200, hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`,
-    );
+    sql(`UPDATE member SET hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
 
     for (const address of ['/gigs', `/gigs/${gigId}`, `/gigs/${gigId}/answers`]) {
@@ -736,9 +736,8 @@ test.describe('accessibility', () => {
     page,
   }) => {
     const { gigId } = addGig('Carnaval', { startsOn: day(12), notes: 'Badge à récupérer.' });
-    sql(
-      `UPDATE member SET textSizePercent = 200, hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`,
-    );
+    sql(`UPDATE member SET hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
     await page.goto(`/gigs/${gigId}`);
 

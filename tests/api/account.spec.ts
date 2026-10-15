@@ -35,7 +35,6 @@ test.describe('preferences', () => {
     language: 'fr',
     colorScheme: 'DARK',
     accentTheme: 'mint',
-    textSizePercent: 140,
     hasHighContrast: true,
     hasIncreasedSpacing: false,
     hasLegibleFont: true,
@@ -73,15 +72,25 @@ test.describe('preferences', () => {
     await refused({ language: 'xx' }, { language: 'invalid' });
     await refused({ colorScheme: 'SEPIA' }, { colorScheme: 'invalid' });
     await refused({ accentTheme: 'gold' }, { accentTheme: 'invalid' });
-    await refused({ textSizePercent: 99 }, { textSizePercent: 'invalid' });
-    await refused({ textSizePercent: 201 }, { textSizePercent: 'invalid' });
-    // Six steps only, 100 to 200 by 20.
-    await refused({ textSizePercent: 150 }, { textSizePercent: 'invalid' });
     await refused({ hasHighContrast: 'yes' }, { hasHighContrast: 'invalid' });
     await refused({ status: 'LEFT' }, { status: 'invalid' });
-    expect(sql("SELECT colorScheme, textSizePercent FROM member WHERE nickname = 'Zaza'")).toBe(
-      'AUTO\t100',
-    );
+    expect(sql("SELECT colorScheme FROM member WHERE nickname = 'Zaza'")).toBe('AUTO');
+    await zaza.dispose();
+  });
+
+  test('the text size is a setting of the device: neither saved nor answered (#18)', async ({
+    playwright,
+  }) => {
+    const zaza = await deviceOf(playwright, email('Zaza'));
+
+    // A page left open on an older version still sends it: it is not refused, and ignored.
+    const response = await zaza.put('/api/me/preferences', {
+      data: preferences({ textSizePercent: 160 }),
+    });
+    expect(response.status()).toBe(200);
+    expect(await response.json()).not.toHaveProperty('textSizePercent');
+    expect(await (await zaza.get('/api/me')).json()).not.toHaveProperty('textSizePercent');
+    expect(sql("SELECT textSizePercent FROM member WHERE nickname = 'Zaza'")).toBe('100');
     await zaza.dispose();
   });
 

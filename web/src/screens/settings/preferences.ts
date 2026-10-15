@@ -4,16 +4,16 @@ import { api } from '../../api.ts';
 import { type Me, useMe, useSetMe } from '../../session.ts';
 
 // The preferences of the signed-in member: language, appearance and
-// accessibility options. They are seen and changed by the member only
-// (model/members.md, "Personal data"). A change applies at once, with no save
-// button, and follows the member from one device to another.
+// accessibility options but the text size, which stays on the device. They
+// are seen and changed by the member only (model/members.md, "Personal data").
+// A change applies at once, with no save button, and follows the member from
+// one device to another.
 
 type Preferences = Pick<
   Me,
   | 'language'
   | 'colorScheme'
   | 'accentTheme'
-  | 'textSizePercent'
   | 'hasHighContrast'
   | 'hasIncreasedSpacing'
   | 'hasLegibleFont'
@@ -45,7 +45,6 @@ export function useSavePreferences() {
             language: next.language,
             colorScheme: next.colorScheme,
             accentTheme: next.accentTheme,
-            textSizePercent: next.textSizePercent,
             hasHighContrast: next.hasHighContrast,
             hasIncreasedSpacing: next.hasIncreasedSpacing,
             hasLegibleFont: next.hasLegibleFont,

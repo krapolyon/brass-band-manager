@@ -5,7 +5,7 @@ import type { Appearance } from './appearance.ts';
 // Who is signed in on this device: what GET /api/me answers
 // (api/src/Access/Profile.php). The session itself is a cookie the page
 // cannot read; this is how the front knows there is one.
-export type Me = Appearance & {
+export type Me = Omit<Appearance, 'textSizePercent'> & {
   id: number;
   nickname: string;
   firstName: string;
@@ -67,8 +67,11 @@ export function useSetMe() {
 
   return (me: Me | null) => {
     if (me === null) {
-      // Nothing a member saw stays in the memory of the page after they sign out.
-      queryClient.clear();
+      // Nothing a member saw stays in the memory of the page after they sign
+      // out. The answer to "who is signed in" is kept, emptied below: what
+      // follows it (the look of the app, the guards) then learns that nobody
+      // is. Removed with the rest, it would never hear of it.
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'me' });
     }
     queryClient.setQueryData(['me'], me);
   };

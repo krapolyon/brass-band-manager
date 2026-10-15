@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { png } from './support/images.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
@@ -266,8 +267,9 @@ test('only an admin opens the settings of the band', async ({ page }) => {
 test('at the largest text size with every option on, the settings of the band can still be used', async ({
   page,
 }) => {
-  sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
+  sql(`UPDATE member SET hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
          hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE email = '${admin.email}'`);
+  await textSizeOfDevice(page, 200);
   await signIn(page);
   const overflow = () =>
     page.evaluate(

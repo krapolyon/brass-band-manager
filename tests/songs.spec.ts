@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from './support/scenario.ts';
 import {
@@ -414,7 +415,7 @@ test.describe('a song', () => {
   test('the list and a song hold at a text size of 200 %, without scrolling sideways', async ({
     page,
   }) => {
-    sql("UPDATE member SET textSizePercent = 200 WHERE nickname = 'Zaza'");
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
     await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
 

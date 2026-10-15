@@ -11,6 +11,7 @@ import { Message } from '../../components/Message.tsx';
 import { NavRow } from '../../components/NavRow.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
+import { useDeviceTextSize } from '../../deviceAccessibility.ts';
 import i18n, { languageName } from '../../i18n.ts';
 import { instrumentsOf, useMembers, useSections } from '../../members.ts';
 import { forgetAsked, usePush } from '../../push.ts';
@@ -28,6 +29,7 @@ export function SettingsScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMe().data;
+  const textSize = useDeviceTextSize();
   const setMe = useSetMe();
   const save = useSavePreferences();
   const push = usePush().data;
@@ -59,9 +61,9 @@ export function SettingsScreen() {
 
   if (!me) return null;
 
+  // The text size is the one of this device; the five others, of the account.
   const options = [
-    me.textSizePercent !== 100 &&
-      t('settings.accessibility.textSize', { percent: me.textSizePercent }),
+    textSize !== 100 && t('settings.accessibility.textSize', { percent: textSize }),
     me.hasHighContrast && t('settings.accessibility.highContrast'),
     me.hasIncreasedSpacing && t('settings.accessibility.increasedSpacing'),
     me.hasLegibleFont && t('settings.accessibility.legibleFont'),

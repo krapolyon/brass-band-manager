@@ -40,9 +40,6 @@ final class UpdatePreferencesAction
         if ($input->accentTheme !== null && !in_array($input->accentTheme, AccentThemes::AVAILABLE, true)) {
             $errors->add('accentTheme', 'invalid');
         }
-        if (!in_array($input->textSizePercent, AccessibilityInput::TEXT_SIZES, true)) {
-            $errors->add('textSizePercent', 'invalid');
-        }
         $errors->throwIfAny();
 
         $this->database->update(
@@ -51,7 +48,6 @@ final class UpdatePreferencesAction
                 'language' => $input->language,
                 'colorScheme' => $input->colorScheme,
                 'accentTheme' => $input->accentTheme,
-                'textSizePercent' => $input->textSizePercent,
                 'hasHighContrast' => (int) $input->hasHighContrast,
                 'hasIncreasedSpacing' => (int) $input->hasIncreasedSpacing,
                 'hasLegibleFont' => (int) $input->hasLegibleFont,

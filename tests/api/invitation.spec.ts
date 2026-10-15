@@ -44,7 +44,6 @@ const record = (changes: object = {}) => ({
   ...changes,
 });
 const options = {
-  textSizePercent: 140,
   hasHighContrast: true,
   hasIncreasedSpacing: false,
   hasLegibleFont: true,
@@ -171,7 +170,7 @@ test('a faulty record saves nothing: no password, no photo, and the link still w
   expect((await request.post('/api/passwordLink/check', { data: { token } })).status()).toBe(200);
 });
 
-test('a text size or a photo the app does not accept is refused', async ({
+test('a photo the app does not accept is refused, and a text size is not saved (#18)', async ({
   playwright,
   request,
 }) => {
@@ -179,12 +178,17 @@ test('a text size or a photo the app does not accept is refused', async ({
   const use = (data: object) =>
     request.post('/api/passwordLink/use', { data: { token, password, ...data } });
 
-  const size = await use({ accessibility: { ...options, textSizePercent: 150 } });
   const photo = await use({ photo: { image: Buffer.from('not an image').toString('base64') } });
-
-  expect((await size.json()).fields).toEqual({ 'accessibility.textSizePercent': 'invalid' });
   expect((await photo.json()).fields).toEqual({ photo: 'invalid' });
   expect(sql(`SELECT status FROM member WHERE id = ${memberId('Kiki')}`)).toBe('INVITED');
+
+  // The text size stays on the device: sent by an older page, it is ignored.
+  const size = await use({ accessibility: { ...options, textSizePercent: 160 } });
+  expect(size.status()).toBe(200);
+  expect(await size.json()).not.toHaveProperty('textSizePercent');
+  expect(sql(`SELECT status, textSizePercent FROM member WHERE id = ${memberId('Kiki')}`)).toBe(
+    'ACTIVE\t100',
+  );
 });
 
 test('an invited member can remove the photo they were given', async ({ playwright, request }) => {

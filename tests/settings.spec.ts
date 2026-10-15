@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { png } from './support/images.ts';
 import {
@@ -261,10 +262,21 @@ test.describe('appearance and accessibility', () => {
     await expect(root(page)).toHaveAttribute('data-text-size', '140');
     await expect(root(page)).toHaveAttribute('data-contrast', 'more');
     await expect(root(page)).toHaveAttribute('data-timeouts', 'extended');
+    // The five options of the account are saved on it; the text size is not.
     await expect
-      .poll(() => zaza('textSizePercent, hasHighContrast, hasExtendedTimeouts, hasLegibleFont'))
-      .toBe('140\t1\t1\t0');
-    expect(await page.evaluate(() => localStorage.getItem('accessibility'))).toBeNull();
+      .poll(() => zaza('hasHighContrast, hasExtendedTimeouts, hasLegibleFont, textSizePercent'))
+      .toBe('1\t1\t0\t100');
+    // The device keeps its text size, and nothing of the account.
+    expect(
+      JSON.parse((await page.evaluate(() => localStorage.getItem('accessibility'))) ?? '{}'),
+    ).toEqual({
+      textSizePercent: 140,
+      hasHighContrast: false,
+      hasIncreasedSpacing: false,
+      hasLegibleFont: false,
+      hasReducedMotion: false,
+      hasExtendedTimeouts: false,
+    });
 
     // The summary says what is on.
     await page.goto('/settings');
@@ -273,11 +285,57 @@ test.describe('appearance and accessibility', () => {
     );
   });
 
+  test('the text size belongs to the device: it stays at sign-out, and another device keeps its own (#18)', async ({
+    page,
+    browser,
+  }) => {
+    await signIn(page);
+    await page.getByRole('link', { name: /Accessibilité/ }).click();
+    // The text under the slider says it.
+    await expect(
+      page.getByText(
+        'Agrandit les textes sans modifier la mise en page. Ce réglage n’affecte que cet appareil.',
+      ),
+    ).toBeVisible();
+    await page.getByRole('slider', { name: 'Taille du texte' }).press('ArrowRight');
+    await page.getByRole('switch', { name: 'Police plus lisible' }).check();
+    await expect(root(page)).toHaveAttribute('data-text-size', '120');
+    await expect.poll(() => zaza('hasLegibleFont')).toBe('1');
+
+    // Signed out: the text size of the device stays, the font of the account goes.
+    await page.goto('/settings');
+    await page.getByRole('button', { name: /Me déconnecter/ }).click();
+    await expect(page).toHaveURL('/sign-in');
+    await expect(root(page)).toHaveAttribute('data-text-size', '120');
+    await expect(root(page)).not.toHaveAttribute('data-typeface', 'legible');
+
+    // Another device of the same member: the font follows the account, not the size.
+    const other = await browser.newContext({ baseURL: 'http://localhost:8081', locale: 'fr-FR' });
+    const computer = await other.newPage();
+    await signIn(computer);
+    await expect(root(computer)).toHaveAttribute('data-typeface', 'legible');
+    await expect(root(computer)).not.toHaveAttribute('data-text-size');
+    await computer.goto('/settings');
+    await expect(computer.getByRole('link', { name: /Accessibilité/ })).toContainText(
+      'Police plus lisible',
+    );
+    await expect(computer.getByRole('link', { name: /Accessibilité/ })).not.toContainText(
+      'Texte à',
+    );
+    await other.close();
+
+    // Back on the first device: its text size again, with the options of the account.
+    await signIn(page);
+    await expect(root(page)).toHaveAttribute('data-text-size', '120');
+    await expect(root(page)).toHaveAttribute('data-typeface', 'legible');
+  });
+
   test('at the largest text size with every option on, the settings can still be used', async ({
     page,
   }) => {
-    sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
+    sql(`UPDATE member SET hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
          hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await signIn(page);
     const overflow = () =>
       page.evaluate(

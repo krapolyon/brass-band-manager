@@ -2,15 +2,18 @@ import { useTranslation } from 'react-i18next';
 import { AccessibilityOptions } from '../../components/AccessibilityOptions.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
+import { setDeviceTextSize, useDeviceTextSize } from '../../deviceAccessibility.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { useSavePreferences } from './preferences.ts';
 
-// Figma: Members / Settings — accessibility. The six options of the account:
-// seen by the member only, applied at once, the same on every device.
+// Figma: Members / Settings — accessibility. The six options, seen by the
+// member only and applied at once: the text size on this device (its slider
+// says so), the five others on the account, the same on every device.
 export function AccessibilityScreen() {
   const { t } = useTranslation();
   const save = useSavePreferences();
   const { me } = save;
+  const textSize = useDeviceTextSize();
 
   if (!me) return null;
 
@@ -25,7 +28,13 @@ export function AccessibilityScreen() {
     >
       {save.isError && <Message kind="danger">{t('errors.unreachable')}</Message>}
       <Sheet>
-        <AccessibilityOptions value={me} onChange={(options) => save.mutate(options)} />
+        <AccessibilityOptions
+          value={{ ...me, textSizePercent: textSize }}
+          onChange={({ textSizePercent, ...account }) => {
+            if (textSizePercent !== textSize) setDeviceTextSize(textSizePercent);
+            else save.mutate(account);
+          }}
+        />
       </Sheet>
     </AppLayout>
   );

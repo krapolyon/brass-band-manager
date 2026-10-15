@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
 
@@ -96,7 +97,7 @@ test.describe('the frame of the app', () => {
   test('from a text size of 160 %, the tabs show their icons alone and keep their names', async ({
     page,
   }) => {
-    sql(`UPDATE member SET textSizePercent = 160 WHERE email = '${admin.email}'`);
+    await textSizeOfDevice(page, 160);
     await signIn(page);
     await expect(page.locator('html')).toHaveAttribute('data-text-size', '160');
 
@@ -206,9 +207,10 @@ test.describe('the directory', () => {
   test('at the largest text size with every option on, the directory can still be used', async ({
     page,
   }) => {
-    sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1,
+    sql(`UPDATE member SET hasIncreasedSpacing = 1, hasLegibleFont = 1,
          hasHighContrast = 1,
          hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE email = '${admin.email}'`);
+    await textSizeOfDevice(page, 200);
     await signIn(page);
     await expect(page.locator('html')).toHaveAttribute('data-text-size', '200');
 

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addGig, addSetlist, addSong, day } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
@@ -669,9 +670,8 @@ test.describe('the live setlist', () => {
     sql(
       `UPDATE setlist SET liveStartedAt = UTC_TIMESTAMP(), livePosition = 3 WHERE id = ${setlistId}`,
     );
-    sql(
-      `UPDATE member SET textSizePercent = 200, hasLegibleFont = 1 WHERE id = ${memberId('Sissi')}`,
-    );
+    sql(`UPDATE member SET hasLegibleFont = 1 WHERE id = ${memberId('Sissi')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Sissi');
     await page.goto(`/setlists/${setlistId}/live`);
     await expect(page.locator('.gigs-liveSongs [aria-current="true"]')).toHaveText(
@@ -738,7 +738,7 @@ test.describe('the live setlist', () => {
     sql(
       `UPDATE setlist SET liveStartedAt = UTC_TIMESTAMP(), livePosition = 3 WHERE id = ${setlistId}`,
     );
-    sql(`UPDATE member SET textSizePercent = 200 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
     await page.goto(`/setlists/${setlistId}/live`);
     await expect(page.locator('.gigs-liveSongs [aria-current="true"]')).toHaveText('Toxic');
