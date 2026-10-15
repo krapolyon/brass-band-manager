@@ -1477,6 +1477,11 @@
         "CONFIRMED": "Le plan a lieu. Se fait tout seul dès qu’il est jouable",
         "CANCELLED": "Le plan n’a pas lieu ; les réponses sont gardées"
       },
+      "detailFromConfirmed": {
+        "PROPOSED": "On rediscute ; les réponses sont gardées",
+        "CONFIRMED": "Statut actuel · le plan a lieu"
+      },
+      "confirmedAgain": "Le plan est toujours jouable : il repassera en Validé à la prochaine réponse. Pour l’éviter, choisis Proposition.",
       "notAllowed": "Pas depuis « {{status}} »",
       "forceTitle": "Valider sans {{sections}} ?",
       "forceLead": "Personne n’a répondu oui en {{sections}}. Valide quand même si quelqu’un d’un autre pupitre remplace : le plan passe en « Validé » pour toute la fanfare.",

@@ -410,6 +410,58 @@ test.describe('who may edit a gig', () => {
     expect(statusOf(gigId)).toBe('CONFIRMED');
   });
 
+  test('a confirmed gig is put back; still playable, the panel says it will be confirmed again', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = addGig('Carnaval', { status: 'CONFIRMED', startsOn: day(12) });
+    // Everybody says yes: the gig is playable.
+    sql(
+      `INSERT INTO gigSlotAttendance (gigSlotId, memberId, answer) SELECT ${slotId}, id, 'YES' FROM member`,
+    );
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}`);
+    await page.getByRole('button', { name: 'Gérer le plan' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Changer le statut' }).click();
+    const panel = page.getByRole('dialog', { name: 'Statut du plan' });
+
+    // From "Validé": back to Accepté or Proposition, not to a draft.
+    await expect(panel.getByRole('radio', { name: /^Brouillon/ })).toBeDisabled();
+    await expect(panel.getByText('Pas depuis « Validé »')).toBeVisible();
+    await expect(panel.getByText('Statut actuel · le plan a lieu')).toBeVisible();
+    await expect(panel.getByText('On rediscute ; les réponses sont gardées')).toBeVisible();
+    const warning = panel.getByText('Le plan est toujours jouable : il repassera en Validé');
+    await expect(warning).toBeHidden();
+
+    await panel.getByText('Accepté', { exact: true }).click();
+    await expect(panel.getByRole('alert')).toContainText(
+      'Le plan est toujours jouable : il repassera en Validé à la prochaine réponse. Pour l’éviter, choisis Proposition.',
+    );
+    await panel.getByText('Proposition', { exact: true }).click();
+    await expect(warning).toBeHidden();
+
+    await panel.getByText('Accepté', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Enregistrer le statut' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(statusOf(gigId)).toBe('ACCEPTED');
+  });
+
+  test('a confirmed gig that is no longer playable is put back without the warning', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Carnaval', { status: 'CONFIRMED', startsOn: day(12) });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}`);
+    await page.getByRole('button', { name: 'Gérer le plan' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Changer le statut' }).click();
+    const panel = page.getByRole('dialog', { name: 'Statut du plan' });
+
+    await panel.getByText('Accepté', { exact: true }).click();
+    await expect(panel.getByText('il repassera en Validé')).toBeHidden();
+    await panel.getByRole('button', { name: 'Enregistrer le statut' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(statusOf(gigId)).toBe('ACCEPTED');
+  });
+
   test('a draft is deleted after a confirmation; one that has answers is not', async ({ page }) => {
     const draft = addGig('Soirée au Ninkasi', { status: 'DRAFT', startsOn: day(20) });
     const answered = addGig('Carnaval', { status: 'DRAFT', startsOn: day(25) });

@@ -397,7 +397,7 @@ test.describe('the life cycle of a gig', () => {
       DRAFT: ['PROPOSED', 'CANCELLED'],
       PROPOSED: ['ACCEPTED', 'CONFIRMED', 'CANCELLED'],
       ACCEPTED: ['CONFIRMED', 'CANCELLED'],
-      CONFIRMED: ['CANCELLED'],
+      CONFIRMED: ['ACCEPTED', 'PROPOSED', 'CANCELLED'],
       CANCELLED: ['DRAFT', 'PROPOSED'],
     };
     const { gigId } = addGig('Carnaval');
@@ -458,6 +458,40 @@ test.describe('the life cycle of a gig', () => {
     });
     const accepted = await gigi.put(`/api/gigs/${gigId}/status`, { data: { status: 'ACCEPTED' } });
     expect(await accepted.json()).toMatchObject({ status: 'CONFIRMED' });
+  });
+
+  test('a confirmed gig put back to accepted while playable is confirmed again at the next answer', async ({
+    playwright,
+  }) => {
+    const { gigId, slotId } = addGig('Carnaval', 'CONFIRMED');
+    answerOf('Zaza', slotId, 'YES');
+    answerOf('Jibé', slotId, 'YES');
+    const gigi = await deviceOf(playwright, email('Gigi'));
+
+    // Put back by hand: the app does not confirm it again on the spot.
+    const back = await gigi.put(`/api/gigs/${gigId}/status`, { data: { status: 'ACCEPTED' } });
+    expect(await back.json()).toMatchObject({ status: 'ACCEPTED', isPlayable: true });
+    expect(sql(`SELECT COUNT(*) FROM gigSlotAttendance WHERE gigSlotId = ${slotId}`)).toBe('2');
+
+    // The rule "confirmed by the app" applies again at the next answer.
+    expect(await (await answer(gigi, gigId, slotId, 'MAYBE')).json()).toMatchObject({
+      status: 'CONFIRMED',
+    });
+  });
+
+  test('a confirmed gig put back to proposed stays proposed, whatever the answers', async ({
+    playwright,
+  }) => {
+    const { gigId, slotId } = addGig('Carnaval', 'CONFIRMED');
+    answerOf('Zaza', slotId, 'YES');
+    answerOf('Jibé', slotId, 'YES');
+    const gigi = await deviceOf(playwright, email('Gigi'));
+
+    const back = await gigi.put(`/api/gigs/${gigId}/status`, { data: { status: 'PROPOSED' } });
+    expect(await back.json()).toMatchObject({ status: 'PROPOSED', isPlayable: true });
+    expect(await (await answer(gigi, gigId, slotId, 'YES')).json()).toMatchObject({
+      status: 'PROPOSED',
+    });
   });
 
   test('who may edit a gig forces it to confirmed although a section has no yes', async ({

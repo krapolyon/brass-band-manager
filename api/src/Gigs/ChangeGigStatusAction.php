@@ -18,6 +18,9 @@ use Psr\Http\Message\ServerRequestInterface;
 //
 // A gig set to ACCEPTED while it is already playable is confirmed at once.
 // Setting CONFIRMED by hand forces it, playable or not: the screen asks first.
+// A confirmed gig put back to ACCEPTED is not confirmed again on the spot,
+// which would undo what was just asked: the next answer saved does it, if the
+// gig is still playable then (model/gigs.md, "Put back by hand").
 final class ChangeGigStatusAction
 {
     public function __construct(
@@ -38,7 +41,8 @@ final class ChangeGigStatusAction
 
         $this->database->transactional(function () use ($gigId, $next, $me): void {
             $gig = $this->gigs->row($gigId, lock: true);
-            if (!in_array($next, GigStatus::from((string) $gig['status'])->next(), true)) {
+            $current = GigStatus::from((string) $gig['status']);
+            if (!in_array($next, $current->next(), true)) {
                 throw new ApiError(409, 'invalidTransition');
             }
             $this->database->update('gig', ['status' => $next->value, 'updatedByMemberId' => $me->id], ['id' => $gigId]);
@@ -51,7 +55,9 @@ final class ChangeGigStatusAction
             if ($next !== GigStatus::CONFIRMED) {
                 $this->setlists->endLiveOfGig($gigId);
             }
-            $this->gigs->confirmIfPlayable($gigId);
+            if ($current !== GigStatus::CONFIRMED) {
+                $this->gigs->confirmIfPlayable($gigId);
+            }
         });
 
         return Json::write($response, $this->gigs->one($me, $gigId));
