@@ -394,6 +394,7 @@ export function GigFormScreen() {
             value={draft.endsOn}
             min={draft.startsOn || undefined}
             onChange={(event) => set('endsOn', event.target.value)}
+            clear={{ label: t('gigs.form.endsOnClear'), onClear: () => set('endsOn', '') }}
           />
           <TextField
             label={t('gigs.form.meetingTime')}

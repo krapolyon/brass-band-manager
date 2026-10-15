@@ -1514,6 +1514,7 @@
       "startsOn": "Date de début",
       "endsOn": "Date de fin",
       "endsOnHint": "Seulement pour un plan sur plusieurs jours.",
+      "endsOnClear": "Retirer la date de fin",
       "meetingTime": "Heure de rendez-vous",
       "meetingTimeHint": "Le premier jour. La note d’une présence dit le reste.",
       "where": "Où",

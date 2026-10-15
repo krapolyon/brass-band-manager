@@ -311,13 +311,13 @@ test.describe('who may edit a gig', () => {
 
     await page.getByLabel('Nom du plan').fill('Fête des Lumières');
     await page.getByLabel('Date de début').fill(day(40));
-    await page.getByLabel('Date de fin').fill(day(39));
+    await page.getByLabel('Date de fin', { exact: true }).fill(day(39));
     await page.getByLabel('Coordonnées GPS').fill('45,7673 4,8344');
     await page.getByRole('button', { name: 'Créer le plan' }).click();
     await expect(page.getByText('La fin ne peut pas être avant le début.')).toBeVisible();
     await expect(page.getByText('Écris la latitude puis la longitude')).toBeVisible();
 
-    await page.getByLabel('Date de fin').fill(day(41));
+    await page.getByLabel('Date de fin', { exact: true }).fill(day(41));
     await page.getByLabel('Heure de rendez-vous').fill('18:00');
     await page.getByLabel('Lieu', { exact: true }).fill('Place des Terreaux');
     await page.getByLabel('Coordonnées GPS').fill('45.7673, 4.8344');
@@ -530,6 +530,28 @@ test.describe('who may edit a gig', () => {
       await expect(page.getByText('c’est pour ceux qui gèrent les plans')).toBeVisible();
       await expect(page.getByLabel('Nom du plan')).toHaveCount(0);
     }
+  });
+
+  test('the end date of a gig is removed with the button of its field (#16)', async ({ page }) => {
+    // The date picker of an iPhone has no way to clear a date: the field does.
+    const { gigId } = addGig('Fête des Lumières', { startsOn: day(40), endsOn: day(42) });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/edit`);
+
+    const end = page.getByLabel('Date de fin', { exact: true });
+    await expect(end).toHaveValue(day(42));
+    // The date that is required has no button to empty it.
+    await expect(page.getByRole('button', { name: /Retirer la date de début/ })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Retirer la date de fin' }).click();
+    await expect(end).toHaveValue('');
+    await expect(end).toBeFocused();
+    // An empty date keeps its calendar: no button to empty it any more.
+    await expect(page.getByRole('button', { name: 'Retirer la date de fin' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Enregistrer le plan' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Fête des Lumières' })).toBeVisible();
+    expect(sql(`SELECT endsOn FROM gig WHERE id = ${gigId}`)).toBe('NULL');
   });
 
   test('editing a gig keeps what the form does not show, and deleting a slot asks first', async ({
