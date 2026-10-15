@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createReadStream, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -57,7 +58,12 @@ function aboutTheApp(): Plugin {
   const version = () =>
     JSON.stringify({
       version: JSON.parse(readFileSync('package.json', 'utf8')).version,
-      builtAt: new Date().toISOString(),
+      // In the GitHub Action, the instant of the commit of main, not of the
+      // build: building the same commit twice gives the same files, and beta
+      // gets a new commit only when something changed.
+      builtAt: process.env.GITHUB_SHA
+        ? execFileSync('git', ['log', '-1', '--format=%cI'], { encoding: 'utf8' }).trim()
+        : new Date().toISOString(),
       commit: process.env.GITHUB_SHA ?? 'local',
     });
   const changelog = () =>

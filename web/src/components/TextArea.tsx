@@ -36,10 +36,20 @@ export function TextArea({ label, hint, error, lines = 4, ...textarea }: Props) 
   }, []);
 
   // Each change of the text, and each change of width: the text wraps anew.
-  // A larger text size changes the width of the letters, not of the field:
-  // the observer sees the height of the lines change too.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the value is what changes the height
   useEffect(fit, [fit, textarea.value]);
+  // The size of the letters changes the height of the lines, not the width:
+  // the fonts finishing loading, and the text size, the legible font or the
+  // spacing of the member, written on the root element (appearance.ts).
+  useEffect(() => {
+    void document.fonts?.ready.then(fit);
+    const options = new MutationObserver(fit);
+    options.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-text-size', 'data-typeface', 'data-spacing'],
+    });
+    return () => options.disconnect();
+  }, [fit]);
   useEffect(() => {
     const element = field.current;
     if (!element || typeof ResizeObserver === 'undefined') return;

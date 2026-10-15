@@ -26,7 +26,10 @@ test.beforeEach(async ({ playwright, baseURL }) => {
 
 const email = (nickname: string) => `${nickname.toLowerCase()}@example.org`;
 
-/** A day counted from today, as 2026-12-04. */
+/**
+ * A day counted from today, as 2026-12-04, in UTC: the server reads the end
+ * of a gig on that clock, with a day of grace (Gigs::firstOpenDay).
+ */
 function day(fromToday: number): string {
   return new Date(Date.now() + fromToday * 86_400_000).toISOString().slice(0, 10);
 }
@@ -492,6 +495,29 @@ test.describe('the life cycle of a gig', () => {
     expect(await (await answer(gigi, gigId, slotId, 'YES')).json()).toMatchObject({
       status: 'PROPOSED',
     });
+  });
+
+  test('a confirmed gig is put back only by who may edit it; its live setlist ends', async ({
+    playwright,
+  }) => {
+    const { gigId, slotId } = addGig('Carnaval', 'CONFIRMED');
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    for (const status of ['ACCEPTED', 'PROPOSED']) {
+      const refused = await zaza.put(`/api/gigs/${gigId}/status`, { data: { status } });
+      expect(refused.status(), status).toBe(403);
+    }
+    expect(statusOf(gigId)).toBe('CONFIRMED');
+
+    const setlistId = Number(
+      sql(
+        `INSERT INTO setlist (gigId, gigSlotId, number, liveStartedAt, livePosition)
+         VALUES (${gigId}, ${slotId}, 1, UTC_TIMESTAMP(), 1); SELECT LAST_INSERT_ID();`,
+      ),
+    );
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    const back = await gigi.put(`/api/gigs/${gigId}/status`, { data: { status: 'ACCEPTED' } });
+    expect(back.status()).toBe(200);
+    expect(sql(`SELECT liveStartedAt IS NULL FROM setlist WHERE id = ${setlistId}`)).toBe('1');
   });
 
   test('who may edit a gig forces it to confirmed although a section has no yes', async ({

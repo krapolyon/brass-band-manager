@@ -6,7 +6,7 @@
 // en.json: never edit CHANGELOG.md by hand.
 //
 // With --check (run by npm run check), it writes nothing and fails when:
-//   - the version of package.json has no entry in en.json;
+//   - the version of package.json has no entry in en.json, or not the first;
 //   - a line of that entry has no French;
 //   - CHANGELOG.md is not what en.json gives (run npm run changelog).
 // See docs/architecture.md, "Versions and the changelog".
@@ -52,6 +52,8 @@ function problems() {
   const current = entries.find((entry) => entry.version === version);
   if (!current) {
     found.push(`Version ${version} of package.json has no entry in web/src/changelog/en.json.`);
+  } else if (entries[0] !== current) {
+    found.push(`The entry of version ${version} must come first in web/src/changelog/en.json.`);
   } else {
     for (const change of current.changes) {
       if (!french[version]?.[change.text]) {

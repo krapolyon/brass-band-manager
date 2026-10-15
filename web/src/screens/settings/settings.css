@@ -86,7 +86,7 @@
   gap: var(--spaceSm);
 }
 
-.settings-changeGroup h3 {
+.settings-changeGroup :is(h2, h3) {
   margin: 0;
 }
 

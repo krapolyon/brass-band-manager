@@ -32,12 +32,35 @@ async function file<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+// Read once, when the page starts, and kept for its whole life: the version
+// shown is the one of the code that runs, even when a newer build reached the
+// host since the page was opened.
+const ONCE = { staleTime: Number.POSITIVE_INFINITY, gcTime: Number.POSITIVE_INFINITY } as const;
+
 export function useBuild() {
-  return useQuery({ queryKey: ['build'], queryFn: () => file<Build>('/version.json') });
+  return useQuery({ queryKey: ['build'], queryFn: () => file<Build>('/version.json'), ...ONCE });
 }
 
 export function useChangelog() {
-  return useQuery({ queryKey: ['changelog'], queryFn: () => file<Changelog>('/changelog.json') });
+  return useQuery({
+    queryKey: ['changelog'],
+    queryFn: () => file<Changelog>('/changelog.json'),
+    ...ONCE,
+  });
+}
+
+/** Asks for both as the page starts (main.tsx). */
+export function readAboutTheApp(client: import('@tanstack/react-query').QueryClient) {
+  void client.prefetchQuery({
+    queryKey: ['build'],
+    queryFn: () => file<Build>('/version.json'),
+    ...ONCE,
+  });
+  void client.prefetchQuery({
+    queryKey: ['changelog'],
+    queryFn: () => file<Changelog>('/changelog.json'),
+    ...ONCE,
+  });
 }
 
 /** A line in the language of the member, or in English when it has no translation. */

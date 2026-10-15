@@ -28,10 +28,14 @@ function dayText(value: string, language: string): string {
 function Changes({
   entry,
   lineOf,
+  headingLevel,
 }: {
   entry: ChangelogEntry;
   lineOf: (version: string, text: string) => string;
+  /** 2 on the screen, under its title; 3 in the panel, under its own. */
+  headingLevel: 2 | 3;
 }) {
+  const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const { t } = useTranslation();
 
   return (
@@ -42,11 +46,11 @@ function Changes({
         const look = KIND[kind] ?? KIND.changed;
         return (
           <section key={kind} className="settings-changeGroup">
-            <h3>
+            <Heading>
               <Chip kind={look?.kind} icon={look?.icon}>
                 {t(`settings.about.kinds.${kind}`)}
               </Chip>
-            </h3>
+            </Heading>
             <ul>
               {lines.map((change) => (
                 <li key={change.text} className="textBody">
@@ -76,7 +80,8 @@ export function AboutScreen() {
   const version = build.data?.version;
   const at = entries.findIndex((entry) => entry.version === version);
   const current = at >= 0 ? entries[at] : undefined;
-  const earlier = at >= 0 ? entries.slice(at + 1) : [];
+  // A version the changelog does not know yet: every entry is an earlier one.
+  const earlier = at >= 0 ? entries.slice(at + 1) : entries;
   const lineOf = (of: string, text: string) =>
     changelog.data ? lineIn(changelog.data, of, text, language) : text;
 
@@ -105,7 +110,7 @@ export function AboutScreen() {
       )}
       {current && current.changes.length > 0 && (
         <Sheet>
-          <Changes entry={current} lineOf={lineOf} />
+          <Changes entry={current} lineOf={lineOf} headingLevel={2} />
         </Sheet>
       )}
       {earlier.length > 0 && (
@@ -135,7 +140,7 @@ export function AboutScreen() {
             <p className="settings-note textBody">
               {t('settings.about.published', { date: dayText(opened.date, language) })}
             </p>
-            <Changes entry={opened} lineOf={lineOf} />
+            <Changes entry={opened} lineOf={lineOf} headingLevel={3} />
           </div>
         )}
       </Panel>

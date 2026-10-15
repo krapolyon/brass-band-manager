@@ -76,23 +76,23 @@ jobs:
             parent=$(git rev-parse FETCH_HEAD)
           fi
           if [ -n "$parent" ] && [ "$(git rev-parse "$parent^{tree}")" = "$tree" ]; then
-            echo "release already holds this build: left as it is."
-            exit 0
+            echo "release already holds this build: left as it is." >> "$GITHUB_STEP_SUMMARY"
+          else
+            # A new commit on top of release, holding the tree of the build.
+            commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "Release of the beta build $build" -m "$(git log -1 --format=%s "$build")")
+            git push origin "$commit:refs/heads/release"
+            echo "release now holds the beta build $build" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          # A new commit on top of release, holding the tree of the build.
-          commit=$(git commit-tree "$tree" ${parent:+-p "$parent"} -m "Release of the beta build $build" -m "$(git log -1 --format=%s "$build")")
-          git push origin "$commit:refs/heads/release"
-          echo "release now holds the beta build $build" >> "$GITHUB_STEP_SUMMARY"
-
-          # The commit of main the build came from is tagged v<version>, so
+          # Once release holds it (again, after a run that stopped before the
+          # tag), the commit of main the build came from is tagged v<version>, so
           # that "git tag" lists what the members received. The version and
           # the commit are those the build wrote in web/version.json. A tag
           # that exists is never moved: a fix changes the number.
           version=$(git show "$build:web/version.json" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
           source=$(git show "$build:web/version.json" | sed -n 's/.*"commit":"\([0-9a-f]\{40\}\)".*/\1/p')
-          if [ -z "$version" ] || [ -z "$source" ]; then
-            echo "::warning::This build says no version or no commit of main: nothing is tagged."
+          if [ -z "$source" ] || ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::warning::This build gives no version or no commit of main: nothing is tagged."
           elif git rev-parse --verify --quiet "refs/tags/v$version" > /dev/null; then
             echo "v$version is already tagged: left as it is." >> "$GITHUB_STEP_SUMMARY"
           else

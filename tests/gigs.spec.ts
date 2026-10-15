@@ -541,8 +541,9 @@ test.describe('who may edit a gig', () => {
 
     const end = page.getByLabel('Date de fin', { exact: true });
     await expect(end).toHaveValue(day(42));
-    // The date that is required has no button to empty it.
-    await expect(page.getByRole('button', { name: /Retirer la date de début/ })).toHaveCount(0);
+    // The date that is required has no button to empty it, only its calendar.
+    const start = page.locator('.TextField').filter({ has: page.getByLabel('Date de début') });
+    await expect(start.getByRole('button')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Retirer la date de fin' }).click();
     await expect(end).toHaveValue('');

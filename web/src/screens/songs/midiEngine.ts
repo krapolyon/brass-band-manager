@@ -55,6 +55,11 @@ function silence(): string {
 
 let unlocker: HTMLAudioElement | null = null;
 
+/** An iPhone or an iPad (which says it is a Mac, with a touch screen). */
+const isAppleMobile = () =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
 /** Asks iOS to treat the sound of the app as music. Called from the press of the member. */
 function unlockSound(): void {
   const session = (navigator as Navigator & { audioSession?: AudioSession }).audioSession;
@@ -62,6 +67,9 @@ function unlockSound(): void {
     session.type = 'playback';
     return;
   }
+  // Elsewhere a media element is not needed, and on Android it would take
+  // the sound from other apps.
+  if (!isAppleMobile()) return;
   unlocker ??= new Audio(silence());
   unlocker.play().catch(() => {
     // Not needed elsewhere than on an older iPhone; refused there, nothing better to do.
@@ -169,6 +177,7 @@ export class MidiEngine {
 
   /** A new clock, with the same instruments, in place of one iOS left interrupted. */
   private replaceClock(): void {
+    if (this.disposed) return;
     for (const voice of this.voices) voice.instrument.dispose();
     void this.context.close().catch(() => {});
     this.context = new AudioContext();
@@ -209,9 +218,17 @@ export class MidiEngine {
     // A browser lets sound start only from a gesture of the member: this is
     // it. What needs the gesture is done before anything is waited for.
     unlockSound();
-    if (!(await this.wake())) {
+    const isAwake = await this.wake();
+    // Meanwhile the member may have paused, or left: nothing to rebuild.
+    if (!this.wanted || this.disposed) return;
+    if (!isAwake) {
       this.replaceClock();
-      await this.context.resume();
+      // The new clock gets a moment too; a clock that still does not run is
+      // said as a failure, never left as a silent "playing".
+      if (!(await this.wake())) {
+        if (this.disposed) return;
+        throw new Error('The sound of the device does not start');
+      }
     }
     await this.loaded;
     // Meanwhile the member may have paused, pressed again, or left.

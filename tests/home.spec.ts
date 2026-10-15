@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
-import { addGig, addSong, answerOf, day, organise, plays } from './support/gigs.ts';
+import { addGig, addSong, answerOf, day, localDay, organise, plays } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 import { emptyStorage } from './support/storage.ts';
 
@@ -289,8 +289,13 @@ test.describe('the gig of the day', () => {
 test('two gigs on the same day: the one that meets first comes first, and the alert leaves them out', async ({
   page,
 }) => {
-  addGig('Mariage de Clémence', { status: 'CONFIRMED', startsOn: day(0), meetingTime: '18:00' });
-  addGig('Vide-grenier', { status: 'CONFIRMED', startsOn: day(0), meetingTime: '09:30' });
+  // Today for the browser, which says which gigs are of the day.
+  addGig('Mariage de Clémence', {
+    status: 'CONFIRMED',
+    startsOn: localDay(0),
+    meetingTime: '18:00',
+  });
+  addGig('Vide-grenier', { status: 'CONFIRMED', startsOn: localDay(0), meetingTime: '09:30' });
   await homeOf(page, 'Zaza');
 
   const heroes = page.getByRole('article');

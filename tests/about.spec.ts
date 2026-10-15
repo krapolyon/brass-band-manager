@@ -74,10 +74,11 @@ test('the settings lead to the version of the app and its changes, grouped by ki
   await expect(page.getByText('Publiée le 20 novembre 2026')).toBeVisible();
 
   // Each kind under its chip, in the order Nouveau, Amélioré, Corrigé.
-  await expect(page.getByRole('heading', { level: 3 })).toHaveText([
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
     'Nouveau',
     'Amélioré',
     'Corrigé',
+    'Versions précédentes',
   ]);
   const group = (name: string) =>
     page.locator('.settings-changeGroup').filter({ has: page.getByRole('heading', { name }) });
@@ -104,6 +105,18 @@ test('with a single version, there is no earlier one to show', async ({ page }) 
   await expect(page.getByText('Version 2.3.0', { exact: true })).toBeVisible();
   await expect(page.getByRole('listitem')).toHaveCount(3);
   await expect(page.getByRole('heading', { name: 'Versions précédentes' })).toHaveCount(0);
+});
+
+test('a version the changelog does not know shows every entry as an earlier one', async ({
+  page,
+}) => {
+  await given(page, [earlier]);
+  await signIn(page);
+  await page.goto('/settings/about');
+
+  await expect(page.getByText('Version 2.3.0', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Versions précédentes' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /2\.2\.0/ })).toBeVisible();
 });
 
 test('the real build says its version, and every line of it has its French', async ({ page }) => {

@@ -4,9 +4,23 @@ import { memberId } from './scenario.ts';
 // Gigs created straight in the test database, for what the tests of the
 // screens and of the API start from. The gigs are examples; nobody is real.
 
-/** A day counted from today, as 2026-12-04. */
+/**
+ * A day counted from today, as 2026-12-04, in UTC: the clock the server reads
+ * the end of a gig and the reminders on, in the tests.
+ */
 export function day(fromToday: number): string {
   return new Date(Date.now() + fromToday * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * The same, on the clock of the computer: the one the browser reads "today"
+ * on. Between midnight and the hour of UTC, day(0) is still yesterday there.
+ */
+export function localDay(fromToday: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + fromToday);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 type NewGig = {
