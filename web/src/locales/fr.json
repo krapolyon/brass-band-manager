@@ -516,6 +516,19 @@
       "title": "Tout déconnecter ?",
       "text": "Tous tes appareils seront déconnectés, celui-ci compris. Il te faudra ton mot de passe pour revenir.",
       "cancel": "Annuler"
+    },
+    "about": {
+      "title": "À propos",
+      "lead": "Ce qui change dans l’app, version après version.",
+      "entry": "Version {{version}} · les nouveautés",
+      "version": "Version {{version}}",
+      "published": "Publiée le {{date}}",
+      "earlier": "Versions précédentes",
+      "kinds": {
+        "added": "Nouveau",
+        "changed": "Amélioré",
+        "fixed": "Corrigé"
+      }
     }
   },
   "manage": {

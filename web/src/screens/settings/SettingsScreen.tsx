@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
+import { useBuild } from '../../about.ts';
 import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
 import { Icon } from '../../components/Icon.tsx';
@@ -30,6 +31,7 @@ export function SettingsScreen() {
   const navigate = useNavigate();
   const me = useMe().data;
   const textSize = useDeviceTextSize();
+  const build = useBuild().data;
   const setMe = useSetMe();
   const save = useSavePreferences();
   const push = usePush().data;
@@ -168,6 +170,17 @@ export function SettingsScreen() {
             </div>
           </Sheet>
         )}
+
+        {/* Alone in its sheet, apart from signing out: a press meant for the
+            changelog never signs the member out (Figma, Members, section 5). */}
+        <Sheet>
+          <NavRow
+            icon="Info"
+            label={t('settings.about.title')}
+            detail={build ? t('settings.about.entry', { version: build.version }) : undefined}
+            to="/settings/about"
+          />
+        </Sheet>
 
         <Sheet>
           <div className="settings-rows">

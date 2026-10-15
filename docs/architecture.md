@@ -901,6 +901,8 @@ Decided on 2026-10-15, with the first beta (issue #24). The beta carries `0.1.0`
 - **The entry of a version is written in the pull request that makes the change**, with its date. A check of `npm run check` refuses a build whose `package.json` version has no entry in `en.json`, or whose entry has a line without French.
 - **`CHANGELOG.md` at the root is generated** from `en.json` by `npm run changelog`, and committed with it: it is what GitHub and other bands read. It is never edited by hand.
 - **The app shows it** in the settings, under "À propos": the version and the day of its build ("Publiée le": the day it reached beta, since promoting it to production builds nothing again), then the changes of that version grouped by kind, and the earlier versions folded. Figma: page `Members`, section 5, `Members / Settings — about`.
+- **How it is built.** A plugin of [vite.config.ts](../vite.config.ts) (`aboutTheApp`) writes `version.json` and `changelog.json` (the two files of `web/src/changelog/`, together) at the root of the built front, and serves them in `npm run dev`. The front reads both as static files, never from the cache ([about.ts](../web/src/about.ts)); serving the changelog as a file rather than inside the code lets the tests give the screen other versions. [scripts/changelog.mjs](../scripts/changelog.mjs) writes `CHANGELOG.md` and, with `--check`, is the first step of `npm run check`. `release.yml` reads the version and the commit in the `web/version.json` of the build it promotes, and tags that commit; a build made before 0.1.1 has no such file and is not tagged.
+- **French typography in `fr.json`**: no-break spaces before `:`, `;`, `?` and `!`, as in the interface text.
 
 ### Migrations without a command line
 

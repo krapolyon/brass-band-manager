@@ -1,0 +1,14 @@
+{
+  "0.1.1": {
+    "The version number and what is new in the app, right here.": "Le numéro de version et les nouveautés de l’app, ici même.",
+    "The text size is set on each device: bigger on your phone, normal on the computer.": "La taille du texte se règle sur chaque appareil : plus grande sur ton téléphone, normale sur l’ordi.",
+    "A gig confirmed by mistake can go back to Accepted or Proposal.": "Un plan validé par erreur peut repasser en Accepté ou en Proposition.",
+    "The address of a gig and the description of a setlist fit on several lines.": "L’adresse d’un plan et la description d’une setlist tiennent sur plusieurs lignes.",
+    "The end date of a gig can be removed.": "La date de fin d’un plan peut être retirée.",
+    "When adding a song to a setlist, the suggestions no longer hide under the keyboard.": "En ajoutant un morceau à une setlist, les suggestions ne se cachent plus sous le clavier.",
+    "On iPhone, the MIDI player no longer stays silent when you come back to the app.": "Sur iPhone, le MIDI ne reste plus muet quand on revient dans l’app."
+  },
+  "0.1.0": {
+    "The first beta: the members of the band, the songs with their recordings, MIDI files, scores and reading mode, the gigs with the answers of everyone, and the setlists.": "La première beta : les fanfarons, les morceaux avec leurs enregistrements, fichiers MIDI, partitions et mode lecture, les plans avec les réponses de chacun, et les setlists."
+  }
+}

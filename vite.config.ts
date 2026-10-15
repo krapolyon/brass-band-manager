@@ -46,11 +46,53 @@ function museScoreEngine(): Plugin {
   };
 }
 
+// What the front reads at start, as two static files at the root of the app
+// (docs/architecture.md, "Versions and the changelog"):
+//   - version.json: the version of package.json, the instant of the build and
+//     the commit of main it was built from ("local" outside the GitHub Action);
+//   - changelog.json: the changes of each version, in English and in French
+//     (web/src/changelog/). Served as a file rather than built into the code,
+//     so that the tests can give the screen other versions.
+function aboutTheApp(): Plugin {
+  const version = () =>
+    JSON.stringify({
+      version: JSON.parse(readFileSync('package.json', 'utf8')).version,
+      builtAt: new Date().toISOString(),
+      commit: process.env.GITHUB_SHA ?? 'local',
+    });
+  const changelog = () =>
+    JSON.stringify({
+      en: JSON.parse(readFileSync('web/src/changelog/en.json', 'utf8')),
+      fr: JSON.parse(readFileSync('web/src/changelog/fr.json', 'utf8')),
+    });
+  const files: Record<string, () => string> = {
+    '/version.json': version,
+    '/changelog.json': changelog,
+  };
+
+  return {
+    name: 'aboutTheApp',
+    configureServer(server) {
+      server.middlewares.use((request, response, next) => {
+        const file = files[(request.url ?? '').split('?')[0] ?? ''];
+        if (!file) return next();
+        response.setHeader('Content-Type', 'application/json');
+        response.end(file());
+      });
+    },
+    generateBundle() {
+      for (const [name, file] of Object.entries(files)) {
+        this.emitFile({ type: 'asset', fileName: name.slice(1), source: file() });
+      }
+    },
+  };
+}
+
 // The front lives in web/ and is built to static files in web/dist.
 // In development, calls to /api are forwarded to the PHP container.
 export default defineConfig({
   root: 'web',
-  plugins: [react(), museScoreEngine()],
+  plugins: [react(), museScoreEngine(), aboutTheApp()],
   server: {
     port: 5173,
     strictPort: true,
