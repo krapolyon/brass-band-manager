@@ -567,6 +567,38 @@ test.describe('the MIDI player', () => {
     await noOverflow(page);
   });
 
+  test('a clock left interrupted by the device is replaced when the member presses play (#22)', async ({
+    page,
+    playwright,
+  }) => {
+    // As an iPhone does after the app was left alone: the first clock of the
+    // sound says "interrupted", and resume() never brings it back.
+    await page.addInitScript(() => {
+      const Real = window.AudioContext;
+      let created = 0;
+      class Device extends Real {
+        private readonly isStuck = created++ === 0;
+        get state() {
+          return this.isStuck ? ('interrupted' as AudioContextState) : super.state;
+        }
+        resume() {
+          return this.isStuck ? new Promise<void>(() => {}) : super.resume();
+        }
+      }
+      Object.assign(window, { AudioContext: Device, clocks: () => created });
+    });
+    await withScore(playwright, page);
+    await openMidi(page);
+    await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Lire' }).click();
+    await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 20_000 });
+    expect(
+      await page.evaluate(() => (window as unknown as { clocks: () => number }).clocks()),
+    ).toBe(2);
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+  });
+
   test('the rehearsal marks of the score are offered for the loop, each with its measures', async ({
     page,
     playwright,
