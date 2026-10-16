@@ -264,8 +264,8 @@ test.describe('appearance and accessibility', () => {
     await expect(root(page)).toHaveAttribute('data-timeouts', 'extended');
     // The five options of the account are saved on it; the text size is not.
     await expect
-      .poll(() => zaza('hasHighContrast, hasExtendedTimeouts, hasLegibleFont, textSizePercent'))
-      .toBe('1\t1\t0\t100');
+      .poll(() => zaza('hasHighContrast, hasExtendedTimeouts, hasLegibleFont'))
+      .toBe('1\t1\t0');
     // The device keeps its text size, and nothing of the account.
     expect(
       JSON.parse((await page.evaluate(() => localStorage.getItem('accessibility'))) ?? '{}'),

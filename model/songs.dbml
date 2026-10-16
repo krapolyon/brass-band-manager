@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications of a new song, a new MuseScore file and a new part (issue #23); the outline of a recording measures loudness and is versioned (issue #29); the Live mode can be driven by the MIDI player (issue #10) (dictionary)
 // v1.4 — 2026-10-13 — songSpokenName: the phrases the dictation of a setlist learned for a song, migration 011
 // v1.3 — 2026-10-13 — rules of the reading mode and of the rehearsal marks (dictionary only, no schema change)
 // v1.2 — 2026-10-13 — validated, migration 007: musicXmlPath, the score as MusicXML produced with the MIDI file from the MuseScore file by the browser that imports it; an instrument chosen by hand during an import can be remembered as an alias; aliases also read the names of the tracks of the MIDI file

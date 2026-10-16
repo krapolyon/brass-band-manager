@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.21 — 2026-10-16 · Model: `members.dbml` · Migration: `013_notificationsAndCalendar.sql` (0.2.0) · `textSizePercent` dropped; the six notification settings of the account (issue #23); `calendarToken`, the personal calendar address (issue #21); push subscriptions serve the new notifications (Gigs v1.6, Songs v1.6)
 > v1.20 — 2026-10-15 · Model: `members.dbml` · No migration · The text size is a setting of the device, no longer of the account (issue #18). `textSizePercent` stays in the table, read and written by no code, and is dropped in 0.2.0: a column of `member` is removed in two releases
 > v1.19 — 2026-10-13 · No change to the tables · Decided with the deployment: the permission to run the migrations, for the admin (Band v1.7); on an empty database, the install creates the tables once the install key is accepted
 > v1.18 — 2026-10-13 · No change to the tables · A device that accepted notifications also receives the live setlist of a gig (Gigs v1.3)
@@ -37,6 +38,13 @@ A person who plays or has played in the band, and their account in the app: the 
 | `hasLegibleFont` | More legible font | Police plus lisible | Yes | false | — | Accessibility option |
 | `hasReducedMotion` | Reduced motion | Mouvement réduit | Yes | false | — | Accessibility option |
 | `hasExtendedTimeouts` | Extended timeouts | Délais augmentés | Yes | false | — | Accessibility option |
+| `notifyGigPlayable` | Playable gigs | Plans jouables | Yes | PUSH | — | Notification setting: `OFF` or `PUSH`. See "Notification settings" |
+| `notifyGigConfirmed` | Confirmed gigs | Plans validés | Yes | PUSH | — | Notification setting |
+| `notifyLiveSetlist` | Next song of the setlist | Prochain morceau de la setlist | Yes | PUSH | — | Notification setting |
+| `notifySongNew` | New song | Nouveau morceau | Yes | PUSH | — | Notification setting |
+| `notifySongScore` | New MuseScore | Nouveau MuseScore | Yes | PUSH | — | Notification setting |
+| `notifySongPart` | New part | Nouvelle partition | Yes | PUSH | — | Notification setting |
+| `calendarToken` | Calendar address | Adresse de l'agenda | No | 9f86d081884c7d659a2feaa0c55ad015 | 32 | Never typed. See "Calendar address" |
 
 The text size (100 to 200 %) is an accessibility option too, but it is not a field of the member: it is kept on each device, in the storage of the browser. See "Accessibility options".
 
@@ -49,7 +57,7 @@ The text size (100 to 200 %) is an accessibility option too, but it is not a fie
 | `INVITED` | | deleted | A member manager cancels the invitation | The row is deleted: nothing refers to it yet |
 | `ACTIVE` | Plays regularly, can sign in | `POWER_MEMBER` | A member manager sets it by hand | Nothing is erased; roles, sessions and password are kept. The member is no longer reminded to answer for gigs |
 | `POWER_MEMBER` | Was active and plays less: comes to help out on some gigs. Can sign in, answers for gigs, counts in whether a gig is playable | `ACTIVE` | A member manager sets it by hand | Reminders resume |
-| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once. `mobilePhone`, the five address fields, the photo, the roles and the levels the member gave to songs (Songs domain, `memberSong`) are erased. The member is taken off the gigs they organise that are not over (Gigs domain, `gigOrganizer`); they stay organiser of the gigs already played, and their answers stay. Names, nickname, email and instrument are kept |
+| `ACTIVE`, `POWER_MEMBER` | | `LEFT` | A member manager marks the member as gone | All sessions and the pending password link are deleted at once, and with the sessions the devices that received notifications. `mobilePhone`, the five address fields, the photo, the calendar address (`calendarToken`), the roles and the levels the member gave to songs (Songs domain, `memberSong`) are erased. The member is taken off the gigs they organise that are not over (Gigs domain, `gigOrganizer`); they stay organiser of the gigs already played, and their answers stay. Names, nickname, email and instrument are kept |
 | `LEFT` | Has left the band | `INVITED` | A member manager brings the member back | A new password link is created; the old password is not reused |
 
 The status labels in French are "Invité", "Actif", "Power member" and "Parti". For those who manage members, an `INVITED` member whose password link is no longer valid is shown as "Invitation expirée": this is a display, not a status. No status changes by itself: `POWER_MEMBER` in particular is never deduced from how often a member answers or plays.
@@ -85,6 +93,7 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 - **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
 - **Password change.** Asks for the current password. Deletes every other session of the member, and their pending password link. A wrong current password counts like a wrong password at sign-in: at the fifth, sign-in is locked and the device is signed out.
 - **Forgotten password.** On the sign-in screen, a person gives an email address. If it is the address of a current member, the app creates a password link and sends it to that address (entry 3). Whatever the address, the screen answers the same thing, in the same time: nothing tells whether an address belongs to a member. A member still `INVITED` gets nothing: their link comes from the person who invited them.
+- **Notification settings.** See "Notification settings" below. **Calendar address.** See "Calendar address" below.
 - **Accessibility before sign-in.** Every screen shown before sign-in (sign-in, forgotten password, the screen a password link opens, the screens of an invitation) carries a button that opens the accessibility options. The button is always visible, reachable from the keyboard and named for screen readers. Nobody is asked to set the options: they are offered, never a step to go through. Chosen before sign-in, they are kept on the device only, in the storage of the browser, and are sent to no one; they apply on that device until a member signs in on it, and from then on the options of the account apply, except the text size, which stays the one of the device. Chosen during an invitation, they are saved to the account when the invitation is completed, except the text size, which stays on the device.
 
 ### Roles and permissions
@@ -135,8 +144,9 @@ Exporting the list of members asks for the password again.
 - `email`: sign-in and directory of the band. Seen by every signed-in member.
 - `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode`, `addressInstructions`: directory of the band, so that members can reach and visit each other. Given by the member, optional, seen by every signed-in member, erased when the member leaves.
 - `photoPath`: recognising each other in the band. Given by the member or by someone who manages members, optional, seen by signed-in members only, never public, never in an export, erased when the member leaves.
-- Preferences (language, appearance, theme, accessibility options) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export. The text size is not even known to the server: it stays on the device.
-- None of these fields is ever written to a log.
+- Preferences (language, appearance, theme, accessibility options, notification settings) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export. The text size is not even known to the server: it stays on the device.
+- `calendarToken`: the personal calendar address of the member, so that a calendar app can subscribe to the gigs they come to. Created only when the member asks for it, seen by the member only, never in an export, erased when the member leaves. Whoever holds the address reads the gigs this member said they come to (name, dates, place), nothing else.
+- None of these fields is ever written to a log, and neither is the calendar address of a request.
 
 ### Display
 - The nickname is the name shown in every representation. First and last names appear on the member's own screen and in the directory.
@@ -144,6 +154,36 @@ Exporting the list of members asks for the password again.
 - Missing photo: a placeholder defined by the design.
 - **Directory.** The directory lists members as cards, in alphabetical order of the nickname, the name shown. By default it shows `ACTIVE` members only. Two options, both off when the directory opens: one adds the `POWER_MEMBER` members, each of them marked as such; the other keeps the members of the section of the signed-in member ("Mon pupitre" in French). `INVITED` and `LEFT` members never appear in it.
 - Representations in the design library (Figma, `Design system` page): `Member/Card` (the directory), `Member/Row` (lists), `Member/TableRow` with `Member/TableHeader` (managing members on a desktop), `Member/Header` (the member's sheet), `Member/Mention`, and the base component `Avatar` (photo, or initials when there is none).
+
+### Notification settings
+Decided with the owner on 2026-10-16 (issue #23). **What a member receives belongs to the account; whether a device receives belongs to the device.** A device accepts or refuses notifications (`pushSubscription`, entry 3); the six settings below say which kinds the member wants, on every device that accepts them. They follow the member from one device to another.
+
+| Setting | Label (fr) | What it sends | To whom |
+|---|---|---|---|
+| `notifyGigPlayable` | Plans jouables | A gig becomes playable (Gigs domain, "Notifications") | The members who organise the gig or answered yes, maybe or if needed on one of its slots |
+| `notifyGigConfirmed` | Plans validés | A gig becomes `CONFIRMED` | The same |
+| `notifyLiveSetlist` | Prochain morceau de la setlist | The live setlist (Gigs domain, entry 4) | The members who answered yes to the slot of the setlist |
+| `notifySongNew` | Nouveau morceau | A song is created (Songs domain, "Notifications") | Every current member |
+| `notifySongScore` | Nouveau MuseScore | The MuseScore file of a song is replaced | Every current member |
+| `notifySongPart` | Nouvelle partition | A part is added or replaced | The current members who play the instrument of the part |
+
+- Each setting is `OFF` or `PUSH`, `PUSH` by default. The values hold a channel so that `EMAIL` can be added later without a new field (decided with the owner); it is not offered yet.
+- **The reminders to answer for a gig are not a setting**: a band needs the answers. They go to `ACTIVE` members as before, never to `POWER_MEMBER` ones (Gigs domain). The screen shows them as a row that cannot be turned off, with the chip "Toujours".
+- Seen and changed by the member only, like the other preferences; never shown to anyone else, never in an export. A setting applies at once, with no save button.
+- When the device the member uses does not receive notifications, the screen shows the settings disabled: they are kept, and apply to the other devices of the member that receive.
+- The device that sent an action never receives the notification of that action: "Suivant" pressed on a phone does not ring that phone. The other devices of the same member do.
+
+### Calendar address
+Decided with the owner on 2026-10-16 (issue #21): **a subscribed calendar (iCal), never a write into anybody's calendar.**
+
+- A member gets a personal address that a calendar app subscribes to: `https://<app>/api/calendar/<calendarToken>.ics`, or `webcal://` for the Apple devices, which open their Calendar app with it. The app writes nothing anywhere: the calendar app reads the address again at its own pace (a few hours on a phone; up to 24 hours for Google Agenda).
+- **Created on demand.** `calendarToken` is empty until the member asks for the address ("Ajouter à mon agenda", "Copier l'adresse"). It is 32 random characters.
+- **Reset.** "Réinitialiser la synchro" replaces the token, after a confirmation: the old address answers nothing from that instant, the calendars subscribed to it stop updating, and the member adds the new one.
+- **Erased** when the member leaves the band; it stops working with their sign-in.
+- **What the address gives**: the gigs of the member, as the Gigs domain describes ("Calendar feed"). An address that matches no current member gets the same answer as an address that never existed.
+- **Who sees it**: the member only, on their calendar screen. Not sent in `GET /api/me`, never shown to anyone else, an admin included, never in an export, never written to a log.
+- Stored in clear, unlike a session token: the screen shows the address again whenever the member wants to copy it, and it gives read access to the gigs of one member, nothing else. A copy of the database lets its holder read those gigs, which the database already holds.
+- The screen does not know whether the address is used: the app does not record when a calendar app reads it (decided with the owner). The settings summary says only whether an address exists.
 
 ### Accessibility options
 The default design is not required to reach the highest level of the accessibility guidelines (WCAG AAA). The options below must let a member bring the app to level AA at least, and to AAA wherever that is feasible.
@@ -252,11 +292,12 @@ A session is a device on which a member is signed in. A password link is a singl
 - A member accepts notifications device by device, when they ask for it in the app: the browser is never made to ask by itself. The device then gives the app an address and two keys (`pushSubscription`), which is all the app needs to write to it.
 - A subscription belongs to a session. Signing the device out, an expired session, a changed password and leaving the band all delete the session, and the subscription with it.
 - The member turns notifications off on a device from the app, which deletes the subscription. A subscription the push service reports as gone is deleted too.
-- A notification carries the name of a gig and nothing about a member.
+- A notification names a gig or a song and nothing about a member.
+- Which kinds of notifications a member receives is a setting of the account (entry 1, "Notification settings"), not of the device.
 
 ### Personal data
 - No IP address and no device name is stored.
-- `pushSubscription`: the address and the keys of a device. Purpose: reminding the member to answer for a gig, and showing them the live setlist of a gig they play. Seen by no one, the member included; never sent to the front, never written to a log.
+- `pushSubscription`: the address and the keys of a device. Purpose: the notifications of the app, the reminders to answer for a gig and those the member chose in their notification settings (entry 1). Seen by no one, the member included; never sent to the front, never written to a log.
 
 ## 4. Storage conventions
 
@@ -267,8 +308,6 @@ These apply to every table of the app and are not repeated in the DBML.
 - Text is compared without regard to case or accents (`utf8mb4_unicode_ci`): "Jibé" and "jibe" are the same nickname.
 
 ## 5. Open questions
-
-- **To do in 0.2.0**: drop `member.textSizePercent` (Members v1.20), in the first migration of that release.
 
 None blocking. Validated by the owner on 2026-10-11 (v1.14): `section.icon`, `memberPasswordLink.emailedAt` and the 5 minutes between two emails, the forgotten password by email for current members only, the six steps of the text size, the rules found while writing the API (nobody acts on the access of someone who may do more, a member who left is not edited, the current password is asked to change it), and the invitation completed in one request.
 
