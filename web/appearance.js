@@ -5,6 +5,12 @@
 (() => {
   var root = document.documentElement;
   var asks = (query) => window.matchMedia?.(query).matches;
-  root.dataset.scheme = asks('(prefers-color-scheme: light)') ? 'light' : 'dark';
+  var light = asks('(prefers-color-scheme: light)');
+  root.dataset.scheme = light ? 'light' : 'dark';
+  // On an iPhone set to light, a translucent status bar would write its clock
+  // in white over a light ground: the bar of the light scheme instead (#28).
+  // Read when the installed app starts, so it follows the device.
+  var bar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (bar && light) bar.setAttribute('content', 'default');
   if (asks('(prefers-contrast: more)')) root.dataset.contrast = 'more';
 })();

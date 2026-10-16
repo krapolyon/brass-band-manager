@@ -4,6 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <!-- Installed on an iPhone, the app draws under the status bar, which
+         stays translucent: no band of another colour above the screen (#28).
+         The top of each screen keeps clear of it (ScreenTop, safe areas). -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- The colour of the ground, set again by appearance.ts with the scheme. -->
+    <meta name="theme-color" content="#0a0f1a" />
     <link rel="manifest" href="/api/manifest" />
     <link rel="icon" href="/appIcons/icon-192.png" />
     <link rel="apple-touch-icon" href="/appIcons/apple-touch-icon.png" />
@@ -11,8 +19,8 @@
     <title>Brass band</title>
     <!-- Sets the scheme of the device before anything is drawn. -->
     <script src="/appearance.js"></script>
-    <script type="module" crossorigin src="/assets/index-B4ura5F-.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C6TQxwhc.css">
+    <script type="module" crossorigin src="/assets/index-CLWIL4Ec.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DRV4MlYY.css">
   </head>
   <body>
     <div id="root"></div>

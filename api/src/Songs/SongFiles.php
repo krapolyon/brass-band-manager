@@ -51,6 +51,11 @@ final class SongFiles
     private const AREA = 'songs';
     private const PEAKS = 'peaks.json';
     public const MAX_PEAKS = 400;
+    // How the outline was computed (model/songs.md, "The waveform of a
+    // recording"). 2: the loudness of each slice, since 0.2.0. A file written
+    // before, a bare list of the loudest samples, is flat on every recording
+    // (issue #29): it counts as no outline, and is computed again.
+    private const PEAKS_KIND = 2;
 
     public function __construct(
         private readonly Connection $database,
@@ -236,20 +241,24 @@ final class SongFiles
         if (!hash_equals((string) Files::version($audioPath), $version)) {
             throw new ApiError(409, 'recordingReplaced');
         }
-        if (!$this->files->add($audioPath, self::PEAKS, json_encode($peaks, JSON_THROW_ON_ERROR))) {
+        $content = json_encode(['kind' => self::PEAKS_KIND, 'peaks' => $peaks], JSON_THROW_ON_ERROR);
+        if (!$this->files->add($audioPath, self::PEAKS, $content)) {
             throw new ApiError(409, 'noRecording');
         }
     }
 
     /**
-     * @return list<int>|null
+     * @return list<int>|null Null when there is none, or one of an older kind
      */
     public function peaks(?string $audioPath): ?array
     {
         $file = $audioPath === null ? null : $this->files->find(dirname($audioPath) . '/' . self::PEAKS);
-        $peaks = $file === null ? null : json_decode((string) @file_get_contents($file), true);
+        $outline = $file === null ? null : json_decode((string) @file_get_contents($file), true);
+        if (!is_array($outline) || ($outline['kind'] ?? null) !== self::PEAKS_KIND || !is_array($outline['peaks'] ?? null)) {
+            return null;
+        }
 
-        return is_array($peaks) ? array_values(array_map(intval(...), $peaks)) : null;
+        return array_values(array_map(intval(...), $outline['peaks']));
     }
 
     /**

@@ -210,13 +210,18 @@ final class Gigs
     // playable. Looked at, inside the transaction that changed something,
     // each time an answer is saved and when a gig becomes accepted. Nothing else changes a
     // status without a member asking, and a confirmed gig never goes back.
-    public function confirmIfPlayable(int $gigId): void
+    // True when it did confirm the gig.
+    public function confirmIfPlayable(int $gigId): bool
     {
         $gig = $this->row($gigId, lock: true);
         if ($gig['status'] === GigStatus::ACCEPTED->value && $this->isPlayable($gigId)) {
             // No author: the app did it.
             $this->database->update('gig', ['status' => GigStatus::CONFIRMED->value, 'updatedByMemberId' => null], ['id' => $gigId]);
+
+            return true;
         }
+
+        return false;
     }
 
     /**

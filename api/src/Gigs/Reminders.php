@@ -121,17 +121,11 @@ final class Reminders
      */
     private static function line(array $gig, string $language): string
     {
-        $day = new \DateTimeImmutable((string) $gig['startsOn']);
-        $date = PushTexts::text('reminder.date', $language, [
-            'day' => explode(',', PushTexts::text('days', $language))[(int) $day->format('w')] ?? '',
-            'number' => (int) $day->format('j'),
-            'month' => explode(',', PushTexts::text('months', $language))[(int) $day->format('n') - 1] ?? '',
-        ]);
+        $date = PushTexts::date((string) $gig['startsOn'], $language);
         if ($gig['meetingTime'] === null) {
             return PushTexts::text('reminder.lineNoTime', $language, ['name' => (string) $gig['name'], 'date' => $date]);
         }
-        [$hour, $minutes] = explode(':', (string) $gig['meetingTime']);
-        $time = PushTexts::text($minutes === '00' ? 'reminder.timeSharp' : 'reminder.time', $language, ['hour' => (int) $hour, 'minutes' => $minutes]);
+        $time = PushTexts::time((string) $gig['meetingTime'], $language);
 
         return PushTexts::text('reminder.line', $language, ['name' => (string) $gig['name'], 'date' => $date, 'time' => $time]);
     }

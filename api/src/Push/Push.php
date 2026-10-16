@@ -9,11 +9,18 @@ use BrassBand\Http\ApiError;
 use BrassBand\Mail\AllowedRecipients;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 
 // Push notifications: the devices that accepted them (pushSubscription,
-// model/members.md) and the sending. Used by the live setlist and by the
-// reminders of gigs. A device belongs to a session: signed out, it receives
+// model/members.md) and the sending. Used by every notification of the app:
+// the reminders and the live setlist, a gig playable or confirmed, a new song,
+// score or part. A device belongs to a session: signed out, it receives
 // nothing. The address and the secret of a device never leave the server.
+//
+// What a member receives is a setting of their account (NotificationSetting):
+// a sender names the setting its notification depends on, and the members
+// who turned it off get nothing. The device that made the request can be
+// left out: it does not ring for what it just did.
 final class Push
 {
     // The push services of the browsers. The server only ever writes to
@@ -30,6 +37,8 @@ final class Push
     // off: a setlist moves on in minutes, a reminder is still good the next day.
     public const TTL_LIVE = 600;
     public const TTL_REMINDER = 86400;
+    // A gig or a song that changed is still news the next day.
+    public const TTL_NEWS = 86400;
 
     public function __construct(
         private readonly Connection $database,
@@ -96,20 +105,30 @@ final class Push
      * @param callable(int $memberId, string $language): ?array<string, mixed> $notification What the device shows (title, body, tag, url…), written for one member in their language; null sends them nothing
      * @param int $ttl Seconds a push service keeps it for a device that is off
      * @param string|null $topic Replaces, at the push service, a notification of the same topic not delivered yet
+     * @param NotificationSetting|null $setting The setting of the account this notification depends on; null for one that is always sent (the reminders)
+     * @param int|null $exceptSessionId The session of the device that made the request: it receives nothing
      */
-    public function toMembers(array $memberIds, callable $notification, int $ttl, ?string $topic = null): void
-    {
+    public function toMembers(
+        array $memberIds,
+        callable $notification,
+        int $ttl,
+        ?string $topic = null,
+        ?NotificationSetting $setting = null,
+        ?int $exceptSessionId = null,
+    ): void {
         if ($this->transport === null || $memberIds === []) {
             return;
         }
+        // The column comes from the enum, never from what was sent.
+        $wanted = $setting === null ? '' : ' AND m.' . $setting->column() . " = '" . NotificationChannel::PUSH->value . "'";
         $devices = $this->database->fetchAllAssociative(
             'SELECT p.endpoint, p.p256dhKey, p.authKey, m.id AS memberId, m.language, m.email
              FROM pushSubscription p
              JOIN memberSession s ON s.id = p.memberSessionId AND s.expiresAt > UTC_TIMESTAMP()
              JOIN member m ON m.id = s.memberId
-             WHERE m.id IN (?) AND m.status IN (\'ACTIVE\', \'POWER_MEMBER\')',
-            [$memberIds],
-            [ArrayParameterType::INTEGER],
+             WHERE m.id IN (?) AND m.status IN (\'ACTIVE\', \'POWER_MEMBER\') AND s.id <> ?' . $wanted,
+            [$memberIds, $exceptSessionId ?? 0],
+            [ArrayParameterType::INTEGER, ParameterType::INTEGER],
         );
 
         $messages = [];
