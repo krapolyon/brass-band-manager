@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router';
 import { useBuild } from '../../about.ts';
 import { api } from '../../api.ts';
+import { useCalendar } from '../../calendar.ts';
 import { Button } from '../../components/Button.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { ListRow } from '../../components/ListRow.tsx';
@@ -15,7 +16,7 @@ import { Sheet } from '../../components/Sheet.tsx';
 import { useDeviceTextSize } from '../../deviceAccessibility.ts';
 import i18n, { languageName } from '../../i18n.ts';
 import { instrumentsOf, useMembers, useSections } from '../../members.ts';
-import { forgetAsked, usePush } from '../../push.ts';
+import { forgetAsked, useNotificationSettings, usePush } from '../../push.ts';
 import { useMe, useSetMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { useSavePreferences } from './preferences.ts';
@@ -35,6 +36,8 @@ export function SettingsScreen() {
   const setMe = useSetMe();
   const save = useSavePreferences();
   const push = usePush().data;
+  const notificationSettings = useNotificationSettings().data;
+  const calendar = useCalendar().data;
   const [isLanguageOpen, setLanguageOpen] = useState(false);
   const [isConfirmOpen, setConfirmOpen] = useState(false);
 
@@ -124,14 +127,31 @@ export function SettingsScreen() {
               label={t('settings.notifications.title')}
               detail={
                 push
-                  ? t(
-                      push.isSubscribed
-                        ? 'settings.notifications.detailOn'
-                        : 'settings.notifications.detailOff',
-                    )
+                  ? push.isSubscribed
+                    ? t('settings.notifications.detailOn', {
+                        // The choices of the account that are on.
+                        count: Object.values(notificationSettings ?? {}).filter(
+                          (channel) => channel === 'PUSH',
+                        ).length,
+                      })
+                    : t('settings.notifications.detailOff')
                   : undefined
               }
               to="/settings/notifications"
+            />
+            <NavRow
+              icon="Calendar"
+              label={t('settings.calendar.title')}
+              detail={
+                calendar
+                  ? t(
+                      calendar.token
+                        ? 'settings.calendar.detailReady'
+                        : 'settings.calendar.detailNone',
+                    )
+                  : undefined
+              }
+              to="/settings/calendar"
             />
             <NavRow
               icon="Languages"

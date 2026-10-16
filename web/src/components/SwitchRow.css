@@ -19,3 +19,7 @@
 .SwitchRow-description {
   color: var(--textMuted);
 }
+
+.SwitchRow:has(input:disabled) {
+  cursor: default;
+}

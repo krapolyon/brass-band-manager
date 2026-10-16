@@ -10,7 +10,9 @@ import { Icon } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
+import { PlayedDots } from '../../components/PlayedDots.tsx';
 import { SetlistSongRow } from '../../components/SetlistSongRow.tsx';
+import { SongPickerRow } from '../../components/SongPickerRow.tsx';
 import { SortableHandle, SortableList, useSortableRow } from '../../components/Sortable.tsx';
 import { TextArea } from '../../components/TextArea.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
@@ -53,7 +55,11 @@ const record = (draft: Draft) => ({
 // saved together by the button; leaving with changes asks first. The songs
 // can also be dictated, one by one: what is heard is matched with the songs
 // the band plays, and the app learns from the choices (model/songs.md, entry
-// 4). For who manages setlists.
+// 4). And they can be picked from the list of every song the band plays,
+// which stays open: each tap appends a song (Gigs › 18, issue #20). Plain
+// dots tell how often a song is already played at this gig. The handle moves
+// a song, a swipe to the left removes it (SetlistSongRow). For who manages
+// setlists.
 export function SetlistFormScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -69,7 +75,8 @@ export function SetlistFormScreen() {
   const form = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [said, setSaid] = useState('');
-  const [openLine, setOpenLine] = useState<Line | null>(null);
+  const [isPickerOpen, setPickerOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [asks, setAsks] = useState<'delete' | null>(null);
   const [failure, setFailure] = useState<'failed' | 'tooLong' | null>(null);
   const [isSaving, setSaving] = useState(false);
@@ -186,6 +193,24 @@ export function SetlistFormScreen() {
   const playable = songs.filter(
     (song) => song.status === 'IN_REPERTOIRE' || song.status === 'TEMPORARY',
   );
+  // How many times a song is in the other setlists of the gig, all slots and
+  // days together (model/gigs.md, "Played dots"), from what the API answers.
+  const elsewhere = new Map<number, number>();
+  for (const setlist of gig.setlists) {
+    if (setlist.id === existing?.id) continue;
+    for (const song of setlist.songs)
+      elsewhere.set(song.songId, (elsewhere.get(song.songId) ?? 0) + 1);
+  }
+  const playedElsewhere = (songId: number) => elsewhere.get(songId) ?? 0;
+  const inThis = (songId: number) => draft.lines.filter((line) => line.songId === songId).length;
+  // The list of every song, from A to Z, narrowed by its search.
+  const searched = plain(search);
+  const listed = playable
+    .filter(
+      (song) =>
+        searched === '' || `${plain(song.name)} ${plain(song.originalTitle)}`.includes(searched),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
   // Saves a phrase heard for the song the member chose or corrected. A comfort:
   // when it fails, the setlist is written all the same.
   const learn = (songId: number, phrase: string) => {
@@ -196,12 +221,18 @@ export function SetlistFormScreen() {
       .then((known) => queryClient.setQueryData(['spokenNames'], known))
       .catch(() => {});
   };
-  const add = (song: SongSummary, dictatedPhrase?: string) => {
+  const add = (song: SongSummary, dictatedPhrase?: string, fromList = false) => {
     const line = { key: newKey(), songId: song.id, name: song.name };
     const lines = [...draft.lines, line];
     setDraft({ ...draft, lines });
-    setQuery('');
     setSaid(t('gigs.setlist.form.added', { name: song.name, position: lines.length }));
+    // From the list: it stays open, and keeps the focus on the song tapped.
+    if (fromList) {
+      dictated.current = null;
+      correcting.current = null;
+      return;
+    }
+    setQuery('');
     if (dictatedPhrase === undefined) {
       // Typed right after the song the dictation added was removed: a correction.
       if (correcting.current) learn(song.id, correcting.current);
@@ -257,7 +288,30 @@ export function SetlistFormScreen() {
     setDraft({ ...draft, lines });
     setSaid(t('gigs.setlist.form.moved', { name: line.name, position: to + 1 }));
   };
-  const move = (line: Line, by: 1 | -1) => moveTo(line, draft.lines.indexOf(line) + by);
+  const move = (line: Line, by: 1 | -1) => {
+    moveTo(line, draft.lines.indexOf(line) + by);
+    // The row keeps the focus at its new place.
+    window.requestAnimationFrame(() =>
+      form.current?.querySelector<HTMLElement>(`[data-line="${line.key}"]`)?.focus(),
+    );
+  };
+  const removeLine = (line: Line) => {
+    const index = draft.lines.indexOf(line);
+    const lines = draft.lines.filter((other) => other !== line);
+    setDraft({ ...draft, lines });
+    // The song the dictation just added: what replaces it is what was said.
+    correcting.current = dictated.current?.key === line.key ? dictated.current.phrase : null;
+    dictated.current = null;
+    setSaid(t('gigs.setlist.form.removed', { name: line.name }));
+    // Its row is gone: the focus goes to the row that took its place, or to
+    // the field that adds a song.
+    const next = lines[Math.min(index, lines.length - 1)];
+    window.requestAnimationFrame(() => {
+      const row = next && form.current?.querySelector<HTMLElement>(`[data-line="${next.key}"]`);
+      if (row) row.focus();
+      else readyForNext();
+    });
+  };
 
   const save = async () => {
     setSaving(true);
@@ -292,8 +346,6 @@ export function SetlistFormScreen() {
       setSaving(false);
     }
   };
-
-  const openIndex = openLine ? draft.lines.indexOf(openLine) : -1;
 
   return (
     <AppLayout
@@ -368,7 +420,9 @@ export function SetlistFormScreen() {
                     key={line.key}
                     line={line}
                     position={index + 1}
-                    onMore={() => setOpenLine(line)}
+                    played={playedElsewhere(line.songId)}
+                    onRemove={() => removeLine(line)}
+                    onMove={(by) => move(line, by)}
                   />
                 ))}
               </ol>
@@ -494,6 +548,16 @@ export function SetlistFormScreen() {
                   }}
                 />
               )}
+              <IconButton
+                kind="control"
+                icon="List"
+                label={t('gigs.setlist.form.list.open')}
+                aria-haspopup="dialog"
+                onClick={() => {
+                  setSearch('');
+                  setPickerOpen(true);
+                }}
+              />
             </div>
             {/* How many songs match, and which one Enter adds. */}
             <p className="visuallyHidden" id="gigs-suggestions-count" aria-live="polite">
@@ -518,6 +582,7 @@ export function SetlistFormScreen() {
                     position > 0
                       ? t('gigs.setlist.form.alreadyAt', { name: song.name, position })
                       : song.name;
+                  const played = playedElsewhere(song.id);
                   return (
                     <li key={song.id}>
                       <button
@@ -532,7 +597,8 @@ export function SetlistFormScreen() {
                         onClick={() => add(song)}
                       >
                         <Icon name="Plus" />
-                        {label}
+                        <span className="gigs-suggestionName">{label}</span>
+                        <PlayedDots count={played} />
                       </button>
                     </li>
                   );
@@ -553,53 +619,52 @@ export function SetlistFormScreen() {
         </p>
       </div>
 
-      {/* The actions of a song. */}
+      {/* Every song a setlist can hold: a tap appends it, the list stays open. */}
       <Panel
-        open={openLine !== null && openIndex >= 0}
-        onClose={() => setOpenLine(null)}
-        title={t('gigs.setlist.form.songTitle', {
-          name: openLine?.name ?? '',
-          position: openIndex + 1,
-        })}
+        open={isPickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title={t('gigs.setlist.form.list.title')}
       >
-        {openLine && (
-          <div className="gigs-sheet">
-            <p className="textBody">{t('gigs.setlist.form.dragHint')}</p>
-            <Button
-              kind="secondary"
-              icon="ArrowUp"
-              disabled={openIndex === 0}
-              onClick={() => move(openLine, -1)}
-            >
-              {t('gigs.setlist.form.moveUp')}
-            </Button>
-            <Button
-              kind="secondary"
-              icon="ArrowDown"
-              disabled={openIndex === draft.lines.length - 1}
-              onClick={() => move(openLine, 1)}
-            >
-              {t('gigs.setlist.form.moveDown')}
-            </Button>
-            <Button
-              kind="danger"
-              icon="Trash"
-              onClick={() => {
-                setDraft({ ...draft, lines: draft.lines.filter((line) => line !== openLine) });
-                // The song the dictation just added: what replaces it is what was said.
-                correcting.current =
-                  dictated.current?.key === openLine.key ? dictated.current.phrase : null;
-                dictated.current = null;
-                setSaid(t('gigs.setlist.form.removed', { name: openLine.name }));
-                setOpenLine(null);
-                // Its row is gone: the focus goes to the field that adds a song.
-                readyForNext();
-              }}
-            >
-              {t('gigs.setlist.form.remove')}
-            </Button>
-          </div>
-        )}
+        <div className="gigs-picker">
+          <TextField
+            label={t('gigs.setlist.form.list.search')}
+            type="search"
+            autoComplete="off"
+            autoCapitalize="off"
+            enterKeyHint="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          {listed.length === 0 ? (
+            <p className="gigs-muted textBody" role="status">
+              {searched === ''
+                ? t('gigs.setlist.form.list.empty')
+                : t('gigs.setlist.form.list.nothing', { search: search.trim() })}
+            </p>
+          ) : (
+            <ul className="gigs-pickerSongs" aria-label={t('gigs.setlist.form.list.title')}>
+              {listed.map((song) => {
+                const count = inThis(song.id);
+                return (
+                  <SongPickerRow
+                    key={song.id}
+                    name={song.name}
+                    inSetlist={count > 0}
+                    played={playedElsewhere(song.id) + count}
+                    label={t(
+                      count > 0 ? 'gigs.setlist.form.list.addAgain' : 'gigs.setlist.form.list.add',
+                      {
+                        name: song.name,
+                        count: playedElsewhere(song.id) + count,
+                      },
+                    )}
+                    onPick={() => add(song, undefined, true)}
+                  />
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </Panel>
 
       <Panel
@@ -625,27 +690,37 @@ export function SetlistFormScreen() {
   );
 }
 
-/** A song of the form: its "more" button, and the handle it is dragged by. */
+/** A song of the form: the handle it is dragged by; swiped or from the keyboard, it is removed or moved. */
 function SongLine({
   line,
   position,
-  onMore,
+  played,
+  onRemove,
+  onMove,
 }: {
   line: Line;
   position: number;
-  onMore: () => void;
+  played: number;
+  onRemove: () => void;
+  onMove: (by: 1 | -1) => void;
 }) {
   const { t } = useTranslation();
   const sortable = useSortableRow(line.key);
 
   return (
-    <SetlistSongRow mode="edit" position={position} name={line.name} row={sortable.row}>
-      <IconButton
-        icon="More"
-        label={t('gigs.setlist.form.more', { name: line.name })}
-        aria-haspopup="dialog"
-        onClick={onMore}
-      />
+    <SetlistSongRow
+      mode="edit"
+      position={position}
+      name={line.name}
+      played={played}
+      playedLabel={t('gigs.setlist.form.playedElsewhere', { count: played })}
+      row={{ ...sortable.row, 'data-line': line.key } as typeof sortable.row}
+      onRemove={onRemove}
+      onMove={onMove}
+      keysLabel={t('gigs.setlist.form.rowKeys')}
+      removeLabel={t('gigs.setlist.form.remove')}
+      removeName={t('gigs.setlist.form.removeSong', { name: line.name })}
+    >
       <SortableHandle {...sortable.handle} />
     </SetlistSongRow>
   );

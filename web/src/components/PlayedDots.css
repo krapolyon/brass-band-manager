@@ -1,0 +1,14 @@
+/* Figma: dots of 8, spaceXxs apart, in textMuted. */
+.PlayedDots {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spaceXxs);
+}
+
+.PlayedDots > span {
+  width: 0.5rem; /* 8 */
+  height: 0.5rem;
+  border-radius: var(--radiusFull);
+  background: var(--textMuted);
+}

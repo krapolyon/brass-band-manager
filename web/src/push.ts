@@ -108,3 +108,50 @@ export function usePushSwitch() {
     },
   };
 }
+
+/**
+ * What the member wants to be told of, on every device that receives
+ * (model/members.md, "Notification settings"). A setting of the account, not
+ * of this device. EMAIL will join the values later.
+ */
+export type NotificationSettings = {
+  notifyGigPlayable: 'OFF' | 'PUSH';
+  notifyGigConfirmed: 'OFF' | 'PUSH';
+  notifyLiveSetlist: 'OFF' | 'PUSH';
+  notifySongNew: 'OFF' | 'PUSH';
+  notifySongScore: 'OFF' | 'PUSH';
+  notifySongPart: 'OFF' | 'PUSH';
+};
+
+const SETTINGS_KEY = ['notificationSettings'];
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: SETTINGS_KEY,
+    queryFn: () => api<NotificationSettings>('/api/me/notifications'),
+  });
+}
+
+/**
+ * Changes one setting at once: shown in the same instant, then saved with the
+ * five others, and put back if the server refuses.
+ */
+export function useSaveNotificationSettings() {
+  const queryClient = useQueryClient();
+  return async (changes: Partial<NotificationSettings>): Promise<boolean> => {
+    const before = queryClient.getQueryData<NotificationSettings>(SETTINGS_KEY);
+    if (!before) return false;
+    const wanted = { ...before, ...changes };
+    queryClient.setQueryData(SETTINGS_KEY, wanted);
+    try {
+      queryClient.setQueryData(
+        SETTINGS_KEY,
+        await api<NotificationSettings>('/api/me/notifications', { method: 'PUT', body: wanted }),
+      );
+      return true;
+    } catch {
+      queryClient.setQueryData(SETTINGS_KEY, before);
+      return false;
+    }
+  };
+}

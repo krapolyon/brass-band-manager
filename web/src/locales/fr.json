@@ -439,13 +439,12 @@
     "account": "Mon compte",
     "notifications": {
       "title": "Notifications",
-      "lead": "Réglées appareil par appareil.",
-      "detailOn": "Activées sur cet appareil",
+      "lead": "Cet appareil reçoit ou non. Ce que tu reçois se règle une fois, pour tous tes appareils.",
+      "detailOn": "Sur cet appareil · {{count}} choix",
       "detailOff": "Pas sur cet appareil",
       "thisDevice": "Sur cet appareil",
       "reminders": "Rappels de présence",
-      "remindersHint": "Quand un plan attend ta réponse, avant la date.",
-      "powerMembers": "Note : les power members ne sont jamais relancés : le réglage reste, mais aucun rappel ne part.",
+      "remindersHint": "Non désactivables : on a besoin que tu répondes. Les power members ne sont pas relancés.",
       "needsInstall": "Sur iPhone, les notifs n’arrivent que si l’app est sur ton écran d’accueil. Ajoute-la, rouvre-la depuis là, puis active les rappels.",
       "install": "Ajouter l’app à l’écran d’accueil",
       "installSteps": "Dans Safari, touche le bouton Partager, puis « Sur l’écran d’accueil ». Rouvre ensuite l’app depuis son icône.",
@@ -458,6 +457,60 @@
         "accept": "Activer les rappels",
         "refuse": "Pas sur cet appareil",
         "later": "Tu peux changer d’avis dans ton compte, rubrique Notifications."
+      },
+      "device": "Recevoir les notifications",
+      "deviceHint": "Sur cet appareil.",
+      "deviceOff": "Active les notifications sur cet appareil pour choisir les types de notifs.",
+      "gigs": "Plans",
+      "songs": "Morceaux",
+      "always": "Toujours",
+      "choices": {
+        "notifyGigPlayable": {
+          "label": "Plans jouables",
+          "hint": "Que je brasse, ou si j’ai répondu “oui”, “peut-être et si besoin”."
+        },
+        "notifyGigConfirmed": {
+          "label": "Plans validés",
+          "hint": "Que je brasse, ou si j’ai répondu “oui”, “peut-être et si besoin”."
+        },
+        "notifyLiveSetlist": {
+          "label": "Prochain morceau de la setlist",
+          "hint": "Pour l’info en “live” de la setlist"
+        },
+        "notifySongNew": {
+          "label": "Nouveau morceau"
+        },
+        "notifySongScore": {
+          "label": "Nouveau MuseScore",
+          "hint": "Sur un morceau existant"
+        },
+        "notifySongPart": {
+          "label": "Nouvelle partition",
+          "hint": "Pour mon instrument"
+        }
+      }
+    },
+    "calendar": {
+      "title": "Calendrier",
+      "lead": "Tes plans dans l’agenda de ton ordinateur et de ton téléphone.",
+      "detailNone": "Pas encore dans ton agenda",
+      "detailReady": "Adresse créée",
+      "sync": "Synchroniser mon calendrier",
+      "what": "L’app ajoute les plans où t’as dit que tu venais et le retire en cas d’annulation.",
+      "add": "Ajouter à mon agenda",
+      "copy": "Copier l’adresse",
+      "copied": "Adresse copiée",
+      "address": "Adresse de ton agenda",
+      "appleNote": "L’agenda s’appelle « {{band}} ». Il se met à jour à la fréquence réglée dans ton téléphone.",
+      "steps": "1. Copie l’adresse.\n2. Sur un ordinateur, ouvre calendar.google.com, puis Autres agendas › À partir de l’URL, et colle-la. Depuis le téléphone, Chrome › Version pour ordinateur permet de le faire aussi.\nL’agenda « {{band}} » apparaît ensuite dans ton téléphone. Google met jusqu’à 24 h à voir un changement.",
+      "reset": "Réinitialiser",
+      "resetLead": "L’ancienne synchro ne fonctionnera plus, il faudra recommencer.",
+      "resetButton": "Réinitialiser la synchro",
+      "wasReset": "Nouvelle adresse créée. Ajoute-la à ton agenda.",
+      "failed": "Ça n’a pas marché. Réessaie dans un instant.",
+      "confirm": {
+        "title": "Réinitialiser la synchro ?",
+        "cancel": "Annuler"
       }
     },
     "band": "La fanfare",
@@ -1261,7 +1314,7 @@
         "suggestion": "Ajouter {{name}}",
         "alreadyAt": "{{name}} · déjà en n° {{position}}",
         "noMatch": "Aucun morceau au répertoire ni temporaire ne ressemble à ça.",
-        "help": "Tape quelques lettres : les morceaux au répertoire et les temporaires s’affichent. Entrée ajoute la première suggestion, et le champ reste prêt pour le suivant. Un morceau peut revenir : l’app dit où il est déjà.",
+        "help": "Glisse vers la gauche pour supprimer. Si tu vois un rond, c’est que ce morceau est déjà dans une autre setlist du plan",
         "added": "{{name}} ajouté en n° {{position}}.",
         "moved": "{{name}} passe en n° {{position}}.",
         "removed": "{{name}} retiré de la setlist.",
@@ -1276,19 +1329,30 @@
             "tooLong": "La description est trop longue."
           }
         },
-        "more": "Actions de {{name}}",
-        "songTitle": "{{name}} · n° {{position}}",
-        "moveUp": "Monter",
-        "moveDown": "Descendre",
-        "dragHint": "Pour le déplacer, tu peux aussi le faire glisser par sa poignée.",
-        "remove": "Retirer de la setlist",
+        "remove": "Retirer",
         "delete": "Supprimer la setlist",
         "deleteTitle": "Supprimer la setlist n° {{number}} ?",
         "deleteLead_zero": "Les autres setlists du plan gardent leur numéro.",
         "deleteLead_one": "Son morceau part avec elle ; le morceau lui-même reste au répertoire. Les autres setlists du plan gardent leur numéro.",
         "deleteLead_other": "Ses {{count}} morceaux partent avec elle ; les morceaux eux-mêmes restent au répertoire. Les autres setlists du plan gardent leur numéro.",
         "cancel": "Annuler",
-        "leaveLead": "Les changements faits depuis l’ouverture de la setlist seront perdus."
+        "leaveLead": "Les changements faits depuis l’ouverture de la setlist seront perdus.",
+        "rowKeys": "Suppr le retire, Alt et une flèche le déplacent.",
+        "playedElsewhere_one": "aussi dans une autre setlist du plan",
+        "playedElsewhere_other": "aussi {{count}} fois ailleurs sur ce plan",
+        "list": {
+          "open": "Tous les morceaux",
+          "title": "Tous les morceaux",
+          "search": "Chercher",
+          "add_one": "Ajouter {{name}}, déjà joué une fois sur ce plan",
+          "add_other": "Ajouter {{name}}, joué {{count}} fois sur ce plan",
+          "add_zero": "Ajouter {{name}}",
+          "addAgain_one": "Ajouter encore {{name}}, déjà dans cette setlist",
+          "addAgain_other": "Ajouter encore {{name}}, déjà dans cette setlist, joué {{count}} fois sur ce plan",
+          "nothing": "Aucun morceau ne s’appelle « {{search}} ». La liste ne contient que les morceaux au répertoire et les temporaires.",
+          "empty": "La liste ne contient que les morceaux au répertoire et les temporaires."
+        },
+        "removeSong": "Retirer {{name}}"
       },
       "liveScreen": {
         "next": "Suivant",

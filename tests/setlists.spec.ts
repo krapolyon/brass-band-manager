@@ -144,21 +144,24 @@ test.describe('writing a setlist', () => {
     await expect(suggestions.getByText('Aucun morceau au répertoire ni temporaire')).toBeVisible();
     await field.fill('');
 
-    // Valerie, Toxic, Valerie: the last one goes up, the first one goes away.
-    await page.getByRole('button', { name: 'Actions de Valerie' }).last().click();
-    let panel = page.getByRole('dialog', { name: 'Valerie · n° 3' });
-    await expect(panel.getByRole('button', { name: 'Descendre' })).toBeDisabled();
-    await panel.getByRole('button', { name: 'Monter' }).click();
-    await expect(page.getByRole('dialog', { name: 'Valerie · n° 2' })).toBeVisible();
-    await page.getByRole('dialog').getByRole('button', { name: 'Fermer' }).click();
-    await page.getByRole('button', { name: 'Actions de Valerie' }).first().click();
-    panel = page.getByRole('dialog', { name: 'Valerie · n° 1' });
-    await panel.getByRole('button', { name: 'Retirer de la setlist' }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Valerie, Toxic, Valerie: the last one goes up, the first one goes
+    // away, from the keyboard (Gigs v1.6: no more menu on a song).
+    const rows = page.locator('.SetlistSongRow');
+    await rows.nth(2).focus();
+    await page.keyboard.press('Alt+ArrowUp');
+    await expect(rows.nth(1)).toContainText('Valerie');
+    await expect(rows.nth(1)).toBeFocused();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Valerie passe en n° 2.' }),
+    ).toHaveCount(1);
+    await rows.nth(0).focus();
+    await page.keyboard.press('Delete');
+    await expect(rows).toHaveCount(2);
     await expect(
       page.getByRole('status').filter({ hasText: 'Valerie retiré de la setlist.' }),
     ).toHaveCount(1);
-    await expect(field).toBeFocused();
+    // The row that took its place has the focus.
+    await expect(rows.nth(0)).toBeFocused();
     expect(sql('SELECT COUNT(*) FROM setlist')).toBe('0');
 
     await page.getByRole('button', { name: 'Enregistrer la setlist' }).click();
@@ -216,15 +219,117 @@ test.describe('writing a setlist', () => {
     await expect(rows).toHaveText([/Valerie/, /Rasputin/, /Toxic/]);
     await expect(page.getByRole('status').filter({ hasText: 'Toxic' })).toBeAttached();
 
-    // Hidden from assistive technology and from the keyboard: “Monter” and “Descendre” are theirs.
+    // Hidden from assistive technology and from the keyboard: the row takes
+    // Alt and the arrows instead, and its one button is “Retirer”.
     await expect(rows.nth(0).locator('.SortableHandle')).toHaveAttribute('aria-hidden', 'true');
     await expect(rows.nth(0).getByRole('button')).toHaveCount(1);
+    await expect(rows.nth(0).getByRole('button')).toHaveAccessibleName('Retirer Valerie');
 
     await page.getByRole('button', { name: 'Enregistrer la setlist' }).click();
     await expect(page).toHaveURL(`/gigs/${gigId}`);
     expect(
       sql(`SELECT songId FROM setlistSong WHERE setlistId = ${setlist} ORDER BY position`),
     ).toBe([songs[1], songs[2], songs[0]].join('\n'));
+  });
+
+  test('a song swiped to the left shows “Retirer”; swiped further, it goes (#20)', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = confirmed();
+    const songs = ['Toxic', 'Valerie', 'Rasputin'].map((name) => addSong(name));
+    const setlist = addSetlist(gigId, slotId, songs);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/${setlist}`);
+    const rows = page.locator('.SetlistSongRow');
+    await expect(rows).toHaveCount(3);
+
+    const swipe = async (index: number, share: number) => {
+      const box = await rows.nth(index).boundingBox();
+      if (!box) throw new Error('The song is not shown');
+      const y = box.y + box.height / 2;
+      await page.mouse.move(box.x + box.width * 0.8, y);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width * (0.8 - share), y, { steps: 10 });
+      await page.mouse.up();
+    };
+
+    // A short swipe reveals “Retirer”, which removes the song.
+    await swipe(1, 0.25);
+    const remove = rows.nth(1).getByRole('button', { name: 'Retirer Valerie' });
+    await expect(remove).toBeVisible();
+    await remove.click();
+    await expect(rows).toHaveText([/Toxic/, /Rasputin/]);
+    // A long one removes it outright.
+    await swipe(0, 0.7);
+    await expect(rows).toHaveText([/Rasputin/]);
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Toxic retiré de la setlist.' }),
+    ).toHaveCount(1);
+  });
+
+  test('the list of every song: alphabetical, a tap appends and the list stays open, twice is twice (#20)', async ({
+    page,
+  }) => {
+    const { gigId, slotIds } = confirmed('Fête des Lumières', ['Vendredi soir', 'Samedi soir']);
+    const [rasputin, toxic, getLucky] = [
+      addSong('Rasputin'),
+      addSong('Toxic'),
+      addSong('Get Lucky'),
+    ];
+    addSong('Valerie', 'TEMPORARY');
+    addSong('Vesoul', 'PROPOSED');
+    // Rasputin is in the setlist n° 1, on another day, and twice in the n° 2.
+    addSetlist(gigId, slotIds[0] as number, [rasputin, toxic]);
+    const second = addSetlist(gigId, slotIds[1] as number, [getLucky, rasputin, rasputin]);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/${second}`);
+
+    // In the setlist, the dots count the other setlists of the gig: Rasputin
+    // once, Get Lucky never.
+    const rows = page.locator('.SetlistSongRow');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(1).locator('.PlayedDots > span')).toHaveCount(1);
+    await expect(rows.nth(1)).toContainText('aussi dans une autre setlist du plan');
+    await expect(rows.nth(0).locator('.PlayedDots')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Tous les morceaux' }).click();
+    const picker = page.getByRole('dialog', { name: 'Tous les morceaux' });
+    const songs = picker.getByRole('listitem');
+    // The songs a setlist can hold, from A to Z: no proposed song.
+    await expect(songs).toHaveText(['Get Lucky', 'Rasputin', 'Toxic', 'Valerie']);
+    // In the list, every setlist of the gig counts, this one included.
+    await expect(songs.nth(1).locator('.PlayedDots > span')).toHaveCount(3);
+    await expect(songs.nth(1).getByRole('button')).toHaveAccessibleName(
+      'Ajouter encore Rasputin, déjà dans cette setlist, joué 3 fois sur ce plan',
+    );
+    await expect(songs.nth(3).getByRole('button')).toHaveAccessibleName('Ajouter Valerie');
+    await expect(songs.nth(3).locator('[data-state="inSetlist"]')).toHaveCount(0);
+
+    // A tap appends; the list stays open; a second tap appends again.
+    await songs.nth(3).getByRole('button').click();
+    await expect(picker).toBeVisible();
+    await expect(songs.nth(3).locator('[data-state="inSetlist"]')).toHaveCount(1);
+    await songs.nth(3).getByRole('button').click();
+    await expect(songs.nth(3).locator('.PlayedDots > span')).toHaveCount(2);
+
+    // The search narrows it; nothing found says what the list holds.
+    await picker.getByLabel('Chercher').fill('bohemian');
+    await expect(
+      picker.getByText(
+        'Aucun morceau ne s’appelle « bohemian ». La liste ne contient que les morceaux au répertoire et les temporaires.',
+      ),
+    ).toBeVisible();
+    await picker.getByLabel('Chercher').fill('tox');
+    await expect(songs).toHaveText(['Toxic']);
+    await picker.getByRole('button', { name: 'Fermer' }).click();
+    await expect(picker).toBeHidden();
+
+    await expect(rows).toHaveText([/Get Lucky/, /Rasputin/, /Rasputin/, /Valerie/, /Valerie/]);
+    await page.getByRole('button', { name: 'Enregistrer la setlist' }).click();
+    await expect(page).toHaveURL(`/gigs/${gigId}`);
+    expect(
+      sql(`SELECT COUNT(*) FROM setlistSong WHERE setlistId = ${second} AND songId <> ${getLucky}`),
+    ).toBe('4');
   });
 
   test('leaving with changes asks first; deleting asks first and keeps the numbers of the others', async ({
@@ -431,8 +536,8 @@ test.describe('dictating a setlist', () => {
     await expect(page.getByText('Entendu : « obey » → Obey')).toBeVisible();
     await page.getByRole('button', { name: 'Arrêter' }).click();
 
-    await page.getByRole('button', { name: 'Actions de Obey' }).click();
-    await page.getByRole('button', { name: 'Retirer de la setlist' }).click();
+    await page.locator('.SetlistSongRow').filter({ hasText: 'Obey' }).focus();
+    await page.keyboard.press('Delete');
     await page.getByLabel('Ajouter un morceau').fill('bay');
     await page.getByLabel('Ajouter un morceau').press('Enter');
     await expect.poll(phrases).toBe('The Bay=obey');
@@ -829,8 +934,10 @@ test.describe('notifications on a device', () => {
     await page.goto('/settings');
     await page.getByRole('link', { name: /Notifications/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Notifications' })).toBeVisible();
-    await expect(page.getByText('Réglées appareil par appareil.')).toBeVisible();
-    const reminders = page.getByRole('switch', { name: 'Rappels de présence' });
+    await expect(
+      page.getByText('Cet appareil reçoit ou non. Ce que tu reçois se règle une fois'),
+    ).toBeVisible();
+    const reminders = page.getByRole('switch', { name: 'Recevoir les notifications' });
     await expect(reminders).toBeChecked();
     await reminders.click();
     await expect(reminders).not.toBeChecked();
@@ -858,7 +965,9 @@ test.describe('notifications on a device', () => {
     await asMember(blocked, 'Zaza');
     await expect(blocked.getByRole('dialog')).toHaveCount(0);
     await blocked.goto('/settings/notifications');
-    await expect(blocked.getByRole('switch', { name: 'Rappels de présence' })).not.toBeChecked();
+    await expect(
+      blocked.getByRole('switch', { name: 'Recevoir les notifications' }),
+    ).not.toBeChecked();
     await expect(
       blocked.getByText('Les notifications sont bloquées pour l’app sur cet appareil.'),
     ).toBeVisible();
