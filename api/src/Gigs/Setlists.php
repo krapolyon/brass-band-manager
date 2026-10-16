@@ -15,7 +15,7 @@ use Doctrine\DBAL\Connection;
 // not know it plays. One setlist at most is live in the band.
 final class Setlists
 {
-    public const DESCRIPTION_MAX_LENGTH = 60;
+    public const DESCRIPTION_MAX_LENGTH = 120;
 
     public function __construct(private readonly Connection $database)
     {

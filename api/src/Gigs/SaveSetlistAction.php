@@ -52,7 +52,7 @@ final class SaveSetlistAction
             }
 
             $errors = new FieldErrors();
-            $description = $errors->optionalText('description', $input->description, Setlists::DESCRIPTION_MAX_LENGTH);
+            $description = $errors->optionalText('description', $input->description, Setlists::DESCRIPTION_MAX_LENGTH, lines: true);
 
             // The slot: asked when the gig has several, the only one otherwise.
             $slotIds = array_map(intval(...), $this->database->fetchFirstColumn('SELECT id FROM gigSlot WHERE gigId = ?', [$gigId]));
