@@ -8,12 +8,14 @@ type Props = {
   description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  /** The choice is kept but cannot be changed here; the screen says why. */
+  disabled?: boolean;
 };
 
 // Figma: SwitchRow. An option that is on or off and applies at once: one
 // control, with its label and its description tied to it. The whole row is
 // the touch target.
-export function SwitchRow({ label, description, checked, onChange }: Props) {
+export function SwitchRow({ label, description, checked, onChange, disabled }: Props) {
   const id = useId();
   const descriptionId = useId();
 
@@ -30,6 +32,7 @@ export function SwitchRow({ label, description, checked, onChange }: Props) {
       <Switch
         id={id}
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
         aria-describedby={description ? descriptionId : undefined}
       />

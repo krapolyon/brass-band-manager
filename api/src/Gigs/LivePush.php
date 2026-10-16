@@ -6,6 +6,7 @@ namespace BrassBand\Gigs;
 
 use BrassBand\Access\Permission;
 use BrassBand\Access\Role;
+use BrassBand\Push\NotificationSetting;
 use BrassBand\Push\Push;
 use BrassBand\Push\PushTexts;
 use Doctrine\DBAL\ArrayParameterType;
@@ -13,7 +14,8 @@ use Doctrine\DBAL\Connection;
 
 // The notification of the live setlist (model/gigs.md, entry 4, "Life
 // cycle"): at each change, the members who said yes to the slot of the
-// setlist are told the song being played and the two after it. On an iPhone
+// setlist, and want it (notifyLiveSetlist), are told the song being played and
+// the two after it. The device that pressed the button is spared. On an iPhone
 // notifications pile up, so each one reads on its own: its title starts with
 // the position. On Android it replaces the one before (same tag), and shows
 // "Suivant" to who manages setlists.
@@ -27,8 +29,9 @@ final class LivePush
 
     /**
      * @param array<string, mixed> $setlist The setlist as it is now, as Setlists::one() gives it
+     * @param int|null $bySessionId The device that moved it: it receives nothing
      */
-    public function changed(array $setlist): void
+    public function changed(array $setlist, ?int $bySessionId): void
     {
         $followers = array_map(fn (mixed $id) => (int) $id, $this->database->fetchFirstColumn(
             "SELECT memberId FROM gigSlotAttendance WHERE gigSlotId = ? AND answer = 'YES'",
@@ -81,6 +84,6 @@ final class LivePush
                     'data' => ['setlistId' => $setlistId, 'position' => $position],
                 ] : []),
             ];
-        }, Push::TTL_LIVE, topic: 'liveSetlist');
+        }, Push::TTL_LIVE, topic: 'liveSetlist', setting: NotificationSetting::LIVE_SETLIST, exceptSessionId: $bySessionId);
     }
 }

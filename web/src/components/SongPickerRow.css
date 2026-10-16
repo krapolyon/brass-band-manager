@@ -1,0 +1,35 @@
+/* Figma: 44 high at least, spaceXs above and below, spaceSm between. */
+.SongPickerRow button {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceSm);
+  width: 100%;
+  min-height: var(--controlHeightSm);
+  padding: var(--spaceXs) 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.SongPickerRow .Icon {
+  flex: none;
+  color: var(--textMuted);
+}
+
+.SongPickerRow-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* InSetlist: the tick is filled in the accent, the name in accentText. The
+   shape of the icon changes too, so the state never rests on colour alone. */
+.SongPickerRow [data-state="inSetlist"] .Icon {
+  color: var(--accent);
+}
+
+.SongPickerRow [data-state="inSetlist"] .SongPickerRow-name {
+  color: var(--accentText);
+}

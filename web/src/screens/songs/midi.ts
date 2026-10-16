@@ -39,7 +39,16 @@ export type MidiSong = {
   signature: { numerator: number; denominator: number };
   /** The rehearsal marks of the score, in the order they are played. */
   marks: { tick: number; name: string }[];
+  /**
+   * Where each written measure of the score is played, in the order it is
+   * played, jumps included: the measure counted from 0, as in the MusicXML.
+   * Written by the app since 0.2.0 (withMeasures); empty in an older file.
+   */
+  written: { tick: number; measure: number }[];
 };
+
+// How a measure of the score is written in the file: a cue point "m12".
+const WRITTEN = /^m(\d+)$/;
 
 const DRUM_CHANNEL = 9;
 const DEFAULT_BPM = 120;
@@ -68,6 +77,7 @@ export function readMidi(file: ArrayBuffer | Uint8Array): MidiSong {
   const tempos: MidiSong['tempos'] = [];
   const signatures: { tick: number; numerator: number; denominator: number }[] = [];
   const marks: MidiSong['marks'] = [];
+  const written: MidiSong['written'] = [];
   let end = 0;
 
   for (const events of midi.tracks) {
@@ -86,6 +96,9 @@ export function readMidi(file: ArrayBuffer | Uint8Array): MidiSong {
       } else if (event.type === 'marker') {
         const mark = textOf(event.text).trim();
         if (mark !== '') marks.push({ tick, name: mark });
+      } else if (event.type === 'cuePoint') {
+        const found = WRITTEN.exec(textOf(event.text).trim());
+        if (found) written.push({ tick, measure: Number(found[1]) });
       } else if (event.type === 'setTempo') {
         tempos.push({ tick, bpm: 60_000_000 / event.microsecondsPerBeat });
       } else if (event.type === 'timeSignature') {
@@ -157,7 +170,41 @@ export function readMidi(file: ArrayBuffer | Uint8Array): MidiSong {
     measures,
     signature: { numerator: first.numerator, denominator: first.denominator },
     marks: marks.sort((one, other) => one.tick - other.tick),
+    written: written.sort((one, other) => one.tick - other.tick),
   };
+}
+
+/**
+ * The written measure the player is at, counted from 0 as in the score.
+ * Read from the measures the app wrote in the file; for an older file, the
+ * measure of the same rank in `played`, the order the reading mode works out
+ * (repeats and voltas, no jump written in words).
+ */
+export function writtenAt(song: MidiSong, tick: number, played: number[]): number {
+  if (song.written.length > 0) {
+    let found = song.written[0]?.measure ?? 0;
+    for (const place of song.written) {
+      if (place.tick > tick) break;
+      found = place.measure;
+    }
+    return found;
+  }
+  const rank = measureAt(song, tick) - 1;
+  return played[Math.min(rank, played.length - 1)] ?? 0;
+}
+
+/**
+ * The tick a place of the played order starts at: the same written measure,
+ * played the same number of times before.
+ */
+export function tickOfPlace(song: MidiSong, place: number, played: number[]): number {
+  if (song.written.length > 0) {
+    const measure = played[place] ?? 0;
+    const times = played.slice(0, place + 1).filter((one) => one === measure).length;
+    const all = song.written.filter((one) => one.measure === measure);
+    return (all[Math.min(times, all.length) - 1] ?? all[0])?.tick ?? 0;
+  }
+  return measureTicks(song, place + 1).start;
 }
 
 /** How many measures the song has. */
@@ -267,7 +314,34 @@ export function withMarks(
   file: Uint8Array,
   marks: { seconds: number; name: string }[],
 ): Uint8Array {
-  if (marks.length === 0) return file;
+  return withEvents(
+    file,
+    marks.map((mark) => ({ seconds: mark.seconds, type: 'marker', text: mark.name })),
+  );
+}
+
+/**
+ * The same MIDI file with each measure of the score written where it is
+ * played, as a cue point ("m12", the measure counted from 0): the reading
+ * mode follows the player with it, repeats and jumps included (model/songs.md,
+ * "The reading mode driven by the MIDI player"). Like the marks, MuseScore
+ * writes none: the worker adds them.
+ */
+export function withMeasures(
+  file: Uint8Array,
+  measures: { seconds: number; measure: number }[],
+): Uint8Array {
+  return withEvents(
+    file,
+    measures.map((one) => ({ seconds: one.seconds, type: 'cuePoint', text: `m${one.measure}` })),
+  );
+}
+
+function withEvents(
+  file: Uint8Array,
+  added: { seconds: number; type: 'marker' | 'cuePoint'; text: string }[],
+): Uint8Array {
+  if (added.length === 0) return file;
   const song = readMidi(file);
   const midi = parseMidi(file);
   const first = midi.tracks[0];
@@ -283,9 +357,9 @@ export function withMarks(
     at += event.deltaTime;
     return { tick: at, event };
   });
-  for (const mark of marks) {
-    const event = { deltaTime: 0, meta: true, type: 'marker', text: bytesOf(mark.name) };
-    events.push({ tick: nearMeasure(tickAt(song, mark.seconds)), event: event as MidiEvent });
+  for (const one of added) {
+    const event = { deltaTime: 0, meta: true, type: one.type, text: bytesOf(one.text) };
+    events.push({ tick: nearMeasure(tickAt(song, one.seconds)), event: event as MidiEvent });
   }
   // The end of the track stays the last event.
   const isEnd = (event: MidiEvent) => (event.type === 'endOfTrack' ? 1 : 0);

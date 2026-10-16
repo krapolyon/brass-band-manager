@@ -1,4 +1,4 @@
-import { rehearsalMarks, withMarks, withTrackNames } from './midi.ts';
+import { rehearsalMarks, withMarks, withMeasures, withTrackNames } from './midi.ts';
 import { unzipped } from './score.ts';
 
 // Reads a MuseScore file with the MuseScore engine (webmscore) and gives back
@@ -74,15 +74,20 @@ self.onmessage = async (message: MessageEvent<Uint8Array>) => {
   self.postMessage(answer);
 };
 
-// The MIDI file with the rehearsal marks of the score. They are a comfort:
-// when they cannot be read, the file goes without them.
+// The MIDI file with the measures of the score where they are played, and
+// its rehearsal marks. Both are a comfort: when they cannot be read, the file
+// goes without them.
 async function marked(score: Score, midi: Uint8Array): Promise<Uint8Array> {
   try {
-    const marks = rehearsalMarks(await score.saveXml());
-    if (marks.length === 0) return midi;
     const { events } = await score.measurePositions();
-    return withMarks(
+    const measured = withMeasures(
       midi,
+      events.map((played) => ({ seconds: played.position / 1000, measure: played.elid })),
+    );
+    const marks = rehearsalMarks(await score.saveXml());
+    if (marks.length === 0) return measured;
+    return withMarks(
+      measured,
       events.flatMap((played) =>
         marks
           .filter((mark) => mark.measure === played.elid)

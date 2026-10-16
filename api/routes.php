@@ -11,6 +11,7 @@ declare(strict_types=1);
 //
 // WHO CAN CALL A ROUTE IS DECIDED HERE, BY WHERE THE ROUTE IS WRITTEN:
 //   1. Public        no sign-in. A short list; adding to it is a decision.
+//                    The calendar feed is one: its address carries its key.
 //   2. Signed in     any current member. This is where a new route goes.
 //   3. Permission    a signed-in member holding a permission: a route of
 //                    block 2 with ->add(new RequirePermission(...)).
@@ -25,6 +26,9 @@ use BrassBand\Access\Sessions;
 use BrassBand\Access\SignInAction;
 use BrassBand\Access\SignOutAction;
 use BrassBand\Band\Bands;
+use BrassBand\Calendar\CalendarAction;
+use BrassBand\Calendar\CalendarFeed;
+use BrassBand\Calendar\CalendarFeedAction;
 use BrassBand\Band\ShowBandAction;
 use BrassBand\Band\ShowGigRemindersAction;
 use BrassBand\Band\UpdateBandAction;
@@ -36,6 +40,7 @@ use BrassBand\Gigs\Costumes;
 use BrassBand\Gigs\DeleteCostumeAction;
 use BrassBand\Gigs\DeleteGigAction;
 use BrassBand\Gigs\DeleteSlotAction;
+use BrassBand\Gigs\GigPush;
 use BrassBand\Gigs\Gigs;
 use BrassBand\Gigs\ListCostumesAction;
 use BrassBand\Gigs\ListGigsAction;
@@ -92,6 +97,7 @@ use BrassBand\Members\ShowMemberAction;
 use BrassBand\Members\ShowPhotoAction;
 use BrassBand\Members\UpdateMemberAction;
 use BrassBand\Members\UpdatePhotoAction;
+use BrassBand\Push\NotificationsAction;
 use BrassBand\Push\PushAction;
 use BrassBand\Push\PushSetup;
 use BrassBand\Sections\DeleteInstrumentAction;
@@ -118,6 +124,7 @@ use BrassBand\Songs\SetLevelsAction;
 use BrassBand\Songs\ShowSongAction;
 use BrassBand\Songs\ShowSongFileAction;
 use BrassBand\Songs\SongFiles;
+use BrassBand\Songs\SongPush;
 use BrassBand\Songs\Songs;
 use BrassBand\Songs\SpokenNames;
 use BrassBand\Songs\SpokenNamesAction;
@@ -157,6 +164,8 @@ return function (App $app, Connection $database, array $config): void {
     $costumes = new Costumes($database);
     $setlists = new Setlists($database);
     $costumePictures = new CostumePictures($database, $files);
+    $gigPush = new GigPush($database, $push);
+    $songPush = new SongPush($database, $push);
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -175,6 +184,9 @@ return function (App $app, Connection $database, array $config): void {
     $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections));
     $app->post('/api/passwordLink/validate', new ValidateInvitationAction($links, $record));
     $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile, $record, $photos));
+    // A calendar app has no session: the token of the address is the key
+    // (model/gigs.md, entry 5). The same "not found" whatever is wrong with it.
+    $app->get('/api/calendar/{token}.ics', new CalendarFeedAction($database, new CalendarFeed($database, is_string($config['appUrl'] ?? null) ? trim($config['appUrl']) : '')));
 
     // ---------------------------------------------------------------
     // 2. Signed in
@@ -199,11 +211,22 @@ return function (App $app, Connection $database, array $config): void {
         $costumes,
         $costumePictures,
         $push,
+        $gigPush,
+        $songPush,
         $migrations,
         $currentPassword,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
+        // What the member wants to be told of, on every device that receives.
+        $notifications = new NotificationsAction($database);
+        $group->get('/api/me/notifications', $notifications);
+        $group->put('/api/me/notifications', $notifications);
+        // One's own calendar address: read, created, or replaced.
+        $calendar = new CalendarAction($database);
+        $group->get('/api/me/calendar', $calendar);
+        $group->post('/api/me/calendar', $calendar);
+        $group->put('/api/me/calendar', $calendar);
         $group->put('/api/me/password', new ChangePasswordAction($database, $links, $currentPassword));
         $group->delete('/api/session', new SignOutAction($sessions, $cookie, everywhere: false));
         $group->delete('/api/sessions', new SignOutAction($sessions, $cookie, everywhere: true));
@@ -237,7 +260,7 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/gigs', new ListGigsAction($gigs));
         $group->get('/api/gigs/{id:[0-9]+}', new ShowGigAction($gigs));
         // One's own answer for a slot: the address names no member.
-        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, forAnother: false));
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, $gigPush, forAnother: false));
         $group->get('/api/setlists/{id:[0-9]+}', new ShowSetlistAction($gigs, $setlists));
         $group->get('/api/costumes', new ListCostumesAction($costumes));
         $group->get('/api/costumes/{id:[0-9]+}/picture', new ShowCostumePictureAction($costumePictures));
@@ -256,14 +279,14 @@ return function (App $app, Connection $database, array $config): void {
         // A gig is edited by whoever manages gigs and by its organisers.
         $editGig = new RequireGigEditor($gigs);
         $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs))->add($editGig);
-        $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs, $setlists))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs, $setlists, $gigPush))->add($editGig);
         $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
         // "Relancer": a notification to who has not answered for the gig.
         $group->post('/api/gigs/{id:[0-9]+}/reminder', new RemindGigAction($database, $gigs, new Reminders($database, $push)))->add($editGig);
         // The answer of a member who told them.
-        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, forAnother: true))
+        $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, $gigPush, forAnother: true))
             ->add($editGig);
 
         // ---------------------------------------------------------------
@@ -299,20 +322,20 @@ return function (App $app, Connection $database, array $config): void {
         $group->delete('/api/instruments/{id:[0-9]+}', new DeleteInstrumentAction($database, $sections))->add($manageSections);
 
         $manageSongs = new RequirePermission(Permission::MANAGE_SONGS);
-        $group->post('/api/songs', new SaveSongAction($database, $songs, $songFiles, $thumbnails))->add($manageSongs);
+        $group->post('/api/songs', new SaveSongAction($database, $songs, $songFiles, $thumbnails, $songPush))->add($manageSongs);
         $group->post('/api/songs/fileNames', new PlaceFilesAction(new FileNames($database)))->add($manageSongs);
-        $group->put('/api/songs/{id:[0-9]+}', new SaveSongAction($database, $songs, $songFiles, $thumbnails))->add($manageSongs);
+        $group->put('/api/songs/{id:[0-9]+}', new SaveSongAction($database, $songs, $songFiles, $thumbnails, $songPush))->add($manageSongs);
         $group->put('/api/songs/{id:[0-9]+}/status', new ChangeSongStatusAction($database, $songs))->add($manageSongs);
         $group->delete('/api/songs/{id:[0-9]+}', new DeleteSongAction($database, $songs, $songFiles))->add($manageSongs);
         $group->put('/api/songs/{id:[0-9]+}/audio/peaks', new SavePeaksAction($songs, $songFiles))->add($manageSongs);
         // The files of a song, each sent alone as the body of its request
         // (FileBody). BodyLimit knows these addresses: keep the two in step.
         foreach (array_keys(SongFiles::COLUMNS) as $kind) {
-            $group->put("/api/songs/{id:[0-9]+}/{$kind}", new UpdateSongFileAction($songs, $songFiles, $kind, removes: false))->add($manageSongs);
-            $group->delete("/api/songs/{id:[0-9]+}/{$kind}", new UpdateSongFileAction($songs, $songFiles, $kind, removes: true))->add($manageSongs);
+            $group->put("/api/songs/{id:[0-9]+}/{$kind}", new UpdateSongFileAction($songs, $songFiles, $songPush, $kind, removes: false))->add($manageSongs);
+            $group->delete("/api/songs/{id:[0-9]+}/{$kind}", new UpdateSongFileAction($songs, $songFiles, $songPush, $kind, removes: true))->add($manageSongs);
         }
-        $group->put('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, 'part', removes: false))->add($manageSongs);
-        $group->delete('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, 'part', removes: true))->add($manageSongs);
+        $group->put('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, $songPush, 'part', removes: false))->add($manageSongs);
+        $group->delete('/api/songs/{id:[0-9]+}/parts/{instrumentId:[0-9]+}', new UpdateSongFileAction($songs, $songFiles, $songPush, 'part', removes: true))->add($manageSongs);
 
         // The known spellings of the instruments. They are listed in the band
         // settings, but belong to whoever manages songs (model/songs.md, entry 2).

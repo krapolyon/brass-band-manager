@@ -98,3 +98,37 @@
   padding: 0;
   list-style: none;
 }
+
+/* Notifications: the categories of the account. With the device off they
+   stand back, as Figma draws them at 40 %, and their switches are disabled. */
+.settings-categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.settings-categories[data-disabled="true"] {
+  opacity: 0.4;
+}
+
+/* High contrast: no text stands back, the switches say they are off by
+   themselves (disabled). */
+:root[data-contrast="more"] .settings-categories[data-disabled="true"] {
+  opacity: 1;
+}
+
+/* Calendar: the content of its two sheets. */
+.settings-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.settings-calendar p {
+  margin: 0;
+}
+
+/* The steps of Google Agenda keep their line breaks. */
+.settings-steps {
+  white-space: pre-line;
+}

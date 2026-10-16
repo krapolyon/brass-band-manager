@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.6 — 2026-10-16 · No change to the tables · Milestone 0.2.0, with Members v1.21 (migration `013_notificationsAndCalendar.sql`): a gig that becomes playable or confirmed is notified, the live setlist follows the setting of each member and spares the device that moved it (issue #23); the setlist editor counts how often a song is played in the gig, adds songs from a list, and removes a song by a swipe (issue #20); the calendar feed of a member (issue #21)
 > v1.5 — 2026-10-15 · No change to the tables · From the beta (milestone 0.1.1): a confirmed gig can be put back to `ACCEPTED` or `PROPOSED` by hand (#17); the end date can be removed (#16); the address and the description of a setlist are typed over several lines (#15)
 > v1.4 — 2026-10-13 · Decided with the design of the home screen (Figma, page `Home`): `gig.proposedAt`, the instant a gig first reaches a status members see; a gig is new for 15 days after it; the gig of the day and the answers in place on the home screen · Migration: `012_gigProposedAt.sql`
 > v1.3 — 2026-10-13 · Validated by the owner · The live setlist, decided with the design: a setlist belongs to a slot; the setlist manager starts it live, moves it on song by song and ends it; the members who said yes to the slot follow it by notification · Migration: `010_setlistLive.sql`
@@ -75,6 +76,11 @@ A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the l
 - **The screen of a gig** changes with its state: the answers, the date, the time and the address first while it is not playable; the meeting information and the notes once it is `CONFIRMED`; the setlists, when it has some, once it is in progress.
 - **Costumes of the gig** (`gigCostume`): the costumes to bring, none or several, chosen in the list of the band. A slot chooses its own among them. Taking a costume off the gig empties it on the slots that had it.
 - **Reminder.** A button "Remind" ("Relancer") sends a push notification at once to the `ACTIVE` members who have not answered for one slot at least of the gig. Offered on a gig in `PROPOSED`, `ACCEPTED` or `CONFIRMED` that is not past. The screen shows when the last reminder was sent.
+- **Notifications of a gig** (decided on 2026-10-16, issue #23). Two notifications tell members about a gig they are involved in: the members who organise it, or who answered yes, maybe or if needed on one of its slots, among the current members whose setting is on (Members domain, "Notification settings").
+  - **Playable** (`notifyGigPlayable`): the gig goes from not playable to playable. Looked at when an answer is saved, by the member or for them. Sent on every such change, not once per gig: a gig that stops being playable and becomes playable again is notified again. Not sent when the same answer also confirms the gig: the "confirmed" one says more.
+  - **Confirmed** (`notifyGigConfirmed`): the gig becomes `CONFIRMED`, by the app or by hand. Again on every change: a gig put back to `ACCEPTED` and confirmed again is notified again.
+  - Only for a gig in `PROPOSED`, `ACCEPTED` or `CONFIRMED` that is not over. A notification names the gig and its date, never a member: "Les Krapos – Plan jouable", "Fête des Lumières – ven. 4 déc. : chaque pupitre a un oui"; "Les Krapos – Plan validé", "Vide-grenier de la Croix-Rousse – sam. 17 oct. – RDV 9 h 30". It opens the gig.
+  - The device that saved the answer or the status does not receive it.
 - **Automatic reminders.** Two per gig, each a number of days before `startsOn`, sent from a given hour on that day to the same members as the button. They concern the gigs in `PROPOSED` and `ACCEPTED`. None is sent on a day a reminder was already sent for the gig, by the button or by the app: `remindedAt` says so. A gig created after the day of a reminder does not get it. The two numbers of days and the hour are settings of the band; an empty number of days means that this reminder is not sent. The hour is read on the clock of the server, which is set to the time zone of the band.
 
 ### Relations
@@ -103,7 +109,7 @@ The right of an organiser depends on the gig, not on a role: the shared layer ch
 - A gig with only a postal code and a city shows them as its place.
 - The coordinates open the map application of the device.
 - The gig of the day shows its place on one line, as the screen of the gig does: the name of the place, the street when there is one, then the postal code and the city, "Boulevard de la Croix-Rousse, 69004 Lyon".
-- Representations in the design library (Figma, pages `Gigs` and `Home`): `Gig/Card` (with `Show new` and `New text`, the line "Nouveau" above the card, and `Show answers`, the four answers under it: both on the home screen only), `Gig/Hero` (the confirmed gig of the day, on the home screen), `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row`.
+- Representations in the design library (Figma, pages `Gigs` and `Home`): `Gig/Card` (with `Show new` and `New text`, the line "Nouveau" above the card, and `Show answers`, the four answers under it: both on the home screen only), `Gig/Hero` (the confirmed gig of the day, on the home screen), `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row` (with `Show played`, the `PlayedDots` of the other setlists of the gig).
 - The count of a slot is "x oui sur y", y being the current members of the band.
 
 ## 2. Slot (`gigSlot`, `gigSlotAttendance`)
@@ -184,7 +190,7 @@ An ordered list of songs played at a slot of a gig, followed live by the members
 | Live | Being played | Live, another song | “Suivant” at the end of a song; or who manages setlists scrolls the live list up or down and stops on a song, to correct | `livePosition` set to that song, never beyond the first or the last. A notification to the followers |
 | Live | Being played | Not live | “Terminer”, which replaces “Suivant” on the last song | Both fields emptied. A last notification to the followers: “Setlist terminée” |
 
-The followers are the current members who answered yes to the slot of the setlist and have at least one device that accepted notifications (Members, `pushSubscription`). There is no way to follow without notifications: the live screen of the app shows the same thing to any member who opens it.
+The followers are the current members who answered yes to the slot of the setlist, whose setting `notifyLiveSetlist` is on (Members domain, "Notification settings"), and who have at least one device that accepted notifications (Members, `pushSubscription`). The device that pressed "Lancer", "Suivant" or "Terminer" does not receive the notification of that press (decided on 2026-10-16): the other devices of the same member do. There is no way to follow without notifications: the live screen of the app shows the same thing to any member who opens it.
 
 The notification names the song being played and the two after it: “3/6 · Prochain : Toxic”, then “Puis : Valerie · Uptown Funk”; on the last song “6/6 · Dernier : Seven Nation Army”. On an iPhone a notification cannot be replaced: the notifications pile up, the newest on top, so each one reads on its own. On Android it replaces the previous one without a new vibration, and shows “Suivant” to who manages setlists.
 
@@ -196,6 +202,9 @@ The notification names the song being played and the two after it: “3/6 · Pro
 - A gig that leaves `CONFIRMED` (cancelled) hides its setlists and ends the one that was live.
 - A song used by a setlist cannot be deleted (Songs domain). A slot that has setlists cannot be deleted: its setlists are moved to another slot or deleted first.
 - The setlists of a gig are shown from `CONFIRMED` on (in progress and past included): before, the band does not know it plays. A member who taps a song of a setlist opens the song, in the mode they used last.
+- **Played dots** (decided on 2026-10-16, issue #20). While a setlist is written, each song shows how many times it is in the other setlists of the same gig, all slots and days together: one plain dot per time, three at most. A song never counts itself. In the list of all songs (below) the count takes every setlist of the gig, this one included. Computed from the setlists each time, never stored.
+- **Adding from a list** (issue #20). Besides typing and dictating, a button beside the microphone opens every song a setlist can hold (`IN_REPERTOIRE`, `TEMPORARY`), in alphabetical order, with a search field. A song already in this setlist shows a tick. A tap appends the song at the end of the setlist and the list stays open; a second tap appends it again (a song can come twice). The list closes with its cross or by dragging it down.
+- **Moving and removing a song** (issue #20). The handle moves a song. A song is removed by sliding its row to the left, which reveals "Retirer", or by sliding it further. Without a pointer: the row takes the focus, Delete removes it, and Alt with the up or down arrow moves it. The menu of a song, with Monter and Descendre, is gone.
 - A live setlist can still be edited; its position stays the same number, and who manages setlists corrects it by scrolling if needed.
 - Later, not modelled: how often each song is played, counted from the setlists of past gigs.
 
@@ -205,16 +214,43 @@ The notification names the song being played and the two after it: “3/6 · Pro
 | Any signed-in member | The setlists of the gigs they see, from `CONFIRMED` on, and the live screen | No | No |
 | `SETLIST_MANAGER`, `ADMIN` | The same | Yes | Yes |
 
-## 5. Other domains
+## 5. Calendar feed (no table)
+
+Decided on 2026-10-16 (issue #21): a member subscribes their calendar app to a personal address (Members domain, "Calendar address"). The app writes into nobody's calendar.
+
+### What the feed holds
+- **One event per gig**, over the whole gig: a gig of several days, or with several slots, is one event.
+- **Which gigs**: those in `PROPOSED`, `ACCEPTED` or `CONFIRMED` for which the member answered yes, maybe or if needed on one slot at least, and whose last day is less than 12 months ago (decided with the owner). A gig the member said no to everywhere, a cancelled gig and a draft are absent: a calendar that had them removes them.
+- **Firm or tentative**: firm (`STATUS:CONFIRMED`) when the member said yes on one slot at least, tentative (`STATUS:TENTATIVE`) otherwise.
+- **Title**: the name of the band, then the name of the gig, with its status in front when it is not `CONFIRMED`: "Les Krapos – Fête des Lumières", "Les Krapos – Proposition : Fête de la soupe". The band name is reused, no field of its own (decided with the owner); the calendar is named after the band too.
+- **Start**: the first day at the meeting time. **End**: midnight at the end of the last day (decided with the owner: the model has no end time, and no length is invented). A gig without a meeting time is an event of whole days, from its first to its last day. The meeting time is on the clock of the place; the feed writes it in UTC, from the time zone of the band (server configuration).
+- **Place**: the name of the place, the street, the postal code and the city. **Link**: the screen of the gig in the app.
+- **Identity**: one identifier per gig and per instance, which never changes; a version number that grows whenever the gig or the answers of the member change, so that a calendar app takes the change.
+- Nothing about other members, the notes of the gig or the Discord channel.
+
+### Rules
+- The address is public (no session): a calendar app has no sign-in. It answers only when its token is the one of a current member; any other address, whatever the reason (unknown token, member who left, reset token), gets the same "not found", after a second, so that trying addresses leads nowhere.
+- The answer is marked private, to be asked again each time (`private, max-age=0`), and asks search engines not to index it.
+- Nothing about the address or the feed is written to a log.
+
+### Access rights
+| Who | Read the feed | Create or reset the address |
+|---|---|---|
+| Whoever holds the address of a current member | That member's gigs, as above | No |
+| The member | Yes | Yes, their own |
+| Anyone else, an admin included | No: they never see the address | No |
+
+## 6. Other domains
 
 Changed with this domain:
 
+- **Members** (v1.21): the notification settings of the account (`notifyGigPlayable`, `notifyGigConfirmed`, `notifyLiveSetlist`) and the calendar address (`calendarToken`), which the calendar feed (entry 5) reads.
 - **Members** (v1.18): a device that accepted notifications also receives the live setlist.
 - **Members** (v1.17): `pushSubscription`, a device that accepted push notifications. The permission "manage costumes" goes to `ADMIN`. The role `SETLIST_MANAGER` is offered once setlists are built. A member who leaves is taken off the gigs they organise that are not over.
 - **Band** (v1.6): `gigFirstReminderDays` (15 by default), `gigSecondReminderDays` (5) and `gigReminderHour` (18).
 - **Songs**: nothing changes; `song` is referred to by `setlistSong`.
 - **Overview** (v0.7) and **scoping**: slots without dates, no stops, costumes, setlists tied to a gig and built in the first version, at the end of this domain.
 
-## 6. Open questions
+## 7. Open questions
 
 None. Decided by the owner on 2026-10-13: the five statuses, `CONFIRMED` set by the app or forced; a cancelled gig can be reopened; organisers edit their gig and answer for others; one meeting time per gig; optional coordinates; the costumes of the gig as the reference, managed by the admin; the reminder button and two automatic reminders; setlists built in this domain, last.

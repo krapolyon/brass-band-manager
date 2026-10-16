@@ -46,7 +46,9 @@ self.addEventListener('notificationclick', (event) => {
       fetch(`/api/setlists/${data.setlistId}/live`, {
         method: 'PUT',
         credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json' },
+        // Pressed in the notification itself: this device is told the next
+        // song like the others, or its notification would stay on the old one.
+        headers: { 'Content-Type': 'application/json', 'X-From-Notification': '1' },
         body: JSON.stringify({ position: data.position + 1 }),
       }).catch(() => {}),
     );

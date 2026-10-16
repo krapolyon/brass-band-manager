@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications when a gig becomes playable or confirmed, the live setlist follows the setting of each member (issue #23); the setlist editor shows how often a song is played in the gig and adds songs from a list (issue #20); the calendar feed of a member (issue #21) (dictionary)
 // v1.5 — 2026-10-15 — no change to the tables: a confirmed gig can be put back to ACCEPTED or PROPOSED by hand (issue #17); streetAddress and setlist.description are typed over several lines (issue #15); the end date of a gig can be removed (issue #16) (dictionary)
 // v1.4 — 2026-10-13 — migration 012, decided with the design of the home screen: gig.proposedAt, the instant a gig first reaches a status members see; a gig is marked as new for 15 days after it.
 // v1.3 — 2026-10-13 — validated, migration 010: the live setlist (decided with the design): a setlist belongs to a slot of its gig, whose members who said yes follow it live; the position of the song being played and the start of the live session.

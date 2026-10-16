@@ -32,6 +32,36 @@ test.describe('on an installed app', () => {
     await expect(page.getByRole('status')).toHaveAttribute('data-state', 'unreachable');
   });
 
+  test('installed on an iPhone, the app draws under a translucent status bar, on its own ground (#28)', async ({
+    page,
+  }) => {
+    await page.goto('/sign-in');
+    await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
+    const meta = (name: string) => page.locator(`meta[name="${name}"]`).getAttribute('content');
+    // A device in light: the bar of the light scheme, its clock in black.
+    expect(await meta('apple-mobile-web-app-status-bar-style')).toBe('default');
+    expect(await page.locator('meta[name="viewport"]').getAttribute('content')).toContain(
+      'viewport-fit=cover',
+    );
+    // What shows under the status bar is the ground of the scheme in use.
+    const grounds = () =>
+      page.evaluate(() => [
+        getComputedStyle(document.documentElement).backgroundColor,
+        getComputedStyle(document.body).backgroundColor,
+      ]);
+    const [root, body] = await grounds();
+    expect(root).toBe(body);
+    const light = await meta('theme-color');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await expect.poll(() => meta('theme-color')).not.toBe(light);
+    const [darkRoot, darkBody] = await grounds();
+    expect(darkRoot).toBe(darkBody);
+    // A device in dark: the app draws under a translucent bar.
+    await page.reload();
+    await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
+    expect(await meta('apple-mobile-web-app-status-bar-style')).toBe('black-translucent');
+  });
+
   test('an address inside the app is answered by the app', async ({ page }) => {
     const response = await page.goto('/rehearsals/12');
 

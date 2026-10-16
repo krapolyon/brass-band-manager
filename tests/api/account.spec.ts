@@ -83,14 +83,13 @@ test.describe('preferences', () => {
   }) => {
     const zaza = await deviceOf(playwright, email('Zaza'));
 
-    // A page left open on an older version still sends it: it is not refused, and ignored.
+    // The column is gone (Members v1.21): the field is a property the API does not expect.
     const response = await zaza.put('/api/me/preferences', {
       data: preferences({ textSizePercent: 160 }),
     });
-    expect(response.status()).toBe(200);
-    expect(await response.json()).not.toHaveProperty('textSizePercent');
+    expect(response.status()).toBe(422);
+    expect((await zaza.put('/api/me/preferences', { data: preferences({}) })).status()).toBe(200);
     expect(await (await zaza.get('/api/me')).json()).not.toHaveProperty('textSizePercent');
-    expect(sql("SELECT textSizePercent FROM member WHERE nickname = 'Zaza'")).toBe('100');
     await zaza.dispose();
   });
 

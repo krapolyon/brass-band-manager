@@ -27,6 +27,7 @@ import {
   readMidi,
 } from './midi.ts';
 import { MidiEngine } from './midiEngine.ts';
+import { useMidiSettings } from './midiSettings.ts';
 import { usePlayer } from './Player.tsx';
 import './songs.css';
 
@@ -85,30 +86,14 @@ export function MidiView({ song }: Props) {
   return <MidiPlayer key={url} song={song} midi={file.data} />;
 }
 
-function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
+/**
+ * The tracks of a MIDI file as the member sees them: the instrument each one
+ * is, from its name, and whether it is the member's own.
+ */
+export function useTracks(midi: MidiSong) {
   const { t } = useTranslation();
   const me = useMe().data;
   const instruments = instrumentsOf(useSections().data);
-  const recording = usePlayer();
-  const sliderLabel = useId();
-
-  const fileBpm = countedBpm(midi);
-  const bandBpm = song.bpm ?? Math.round(fileBpm);
-  const total = measureCount(midi);
-  const marks = useMemo(() => markRanges(midi), [midi]);
-
-  const engine = useRef<MidiEngine | null>(null);
-  const [sounds, setSounds] = useState<'loading' | 'ready' | 'failed'>('loading');
-  const [isPlaying, setPlaying] = useState(false);
-  const [measure, setMeasure] = useState(1);
-  const [bpm, setBpm] = useState(bandBpm);
-  const [muted, setMuted] = useState<boolean[]>(() => midi.tracks.map(() => false));
-  const [mutedStep, setMutedStep] = useState(0);
-  const [range, setRange] = useState<{ from: number; to: number } | null>(null);
-  const [isLooping, setLooping] = useState(false);
-  const [isChoosing, setChoosing] = useState(false);
-
-  // The instrument of each track, from its name.
   const names = midi.tracks.map((track) => track.name);
   const placed = useQuery({
     queryKey: ['songs', 'trackNames', names],
@@ -125,6 +110,117 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
       own: instrument !== undefined && instrument.id === me?.instrumentId,
     };
   });
+  return { tracks, placed };
+}
+
+/** The tempo of the band and the slowest and fastest the player goes, for a file. */
+export function tempoRange(fileBpm: number, bandBpm: number) {
+  return {
+    slowest: Math.min(Math.ceil(fileBpm * SLOWEST), bandBpm),
+    fastest: Math.max(Math.floor(fileBpm * FASTEST), bandBpm),
+  };
+}
+
+type TempoAndVolumeProps = {
+  bandBpm: number;
+  bpm: number;
+  onBpm: (bpm: number) => void;
+  mutedStep: number;
+  onMutedStep: (step: number) => void;
+};
+
+/** Figma: the tempo and the volume of the cut tracks, in the MIDI mode and in its sheet of the Live mode. */
+export function TempoAndVolume({
+  bandBpm,
+  bpm,
+  onBpm,
+  mutedStep,
+  onMutedStep,
+}: TempoAndVolumeProps) {
+  const { t } = useTranslation();
+  const sliderLabel = useId();
+  const mutedPercent = t('songs.midi.percent', { value: mutedStep * 5 });
+  return (
+    <>
+      <div className="songs-midiTempo">
+        <span className="songs-midiTempoTexts">
+          <span className="textLabel">{t('songs.midi.tempo')}</span>
+          <span className="textCaption songs-muted">
+            {t('songs.midi.bandTempo', { bpm: bandBpm })}
+          </span>
+        </span>
+        <IconButton
+          kind="control"
+          icon="Minus"
+          label={t('songs.midi.slower')}
+          onClick={() => onBpm(bpm - BPM_STEP)}
+        />
+        <output className="songs-midiTempoValue" aria-label={t('songs.midi.bpm', { bpm })}>
+          <span className="textHeading">{bpm}</span>
+          <span className="textMicro songs-muted">{t('songs.midi.bpmUnit')}</span>
+        </output>
+        <IconButton
+          kind="control"
+          icon="Plus"
+          label={t('songs.midi.faster')}
+          onClick={() => onBpm(bpm + BPM_STEP)}
+        />
+      </div>
+
+      <div className="songs-midiVolume">
+        <div className="songs-midiVolumeLabel">
+          <span id={sliderLabel} className="textLabel">
+            {t('songs.midi.mutedVolume')}
+          </span>
+          <span className="textLabel songs-accent">{mutedPercent}</span>
+        </div>
+        <Slider
+          steps={MUTED_STEPS}
+          step={mutedStep}
+          onChange={onMutedStep}
+          labelledBy={sliderLabel}
+          valueText={mutedPercent}
+        />
+        <div className="songs-midiVolumeLabel textCaption songs-muted">
+          <span>{t('songs.midi.silent')}</span>
+          <span>{t('songs.midi.percent', { value: (MUTED_STEPS - 1) * 5 })}</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** How loud a cut track stays at a step of the volume slider, from 0 to 1. */
+export const mutedVolumeOf = (step: number) => step * MUTED_STEP;
+
+function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
+  const { t } = useTranslation();
+  const me = useMe().data;
+  const recording = usePlayer();
+
+  const fileBpm = countedBpm(midi);
+  const bandBpm = song.bpm ?? Math.round(fileBpm);
+  const total = measureCount(midi);
+  const marks = useMemo(() => markRanges(midi), [midi]);
+
+  const engine = useRef<MidiEngine | null>(null);
+  const [sounds, setSounds] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [isPlaying, setPlaying] = useState(false);
+  const [measure, setMeasure] = useState(1);
+  // Shared with the Live mode driven by the MIDI player.
+  const [{ bpm, muted, mutedStep }, setSettings] = useMidiSettings(
+    song.id,
+    bandBpm,
+    midi.tracks.length,
+  );
+  const [range, setRange] = useState<{ from: number; to: number } | null>(null);
+  const [isLooping, setLooping] = useState(false);
+  const [isChoosing, setChoosing] = useState(false);
+
+  const { tracks, placed } = useTracks(midi);
+
+  const settingsNow = useRef({ muted, mutedStep });
+  settingsNow.current = { muted, mutedStep };
 
   // One engine for the file: it holds the sound of the device until the
   // member leaves the mode.
@@ -137,6 +233,12 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
       () => isAlive && setSounds('ready'),
       () => isAlive && setSounds('failed'),
     );
+    // What was set before, here or in the Live mode.
+    const { muted: cut, mutedStep: step } = settingsNow.current;
+    cut.forEach((isMuted, index) => {
+      created.setMuted(index, isMuted);
+    });
+    created.setMutedVolume(mutedVolumeOf(step));
     return () => {
       isAlive = false;
       engine.current = null;
@@ -183,25 +285,24 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
 
   const changeBpm = (next: number) => {
     // The tempo of the band is always within reach, whatever the file says.
-    const slowest = Math.min(Math.ceil(fileBpm * SLOWEST), bandBpm);
-    const fastest = Math.max(Math.floor(fileBpm * FASTEST), bandBpm);
-    setBpm(Math.min(Math.max(next, slowest), fastest));
+    const { slowest, fastest } = tempoRange(fileBpm, bandBpm);
+    setSettings({ bpm: Math.min(Math.max(next, slowest), fastest) });
   };
 
   const toggleMute = (index: number) => {
     const next = !muted[index];
-    setMuted((current) => current.map((value, at) => (at === index ? next : value)));
+    setSettings({ muted: muted.map((value, at) => (at === index ? next : value)) });
     engine.current?.setMuted(index, next);
   };
   const unmuteAll = () => {
-    setMuted(midi.tracks.map(() => false));
+    setSettings({ muted: midi.tracks.map(() => false) });
     midi.tracks.forEach((_, index) => {
       engine.current?.setMuted(index, false);
     });
   };
   const changeMutedStep = (step: number) => {
-    setMutedStep(step);
-    engine.current?.setMutedVolume(step * MUTED_STEP);
+    setSettings({ mutedStep: step });
+    engine.current?.setMutedVolume(mutedVolumeOf(step));
   };
 
   const loopOn = (from: number, to: number) => {
@@ -257,7 +358,6 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
     };
   }, [draw, isPlaying, placed.data, me?.instrumentId, isLooping, range, bpm, muted]);
 
-  const mutedPercent = t('songs.midi.percent', { value: mutedStep * 5 });
   const hasMuted = muted.some(Boolean);
 
   return (
@@ -336,50 +436,13 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
         )}
 
         <section className="songs-midiSettings" aria-label={t('songs.midi.settings')}>
-          <div className="songs-midiTempo">
-            <span className="songs-midiTempoTexts">
-              <span className="textLabel">{t('songs.midi.tempo')}</span>
-              <span className="textCaption songs-muted">
-                {t('songs.midi.bandTempo', { bpm: bandBpm })}
-              </span>
-            </span>
-            <IconButton
-              kind="control"
-              icon="Minus"
-              label={t('songs.midi.slower')}
-              onClick={() => changeBpm(bpm - BPM_STEP)}
-            />
-            <output className="songs-midiTempoValue" aria-label={t('songs.midi.bpm', { bpm })}>
-              <span className="textHeading">{bpm}</span>
-              <span className="textMicro songs-muted">{t('songs.midi.bpmUnit')}</span>
-            </output>
-            <IconButton
-              kind="control"
-              icon="Plus"
-              label={t('songs.midi.faster')}
-              onClick={() => changeBpm(bpm + BPM_STEP)}
-            />
-          </div>
-
-          <div className="songs-midiVolume">
-            <div className="songs-midiVolumeLabel">
-              <span id={sliderLabel} className="textLabel">
-                {t('songs.midi.mutedVolume')}
-              </span>
-              <span className="textLabel songs-accent">{mutedPercent}</span>
-            </div>
-            <Slider
-              steps={MUTED_STEPS}
-              step={mutedStep}
-              onChange={changeMutedStep}
-              labelledBy={sliderLabel}
-              valueText={mutedPercent}
-            />
-            <div className="songs-midiVolumeLabel textCaption songs-muted">
-              <span>{t('songs.midi.silent')}</span>
-              <span>{t('songs.midi.percent', { value: (MUTED_STEPS - 1) * 5 })}</span>
-            </div>
-          </div>
+          <TempoAndVolume
+            bandBpm={bandBpm}
+            bpm={bpm}
+            onBpm={changeBpm}
+            mutedStep={mutedStep}
+            onMutedStep={changeMutedStep}
+          />
 
           <NavRow
             icon="Repeat"

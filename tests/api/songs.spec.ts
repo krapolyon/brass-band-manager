@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
 import { png } from '../support/images.ts';
@@ -26,6 +27,10 @@ import { emptyStorage, storedFiles } from '../support/storage.ts';
 
 // The band of these tests: Jibé the admin (installed, Sax Ténor), Zaza a
 // plain member (Trompette), Sisi who manages songs, Popo a power member.
+/** Runs a shell command on the test server, where its storage folder is. */
+const onTestServer = (script: string) =>
+  execFileSync('docker', ['compose', 'exec', '-T', 'web-test', 'sh', '-c', script]);
+
 test.beforeEach(async ({ playwright, baseURL }) => {
   emptyDatabase();
   emptyStorage();
@@ -536,6 +541,16 @@ test.describe('the files of a song', () => {
     });
     expect((await saved.json()).audio.peaks).toEqual([0, 40, 100, 12]);
     expect(storedFiles('songs')).toHaveLength(2);
+
+    // An outline written before 0.2.0, a bare list of the loudest samples, is
+    // flat on every recording (#29): it counts as none, and is computed again.
+    const outline = storedFiles('songs').find((file) => file.endsWith('/peaks.json'));
+    onTestServer(`echo '[100,100,99,100]' > /var/www/storage/${outline}`);
+    expect((await (await sisi.get(`/api/songs/${songId}`)).json()).audio.peaks).toBeNull();
+    const again = await sisi.put(`/api/songs/${songId}/audio/peaks`, {
+      data: { peaks: [0, 40, 100, 12], version: version(first) },
+    });
+    expect((await again.json()).audio.peaks).toEqual([0, 40, 100, 12]);
 
     for (const wrong of [[], [101], [-1], Array(401).fill(1)]) {
       const refused = await sisi.put(`/api/songs/${songId}/audio/peaks`, {

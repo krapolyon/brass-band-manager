@@ -162,9 +162,9 @@ test('a faulty record saves nothing: no password, no photo, and the link still w
   expect((await refused.json()).fields).toEqual({ nickname: 'duplicate', email: 'invalid' });
   expect(
     sql(
-      `SELECT status, passwordHash IS NULL, textSizePercent, firstName FROM member WHERE id = ${memberId('Kiki')}`,
+      `SELECT status, passwordHash IS NULL, firstName FROM member WHERE id = ${memberId('Kiki')}`,
     ),
-  ).toBe('INVITED\t1\t100\tPrénom');
+  ).toBe('INVITED\t1\tPrénom');
   expect(storedFiles('members')).toEqual([]);
   expect((await request.get('/api/me')).status()).toBe(401);
   expect((await request.post('/api/passwordLink/check', { data: { token } })).status()).toBe(200);
@@ -182,13 +182,13 @@ test('a photo the app does not accept is refused, and a text size is not saved (
   expect((await photo.json()).fields).toEqual({ photo: 'invalid' });
   expect(sql(`SELECT status FROM member WHERE id = ${memberId('Kiki')}`)).toBe('INVITED');
 
-  // The text size stays on the device: sent by an older page, it is ignored.
+  // The text size stays on the device: the account has no such field (Members v1.21).
   const size = await use({ accessibility: { ...options, textSizePercent: 160 } });
-  expect(size.status()).toBe(200);
-  expect(await size.json()).not.toHaveProperty('textSizePercent');
-  expect(sql(`SELECT status, textSizePercent FROM member WHERE id = ${memberId('Kiki')}`)).toBe(
-    'ACTIVE\t100',
-  );
+  expect(size.status()).toBe(422);
+  expect(sql(`SELECT status FROM member WHERE id = ${memberId('Kiki')}`)).toBe('INVITED');
+  const accepted = await use({ accessibility: options });
+  expect(accepted.status()).toBe(200);
+  expect(await accepted.json()).not.toHaveProperty('textSizePercent');
 });
 
 test('an invited member can remove the photo they were given', async ({ playwright, request }) => {

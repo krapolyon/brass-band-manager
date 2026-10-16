@@ -134,7 +134,7 @@ test('the options chosen during an invitation are saved with the account, not on
   await expect(page).toHaveURL('/');
 
   // The account receives the five options; the text size stays on the device.
-  expect(kiki('textSizePercent, hasLegibleFont, hasHighContrast')).toBe('100\t1\t0');
+  expect(kiki('hasLegibleFont, hasHighContrast')).toBe('1\t0');
   await expect(page.locator('html')).toHaveAttribute('data-text-size', '120');
   // The options of the account can hint at a disability: the device keeps no
   // trace of them, only its own text size.

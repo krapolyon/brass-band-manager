@@ -30,6 +30,7 @@ import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
 import { AboutScreen } from './screens/settings/AboutScreen.tsx';
 import { AccessibilityScreen } from './screens/settings/AccessibilityScreen.tsx';
 import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
+import { CalendarScreen } from './screens/settings/CalendarScreen.tsx';
 import { NotificationsScreen } from './screens/settings/NotificationsScreen.tsx';
 import { PasswordScreen } from './screens/settings/PasswordScreen.tsx';
 import { ProfileScreen } from './screens/settings/ProfileScreen.tsx';
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
       { path: '/settings/appearance', element: <AppearanceScreen /> },
       { path: '/settings/accessibility', element: <AccessibilityScreen /> },
       { path: '/settings/notifications', element: <NotificationsScreen /> },
+      { path: '/settings/calendar', element: <CalendarScreen /> },
       { path: '/settings/about', element: <AboutScreen /> },
     ],
   },

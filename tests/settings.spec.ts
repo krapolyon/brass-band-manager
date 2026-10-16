@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import { fakePush } from './support/fakePush.ts';
 import { png } from './support/images.ts';
 import {
   addMember,
@@ -264,8 +265,8 @@ test.describe('appearance and accessibility', () => {
     await expect(root(page)).toHaveAttribute('data-timeouts', 'extended');
     // The five options of the account are saved on it; the text size is not.
     await expect
-      .poll(() => zaza('hasHighContrast, hasExtendedTimeouts, hasLegibleFont, textSizePercent'))
-      .toBe('1\t1\t0\t100');
+      .poll(() => zaza('hasHighContrast, hasExtendedTimeouts, hasLegibleFont'))
+      .toBe('1\t1\t0');
     // The device keeps its text size, and nothing of the account.
     expect(
       JSON.parse((await page.evaluate(() => localStorage.getItem('accessibility'))) ?? '{}'),
@@ -352,6 +353,148 @@ test.describe('appearance and accessibility', () => {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       expect(await overflow(), address).toBeLessThanOrEqual(0);
     }
+  });
+});
+
+test.describe('notifications by category (#23)', () => {
+  // This device was asked already: the sheet of a first opening stays shut.
+  const askedBefore = (page: Page) =>
+    page.addInitScript(() => localStorage.setItem('pushAsked', '1'));
+  const choices = [
+    'Plans jouables',
+    'Plans validés',
+    'Prochain morceau de la setlist',
+    'Nouveau morceau',
+    'Nouveau MuseScore',
+    'Nouvelle partition',
+  ];
+
+  test('the device switch first; with it off, the six choices of the account are shown disabled and kept', async ({
+    page,
+  }) => {
+    await fakePush(page);
+    await askedBefore(page);
+    await signIn(page);
+    await page.getByRole('link', { name: /Notifications/ }).click();
+
+    const device = page.getByRole('switch', { name: 'Recevoir les notifications' });
+    await expect(device).not.toBeChecked();
+    await expect(
+      page.getByText('Active les notifications sur cet appareil pour choisir les types de notifs.'),
+    ).toBeVisible();
+    for (const name of choices) {
+      await expect(page.getByRole('switch', { name })).toBeChecked();
+      await expect(page.getByRole('switch', { name })).toBeDisabled();
+    }
+    // The reminders are no choice: always sent.
+    await expect(page.getByText('Rappels de présence')).toBeVisible();
+    await expect(page.getByText('Toujours', { exact: true })).toBeVisible();
+    await expect(page.getByRole('switch', { name: 'Rappels de présence' })).toHaveCount(0);
+
+    // On: the choices can be changed, each at once, for every device.
+    await device.click();
+    await expect(device).toBeChecked();
+    await expect(page.getByText('Active les notifications sur cet appareil')).toHaveCount(0);
+    await page.getByRole('switch', { name: 'Plans jouables' }).click();
+    await page.getByRole('switch', { name: 'Nouvelle partition' }).click();
+    await expect
+      .poll(() => zaza('notifyGigPlayable, notifyGigConfirmed, notifySongPart'))
+      .toBe('OFF\tPUSH\tOFF');
+
+    // The summary counts the choices that are on.
+    await page.goto('/settings');
+    await expect(page.getByRole('link', { name: /Notifications/ })).toContainText(
+      'Sur cet appareil · 4 choix',
+    );
+
+    // Off again on this device: the choices stay as they were.
+    await page.getByRole('link', { name: /Notifications/ }).click();
+    await device.click();
+    await expect(page.getByRole('switch', { name: 'Plans jouables' })).toBeDisabled();
+    await expect(page.getByRole('switch', { name: 'Plans jouables' })).not.toBeChecked();
+    expect(zaza('notifyGigPlayable')).toBe('OFF');
+  });
+
+  test('a refused change goes back, and says so', async ({ page }) => {
+    await fakePush(page, 'granted');
+    await askedBefore(page);
+    await signIn(page);
+    await page.goto('/settings/notifications');
+    await page.getByRole('switch', { name: 'Recevoir les notifications' }).click();
+    const choice = page.getByRole('switch', { name: 'Nouveau morceau' });
+    await expect(choice).toBeEnabled();
+    await page.route('**/api/me/notifications', (route) =>
+      route.request().method() === 'PUT' ? route.abort() : route.continue(),
+    );
+    await choice.click();
+    await expect(page.getByText('Le réglage n’a pas changé.')).toBeVisible();
+    await expect(choice).toBeChecked();
+    expect(zaza('notifySongNew')).toBe('PUSH');
+  });
+});
+
+test.describe('the calendar (#21)', () => {
+  test('the address is created when it is first asked for, then reset after a confirmation', async ({
+    page,
+    context,
+    browserName,
+  }) => {
+    if (browserName === 'chromium') {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    }
+    await signIn(page);
+    await expect(page.getByRole('link', { name: /Calendrier/ })).toContainText(
+      'Pas encore dans ton agenda',
+    );
+    await page.getByRole('link', { name: /Calendrier/ }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Calendrier' })).toBeVisible();
+    expect(zaza('calendarToken')).toBe('NULL');
+    // Nothing to reset before an address exists.
+    await expect(page.getByRole('button', { name: 'Réinitialiser la synchro' })).toBeDisabled();
+
+    const isApple = browserName === 'webkit';
+    if (isApple) {
+      // An iPhone opens its Calendar app with the webcal address; copying is offered too.
+      await expect(page.getByRole('button', { name: 'Ajouter à mon agenda' })).toBeVisible();
+      await expect(page.getByText(/Il se met à jour à la fréquence réglée/)).toBeVisible();
+    } else {
+      // Android: the address is copied, with the steps of Google Agenda.
+      await expect(page.getByRole('button', { name: 'Ajouter à mon agenda' })).toHaveCount(0);
+      await expect(page.getByText(/Autres agendas › À partir de l’URL/)).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Copier l’adresse' }).click();
+    await expect.poll(() => zaza('calendarToken')).toMatch(/^[0-9a-f]{32}$/);
+    const token = zaza('calendarToken');
+    const address = `http://localhost:8081/api/calendar/${token}.ics`;
+    if (isApple) {
+      // The clipboard of the test browser may refuse: the address is then shown to copy by hand.
+      await expect(
+        page
+          .getByRole('button', { name: 'Adresse copiée' })
+          .or(page.getByLabel('Adresse de ton agenda')),
+      ).toBeVisible();
+    } else {
+      await expect(page.getByRole('button', { name: 'Adresse copiée' })).toBeVisible();
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(address);
+    }
+
+    await page.getByRole('button', { name: 'Réinitialiser la synchro' }).click();
+    const confirm = page.getByRole('dialog', { name: 'Réinitialiser la synchro ?' });
+    await expect(
+      confirm.getByText('L’ancienne synchro ne fonctionnera plus, il faudra recommencer.'),
+    ).toBeVisible();
+    await confirm.getByRole('button', { name: 'Annuler' }).click();
+    expect(zaza('calendarToken')).toBe(token);
+    await page.getByRole('button', { name: 'Réinitialiser la synchro' }).click();
+    await confirm.getByRole('button', { name: 'Réinitialiser la synchro' }).click();
+    await expect(confirm).toBeHidden();
+    await expect.poll(() => zaza('calendarToken')).not.toBe(token);
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Nouvelle adresse créée.' }),
+    ).toHaveCount(1);
+
+    await page.goto('/settings');
+    await expect(page.getByRole('link', { name: /Calendrier/ })).toContainText('Adresse créée');
   });
 });
 

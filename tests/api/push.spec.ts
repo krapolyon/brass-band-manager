@@ -107,6 +107,9 @@ test.describe('the live setlist', () => {
   test('each change tells the members who said yes to the slot: the song, the two after, the last, the end', async ({
     playwright,
   }) => {
+    // Sissi moves the setlist from her tablet, and follows it on her phone:
+    // the device that pressed is spared (Gigs v1.6).
+    const tablet = await deviceOf(playwright, email('Sissi'));
     const sissi = await deviceOf(playwright, email('Sissi'));
     const zaza = await deviceOf(playwright, email('Zaza'));
     const riton = await deviceOf(playwright, email('Riton'));
@@ -121,7 +124,7 @@ test.describe('the live setlist', () => {
     // Riton said maybe: he follows nothing.
     answerOf('Riton', slotId, 'MAYBE');
 
-    await sissi.post(`/api/setlists/${setlist}/live`);
+    await tablet.post(`/api/setlists/${setlist}/live`);
     let sent = sentPushes();
     expect(sent.map((push) => push.endpoint).sort()).toEqual([
       endpointOf('sissi'),
@@ -143,11 +146,11 @@ test.describe('the live setlist', () => {
 
     // Pressed twice, or moved to where it is: nothing new is sent.
     emptyPushes();
-    await sissi.post(`/api/setlists/${setlist}/live`);
-    await sissi.put(`/api/setlists/${setlist}/live`, { data: { position: 1 } });
+    await tablet.post(`/api/setlists/${setlist}/live`);
+    await tablet.put(`/api/setlists/${setlist}/live`, { data: { position: 1 } });
     expect(sentPushes()).toEqual([]);
 
-    await sissi.put(`/api/setlists/${setlist}/live`, { data: { position: 3 } });
+    await tablet.put(`/api/setlists/${setlist}/live`, { data: { position: 3 } });
     sent = sentPushes().filter((push) => push.endpoint === endpointOf('zaza'));
     expect(sent[0]?.payload).toMatchObject({
       title: '3/4 · Prochain\u00a0: Toxic',
@@ -155,7 +158,7 @@ test.describe('the live setlist', () => {
     });
 
     emptyPushes();
-    await sissi.put(`/api/setlists/${setlist}/live`, { data: { position: 4 } });
+    await tablet.put(`/api/setlists/${setlist}/live`, { data: { position: 4 } });
     sent = sentPushes();
     expect(sent.every((push) => push.payload.title === '4/4 · Dernier\u00a0: Valerie')).toBe(true);
     expect(
@@ -163,15 +166,16 @@ test.describe('the live setlist', () => {
     ).toBe(true);
 
     emptyPushes();
-    await sissi.delete(`/api/setlists/${setlist}/live`);
+    await tablet.delete(`/api/setlists/${setlist}/live`);
     expect(titles().sort()).toEqual(['sissi: Setlist terminée', 'zaza: Setlist terminée']);
     // Ended twice: said once.
     emptyPushes();
-    await sissi.delete(`/api/setlists/${setlist}/live`);
+    await tablet.delete(`/api/setlists/${setlist}/live`);
     expect(sentPushes()).toEqual([]);
   });
 
   test('a device the push service says is gone is forgotten', async ({ playwright }) => {
+    const tablet = await deviceOf(playwright, email('Sissi'));
     const sissi = await deviceOf(playwright, email('Sissi'));
     const zaza = await deviceOf(playwright, email('Zaza'));
     await subscribe(sissi, 'sissi');
@@ -181,7 +185,7 @@ test.describe('the live setlist', () => {
     answerOf('Sissi', slotId, 'YES');
     answerOf('Zaza', slotId, 'YES');
 
-    await sissi.post(`/api/setlists/${setlist}/live`);
+    await tablet.post(`/api/setlists/${setlist}/live`);
     await expect.poll(() => sql('SELECT COUNT(*) FROM pushSubscription')).toBe('1');
     expect(titles()).toEqual(['sissi: 1/1 · Dernier\u00a0: Toxic']);
   });

@@ -699,3 +699,26 @@ button.gigs-member {
   flex-wrap: wrap;
   gap: var(--spaceXs);
 }
+
+/* A suggestion: its name, then the dots of the gig at the end. */
+.gigs-suggestionName {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The list of every song, in its panel (Gigs › 18): the search, then the rows. */
+.gigs-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+}
+
+.gigs-picker > p {
+  margin: var(--spaceMd) 0 0;
+}
+
+.gigs-pickerSongs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

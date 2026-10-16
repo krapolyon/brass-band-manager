@@ -31,3 +31,57 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Edit: the row follows a finger that slides it to the left; the page keeps
+   its vertical scroll. */
+.SetlistSongRow[data-mode="edit"] {
+  position: relative;
+  min-height: var(--controlHeightSm);
+  border-radius: var(--radiusSm);
+  touch-action: pan-y;
+}
+
+/* Figma: "Retirer" on dangerSoft, 104 wide once revealed, over the end of
+   the row. Hidden until a swipe reveals it, or until it takes the focus. */
+.SetlistSongRow-remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceXs);
+  width: 6.5rem; /* 104 */
+  padding: 0 var(--spaceSm);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radiusSm);
+  background: var(--dangerSoft);
+  color: var(--danger);
+  white-space: nowrap;
+  cursor: pointer;
+  isolation: isolate;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.15s ease-out;
+}
+
+.SetlistSongRow-remove[data-revealed="true"],
+.SetlistSongRow:focus-within .SetlistSongRow-remove {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The ground of the sheet under "Retirer": dangerSoft is translucent. */
+.SetlistSongRow-remove::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sheet);
+}
+
+.SetlistSongRow[data-swiping="true"] .SetlistSongRow-remove {
+  transition: none;
+}

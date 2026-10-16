@@ -1,9 +1,19 @@
 {
+  "0.2.0": {
+    "New types of notifications in a new settings screen : playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument.": "Nouveaux types de notifications dans un nouvel écran de réglages : plans jouables et confirmés, setlist live, nouveaux morceaux, mise à jour de fichier Musescore, ou pdf pour ton instru.",
+    "Calendard sync of your gigs.": "Ajout et synchronisation automatique des plans dans ton agenda",
+    "In a setlist, add songs from the list of every song; dots show how often a song is already played at the gig.": "Dans une setlist, ajoute les morceaux depuis la liste de tous les morceaux ; des ronds montrent combien de fois un morceau est déjà joué sur le plan.",
+    "The Live mode can follow the MIDI player: the score scrolls with the music.": "Le mode live peut suivre le lecteur MIDI : la partition défile avec la musique.",
+    "In a setlist, swipe a song to the left to remove it.": "Dans une setlist, glisse un morceau vers la gauche pour le retirer",
+    "The phone that moves the live setlist does no longer receive a next song notification.": "Le téléphone qui fait avancer la setlist en direct ne reçoit pas de notif du morceau suivant.",
+    "The waveform of a recording shows its quiet and loud parts again.": "La forme d’onde d’un enregistrement n'est plus en saturation permanente.",
+    "On iPhone, no more dark band at the top of the installed app.": "Sur iPhone, plus de bande sombre en haut de l’app installée."
+  },
   "0.1.1": {
-    "The version number and what is new in the app, right here.": "Le numéro de version et les nouveautés de l’app, ici même.",
-    "The text size is set on each device: bigger on your phone, normal on the computer.": "La taille du texte se règle sur chaque appareil : plus grande sur ton téléphone, normale sur l’ordi.",
+    "The app now show this changelog.": "L'appli affiche désormais ce journal des évolutions.'",
+    "The text size adjustement is now a per-device setting": "Le réglage de la taille du texte est désormais un réglage par appareil",
     "A gig confirmed by mistake can go back to Accepted or Proposal.": "Un plan validé par erreur peut repasser en Accepté ou en Proposition.",
-    "The address of a gig and the description of a setlist fit on several lines.": "L’adresse d’un plan et la description d’une setlist tiennent sur plusieurs lignes.",
+    "The address of a gig and the description of a setlist fit on several lines.": "Les champs d’adresse d’un plan et la description d’une setlist proposent plusieurs lignes.",
     "The end date of a gig can be removed.": "La date de fin d’un plan peut être retirée.",
     "When adding a song to a setlist, the suggestions no longer hide under the keyboard.": "En ajoutant un morceau à une setlist, les suggestions ne se cachent plus sous le clavier.",
     "On iPhone, the MIDI player no longer stays silent when you come back to the app.": "Sur iPhone, le MIDI ne reste plus muet quand on revient dans l’app."
