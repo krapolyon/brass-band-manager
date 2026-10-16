@@ -5,11 +5,11 @@
     "changes": [
       {
         "kind": "added",
-        "text": "New types of notifications in a new settings screen : playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument."
+        "text": "New types of notifications in a new settings screen: playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument."
       },
       {
         "kind": "added",
-        "text": "Calendard sync of your gigs."
+        "text": "Calendar sync of your gigs."
       },
       {
         "kind": "added",
@@ -25,7 +25,7 @@
       },
       {
         "kind": "changed",
-        "text": "The phone that moves the live setlist does no longer receive a next song notification."
+        "text": "The phone that moves the live setlist no longer receives a next song notification."
       },
       {
         "kind": "fixed",
@@ -43,11 +43,11 @@
     "changes": [
       {
         "kind": "changed",
-        "text": "The app now show this changelog."
+        "text": "The app now shows this changelog."
       },
       {
         "kind": "changed",
-        "text": "The text size adjustement is now a per-device setting."
+        "text": "The text size adjustment is now a per-device setting."
       },
       {
         "kind": "changed",
