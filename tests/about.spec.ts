@@ -37,6 +37,7 @@ const current = {
 const earlier = {
   version: '2.2.0',
   date: '2026-11-02',
+  note: 'the quotes release',
   changes: [{ kind: 'added', text: 'Quotes.' }],
 };
 const french = {
@@ -44,7 +45,7 @@ const french = {
     'Setlists can be printed.': 'Les setlists s’impriment.',
     'Bigger buttons.': 'Des boutons plus grands.',
   },
-  '2.2.0': { 'Quotes.': 'Les devis.' },
+  '2.2.0': { 'Quotes.': 'Les devis.', 'the quotes release': 'la version des devis' },
 };
 
 /** The build and the changelog the screen is given. */
@@ -89,9 +90,12 @@ test('the settings lead to the version of the app and its changes, grouped by ki
 
   // An earlier version is folded: its row opens it in a panel.
   await expect(page.getByRole('heading', { name: 'Versions précédentes' })).toBeVisible();
-  await page.getByRole('button', { name: /2\.2\.0/ }).click();
+  // Its row and its panel give the date, then its note, in French.
+  const row = page.getByRole('button', { name: /2\.2\.0/ });
+  await expect(row).toContainText('2 novembre 2026 · la version des devis');
+  await row.click();
   const panel = page.getByRole('dialog', { name: 'Version 2.2.0' });
-  await expect(panel.getByText('Publiée le 2 novembre 2026')).toBeVisible();
+  await expect(panel.getByText('Publiée le 2 novembre 2026 · la version des devis')).toBeVisible();
   await expect(panel.getByRole('listitem')).toHaveText(['Les devis.']);
   await panel.getByRole('button', { name: 'Fermer' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);

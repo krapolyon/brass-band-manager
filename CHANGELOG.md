@@ -21,7 +21,7 @@ What changes in the app, version after version. This file is written by
 - When adding a song to a setlist, the suggestions no longer hide under the keyboard.
 - On iPhone, the MIDI player no longer stays silent when you come back to the app.
 
-## 0.1.0 — 2026-10-13
+## 0.1.0 — 2026-10-13 — the first beta
 
 ### Added
 

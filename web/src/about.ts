@@ -12,6 +12,8 @@ export type ChangelogEntry = {
   version: string;
   /** YYYY-MM-DD. */
   date: string;
+  /** A few words shown after the date ("the first beta"), translated like a line. */
+  note?: string;
   changes: { kind: ChangeKind; text: string }[];
 };
 

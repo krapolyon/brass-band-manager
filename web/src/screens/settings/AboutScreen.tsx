@@ -24,6 +24,15 @@ function dayText(value: string, language: string): string {
   return new Intl.DateTimeFormat(language, { dateStyle: 'long' }).format(date);
 }
 
+/** "13 octobre 2026 · la première beta": the day of a version, and its note. */
+function whenText(
+  entry: ChangelogEntry,
+  day: string,
+  lineOf: (version: string, text: string) => string,
+) {
+  return entry.note ? `${day} · ${lineOf(entry.version, entry.note)}` : day;
+}
+
 /** The changes of a version, grouped by kind, in the language of the member. */
 function Changes({
   entry,
@@ -120,7 +129,7 @@ export function AboutScreen() {
               <NavRow
                 key={entry.version}
                 label={entry.version}
-                detail={dayText(entry.date, language)}
+                detail={whenText(entry, dayText(entry.date, language), lineOf)}
                 chevron
                 opensPanel
                 onClick={() => setOpened(entry)}
@@ -138,7 +147,11 @@ export function AboutScreen() {
         {opened && (
           <div className="settings-confirm">
             <p className="settings-note textBody">
-              {t('settings.about.published', { date: dayText(opened.date, language) })}
+              {whenText(
+                opened,
+                t('settings.about.published', { date: dayText(opened.date, language) }),
+                lineOf,
+              )}
             </p>
             <Changes entry={opened} lineOf={lineOf} headingLevel={3} />
           </div>

@@ -7,7 +7,7 @@
 //
 // With --check (run by npm run check), it writes nothing and fails when:
 //   - the version of package.json has no entry in en.json, or not the first;
-//   - a line of that entry has no French;
+//   - a line of that entry, or its note, has no French;
 //   - CHANGELOG.md is not what en.json gives (run npm run changelog).
 // See docs/architecture.md, "Versions and the changelog".
 
@@ -28,7 +28,8 @@ function markdown() {
     '`npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.',
   ];
   for (const entry of entries) {
-    lines.push('', `## ${entry.version} — ${entry.date}`);
+    const note = entry.note ? ` — ${entry.note}` : '';
+    lines.push('', `## ${entry.version} — ${entry.date}${note}`);
     for (const [kind, title] of Object.entries(KINDS)) {
       const changes = entry.changes.filter((change) => change.kind === kind);
       if (changes.length === 0) continue;
@@ -42,6 +43,9 @@ function markdown() {
 function problems() {
   const found = [];
   for (const entry of entries) {
+    if (entry.note !== undefined && (typeof entry.note !== 'string' || entry.note === '')) {
+      found.push(`${entry.version}: the note, when there is one, is a text.`);
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.date ?? '')) {
       found.push(`${entry.version}: the date is not written YYYY-MM-DD.`);
     }
@@ -55,9 +59,11 @@ function problems() {
   } else if (entries[0] !== current) {
     found.push(`The entry of version ${version} must come first in web/src/changelog/en.json.`);
   } else {
-    for (const change of current.changes) {
-      if (!french[version]?.[change.text]) {
-        found.push(`No French in web/src/changelog/fr.json for "${change.text}".`);
+    const texts = current.changes.map((change) => change.text);
+    if (current.note) texts.push(current.note);
+    for (const text of texts) {
+      if (!french[version]?.[text]) {
+        found.push(`No French in web/src/changelog/fr.json for "${text}".`);
       }
     }
   }
