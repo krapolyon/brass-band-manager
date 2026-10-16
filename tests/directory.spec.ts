@@ -117,7 +117,7 @@ test.describe('the directory', () => {
   test('shows the active members by nickname, and nobody else', async ({ page }) => {
     await signIn(page);
 
-    expect(await names(page)).toEqual(['Jibé', 'Momo', 'Zaza']);
+    await expect.poll(() => names(page)).toEqual(['Jibé', 'Momo', 'Zaza']);
     await expect(page.getByText('3 fanfarons, de A à Z.')).toBeVisible();
     // Each card says the instrument.
     await expect(cards(page).filter({ hasText: 'Jibé' })).toContainText('Sax Ténor');
@@ -127,7 +127,7 @@ test.describe('the directory', () => {
     await signIn(page);
     await page.getByRole('button', { name: 'Power members' }).click();
 
-    expect(await names(page)).toEqual(['Jibé', 'Momo', 'Tonton Fred', 'Zaza']);
+    await expect.poll(() => names(page)).toEqual(['Jibé', 'Momo', 'Tonton Fred', 'Zaza']);
     await expect(page.getByText('4 fanfarons, power members compris.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Power members' })).toHaveAttribute(
       'aria-pressed',
@@ -143,7 +143,7 @@ test.describe('the directory', () => {
     await page.getByRole('button', { name: 'Mon pupitre' }).click();
 
     // Jibé plays the Sax Ténor and Momo the Sax Alto: one section, Saxophone.
-    expect(await names(page)).toEqual(['Jibé', 'Momo']);
+    await expect.poll(() => names(page)).toEqual(['Jibé', 'Momo']);
     await expect(
       page.getByText('Ton pupitre, Saxophone : 2 fanfarons, toi compris.'),
     ).toBeVisible();
