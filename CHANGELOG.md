@@ -7,15 +7,15 @@ What changes in the app, version after version. This file is written by
 
 ### Added
 
-- New types of notifications in a new settings screen : playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument.
-- Calendard sync of your gigs.
+- New types of notifications in a new settings screen: playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument.
+- Calendar sync of your gigs.
 - In a setlist, add songs from the list of every song; dots show how often a song is already played at the gig.
 - The Live mode can follow the MIDI player: the score scrolls with the music.
 
 ### Changed
 
 - In a setlist, swipe a song to the left to remove it.
-- The phone that moves the live setlist does no longer receive a next song notification.
+- The phone that moves the live setlist no longer receives a next song notification.
 
 ### Fixed
 
@@ -26,8 +26,8 @@ What changes in the app, version after version. This file is written by
 
 ### Changed
 
-- The app now show this changelog.
-- The text size adjustement is now a per-device setting.
+- The app now shows this changelog.
+- The text size adjustment is now a per-device setting.
 - A gig confirmed by mistake can go back to Accepted or Proposal.
 - The address of a gig and the description of a setlist fit on several lines.
 
