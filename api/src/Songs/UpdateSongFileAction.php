@@ -16,7 +16,8 @@ use Psr\Http\Message\ServerRequestInterface;
 //
 // The file is the body of the request, as it is (FileBody). What it is is
 // decided from its content: a file that is not of the kind its address says
-// is refused.
+// is refused. A MuseScore file that replaces another one, and a part given or
+// replaced, are notified (SongPush).
 final class UpdateSongFileAction
 {
     /**
@@ -26,6 +27,7 @@ final class UpdateSongFileAction
     public function __construct(
         private readonly Songs $songs,
         private readonly SongFiles $files,
+        private readonly SongPush $songPush,
         private readonly string $kind,
         private readonly bool $removes,
     ) {
@@ -41,11 +43,18 @@ final class UpdateSongFileAction
         $content = $this->removes ? null : FileBody::from($request, SongFiles::MAX_BYTES[$this->kind]);
 
         if ($this->kind === 'part') {
-            $this->files->replacePart($songId, (int) ($arguments['instrumentId'] ?? 0), $content, $me->id);
+            $instrumentId = (int) ($arguments['instrumentId'] ?? 0);
+            $this->files->replacePart($songId, $instrumentId, $content, $me->id);
+            if ($content !== null) {
+                $this->songPush->partChanged($songId, $instrumentId, $me->sessionId);
+            }
         } else {
             // 404 before the file is looked at.
-            $this->songs->row($songId);
+            $hadScore = $this->songs->row($songId)['museScorePath'] !== null;
             $this->files->replace($songId, $this->kind, $content, $me->id);
+            if ($this->kind === 'museScore' && $content !== null && $hadScore) {
+                $this->songPush->scoreReplaced($songId, $me->sessionId);
+            }
         }
 
         return Json::write($response, $this->songs->one($me, $songId));

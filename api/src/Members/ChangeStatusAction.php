@@ -93,6 +93,8 @@ final class ChangeStatusAction
             'countryCode' => null,
             'addressInstructions' => null,
             'photoPath' => null,
+            // The calendar address stops with the member (model/members.md).
+            'calendarToken' => null,
             // The old password is not reused if they come back.
             'passwordHash' => null,
             'failedSignInCount' => 0,

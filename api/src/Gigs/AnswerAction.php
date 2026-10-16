@@ -21,7 +21,8 @@ use Psr\Http\Message\ServerRequestInterface;
 //
 // Members answer while the gig is proposed, accepted or confirmed, until it
 // is over. An answer can be changed, not taken back. An answer that makes an
-// accepted gig playable confirms it.
+// accepted gig playable confirms it. A gig that becomes playable, or
+// confirmed, is notified (GigPush): only the confirmation when it is both.
 final class AnswerAction
 {
     /**
@@ -30,6 +31,7 @@ final class AnswerAction
     public function __construct(
         private readonly Connection $database,
         private readonly Gigs $gigs,
+        private readonly GigPush $gigPush,
         private readonly bool $forAnother,
     ) {
     }
@@ -45,7 +47,7 @@ final class AnswerAction
         $memberId = $this->forAnother ? (int) ($arguments['memberId'] ?? 0) : $me->id;
         $answer = Input::from($request, AnswerInput::class)->answer;
 
-        $this->database->transactional(function () use ($me, $gigId, $slotId, $memberId, $answer): void {
+        $news = $this->database->transactional(function () use ($me, $gigId, $slotId, $memberId, $answer): ?string {
             $gig = $this->gigs->rowVisibleTo($me, $gigId, lock: true);
             if ($this->database->fetchOne('SELECT 1 FROM gigSlot WHERE id = ? AND gigId = ?', [$slotId, $gigId]) === false) {
                 throw new ApiError(404, 'notFound');
@@ -59,13 +61,23 @@ final class AnswerAction
                 throw new ApiError(409, 'gigNotOpen');
             }
 
+            $wasPlayable = $this->gigs->isPlayable($gigId);
             $this->database->executeStatement(
                 'INSERT INTO gigSlotAttendance (gigSlotId, memberId, answer, updatedByMemberId) VALUES (?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE answer = VALUES(answer), updatedByMemberId = VALUES(updatedByMemberId)',
                 [$slotId, $memberId, $answer->value, $me->id],
             );
-            $this->gigs->confirmIfPlayable($gigId);
+            if ($this->gigs->confirmIfPlayable($gigId)) {
+                return 'confirmed';
+            }
+
+            return !$wasPlayable && $this->gigs->isPlayable($gigId) ? 'playable' : null;
         });
+        if ($news === 'confirmed') {
+            $this->gigPush->confirmed($gigId, $me->sessionId);
+        } elseif ($news === 'playable') {
+            $this->gigPush->playable($gigId, $me->sessionId);
+        }
 
         return Json::write($response, $this->gigs->one($me, $gigId));
     }

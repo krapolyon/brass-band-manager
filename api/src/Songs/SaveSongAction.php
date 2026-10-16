@@ -28,6 +28,7 @@ final class SaveSongAction
         private readonly Songs $songs,
         private readonly SongFiles $files,
         private readonly ClipThumbnails $thumbnails,
+        private readonly SongPush $songPush,
     ) {
     }
 
@@ -79,6 +80,9 @@ final class SaveSongAction
                 : $failure;
         }
         $this->files->delete($replaced);
+        if ($current === null) {
+            $this->songPush->created($songId, $me->sessionId);
+        }
 
         return Json::write($response, $this->songs->one($me, $songId), $current === null ? 201 : 200);
     }

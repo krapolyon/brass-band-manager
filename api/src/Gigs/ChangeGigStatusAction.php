@@ -21,12 +21,14 @@ use Psr\Http\Message\ServerRequestInterface;
 // A confirmed gig put back to ACCEPTED is not confirmed again on the spot,
 // which would undo what was just asked: the next answer saved does it, if the
 // gig is still playable then (model/gigs.md, "Put back by hand").
+// A gig that becomes confirmed, by hand or by the app, is notified (GigPush).
 final class ChangeGigStatusAction
 {
     public function __construct(
         private readonly Connection $database,
         private readonly Gigs $gigs,
         private readonly Setlists $setlists,
+        private readonly GigPush $gigPush,
     ) {
     }
 
@@ -39,7 +41,7 @@ final class ChangeGigStatusAction
         $gigId = (int) $arguments['id'];
         $next = Input::from($request, GigStatusInput::class)->status;
 
-        $this->database->transactional(function () use ($gigId, $next, $me): void {
+        $confirmed = $this->database->transactional(function () use ($gigId, $next, $me): bool {
             $gig = $this->gigs->row($gigId, lock: true);
             $current = GigStatus::from((string) $gig['status']);
             if (!in_array($next, $current->next(), true)) {
@@ -55,10 +57,15 @@ final class ChangeGigStatusAction
             if ($next !== GigStatus::CONFIRMED) {
                 $this->setlists->endLiveOfGig($gigId);
             }
-            if ($current !== GigStatus::CONFIRMED) {
-                $this->gigs->confirmIfPlayable($gigId);
+            if ($current !== GigStatus::CONFIRMED && $this->gigs->confirmIfPlayable($gigId)) {
+                return true;
             }
+
+            return $next === GigStatus::CONFIRMED;
         });
+        if ($confirmed) {
+            $this->gigPush->confirmed($gigId, $me->sessionId);
+        }
 
         return Json::write($response, $this->gigs->one($me, $gigId));
     }

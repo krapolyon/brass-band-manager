@@ -85,7 +85,7 @@ final class LiveSetlistAction
         $setlist = $this->setlists->one($setlistId);
         // A notification to the followers at each change, none when nothing moved.
         if ($changed) {
-            $this->livePush->changed($setlist);
+            $this->livePush->changed($setlist, $me->sessionId);
         }
 
         return Json::write($response, $setlist);
