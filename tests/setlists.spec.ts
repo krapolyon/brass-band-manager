@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import { fakePush } from './support/fakePush.ts';
 import { addGig, addSetlist, addSong, day } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 import { emptyStorage } from './support/storage.ts';
@@ -863,54 +864,6 @@ test.describe('the live setlist', () => {
     await expect(page.getByText('Cette setlist n’existe pas, ou plus.')).toBeVisible();
   });
 });
-
-// The browser of the tests is given a push service of its own: nothing is
-// asked of Google or Apple, and the server records instead of sending.
-async function fakePush(page: Page, permission: 'default' | 'granted' | 'denied' = 'default') {
-  await page.addInitScript((start) => {
-    let state = start;
-    const subscription = {
-      toJSON: () => ({
-        endpoint: 'https://fcm.googleapis.com/fcm/send/test-browser',
-        keys: {
-          p256dh:
-            'BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM',
-          auth: 'tBHItJI5svbpez7KI4CCXg',
-        },
-      }),
-      unsubscribe: async () => true,
-    };
-    let current: typeof subscription | null = null;
-    const registration = {
-      pushManager: {
-        getSubscription: async () => current,
-        subscribe: async () => {
-          current = subscription;
-          return subscription;
-        },
-      },
-    };
-    Object.defineProperty(window, 'Notification', {
-      value: {
-        get permission() {
-          return state;
-        },
-        requestPermission: async () => {
-          if (state === 'default') state = 'granted';
-          return state;
-        },
-      },
-    });
-    Object.defineProperty(window, 'PushManager', { value: class {} });
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: {
-        register: async () => registration,
-        getRegistration: async () => registration,
-        ready: Promise.resolve(registration),
-      },
-    });
-  }, permission);
-}
 
 test.describe('notifications on a device', () => {
   test('a new device is asked once; yes turns them on, and the account says so and turns them off', async ({
