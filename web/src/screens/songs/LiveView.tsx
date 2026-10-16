@@ -149,6 +149,7 @@ export function LiveView({ song, onClose }: Props) {
           song={song}
           onClose={onClose}
           midi={midi.data && midi.data.tracks.length > 0 ? midi.data : null}
+          midiFailed={midiUrl !== '' && (midi.isError || midi.data?.tracks.length === 0)}
           {...file.data}
         />
       )}
@@ -159,12 +160,14 @@ export function LiveView({ song, onClose }: Props) {
 type ScoreProps = Props & {
   /** The MIDI file of the song, when it has one that plays. */
   midi: MidiSong | null;
+  /** The song has a MIDI file, and it could not be read. */
+  midiFailed: boolean;
   score: Document;
   parts: { id: string; name: string }[];
   timeline: Timeline;
 };
 
-function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) {
+function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: ScoreProps) {
   const { t } = useTranslation();
   const me = useMe().data;
   const instruments = instrumentsOf(useSections().data);
@@ -228,6 +231,12 @@ function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) 
   const engineFor = (file: MidiSong) => {
     if (engine.current) return engine.current;
     const created = new MidiEngine(file);
+    // What was set before, here or in the MIDI mode, from the first note.
+    settings.muted.forEach((isMuted, index) => {
+      created.setMuted(index, isMuted);
+    });
+    created.setMutedVolume(mutedVolumeOf(settings.mutedStep));
+    created.setSpeed(settings.bpm / fileBpm);
     created.loaded.then(
       () => setSounds('ready'),
       () => setSounds('failed'),
@@ -669,6 +678,7 @@ function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) 
                   type="button"
                   className="songs-liveMidiChip"
                   aria-haspopup="dialog"
+                  aria-describedby="songs-liveMidiChipDoes"
                   onClick={() => {
                     pauseMidi();
                     setPanel('midi');
@@ -680,6 +690,9 @@ function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) 
                       count: settings.muted.filter((isMuted) => !isMuted).length,
                     })}
                   </Chip>
+                  <span className="visuallyHidden" id="songs-liveMidiChipDoes">
+                    {t('songs.live.midi.chipDoes')}
+                  </span>
                 </button>
               )}
               <div className="songs-liveBar">
@@ -726,7 +739,9 @@ function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) 
                 icon="Piano"
                 label={t('songs.live.midi.open')}
                 aria-haspopup="dialog"
-                aria-describedby={midi ? undefined : 'songs-liveNoMidi'}
+                aria-describedby={
+                  !midi && (song.midi === null || midiFailed) ? 'songs-liveNoMidi' : undefined
+                }
                 disabled={!midi || drawing !== 'drawn'}
                 onClick={() => {
                   if (!midi) return;
@@ -734,9 +749,9 @@ function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) 
                   setPanel('midi');
                 }}
               />
-              {!midi && (
+              {!midi && (song.midi === null || midiFailed) && (
                 <p className="songs-liveNoMidi textCaption songs-muted" id="songs-liveNoMidi">
-                  {t('songs.live.midi.none')}
+                  {t(midiFailed ? 'songs.live.midi.failed' : 'songs.live.midi.none')}
                 </p>
               )}
               <div className="songs-liveBar">

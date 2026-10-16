@@ -53,9 +53,11 @@ final class CalendarFeed
              JOIN gigSlot s ON s.gigId = g.id
              JOIN gigSlotAttendance a ON a.gigSlotId = s.id AND a.memberId = ?
              WHERE g.status IN ('PROPOSED', 'ACCEPTED', 'CONFIRMED')
-               AND a.answer IN ('YES', 'MAYBE', 'IF_NEEDED')
                AND COALESCE(g.endsOn, g.startsOn) >= ?
              GROUP BY g.id
+             -- Every answer counts for the version (a no that turns a gig
+             -- tentative is a change); a gig with no yes, maybe or if needed is absent.
+             HAVING SUM(a.answer IN ('YES', 'MAYBE', 'IF_NEEDED')) > 0
              ORDER BY g.startsOn, g.id",
             [$memberId, $since],
         );

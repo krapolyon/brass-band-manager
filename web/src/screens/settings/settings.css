@@ -111,6 +111,12 @@
   opacity: 0.4;
 }
 
+/* High contrast: no text stands back, the switches say they are off by
+   themselves (disabled). */
+:root[data-contrast="more"] .settings-categories[data-disabled="true"] {
+  opacity: 1;
+}
+
 /* Calendar: the content of its two sheets. */
 .settings-calendar {
   display: flex;

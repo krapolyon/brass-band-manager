@@ -998,7 +998,9 @@
         "play": "Lire avec le MIDI",
         "none": "Pas de fichier MIDI pour ce morceau.",
         "following_one": "Suit le MIDI · {{bpm}} · {{count}} piste",
-        "following_other": "Suit le MIDI · {{bpm}} · {{count}} pistes"
+        "following_other": "Suit le MIDI · {{bpm}} · {{count}} pistes",
+        "chipDoes": "Met le lecteur en pause et ouvre ses réglages.",
+        "failed": "Le fichier MIDI de ce morceau ne se lit pas."
       }
     },
     "midi": {

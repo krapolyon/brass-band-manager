@@ -136,21 +136,27 @@ export function useNotificationSettings() {
  * Changes one setting at once: shown in the same instant, then saved with the
  * five others, and put back if the server refuses.
  */
+// The last change sent: the answer of an older one, arriving late, does not
+// undo what the screen shows.
+let lastSent = 0;
+
 export function useSaveNotificationSettings() {
   const queryClient = useQueryClient();
   return async (changes: Partial<NotificationSettings>): Promise<boolean> => {
     const before = queryClient.getQueryData<NotificationSettings>(SETTINGS_KEY);
     if (!before) return false;
     const wanted = { ...before, ...changes };
+    const sent = ++lastSent;
     queryClient.setQueryData(SETTINGS_KEY, wanted);
     try {
-      queryClient.setQueryData(
-        SETTINGS_KEY,
-        await api<NotificationSettings>('/api/me/notifications', { method: 'PUT', body: wanted }),
-      );
+      const saved = await api<NotificationSettings>('/api/me/notifications', {
+        method: 'PUT',
+        body: wanted,
+      });
+      if (sent === lastSent) queryClient.setQueryData(SETTINGS_KEY, saved);
       return true;
     } catch {
-      queryClient.setQueryData(SETTINGS_KEY, before);
+      if (sent === lastSent) queryClient.setQueryData(SETTINGS_KEY, before);
       return false;
     }
   };

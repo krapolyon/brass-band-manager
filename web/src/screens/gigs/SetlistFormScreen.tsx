@@ -589,7 +589,12 @@ export function SetlistFormScreen() {
                         type="button"
                         className="textBodyLarge"
                         data-first={index === 0}
-                        aria-label={t('gigs.setlist.form.suggestion', { name: label })}
+                        aria-label={[
+                          t('gigs.setlist.form.suggestion', { name: label }),
+                          played > 0 && t('gigs.setlist.form.playedElsewhere', { count: played }),
+                        ]
+                          .filter(Boolean)
+                          .join(', ')}
                         // The field keeps the focus while a suggestion is
                         // pressed: on a phone the keyboard stays up, and
                         // nothing moves under the finger.
@@ -664,6 +669,10 @@ export function SetlistFormScreen() {
               })}
             </ul>
           )}
+          {/* Said here too: a modal panel hides what is outside it. */}
+          <p className="visuallyHidden" role="status">
+            {isPickerOpen ? said : ''}
+          </p>
         </div>
       </Panel>
 

@@ -105,7 +105,7 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 
 | Event | Setting | To whom | Text (fr) |
 |---|---|---|---|
-| A song is created, whatever its status (decided with the owner) | `notifySongNew` | Every current member | "Les Krapos – Nouveau morceau", "Rasputin – Boney M." (the original artist when there is one) |
+| A song is created, whatever its status (decided with the owner) | `notifySongNew` | Every current member | "Les Krapos – Nouveau morceau", "Rasputin – Boney M." (the original artist, a required field) |
 | The MuseScore file of a song is replaced by another one | `notifySongScore` | Every current member | "Les Krapos – Nouveau MuseScore", "Rasputin : la partition a changé" |
 | A part is added to a song, or replaced | `notifySongPart` | The current members who play the instrument of the part | "Les Krapos – Nouvelle partition pour toi", "Rasputin – Sax ténor" |
 

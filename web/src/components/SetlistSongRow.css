@@ -61,13 +61,14 @@
   color: var(--danger);
   white-space: nowrap;
   cursor: pointer;
+  isolation: isolate;
   opacity: 0;
   pointer-events: none;
   transition: width 0.15s ease-out;
 }
 
 .SetlistSongRow-remove[data-revealed="true"],
-.SetlistSongRow-remove:focus-visible {
+.SetlistSongRow:focus-within .SetlistSongRow-remove {
   opacity: 1;
   pointer-events: auto;
 }
@@ -79,10 +80,6 @@
   inset: 0;
   z-index: -1;
   background: var(--sheet);
-}
-
-.SetlistSongRow-remove {
-  isolation: isolate;
 }
 
 .SetlistSongRow[data-swiping="true"] .SetlistSongRow-remove {

@@ -29,9 +29,9 @@ final class LivePush
 
     /**
      * @param array<string, mixed> $setlist The setlist as it is now, as Setlists::one() gives it
-     * @param int $bySessionId The device that moved it: it receives nothing
+     * @param int|null $bySessionId The device that moved it: it receives nothing
      */
-    public function changed(array $setlist, int $bySessionId): void
+    public function changed(array $setlist, ?int $bySessionId): void
     {
         $followers = array_map(fn (mixed $id) => (int) $id, $this->database->fetchFirstColumn(
             "SELECT memberId FROM gigSlotAttendance WHERE gigSlotId = ? AND answer = 'YES'",

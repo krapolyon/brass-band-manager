@@ -38,7 +38,8 @@ test.describe('on an installed app', () => {
     await page.goto('/sign-in');
     await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
     const meta = (name: string) => page.locator(`meta[name="${name}"]`).getAttribute('content');
-    expect(await meta('apple-mobile-web-app-status-bar-style')).toBe('black-translucent');
+    // A device in light: the bar of the light scheme, its clock in black.
+    expect(await meta('apple-mobile-web-app-status-bar-style')).toBe('default');
     expect(await page.locator('meta[name="viewport"]').getAttribute('content')).toContain(
       'viewport-fit=cover',
     );
@@ -55,6 +56,10 @@ test.describe('on an installed app', () => {
     await expect.poll(() => meta('theme-color')).not.toBe(light);
     const [darkRoot, darkBody] = await grounds();
     expect(darkRoot).toBe(darkBody);
+    // A device in dark: the app draws under a translucent bar.
+    await page.reload();
+    await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
+    expect(await meta('apple-mobile-web-app-status-bar-style')).toBe('black-translucent');
   });
 
   test('an address inside the app is answered by the app', async ({ page }) => {

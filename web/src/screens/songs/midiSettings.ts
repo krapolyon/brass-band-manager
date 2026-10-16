@@ -16,6 +16,8 @@ export type MidiSettings = {
 };
 
 const settings = new Map<number, MidiSettings>();
+// What a song whose file is not read yet answers: always the same object.
+const NONE: MidiSettings = { bpm: 0, muted: [], mutedStep: 0 };
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {
@@ -31,6 +33,8 @@ export function useMidiSettings(songId: number, bpm: number, tracks: number) {
   const read = useCallback(() => {
     const known = settings.get(songId);
     if (known && known.muted.length === tracks) return known;
+    // The file is not read yet: nothing is stored, what is known stays.
+    if (tracks === 0) return known ?? NONE;
     const first = { bpm, muted: Array.from({ length: tracks }, () => false), mutedStep: 0 };
     settings.set(songId, first);
     return first;
@@ -38,10 +42,11 @@ export function useMidiSettings(songId: number, bpm: number, tracks: number) {
   const current = useSyncExternalStore(subscribe, read);
   const change = useCallback(
     (changes: Partial<MidiSettings>) => {
+      if (tracks === 0) return;
       settings.set(songId, { ...read(), ...changes });
       for (const listener of listeners) listener();
     },
-    [songId, read],
+    [songId, read, tracks],
   );
   return [current, change] as const;
 }

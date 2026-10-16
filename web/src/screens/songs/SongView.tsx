@@ -489,7 +489,7 @@ function useOutline(song: Song) {
     computing.add(url);
     (async () => {
       const response = await fetch(url);
-      if (!response.ok) return;
+      if (!response.ok) throw new Error('The recording could not be read');
       const saved = await saveOutline(song.id, await response.blob(), url);
       if (saved) queryClient.setQueryData(['songs', song.id], saved);
     })().catch(() => {

@@ -126,6 +126,26 @@ test.describe('the live setlist', () => {
   });
 });
 
+test('“Suivant” pressed in the notification itself: that device is told the next song too', async ({
+  playwright,
+}) => {
+  const sissi = await deviceOf(playwright, email('Sissi'));
+  await subscribe(sissi, 'sissi');
+  const { gigId, slotId } = addGig('Carnaval', { status: 'CONFIRMED', startsOn: day(0) });
+  const setlist = addSetlist(gigId, slotId, [addSong('Toxic'), addSong('Valerie')]);
+  answerOf('Sissi', slotId, 'YES');
+  await sissi.post(`/api/setlists/${setlist}/live`);
+  expect(sentPushes()).toEqual([]);
+
+  // As web/public/sw.js sends it: the notification must be replaced, or it
+  // would offer the same position again.
+  await sissi.put(`/api/setlists/${setlist}/live`, {
+    data: { position: 2 },
+    headers: { 'X-From-Notification': '1' },
+  });
+  expect(received()).toEqual([`sissi: 2/2 · Dernier\u00a0: Valerie`]);
+});
+
 test.describe('a gig that becomes playable or confirmed', () => {
   const answer = (
     device: Awaited<ReturnType<typeof deviceOf>>,

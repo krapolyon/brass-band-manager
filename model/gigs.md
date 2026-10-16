@@ -230,7 +230,7 @@ Decided on 2026-10-16 (issue #21): a member subscribes their calendar app to a p
 
 ### Rules
 - The address is public (no session): a calendar app has no sign-in. It answers only when its token is the one of a current member; any other address, whatever the reason (unknown token, member who left, reset token), gets the same "not found", after a second, so that trying addresses leads nowhere.
-- The answer is marked private and is not kept by a cache, and asks search engines not to index it.
+- The answer is marked private, to be asked again each time (`private, max-age=0`), and asks search engines not to index it.
 - Nothing about the address or the feed is written to a log.
 
 ### Access rights

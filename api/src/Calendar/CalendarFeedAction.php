@@ -32,12 +32,18 @@ final class CalendarFeedAction
     {
         $token = $arguments['token'];
         $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
-        $member = preg_match('/^[0-9a-f]{32}$/', $token) === 1 ? $this->database->fetchAssociative(
+        $isWellFormed = preg_match('/^[0-9a-f]{32}$/', $token) === 1;
+        $member = $isWellFormed ? $this->database->fetchAssociative(
             "SELECT id, language FROM member WHERE calendarToken = ? AND status IN ({$current})",
             [$token],
         ) : false;
         if ($member === false) {
-            sleep(1);
+            // A second for an address that could have been one: an address of
+            // another shape is answered at once, and holds no PHP worker of
+            // the host asleep.
+            if ($isWellFormed) {
+                sleep(1);
+            }
             throw new ApiError(404, 'notFound');
         }
 

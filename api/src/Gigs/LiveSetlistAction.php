@@ -83,9 +83,13 @@ final class LiveSetlistAction
         });
 
         $setlist = $this->setlists->one($setlistId);
-        // A notification to the followers at each change, none when nothing moved.
+        // A notification to the followers at each change, none when nothing
+        // moved. The device that pressed is spared, unless the press came from
+        // its notification ("Suivant", web/public/sw.js): that one must be
+        // replaced by the next, or it would offer the same position again.
         if ($changed) {
-            $this->livePush->changed($setlist, $me->sessionId);
+            $fromNotification = $request->getHeaderLine('X-From-Notification') === '1';
+            $this->livePush->changed($setlist, $fromNotification ? null : $me->sessionId);
         }
 
         return Json::write($response, $setlist);
