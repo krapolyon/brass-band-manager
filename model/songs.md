@@ -133,7 +133,7 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 - The internal name is the name shown in every representation. The original title and the original artist appear on the sheet of the song.
 - Missing cover art: the placeholder of `Song/Tile` (the music icon on a plain square).
 - Missing tempo, version, clip or file: the line is not shown.
-- Representations in the design library (Figma, checked on 2026-10-13): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/Latest` (the latest songs of the repertoire, pinned on the home screen: a slot of three `Song/Row` without their status), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import). Missing: none needed yet.
+- Representations in the design library (Figma, checked on 2026-10-13): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/Latest` (the latest songs of the repertoire, pinned on the home screen: a slot of three `Song/Row` without their status), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import), `Song/PickerRow` (a song in the list that adds songs to a setlist, with its `PlayedDots`: Gigs domain). Missing: none needed yet.
 
 ## 2. Part and alias (`songPart`, `instrumentAlias`)
 

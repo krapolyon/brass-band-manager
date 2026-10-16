@@ -109,7 +109,7 @@ The right of an organiser depends on the gig, not on a role: the shared layer ch
 - A gig with only a postal code and a city shows them as its place.
 - The coordinates open the map application of the device.
 - The gig of the day shows its place on one line, as the screen of the gig does: the name of the place, the street when there is one, then the postal code and the city, "Boulevard de la Croix-Rousse, 69004 Lyon".
-- Representations in the design library (Figma, pages `Gigs` and `Home`): `Gig/Card` (with `Show new` and `New text`, the line "Nouveau" above the card, and `Show answers`, the four answers under it: both on the home screen only), `Gig/Hero` (the confirmed gig of the day, on the home screen), `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row`.
+- Representations in the design library (Figma, pages `Gigs` and `Home`): `Gig/Card` (with `Show new` and `New text`, the line "Nouveau" above the card, and `Show answers`, the four answers under it: both on the home screen only), `Gig/Hero` (the confirmed gig of the day, on the home screen), `Gig/Header`, `Gig/Picture`, `Gig/Meeting`, `Gig/Infos`; for a slot, `GigSlot/Card` and `GigSlot/WhoComes`; for a setlist, `Setlist/Card` and `SetlistSong/Row` (with `Show played`, the `PlayedDots` of the other setlists of the gig).
 - The count of a slot is "x oui sur y", y being the current members of the band.
 
 ## 2. Slot (`gigSlot`, `gigSlotAttendance`)

@@ -1,9 +1,50 @@
 [
   {
+    "version": "0.2.0",
+    "date": "2026-10-16",
+    "changes": [
+      {
+        "kind": "added",
+        "text": "Choose which notifications you get: playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument."
+      },
+      {
+        "kind": "added",
+        "text": "Your gigs in the calendar of your phone or your computer, kept up to date by itself."
+      },
+      {
+        "kind": "added",
+        "text": "In a setlist, add songs from the list of every song; dots show how often a song is already played at the gig."
+      },
+      {
+        "kind": "added",
+        "text": "The Live mode can follow the MIDI player: the score scrolls with the music, repeats included."
+      },
+      {
+        "kind": "changed",
+        "text": "In a setlist, swipe a song to the left to remove it; the handle moves it."
+      },
+      {
+        "kind": "changed",
+        "text": "The phone that moves the live setlist on no longer rings for it."
+      },
+      {
+        "kind": "fixed",
+        "text": "The waveform of a recording shows its quiet and loud parts again."
+      },
+      {
+        "kind": "fixed",
+        "text": "On iPhone, no more dark band at the top of the installed app."
+      }
+    ]
+  },
+  {
     "version": "0.1.1",
     "date": "2026-10-16",
     "changes": [
-      { "kind": "added", "text": "The version number and what is new in the app, right here." },
+      {
+        "kind": "added",
+        "text": "The version number and what is new in the app, right here."
+      },
       {
         "kind": "changed",
         "text": "The text size is set on each device: bigger on your phone, normal on the computer."
@@ -16,7 +57,10 @@
         "kind": "changed",
         "text": "The address of a gig and the description of a setlist fit on several lines."
       },
-      { "kind": "fixed", "text": "The end date of a gig can be removed." },
+      {
+        "kind": "fixed",
+        "text": "The end date of a gig can be removed."
+      },
       {
         "kind": "fixed",
         "text": "When adding a song to a setlist, the suggestions no longer hide under the keyboard."

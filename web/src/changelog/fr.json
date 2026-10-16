@@ -1,4 +1,14 @@
 {
+  "0.2.0": {
+    "Choose which notifications you get: playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument.": "Choisis tes notifs : plans jouables et validés, setlist en direct, nouveaux morceaux, nouveaux MuseScore, nouvelles partitions pour ton instrument.",
+    "Your gigs in the calendar of your phone or your computer, kept up to date by itself.": "Tes plans dans l’agenda de ton téléphone ou de ton ordi, mis à jour tout seuls.",
+    "In a setlist, add songs from the list of every song; dots show how often a song is already played at the gig.": "Dans une setlist, ajoute les morceaux depuis la liste de tous les morceaux ; des ronds montrent combien de fois un morceau est déjà joué sur le plan.",
+    "The Live mode can follow the MIDI player: the score scrolls with the music, repeats included.": "Le mode live peut suivre le lecteur MIDI : la partition défile avec la musique, reprises comprises.",
+    "In a setlist, swipe a song to the left to remove it; the handle moves it.": "Dans une setlist, glisse un morceau vers la gauche pour le retirer ; la poignée le déplace.",
+    "The phone that moves the live setlist on no longer rings for it.": "Le téléphone qui fait avancer la setlist en direct ne sonne plus pour ça.",
+    "The waveform of a recording shows its quiet and loud parts again.": "La forme d’onde d’un enregistrement montre de nouveau ses passages calmes et forts.",
+    "On iPhone, no more dark band at the top of the installed app.": "Sur iPhone, plus de bande sombre en haut de l’app installée."
+  },
   "0.1.1": {
     "The version number and what is new in the app, right here.": "Le numéro de version et les nouveautés de l’app, ici même.",
     "The text size is set on each device: bigger on your phone, normal on the computer.": "La taille du texte se règle sur chaque appareil : plus grande sur ton téléphone, normale sur l’ordi.",
