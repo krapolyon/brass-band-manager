@@ -28,7 +28,9 @@ enum GigStatus: string
             // CONFIRMED from PROPOSED is the gig forced without a quote.
             self::PROPOSED => [self::ACCEPTED, self::CONFIRMED, self::CANCELLED],
             self::ACCEPTED => [self::CONFIRMED, self::CANCELLED],
-            self::CONFIRMED => [self::CANCELLED],
+            // Put back by hand, for a confirmation made by mistake (model/gigs.md,
+            // "Put back by hand").
+            self::CONFIRMED => [self::ACCEPTED, self::PROPOSED, self::CANCELLED],
             // A cancelled gig is reopened.
             self::CANCELLED => [self::DRAFT, self::PROPOSED],
         };

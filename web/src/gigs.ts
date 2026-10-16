@@ -14,7 +14,8 @@ export const nextStatuses: Record<GigStatus, GigStatus[]> = {
   DRAFT: ['PROPOSED', 'CANCELLED'],
   PROPOSED: ['ACCEPTED', 'CONFIRMED', 'CANCELLED'],
   ACCEPTED: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['CANCELLED'],
+  // Put back by hand, for a confirmation made by mistake.
+  CONFIRMED: ['ACCEPTED', 'PROPOSED', 'CANCELLED'],
   CANCELLED: ['DRAFT', 'PROPOSED'],
 };
 

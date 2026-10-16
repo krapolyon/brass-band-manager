@@ -51,6 +51,16 @@
   outline: none;
 }
 
+/* A date: Icon/Calendar stands for the browser's own button (TextField.tsx). */
+.TextField input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.TextField-box > .Icon {
+  flex-shrink: 0;
+  color: var(--textMuted);
+}
+
 .TextField input::placeholder {
   color: var(--textMuted);
   opacity: 1;

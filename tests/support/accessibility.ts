@@ -19,3 +19,18 @@ export async function chooseAccessibility(page: Page, options: Options): Promise
     localStorage.setItem('accessibility', JSON.stringify(chosen));
   }, options);
 }
+
+/**
+ * Sets the text size of the device, as the app keeps it: in the storage of
+ * the browser, whoever is signed in (model/members.md v1.20). Applies from the
+ * next page load on.
+ */
+export async function textSizeOfDevice(
+  page: Page,
+  textSizePercent: NonNullable<Options['textSizePercent']>,
+): Promise<void> {
+  await page.addInitScript((size) => {
+    const stored = JSON.parse(localStorage.getItem('accessibility') ?? '{}');
+    localStorage.setItem('accessibility', JSON.stringify({ ...stored, textSizePercent: size }));
+  }, textSizePercent);
+}

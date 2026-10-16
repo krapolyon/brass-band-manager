@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 
@@ -358,8 +359,9 @@ test('a member without the right is told so, on every address of the management'
 test('at the largest text size with every option on, managing members can still be done', async ({
   page,
 }) => {
-  sql(`UPDATE member SET textSizePercent = 200, hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
+  sql(`UPDATE member SET hasIncreasedSpacing = 1, hasLegibleFont = 1, hasHighContrast = 1,
          hasReducedMotion = 1, hasExtendedTimeouts = 1 WHERE email = '${admin.email}'`);
+  await textSizeOfDevice(page, 200);
   await signIn(page);
   const overflow = () =>
     page.evaluate(

@@ -1,6 +1,6 @@
 {
   "name": "brass-band-manager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -19,7 +19,8 @@
     "db:migrate": "docker compose exec web php /var/www/database/migrate.php",
     "push:keys": "docker compose run --rm php php tasks/pushKeys.php",
     "db:reset": "docker compose down -v && npm run stack:up && npm run db:migrate",
-    "check": "biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
+    "changelog": "node scripts/changelog.mjs",
+    "check": "node scripts/changelog.mjs --check && biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
     "format": "biome check --write .",
     "test:prepare": "node scripts/prepare-test-database.mjs",
     "pretest": "npm run test:prepare",

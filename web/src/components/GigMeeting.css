@@ -21,6 +21,8 @@
 .GigMeeting-label,
 .GigMeeting-address {
   color: var(--textMuted);
+  /* The line breaks typed in the address are kept. */
+  white-space: pre-line;
 }
 
 /* The first action takes the whole line; the next ones wrap under it. */

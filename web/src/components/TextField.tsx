@@ -1,5 +1,6 @@
-import { type InputHTMLAttributes, type ReactNode, useId } from 'react';
+import { type InputHTMLAttributes, type ReactNode, useId, useRef } from 'react';
 import { Icon } from './Icon.tsx';
+import { IconButton } from './IconButton.tsx';
 import './TextField.css';
 
 type Common = {
@@ -15,24 +16,65 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> &
   Common & {
     /** At the end of the field (Figma: "Trailing icon"): the eye of a password, for instance. */
     trailing?: ReactNode;
+    /** A date that may be left empty: once filled, the field offers to empty it
+     *  (Figma: Icon/Close as the trailing icon). The date picker of a phone has
+     *  no way to clear a date. The label names the button for screen readers. */
+    clear?: { label: string; onClear: () => void };
   };
 
 // Figma: TextField. Its states are those of the input: Empty shows the
 // placeholder, Filled a value, Focused the focus, Disabled the `disabled`
 // attribute; Error is the `error` prop.
-export function TextField({ label, hint, error, trailing, ...input }: Props) {
+//
+// A date shows Icon/Calendar at its end, and the whole field opens the picker
+// of the device. The browser's own calendar button is hidden: one icon, the
+// one of the design.
+export function TextField({ label, hint, error, trailing, clear, ...input }: Props) {
   const id = useId();
+  const field = useRef<HTMLInputElement>(null);
+  const isDate = input.type === 'date';
+
+  let end = trailing;
+  if (end === undefined && isDate) {
+    end =
+      clear && input.value ? (
+        <IconButton
+          icon="Close"
+          label={clear.label}
+          tone="muted"
+          onClick={() => {
+            clear.onClear();
+            // The member goes on from the field they emptied.
+            field.current?.focus();
+          }}
+        />
+      ) : (
+        <Icon name="Calendar" />
+      );
+  }
 
   return (
     <Field id={id} label={label} hint={hint} error={error} disabled={input.disabled}>
       <input
         className="textBodyLarge"
         id={id}
+        ref={field}
         aria-invalid={error ? true : undefined}
         aria-describedby={(error ?? hint) ? `${id}-hint` : undefined}
         {...input}
+        onClick={(event) => {
+          input.onClick?.(event);
+          if (!isDate || input.disabled || input.readOnly) return;
+          // A computer opens the picker only from its own button, hidden
+          // here. A browser that cannot do it opens its picker by itself.
+          try {
+            event.currentTarget.showPicker();
+          } catch {
+            // Nothing to do: the field can still be typed in.
+          }
+        }}
       />
-      {trailing}
+      {end}
     </Field>
   );
 }

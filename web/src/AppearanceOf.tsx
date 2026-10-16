@@ -4,27 +4,28 @@ import { useTranslation } from 'react-i18next';
 import { SESSION_ENDED } from './api.ts';
 import { applyAppearance } from './appearance.ts';
 import { useBand } from './band.ts';
-import { useAccessibilityBeforeSignIn } from './deviceAccessibility.ts';
+import { useAccessibilityBeforeSignIn, useDeviceTextSize } from './deviceAccessibility.ts';
 import { useMe } from './session.ts';
 
 // Decides how the app looks and which language it speaks, for whoever is in
-// front of it. Signed in: the choices of the account. Not signed in: the
-// scheme of the device, the theme and the language of the band, and the
-// accessibility options kept on this device (or being chosen during an
-// invitation).
+// front of it. Signed in: the choices of the account, with the text size of
+// the device. Not signed in: the scheme of the device, the theme and the
+// language of the band, and the accessibility options kept on this device (or
+// being chosen during an invitation).
 export function AppearanceOf() {
   const { i18n } = useTranslation();
   const me = useMe().data;
   const band = useBand().data;
   const beforeSignIn = useAccessibilityBeforeSignIn();
+  const textSize = useDeviceTextSize();
 
   useEffect(() => {
     if (me) {
-      applyAppearance(me);
+      applyAppearance({ ...me, textSizePercent: textSize });
     } else {
       applyAppearance({ colorScheme: 'AUTO', accentTheme: null, ...beforeSignIn });
     }
-  }, [me, beforeSignIn]);
+  }, [me, beforeSignIn, textSize]);
 
   // A request refused because the session is over: the app asks again who is
   // signed in, and its guard then leads to the sign-in screen.

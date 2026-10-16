@@ -12,7 +12,11 @@ import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { StepIndicator } from '../../components/StepIndicator.tsx';
-import { previewAccessibility, useAccessibilityBeforeSignIn } from '../../deviceAccessibility.ts';
+import {
+  previewAccessibility,
+  setDeviceTextSize,
+  useAccessibilityBeforeSignIn,
+} from '../../deviceAccessibility.ts';
 import { HOME, type Me, useSetMe } from '../../session.ts';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { MemberRecordFields, type PhotoDraft } from '../members/MemberRecordFields.tsx';
@@ -44,6 +48,11 @@ const STEPS = 2;
 // whoever invited, to check and complete, then the password. Nothing is
 // saved before the last step: everything is sent together, and saved together
 // or not at all (model/members.md, entry 3).
+/** What the account receives of the options: all but the text size. */
+function accountOptions({ textSizePercent: _, ...account }: AccessibilityOptions) {
+  return account;
+}
+
 export function OnboardingScreen({ token, invitation }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -64,7 +73,8 @@ export function OnboardingScreen({ token, invitation }: Props) {
   const [wasSent, setSent] = useState(false);
 
   // The options start as those of the device and are shown at once; they are
-  // saved with the account, not on the device.
+  // saved with the account, not on the device, except the text size, which
+  // stays on the device.
   const [options, setOptions] = useState<AccessibilityOptions>(useAccessibilityBeforeSignIn());
   useEffect(() => {
     previewAccessibility(options);
@@ -89,12 +99,13 @@ export function OnboardingScreen({ token, invitation }: Props) {
           token,
           password,
           member: recordOf(draft, bandCountry),
-          accessibility: options,
+          accessibility: accountOptions(options),
           ...(photo.chosen ? { photo: { image: photo.chosen.image } } : {}),
           ...(photo.isRemoved && !photo.chosen ? { removePhoto: true } : {}),
         },
       }),
     onSuccess: (me) => {
+      setDeviceTextSize(options.textSizePercent);
       setMe(me);
       navigate(HOME, { replace: true });
     },

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addCostume, addGig, answerOf, day, organise, plays } from './support/gigs.ts';
 import { png } from './support/images.ts';
@@ -311,13 +312,13 @@ test.describe('who may edit a gig', () => {
 
     await page.getByLabel('Nom du plan').fill('Fête des Lumières');
     await page.getByLabel('Date de début').fill(day(40));
-    await page.getByLabel('Date de fin').fill(day(39));
+    await page.getByLabel('Date de fin', { exact: true }).fill(day(39));
     await page.getByLabel('Coordonnées GPS').fill('45,7673 4,8344');
     await page.getByRole('button', { name: 'Créer le plan' }).click();
     await expect(page.getByText('La fin ne peut pas être avant le début.')).toBeVisible();
     await expect(page.getByText('Écris la latitude puis la longitude')).toBeVisible();
 
-    await page.getByLabel('Date de fin').fill(day(41));
+    await page.getByLabel('Date de fin', { exact: true }).fill(day(41));
     await page.getByLabel('Heure de rendez-vous').fill('18:00');
     await page.getByLabel('Lieu', { exact: true }).fill('Place des Terreaux');
     await page.getByLabel('Coordonnées GPS').fill('45.7673, 4.8344');
@@ -410,6 +411,58 @@ test.describe('who may edit a gig', () => {
     expect(statusOf(gigId)).toBe('CONFIRMED');
   });
 
+  test('a confirmed gig is put back; still playable, the panel says it will be confirmed again', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = addGig('Carnaval', { status: 'CONFIRMED', startsOn: day(12) });
+    // Everybody says yes: the gig is playable.
+    sql(
+      `INSERT INTO gigSlotAttendance (gigSlotId, memberId, answer) SELECT ${slotId}, id, 'YES' FROM member`,
+    );
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}`);
+    await page.getByRole('button', { name: 'Gérer le plan' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Changer le statut' }).click();
+    const panel = page.getByRole('dialog', { name: 'Statut du plan' });
+
+    // From "Validé": back to Accepté or Proposition, not to a draft.
+    await expect(panel.getByRole('radio', { name: /^Brouillon/ })).toBeDisabled();
+    await expect(panel.getByText('Pas depuis « Validé »')).toBeVisible();
+    await expect(panel.getByText('Statut actuel · le plan a lieu')).toBeVisible();
+    await expect(panel.getByText('On rediscute ; les réponses sont gardées')).toBeVisible();
+    const warning = panel.getByText('Le plan est toujours jouable : il repassera en Validé');
+    await expect(warning).toBeHidden();
+
+    await panel.getByText('Accepté', { exact: true }).click();
+    await expect(panel.getByRole('alert')).toContainText(
+      'Le plan est toujours jouable : il repassera en Validé à la prochaine réponse. Pour l’éviter, choisis Proposition.',
+    );
+    await panel.getByText('Proposition', { exact: true }).click();
+    await expect(warning).toBeHidden();
+
+    await panel.getByText('Accepté', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Enregistrer le statut' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(statusOf(gigId)).toBe('ACCEPTED');
+  });
+
+  test('a confirmed gig that is no longer playable is put back without the warning', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Carnaval', { status: 'CONFIRMED', startsOn: day(12) });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}`);
+    await page.getByRole('button', { name: 'Gérer le plan' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Changer le statut' }).click();
+    const panel = page.getByRole('dialog', { name: 'Statut du plan' });
+
+    await panel.getByText('Accepté', { exact: true }).click();
+    await expect(panel.getByText('il repassera en Validé')).toBeHidden();
+    await panel.getByRole('button', { name: 'Enregistrer le statut' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(statusOf(gigId)).toBe('ACCEPTED');
+  });
+
   test('a draft is deleted after a confirmation; one that has answers is not', async ({ page }) => {
     const draft = addGig('Soirée au Ninkasi', { status: 'DRAFT', startsOn: day(20) });
     const answered = addGig('Carnaval', { status: 'DRAFT', startsOn: day(25) });
@@ -478,6 +531,29 @@ test.describe('who may edit a gig', () => {
       await expect(page.getByText('c’est pour ceux qui gèrent les plans')).toBeVisible();
       await expect(page.getByLabel('Nom du plan')).toHaveCount(0);
     }
+  });
+
+  test('the end date of a gig is removed with the button of its field (#16)', async ({ page }) => {
+    // The date picker of an iPhone has no way to clear a date: the field does.
+    const { gigId } = addGig('Fête des Lumières', { startsOn: day(40), endsOn: day(42) });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/edit`);
+
+    const end = page.getByLabel('Date de fin', { exact: true });
+    await expect(end).toHaveValue(day(42));
+    // The date that is required has no button to empty it, only its calendar.
+    const start = page.locator('.TextField').filter({ has: page.getByLabel('Date de début') });
+    await expect(start.getByRole('button')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Retirer la date de fin' }).click();
+    await expect(end).toHaveValue('');
+    await expect(end).toBeFocused();
+    // An empty date keeps its calendar: no button to empty it any more.
+    await expect(page.getByRole('button', { name: 'Retirer la date de fin' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Enregistrer le plan' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Fête des Lumières' })).toBeVisible();
+    expect(sql(`SELECT endsOn FROM gig WHERE id = ${gigId}`)).toBe('NULL');
   });
 
   test('editing a gig keeps what the form does not show, and deleting a slot asks first', async ({
@@ -616,9 +692,8 @@ test.describe('accessibility', () => {
       placeName: 'Place Joffre, Saint-Genis-Laval',
     });
     answerOf('Lulu', slotId, 'YES');
-    sql(
-      `UPDATE member SET textSizePercent = 200, hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`,
-    );
+    sql(`UPDATE member SET hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
 
     for (const address of ['/gigs', `/gigs/${gigId}`, `/gigs/${gigId}/answers`]) {
@@ -662,9 +737,8 @@ test.describe('accessibility', () => {
     page,
   }) => {
     const { gigId } = addGig('Carnaval', { startsOn: day(12), notes: 'Badge à récupérer.' });
-    sql(
-      `UPDATE member SET textSizePercent = 200, hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`,
-    );
+    sql(`UPDATE member SET hasLegibleFont = 1 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
     await page.goto(`/gigs/${gigId}`);
 
@@ -1102,6 +1176,32 @@ test.describe('what must not go wrong', () => {
     expect(decodeURIComponent(opened[0] ?? '')).toContain('45.7743,4.832');
     // Nothing was asked of another site: no CDN, no font, no other map server.
     expect(elsewhere).toEqual([]);
+  });
+
+  test('the address is typed over several lines, and shown with them (#15)', async ({ page }) => {
+    const { gigId } = addGig('Vide-grenier', {
+      status: 'CONFIRMED',
+      startsOn: day(5),
+      city: 'Lyon',
+    });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/edit`);
+
+    const address = page.getByLabel('Adresse', { exact: true });
+    const before = (await address.boundingBox())?.height ?? 0;
+    await address.fill('12 rue des Capucins\nDerrière la grille verte\nSonner au 3');
+    // The field grows with its text: its three lines are read without scrolling.
+    expect((await address.boundingBox())?.height ?? 0).toBeGreaterThan(before);
+    await page.getByRole('button', { name: 'Enregistrer le plan' }).click();
+    await expect(page).toHaveURL(`/gigs/${gigId}`);
+    expect(sql(`SELECT REPLACE(streetAddress, '\n', '|') FROM gig WHERE id = ${gigId}`)).toBe(
+      '12 rue des Capucins|Derrière la grille verte|Sonner au 3',
+    );
+
+    // The meeting of the confirmed gig shows it as it was typed.
+    expect(await page.locator('.GigMeeting-address').innerText()).toBe(
+      '12 rue des Capucins\nDerrière la grille verte\nSonner au 3, Lyon',
+    );
   });
 
   test('“Copier l’adresse” copies the address and says so, in sight and to screen readers', async ({

@@ -394,6 +394,7 @@ export function GigFormScreen() {
             value={draft.endsOn}
             min={draft.startsOn || undefined}
             onChange={(event) => set('endsOn', event.target.value)}
+            clear={{ label: t('gigs.form.endsOnClear'), onClear: () => set('endsOn', '') }}
           />
           <TextField
             label={t('gigs.form.meetingTime')}
@@ -423,10 +424,12 @@ export function GigFormScreen() {
             value={draft.placeUrl}
             onChange={(event) => set('placeUrl', event.target.value)}
           />
-          <TextField
+          <TextArea
             label={t('gigs.form.streetAddress')}
             placeholder={t('gigs.form.streetAddressPlaceholder')}
             autoComplete="off"
+            lines={2}
+            maxLength={200}
             error={errors.streetAddress}
             value={draft.streetAddress}
             onChange={(event) => set('streetAddress', event.target.value)}

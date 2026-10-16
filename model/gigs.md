@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.5 — 2026-10-15 · No change to the tables · From the beta (milestone 0.1.1): a confirmed gig can be put back to `ACCEPTED` or `PROPOSED` by hand (#17); the end date can be removed (#16); the address and the description of a setlist are typed over several lines (#15)
 > v1.4 — 2026-10-13 · Decided with the design of the home screen (Figma, page `Home`): `gig.proposedAt`, the instant a gig first reaches a status members see; a gig is new for 15 days after it; the gig of the day and the answers in place on the home screen · Migration: `012_gigProposedAt.sql`
 > v1.3 — 2026-10-13 · Validated by the owner · The live setlist, decided with the design: a setlist belongs to a slot; the setlist manager starts it live, moves it on song by song and ends it; the members who said yes to the slot follow it by notification · Migration: `010_setlistLive.sql`
 > v1.2 — 2026-10-13 · Decided with the design of gigs: a setlist is numbered within its gig (1, 2, 3…); only a song in the repertoire or a temporary one is added to a setlist · Migration: `009_setlistNumberPerGig.sql`
@@ -23,11 +24,11 @@ A concert the band is asked to play, from the first contact to the day itself. I
 |---|---|---|---|---|---|---|
 | `name` | Name | Nom du plan | Yes | Fête des Lumières | 10 to 40 characters | Not unique: the same gig comes back every year |
 | `startsOn` | Start date | Date de début | Yes | 2026-12-04 | — | |
-| `endsOn` | End date | Date de fin | No | 2026-12-06 | — | Never before `startsOn`. Empty for a gig of one day |
+| `endsOn` | End date | Date de fin | No | 2026-12-06 | — | Never before `startsOn`. Empty for a gig of one day. Once filled, it is emptied with the clear button of the field: the date picker of a phone has no way to clear a date (#16) |
 | `meetingTime` | Meeting time | Heure de rendez-vous | No | 18:30 | — | On the first day, on the clock of the place. One for the whole gig |
 | `placeName` | Place | Lieu | No | Place des Terreaux | 10 to 40 characters | |
 | `placeUrl` | Link to the place | Lien du lieu | No | The site of the venue | Up to 500 characters | An `https` address |
-| `streetAddress` | Address | Adresse | No | 12 rue des Capucins | 1 to 2 lines | |
+| `streetAddress` | Address | Adresse | No | 12 rue des Capucins, derrière la grille verte | 1 to 3 lines | Typed in a text area that shows two lines and grows with its text; the line breaks are kept when it is shown |
 | `postalCode` | Postal code | Code postal | No | 69001 | 5 characters | Can be filled without the street |
 | `city` | City | Ville | No | Lyon | Up to 30 characters | Can be filled without the street |
 | `latitude`, `longitude` | GPS coordinates | Coordonnées GPS | No | 45.767300, 4.834400 | 6 decimals | Both or neither. Typed or pasted as one text, "45.7673, 4.8344". Latitude from -90 to 90, longitude from -180 to 180 |
@@ -42,7 +43,7 @@ A concert the band is asked to play, from the first contact to the day itself. I
 | `DRAFT` | Someone contacted the band; it is noted down | `PROPOSED`, `CANCELLED` | Whoever may edit the gig | Seen by those who manage gigs and by its organisers only. Nobody answers, nobody is reminded |
 | `PROPOSED` | The conditions are being discussed | `ACCEPTED`, `CONFIRMED` (forced), `CANCELLED` | Whoever may edit the gig | Every current member sees the gig and answers for its slots |
 | `ACCEPTED` | The band and whoever asked agree, with or without a quote; the band is not playable yet | `CONFIRMED`, `CANCELLED` | To `CONFIRMED`: the app, as soon as the gig is playable; or whoever may edit the gig, who forces it | Members keep answering |
-| `CONFIRMED` | The gig takes place | `CANCELLED` | Whoever may edit the gig | The meeting information comes first on the screen of the gig |
+| `CONFIRMED` | The gig takes place | `ACCEPTED`, `PROPOSED`, `CANCELLED` | Whoever may edit the gig | The meeting information comes first on the screen of the gig. Back to `ACCEPTED` or `PROPOSED` by hand only, when it was confirmed by mistake: see "Put back by hand" |
 | `CANCELLED` | The gig does not take place | `DRAFT`, `PROPOSED` | Whoever may edit the gig reopens it and chooses which of the two | Hidden from the list by default. Answers are kept, and found again when it is reopened |
 
 The status labels in French are "Brouillon", "Proposition", "Accepté", "Validé" and "Annulé".
@@ -50,6 +51,7 @@ The status labels in French are "Brouillon", "Proposition", "Accepté", "Validé
 - **Confirmed by the app.** A gig goes from `ACCEPTED` to `CONFIRMED` by itself in two cases: an answer makes it playable while it is accepted, or it becomes accepted while it is already playable. This is the only change of status the app makes. The app looks at it when an answer is saved and when the gig becomes accepted, at no other moment: an accepted gig that becomes playable because a member left the band is confirmed at the next answer, or by hand.
 - **Forced by hand.** Whoever may edit the gig can set `CONFIRMED` although a section has no yes: a member of another section fills in. The screen asks to confirm, and says which sections are missing.
 - **No way back by itself.** A confirmed gig stays confirmed when an answer changes afterwards. If it is no longer playable, the gig shows a warning with the missing sections.
+- **Put back by hand** (decided on 2026-10-15, #17). Whoever may edit the gig can put a confirmed gig back to `ACCEPTED` or `PROPOSED`, for a confirmation made by mistake. The answers are kept. The rule "confirmed by the app" applies again as it stands: a gig put back to `ACCEPTED` while it is still playable is confirmed again at the next answer saved. The status panel says so when that is the case ("Il repassera en Validé à la prochaine réponse") and offers `PROPOSED` first. No field records that the gig was put back.
 - **Accepted by hand.** Quotes are not managed yet: the gig has no field for one, and whoever may edit the gig sets `ACCEPTED` once the band and whoever asked agree. A gig without a quote goes the same way, or is forced to `CONFIRMED` straight from `PROPOSED`.
 
 Two more states are shown and never stored, because they come from the clock. They apply to a `CONFIRMED` gig only: a gig that was not confirmed was not played.
@@ -169,7 +171,7 @@ An ordered list of songs played at a slot of a gig, followed live by the members
 |---|---|---|---|---|---|---|
 | `gigSlotId` | Slot | Présence | Yes | Samedi midi | — | One of the slots of the gig. Asked only when the gig has several; the only slot otherwise |
 | `number` | Number | Numéro | Yes | 2 | — | Given by the app: one more than the highest of the setlists of the same gig, 1 for its first. Never typed. Unique within the gig |
-| `description` | Description | Description | No | Parade, 45 minutes | Up to 60 characters | |
+| `description` | Description | Description | No | Parade, 45 minutes | 1 to 2 lines, up to 120 characters | Typed in a text area that shows two lines and grows with its text; the line breaks are kept when it is shown |
 | `position` | — | — | Yes | 7 | — | A song can come twice in a setlist |
 | `songId` | Song | Morceau | Yes | Seven Nation Army | — | A song whose status is `IN_REPERTOIRE` or `TEMPORARY` when it is added |
 | `liveStartedAt` | — | — | No | 2026-10-17 10:12 | — | Filled while the setlist is live |

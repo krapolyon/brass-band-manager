@@ -1,10 +1,19 @@
 import { useSyncExternalStore } from 'react';
-import { type AccessibilityOptions, noAccessibilityOption, textSizes } from './appearance.ts';
+import {
+  type AccessibilityOptions,
+  noAccessibilityOption,
+  type TextSize,
+  textSizes,
+} from './appearance.ts';
 
-// The accessibility options chosen before sign-in (model/members.md,
-// "Accessibility before sign-in"). They are kept on the device only, in the
-// storage of the browser, and are sent to no one. They apply on this device
-// whenever nobody is signed in on it.
+// The accessibility options of this device (model/members.md,
+// "Accessibility before sign-in" and "Accessibility options"). They are kept
+// in the storage of the browser and are sent to no one.
+//   - The text size belongs to the device, signed in or not: a bigger text is
+//     wanted on a phone, rarely on a computer (issue #18). Signing in or out
+//     does not change it.
+//   - The five other options chosen before sign-in apply whenever nobody is
+//     signed in on this device; once someone is, those of their account do.
 //
 // The options of an account are never written here: they can hint at a
 // disability, and a device can be shared.
@@ -49,6 +58,22 @@ export function setDeviceAccessibility(options: AccessibilityOptions) {
 export function previewAccessibility(options: AccessibilityOptions | null) {
   preview = options;
   for (const listener of listeners) listener();
+}
+
+/** Changes the text size of this device, whoever is signed in. */
+export function setDeviceTextSize(size: TextSize) {
+  setDeviceAccessibility({ ...current, textSizePercent: size });
+}
+
+/** The text size of this device, or the one being chosen during an invitation. */
+export function useDeviceTextSize(): TextSize {
+  return useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => (preview ?? current).textSizePercent,
+  );
 }
 
 /** The options that apply while nobody is signed in: those being chosen, or those of this device. */

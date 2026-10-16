@@ -27,6 +27,7 @@ import { InviteScreen } from './screens/members/InviteScreen.tsx';
 import { ManageListScreen } from './screens/members/ManageListScreen.tsx';
 import { ManageMemberScreen } from './screens/members/ManageMemberScreen.tsx';
 import { NotFoundScreen } from './screens/NotFoundScreen.tsx';
+import { AboutScreen } from './screens/settings/AboutScreen.tsx';
 import { AccessibilityScreen } from './screens/settings/AccessibilityScreen.tsx';
 import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
 import { NotificationsScreen } from './screens/settings/NotificationsScreen.tsx';
@@ -75,6 +76,7 @@ export const router = createBrowserRouter([
       { path: '/settings/appearance', element: <AppearanceScreen /> },
       { path: '/settings/accessibility', element: <AccessibilityScreen /> },
       { path: '/settings/notifications', element: <NotificationsScreen /> },
+      { path: '/settings/about', element: <AboutScreen /> },
     ],
   },
   {

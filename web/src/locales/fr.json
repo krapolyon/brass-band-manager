@@ -192,7 +192,7 @@
     "textSize": {
       "label": "Taille du texte",
       "value": "{{percent}} %",
-      "description": "Agrandit les textes sans modifier la mise en page."
+      "description": "Agrandit les textes sans modifier la mise en page. Ce réglage n’affecte que cet appareil."
     },
     "highContrast": {
       "label": "Contraste élevé",
@@ -516,6 +516,19 @@
       "title": "Tout déconnecter ?",
       "text": "Tous tes appareils seront déconnectés, celui-ci compris. Il te faudra ton mot de passe pour revenir.",
       "cancel": "Annuler"
+    },
+    "about": {
+      "title": "À propos",
+      "lead": "Ce qui change dans l’app, version après version.",
+      "entry": "Version {{version}} · les nouveautés",
+      "version": "Version {{version}}",
+      "published": "Publiée le {{date}}",
+      "earlier": "Versions précédentes",
+      "kinds": {
+        "added": "Nouveau",
+        "changed": "Amélioré",
+        "fixed": "Corrigé"
+      }
     }
   },
   "manage": {
@@ -1477,6 +1490,11 @@
         "CONFIRMED": "Le plan a lieu. Se fait tout seul dès qu’il est jouable",
         "CANCELLED": "Le plan n’a pas lieu ; les réponses sont gardées"
       },
+      "detailFromConfirmed": {
+        "PROPOSED": "On rediscute ; les réponses sont gardées",
+        "CONFIRMED": "Statut actuel · le plan a lieu"
+      },
+      "confirmedAgain": "Le plan est toujours jouable : il repassera en Validé à la prochaine réponse. Pour l’éviter, choisis Proposition.",
       "notAllowed": "Pas depuis « {{status}} »",
       "forceTitle": "Valider sans {{sections}} ?",
       "forceLead": "Personne n’a répondu oui en {{sections}}. Valide quand même si quelqu’un d’un autre pupitre remplace : le plan passe en « Validé » pour toute la fanfare.",
@@ -1509,6 +1527,7 @@
       "startsOn": "Date de début",
       "endsOn": "Date de fin",
       "endsOnHint": "Seulement pour un plan sur plusieurs jours.",
+      "endsOnClear": "Retirer la date de fin",
       "meetingTime": "Heure de rendez-vous",
       "meetingTimeHint": "Le premier jour. La note d’une présence dit le reste.",
       "where": "Où",

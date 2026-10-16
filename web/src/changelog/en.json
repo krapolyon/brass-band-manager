@@ -1,0 +1,41 @@
+[
+  {
+    "version": "0.1.1",
+    "date": "2026-10-16",
+    "changes": [
+      { "kind": "added", "text": "The version number and what is new in the app, right here." },
+      {
+        "kind": "changed",
+        "text": "The text size is set on each device: bigger on your phone, normal on the computer."
+      },
+      {
+        "kind": "changed",
+        "text": "A gig confirmed by mistake can go back to Accepted or Proposal."
+      },
+      {
+        "kind": "changed",
+        "text": "The address of a gig and the description of a setlist fit on several lines."
+      },
+      { "kind": "fixed", "text": "The end date of a gig can be removed." },
+      {
+        "kind": "fixed",
+        "text": "When adding a song to a setlist, the suggestions no longer hide under the keyboard."
+      },
+      {
+        "kind": "fixed",
+        "text": "On iPhone, the MIDI player no longer stays silent when you come back to the app."
+      }
+    ]
+  },
+  {
+    "version": "0.1.0",
+    "date": "2026-10-13",
+    "note": "the first beta",
+    "changes": [
+      {
+        "kind": "added",
+        "text": "The first beta: the members of the band, the songs with their recordings, MIDI files, scores and reading mode, the gigs with the answers of everyone, and the setlists."
+      }
+    ]
+  }
+]

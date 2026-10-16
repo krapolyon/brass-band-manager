@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addGig, addSetlist, addSong, day } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
@@ -112,7 +113,11 @@ test.describe('writing a setlist', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Setlist n° 1' })).toBeVisible();
     await expect(page.getByText('Pas encore de morceau.')).toBeVisible();
     await page.getByLabel('Présence').selectOption({ label: 'Samedi soir' });
-    await page.getByLabel('Description').fill('Place des Terreaux, 21 h');
+    // Over two lines: the field grows with its text.
+    const description = page.getByLabel('Description');
+    const before = (await description.boundingBox())?.height ?? 0;
+    await description.fill('Place des Terreaux, 21 h\nPuis le défilé\njusqu’à la mairie');
+    expect((await description.boundingBox())?.height ?? 0).toBeGreaterThan(before);
 
     // A few letters, without their case: only the songs the band plays.
     const field = page.getByLabel('Ajouter un morceau');
@@ -158,13 +163,35 @@ test.describe('writing a setlist', () => {
 
     await page.getByRole('button', { name: 'Enregistrer la setlist' }).click();
     await expect(page).toHaveURL(`/gigs/${gigId}`);
-    await expect(page.getByRole('button', { name: /Setlist n° 1/ })).toContainText(
-      'Place des Terreaux, 21 h · 2 morceaux',
+    // The line breaks are kept where the description is shown.
+    const card = page.locator('.SetlistCard-description');
+    expect(await card.innerText()).toBe(
+      'Place des Terreaux, 21 h\nPuis le défilé\njusqu’à la mairie · 2 morceaux',
     );
-    expect(sql('SELECT gigSlotId, number, description FROM setlist')).toBe(
-      `${slotIds[1]}\t1\tPlace des Terreaux, 21 h`,
+    expect(sql("SELECT gigSlotId, number, REPLACE(description, '\\n', '|') FROM setlist")).toBe(
+      `${slotIds[1]}\t1\tPlace des Terreaux, 21 h|Puis le défilé|jusqu’à la mairie`,
     );
     expect(sql('SELECT songId FROM setlistSong ORDER BY position')).toBe(`${valerie}\n${toxic}`);
+  });
+
+  test('on a phone, the song field goes to the top of the screen so that its suggestions show (#19)', async ({
+    page,
+  }) => {
+    const { gigId, slotIds } = confirmed('Fête des Lumières', ['Vendredi soir']);
+    const songs = Array.from({ length: 12 }, (_, index) => addSong(`Morceau ${index + 1}`));
+    const setlistId = addSetlist(gigId, slotIds[0] as number, songs);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/${setlistId}`);
+
+    // Far down the page, under a long setlist.
+    const field = page.getByLabel('Ajouter un morceau');
+    await expect(field).toBeVisible();
+    await field.focus();
+
+    await expect.poll(async () => (await field.boundingBox())?.y ?? -1).toBeLessThan(80);
+    await field.fill('Morceau');
+    const suggestions = page.getByRole('list', { name: 'Suggestions' });
+    await expect(suggestions.getByRole('button').first()).toBeInViewport();
   });
 
   test('a song is dragged by its handle to its place; the handle is not a control of the keyboard', async ({
@@ -643,9 +670,8 @@ test.describe('the live setlist', () => {
     sql(
       `UPDATE setlist SET liveStartedAt = UTC_TIMESTAMP(), livePosition = 3 WHERE id = ${setlistId}`,
     );
-    sql(
-      `UPDATE member SET textSizePercent = 200, hasLegibleFont = 1 WHERE id = ${memberId('Sissi')}`,
-    );
+    sql(`UPDATE member SET hasLegibleFont = 1 WHERE id = ${memberId('Sissi')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Sissi');
     await page.goto(`/setlists/${setlistId}/live`);
     await expect(page.locator('.gigs-liveSongs [aria-current="true"]')).toHaveText(
@@ -712,7 +738,7 @@ test.describe('the live setlist', () => {
     sql(
       `UPDATE setlist SET liveStartedAt = UTC_TIMESTAMP(), livePosition = 3 WHERE id = ${setlistId}`,
     );
-    sql(`UPDATE member SET textSizePercent = 200 WHERE id = ${memberId('Zaza')}`);
+    await textSizeOfDevice(page, 200);
     await asMember(page, 'Zaza');
     await page.goto(`/setlists/${setlistId}/live`);
     await expect(page.locator('.gigs-liveSongs [aria-current="true"]')).toHaveText('Toxic');

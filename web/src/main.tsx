@@ -11,6 +11,7 @@ import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/text.css';
 import './styles/base.css';
+import { readAboutTheApp } from './about.ts';
 
 // Starting point of the front. See docs/architecture.md, "The front".
 
@@ -27,6 +28,8 @@ followDevice();
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, retryDelay: 500 } },
 });
+// The version of the code that runs, read as the page starts (about.ts).
+readAboutTheApp(queryClient);
 
 const root = document.getElementById('root');
 if (!root) {

@@ -16,8 +16,9 @@
      error does not move anything. */
   box-shadow: inset 0 0 0 var(--borderWidth) var(--border);
   color: var(--text);
-  /* Its height is its number of lines; the member reads the rest by scrolling. */
+  /* Its number of lines at least, then as tall as its text (TextArea.tsx). */
   resize: none;
+  overflow-y: hidden;
 }
 
 .TextArea textarea::placeholder {

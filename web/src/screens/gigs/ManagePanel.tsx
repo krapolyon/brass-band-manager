@@ -36,6 +36,15 @@ type Props = {
 // stay listed; one the model does not allow after the current one (the API
 // decides) cannot be chosen, and says why. Forcing "Validé" while a section
 // has no yes asks first, and so does deleting.
+/** What a row of the status panel says, seen from the status the gig has. */
+function detailKey(current: GigStatus, status: GigStatus) {
+  if (current === 'CONFIRMED' && status === 'CONFIRMED')
+    return 'gigs.statusPanel.detailFromConfirmed.CONFIRMED';
+  if (current === 'CONFIRMED' && status === 'PROPOSED')
+    return 'gigs.statusPanel.detailFromConfirmed.PROPOSED';
+  return `gigs.statusPanel.detail.${status}` as const;
+}
+
 export function ManagePanel({ gig, open, onClose, start = 'menu' }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -141,7 +150,7 @@ export function ManagePanel({ gig, open, onClose, start = 'menu' }: Props) {
                   label={t(`gigs.status.${status}`)}
                   detail={
                     isAllowed
-                      ? t(`gigs.statusPanel.detail.${status}`)
+                      ? t(detailKey(gig.status, status))
                       : t('gigs.statusPanel.notAllowed', {
                           status: t(`gigs.status.${gig.status}`),
                         })
@@ -154,6 +163,10 @@ export function ManagePanel({ gig, open, onClose, start = 'menu' }: Props) {
               );
             })}
           </div>
+          {/* Figma: Gigs, section 6, "a confirmed gig put back to Accepté, still playable". */}
+          {gig.status === 'CONFIRMED' && chosen === 'ACCEPTED' && gig.isPlayable && (
+            <Message kind="warning">{t('gigs.statusPanel.confirmedAgain')}</Message>
+          )}
           {save.isError && <Message kind="danger">{t('gigs.statusPanel.failed')}</Message>}
           <Button disabled={save.isPending} onClick={submit}>
             {t('gigs.statusPanel.save')}

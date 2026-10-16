@@ -8,7 +8,9 @@ import { type AccentTheme, accentThemes } from './themes.ts';
 export const textSizes = [100, 120, 140, 160, 180, 200] as const;
 export type TextSize = (typeof textSizes)[number];
 
-/** The six accessibility options, named as in the model. */
+/** The six accessibility options, named as in the model. The text size is
+ *  kept on the device (deviceAccessibility.ts), the five others on the
+ *  account once someone is signed in. */
 export type AccessibilityOptions = {
   textSizePercent: TextSize;
   hasHighContrast: boolean;
@@ -17,6 +19,9 @@ export type AccessibilityOptions = {
   hasReducedMotion: boolean;
   hasExtendedTimeouts: boolean;
 };
+
+/** The five options of an account: every one but the text size. */
+export type AccountAccessibility = Omit<AccessibilityOptions, 'textSizePercent'>;
 
 export type Appearance = AccessibilityOptions & {
   colorScheme: 'AUTO' | 'LIGHT' | 'DARK';

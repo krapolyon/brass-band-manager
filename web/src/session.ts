@@ -5,7 +5,7 @@ import type { Appearance } from './appearance.ts';
 // Who is signed in on this device: what GET /api/me answers
 // (api/src/Access/Profile.php). The session itself is a cookie the page
 // cannot read; this is how the front knows there is one.
-export type Me = Appearance & {
+export type Me = Omit<Appearance, 'textSizePercent'> & {
   id: number;
   nickname: string;
   firstName: string;
@@ -62,13 +62,25 @@ export function useMe() {
 }
 
 /** Records who is signed in after a sign-in, a password link or a change of the member's own record. */
+// What signing out keeps: who is signed in (emptied, not removed), and what
+// the build says about itself, which is about the app, not the member.
+const KEPT = ['me', 'build', 'changelog'];
+
 export function useSetMe() {
   const queryClient = useQueryClient();
 
   return (me: Me | null) => {
     if (me === null) {
-      // Nothing a member saw stays in the memory of the page after they sign out.
-      queryClient.clear();
+      // Nothing a member saw stays in the memory of the page after they sign
+      // out. The answer to "who is signed in" is kept, emptied below: what
+      // follows it (the look of the app, the guards) then learns that nobody
+      // is. Removed with the rest, it would never hear of it.
+      // A question about the member still on its way must not answer after.
+      void queryClient.cancelQueries({ queryKey: ['me'] });
+      queryClient.removeQueries({
+        predicate: (query) => !KEPT.includes(String(query.queryKey[0])),
+      });
+      queryClient.getMutationCache().clear();
     }
     queryClient.setQueryData(['me'], me);
   };

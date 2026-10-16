@@ -104,10 +104,18 @@ export function whereText(
   return [gig.placeName, addressText(gig)].filter(Boolean).join(', ');
 }
 
-/** The address alone: "12 rue des Capucins, 69001 Lyon". */
-export function addressText(gig: Pick<Gig, 'streetAddress' | 'postalCode' | 'city'>): string {
+/**
+ * The address alone: "12 rue des Capucins, 69001 Lyon". On one line by
+ * default; `lines` keeps the line breaks typed in the street, for a screen
+ * that shows the address as it was written.
+ */
+export function addressText(
+  gig: Pick<Gig, 'streetAddress' | 'postalCode' | 'city'>,
+  lines = false,
+): string {
   const town = [gig.postalCode, gig.city].filter(Boolean).join(' ');
-  return [gig.streetAddress?.replace(/\n+/g, ', '), town].filter(Boolean).join(', ');
+  const street = lines ? gig.streetAddress : gig.streetAddress?.replace(/\n+/g, ', ');
+  return [street, town].filter(Boolean).join(', ');
 }
 
 /** The place of a gig in the list: its name, else its postal code and city. */

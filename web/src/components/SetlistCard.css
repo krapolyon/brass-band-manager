@@ -37,6 +37,8 @@
 
 .SetlistCard-description {
   color: var(--textMuted);
+  /* The line breaks typed in the description are kept. */
+  white-space: pre-line;
 }
 
 .SetlistCard-toggle {

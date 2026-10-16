@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.20 — 2026-10-15 · Model: `members.dbml` · No migration · The text size is a setting of the device, no longer of the account (issue #18). `textSizePercent` stays in the table, read and written by no code, and is dropped in 0.2.0: a column of `member` is removed in two releases
 > v1.19 — 2026-10-13 · No change to the tables · Decided with the deployment: the permission to run the migrations, for the admin (Band v1.7); on an empty database, the install creates the tables once the install key is accepted
 > v1.18 — 2026-10-13 · No change to the tables · A device that accepted notifications also receives the live setlist of a gig (Gigs v1.3)
 > v1.17 — 2026-10-13 · Model: `members.dbml` · Validated · Migrations: `001_members.sql`, `003_memberPhoto.sql`, `004_pictogramsAndBandDefaults.sql`, `005_invitationRefusals.sql`, `008_gigs.sql` · Push subscriptions; what leaving changes for gigs
@@ -31,12 +32,13 @@ A person who plays or has played in the band, and their account in the app: the 
 | `language` | Language | Langue | Yes | fr | 2 to 5 | Set from the band's default language at creation |
 | `colorScheme` | Appearance | Apparence | Yes | AUTO | — | Automatic (follows the device), light or dark |
 | `accentTheme` | Theme | Thème | No | copper | — | One of the accent themes of the design system. Empty: the default theme of the band |
-| `textSizePercent` | Text size | Taille du texte | Yes | 140 | — | Accessibility option. One of 100, 120, 140, 160, 180, 200 |
 | `hasHighContrast` | High contrast | Contraste élevé | Yes | false | — | Accessibility option |
 | `hasIncreasedSpacing` | Increased spacing | Espacement augmenté | Yes | false | — | Accessibility option |
 | `hasLegibleFont` | More legible font | Police plus lisible | Yes | false | — | Accessibility option |
 | `hasReducedMotion` | Reduced motion | Mouvement réduit | Yes | false | — | Accessibility option |
 | `hasExtendedTimeouts` | Extended timeouts | Délais augmentés | Yes | false | — | Accessibility option |
+
+The text size (100 to 200 %) is an accessibility option too, but it is not a field of the member: it is kept on each device, in the storage of the browser. See "Accessibility options".
 
 `failedSignInCount` and `signInLockedUntil` are never displayed.
 
@@ -83,7 +85,7 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 - **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
 - **Password change.** Asks for the current password. Deletes every other session of the member, and their pending password link. A wrong current password counts like a wrong password at sign-in: at the fifth, sign-in is locked and the device is signed out.
 - **Forgotten password.** On the sign-in screen, a person gives an email address. If it is the address of a current member, the app creates a password link and sends it to that address (entry 3). Whatever the address, the screen answers the same thing, in the same time: nothing tells whether an address belongs to a member. A member still `INVITED` gets nothing: their link comes from the person who invited them.
-- **Accessibility before sign-in.** Every screen shown before sign-in (sign-in, forgotten password, the screen a password link opens, the screens of an invitation) carries a button that opens the accessibility options. The button is always visible, reachable from the keyboard and named for screen readers. Nobody is asked to set the options: they are offered, never a step to go through. Chosen before sign-in, they are kept on the device only, in the storage of the browser, and are sent to no one; they apply on that device until a member signs in on it, and from then on the options of the account apply. Chosen during an invitation, they are saved to the account when the invitation is completed.
+- **Accessibility before sign-in.** Every screen shown before sign-in (sign-in, forgotten password, the screen a password link opens, the screens of an invitation) carries a button that opens the accessibility options. The button is always visible, reachable from the keyboard and named for screen readers. Nobody is asked to set the options: they are offered, never a step to go through. Chosen before sign-in, they are kept on the device only, in the storage of the browser, and are sent to no one; they apply on that device until a member signs in on it, and from then on the options of the account apply, except the text size, which stays the one of the device. Chosen during an invitation, they are saved to the account when the invitation is completed, except the text size, which stays on the device.
 
 ### Roles and permissions
 A member holds zero, one or several roles. The list of roles is fixed by the app.
@@ -133,7 +135,7 @@ Exporting the list of members asks for the password again.
 - `email`: sign-in and directory of the band. Seen by every signed-in member.
 - `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode`, `addressInstructions`: directory of the band, so that members can reach and visit each other. Given by the member, optional, seen by every signed-in member, erased when the member leaves.
 - `photoPath`: recognising each other in the band. Given by the member or by someone who manages members, optional, seen by signed-in members only, never public, never in an export, erased when the member leaves.
-- Preferences (language, appearance, theme, accessibility options) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export.
+- Preferences (language, appearance, theme, accessibility options) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export. The text size is not even known to the server: it stays on the device.
 - None of these fields is ever written to a log.
 
 ### Display
@@ -149,7 +151,7 @@ The default design is not required to reach the highest level of the accessibili
 | Option | Values | What it does | Text shown under the option (fr) |
 |---|---|---|---|
 | High contrast | Off, on | Stronger contrast between text and background; translucent surfaces and coloured halos become plain and opaque | Renforce le contraste entre le texte et le fond. Utile en cas de basse vision, de fatigue visuelle ou de forte luminosité ambiante. |
-| Text size | 100, 120, 140, 160, 180 or 200 % | Enlarges text without breaking the layout. An installed app has no zoom control, so this is the only way to get bigger text. A text never grows beyond the size of a page title, and page titles do not grow: they are large enough to read. Spacing and controls keep their size | Agrandit les textes sans modifier la mise en page. |
+| Text size | 100, 120, 140, 160, 180 or 200 % | Enlarges text without breaking the layout. An installed app has no zoom control, so this is the only way to get bigger text. A text never grows beyond the size of a page title, and page titles do not grow: they are large enough to read. Spacing and controls keep their size. **Kept on the device, not on the account** (see below) | Agrandit les textes sans modifier la mise en page. Ce réglage n’affecte que cet appareil. |
 | Increased spacing | Off, on | More space between letters, between words and between lines | Aère le texte : espace entre les lettres, entre les mots et entre les lignes. |
 | More legible font | Off, on | Replaces the typefaces of the app with one designed to tell similar characters apart (I / l / 1, O / 0). Atkinson Hyperlegible is the reference; the choice belongs to the design | Distingue plus nettement les caractères qui se ressemblent (I / l / 1, O / 0). |
 | Reduced motion | Off, on | Removes animations and transitions of large amplitude | Supprime les animations et les transitions de grande amplitude. Utile en cas de troubles vestibulaires, de migraines ou de sensibilité au mouvement. |
@@ -157,7 +159,8 @@ The default design is not required to reach the highest level of the accessibili
 
 - The list and the wording come from another project of the owner, adapted to the "tu" used in this app.
 - High contrast and reduced motion are also applied when the device asks for them, without the member having to set anything.
-- Text size is offered as a slider with six steps: 100, 120, 140, 160, 180 and 200 %. The API refuses any other value.
+- Text size is offered as a slider with six steps: 100, 120, 140, 160, 180 and 200 %.
+- **The text size belongs to the device, the five other options to the account** (decided on 2026-10-15, issue #18). A bigger text is wanted on a phone and rarely on a computer, whereas the other options answer needs that do not depend on the screen. So the text size is kept in the storage of the browser of each device, is never sent to the server, and a device starts at 100 % until the member changes it there; the five other options are saved on the account and follow the member from one device to another. The option says so on the screen, under its slider. Signing out or signing in leaves the text size of the device as it is.
 - The exact visual effect of each option is defined by the design (`brass-band-design` skill). In Figma, text size, the legible font and high contrast are variable modes (`TextSize`, `Typeface`, two modes of `Scheme`), so a screen can be checked with them; increased spacing, reduced motion and extended timeouts are rules written in the skill. Every screen must hold with all six options on.
 
 ## 2. Section and instrument (`section`, `instrument`)
@@ -264,6 +267,8 @@ These apply to every table of the app and are not repeated in the DBML.
 - Text is compared without regard to case or accents (`utf8mb4_unicode_ci`): "Jibé" and "jibe" are the same nickname.
 
 ## 5. Open questions
+
+- **To do in 0.2.0**: drop `member.textSizePercent` (Members v1.20), in the first migration of that release.
 
 None blocking. Validated by the owner on 2026-10-11 (v1.14): `section.icon`, `memberPasswordLink.emailedAt` and the 5 minutes between two emails, the forgotten password by email for current members only, the six steps of the text size, the rules found while writing the API (nobody acts on the access of someone who may do more, a member who left is not edited, the current password is asked to change it), and the invitation completed in one request.
 

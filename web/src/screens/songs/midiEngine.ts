@@ -11,6 +11,71 @@ import { type MidiSong, type MidiTrack, secondsAt, tickAt } from './midi.ts';
 
 const SAMPLES = '/soundfonts/FluidR3_GM';
 
+// iPhone (issue #22). A sound of the Web Audio API belongs to the "ambient"
+// category of iOS: it is silenced by the silent switch, and after the app was
+// left alone iOS may leave its clock "interrupted", a state that resume() does
+// not always end. A recording or a clip, played by an <audio> or <video>
+// element, belongs to "playback", which is why playing one first brought the
+// MIDI file back. So, from the press on "Lire":
+//   - the category is asked for (navigator.audioSession, Safari 16.4 on);
+//   - on an older iPhone, a silent <audio> plays once, which does the same;
+//   - a clock that does not run shortly after resume() is replaced by a new
+//     one, with the same instruments (their files come from the cache).
+
+/** How long a clock is given to run again after resume(). */
+const WAKE_MS = 500;
+
+type AudioSession = { type: string };
+
+/** Half a second of silence, as a WAV file: what an <audio> element plays to unlock the sound. */
+function silence(): string {
+  const samples = 4000;
+  const bytes = new Uint8Array(44 + samples);
+  const view = new DataView(bytes.buffer);
+  const text = (at: number, value: string) => {
+    for (let i = 0; i < value.length; i++) bytes[at + i] = value.charCodeAt(i);
+  };
+  text(0, 'RIFF');
+  view.setUint32(4, 36 + samples, true);
+  text(8, 'WAVEfmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, 8000, true); // samples per second
+  view.setUint32(28, 8000, true); // bytes per second
+  view.setUint16(32, 1, true);
+  view.setUint16(34, 8, true); // 8 bits: 128 is silence
+  text(36, 'data');
+  view.setUint32(40, samples, true);
+  bytes.fill(128, 44);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `data:audio/wav;base64,${btoa(binary)}`;
+}
+
+let unlocker: HTMLAudioElement | null = null;
+
+/** An iPhone or an iPad (which says it is a Mac, with a touch screen). */
+const isAppleMobile = () =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
+/** Asks iOS to treat the sound of the app as music. Called from the press of the member. */
+function unlockSound(): void {
+  const session = (navigator as Navigator & { audioSession?: AudioSession }).audioSession;
+  if (session) {
+    session.type = 'playback';
+    return;
+  }
+  // Elsewhere a media element is not needed, and on Android it would take
+  // the sound from other apps.
+  if (!isAppleMobile()) return;
+  unlocker ??= new Audio(silence());
+  unlocker.play().catch(() => {
+    // Not needed elsewhere than on an older iPhone; refused there, nothing better to do.
+  });
+}
+
 /** The samples a track is played with. */
 function samplesOf(track: MidiTrack): string {
   if (track.isDrums) return 'percussion';
@@ -49,8 +114,8 @@ const EVERY_MS = 40;
 const FADE_SECONDS = 0.03;
 
 export class MidiEngine {
-  private readonly context: AudioContext;
-  private readonly voices: Voice[];
+  private context: AudioContext;
+  private voices: Voice[];
   private readonly end: number;
   private stretches: Stretch[] = [];
   private timer: number | null = null;
@@ -63,18 +128,25 @@ export class MidiEngine {
   private wanted = false;
   private disposed = false;
   /** Resolves once every instrument has its samples. */
-  readonly loaded: Promise<void>;
+  loaded: Promise<void>;
   /** Called when the song reaches its end. */
   onEnd: () => void = () => {};
 
   constructor(private readonly song: MidiSong) {
-    this.context = new AudioContext();
     this.end = song.measures[song.measures.length - 1] ?? 0;
     this.muted = song.tracks.map(() => false);
-    this.voices = song.tracks.map((track) => {
-      const volume = this.context.createGain();
-      volume.connect(this.context.destination);
-      const instrument = Soundfont(this.context, {
+    this.context = new AudioContext();
+    this.voices = this.voicesOn(this.context);
+    this.loaded = this.loadingOf(this.voices);
+  }
+
+  /** The instruments of the tracks, on a clock. */
+  private voicesOn(context: AudioContext): Voice[] {
+    return this.song.tracks.map((track, index) => {
+      const volume = context.createGain();
+      volume.gain.value = this.muted[index] ? this.mutedVolume : 1;
+      volume.connect(context.destination);
+      const instrument = Soundfont(context, {
         instrumentUrl: `${SAMPLES}/${samplesOf(track)}-mp3.js`,
         destination: volume,
         // Only the notes the track plays are decoded.
@@ -82,9 +154,35 @@ export class MidiEngine {
       });
       return { track, volume, instrument, next: 0 };
     });
-    this.loaded = Promise.all(this.voices.map((voice) => voice.instrument.load)).then(() => {});
+  }
+
+  private loadingOf(voices: Voice[]): Promise<void> {
+    const loading = Promise.all(voices.map((voice) => voice.instrument.load)).then(() => {});
     // Nobody may be waiting for it: a failure is then told by play().
-    this.loaded.catch(() => {});
+    loading.catch(() => {});
+    return loading;
+  }
+
+  /** Makes the clock run; false when it still does not, a moment later. */
+  private async wake(): Promise<boolean> {
+    // Read each time: the state changes while resume() is waited for.
+    const isRunning = () => this.context.state === 'running';
+    if (isRunning()) return true;
+    await Promise.race([
+      this.context.resume().catch(() => {}),
+      new Promise((resolve) => window.setTimeout(resolve, WAKE_MS)),
+    ]);
+    return isRunning();
+  }
+
+  /** A new clock, with the same instruments, in place of one iOS left interrupted. */
+  private replaceClock(): void {
+    if (this.disposed) return;
+    for (const voice of this.voices) voice.instrument.dispose();
+    void this.context.close().catch(() => {});
+    this.context = new AudioContext();
+    this.voices = this.voicesOn(this.context);
+    this.loaded = this.loadingOf(this.voices);
   }
 
   get isPlaying(): boolean {
@@ -117,8 +215,21 @@ export class MidiEngine {
   async play(): Promise<void> {
     if (this.isPlaying || this.disposed) return;
     this.wanted = true;
-    // A browser lets sound start only from a gesture of the member: this is it.
-    await this.context.resume();
+    // A browser lets sound start only from a gesture of the member: this is
+    // it. What needs the gesture is done before anything is waited for.
+    unlockSound();
+    const isAwake = await this.wake();
+    // Meanwhile the member may have paused, or left: nothing to rebuild.
+    if (!this.wanted || this.disposed) return;
+    if (!isAwake) {
+      this.replaceClock();
+      // The new clock gets a moment too; a clock that still does not run is
+      // said as a failure, never left as a silent "playing".
+      if (!(await this.wake())) {
+        if (this.disposed) return;
+        throw new Error('The sound of the device does not start');
+      }
+    }
     await this.loaded;
     // Meanwhile the member may have paused, pressed again, or left.
     if (!this.wanted || this.disposed || this.isPlaying) return;

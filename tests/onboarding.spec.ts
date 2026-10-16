@@ -133,10 +133,15 @@ test('the options chosen during an invitation are saved with the account, not on
   await enter(page).click();
   await expect(page).toHaveURL('/');
 
-  expect(kiki('textSizePercent, hasLegibleFont, hasHighContrast')).toBe('120\t1\t0');
+  // The account receives the five options; the text size stays on the device.
+  expect(kiki('textSizePercent, hasLegibleFont, hasHighContrast')).toBe('100\t1\t0');
   await expect(page.locator('html')).toHaveAttribute('data-text-size', '120');
-  // They can hint at a disability: the device keeps no trace of them.
-  expect(await page.evaluate(() => localStorage.getItem('accessibility'))).toBeNull();
+  // The options of the account can hint at a disability: the device keeps no
+  // trace of them, only its own text size.
+  const stored = JSON.parse(
+    (await page.evaluate(() => localStorage.getItem('accessibility'))) ?? '{}',
+  );
+  expect(stored).toMatchObject({ textSizePercent: 120, hasLegibleFont: false });
 });
 
 test('the photo given by whoever invited can be replaced, or removed', async ({
