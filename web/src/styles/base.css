@@ -10,6 +10,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* What shows behind the page, under the status bar and when it bounces:
+     the ground, never the black or white of the browser (#28). */
+  background: var(--ground);
 }
 
 body {

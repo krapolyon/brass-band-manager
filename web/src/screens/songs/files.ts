@@ -129,8 +129,14 @@ const PEAKS = 200;
  * The outline of a recording: how loud each of 200 slices is, from 0 to 100.
  * Computed once, by the browser that sends the recording; null when this
  * browser cannot read it, and the screen then draws a plain line of bars.
+ *
+ * Each slice is measured by its loudness, the root mean square of its
+ * samples, against the loudest slice (model/songs.md, "The waveform of a
+ * recording"). The loudest sample of each slice was used before 0.2.0: a
+ * produced recording reaches its peak in almost every second, and every bar
+ * came out full (#29).
  */
-async function peaksOf(file: Blob): Promise<number[] | null> {
+export async function peaksOf(file: Blob): Promise<number[] | null> {
   const Context = window.AudioContext;
   if (!Context) return null;
   const context = new Context();
@@ -138,24 +144,37 @@ async function peaksOf(file: Blob): Promise<number[] | null> {
     const sound = await context.decodeAudioData(await file.arrayBuffer());
     const samples = sound.getChannelData(0);
     const slice = Math.max(1, Math.floor(samples.length / PEAKS));
-    const loudest: number[] = [];
+    const levels: number[] = [];
     for (let index = 0; index < PEAKS; index++) {
-      let peak = 0;
-      const end = Math.min(samples.length, (index + 1) * slice);
-      for (let at = index * slice; at < end; at++) {
-        const level = Math.abs(samples[at] ?? 0);
-        if (level > peak) peak = level;
+      let sum = 0;
+      const start = index * slice;
+      const end = Math.min(samples.length, start + slice);
+      for (let at = start; at < end; at++) {
+        const sample = samples[at] ?? 0;
+        sum += sample * sample;
       }
-      loudest.push(peak);
+      levels.push(end > start ? Math.sqrt(sum / (end - start)) : 0);
     }
     // Against the loudest slice: a quiet recording still fills the height.
-    const top = Math.max(...loudest, 0.0001);
-    return loudest.map((peak) => Math.round((peak / top) * 100));
+    const top = Math.max(...levels, 0.0001);
+    return levels.map((level) => Math.round((level / top) * 100));
   } catch {
     return null;
   } finally {
     void context.close();
   }
+}
+
+/**
+ * Computes the outline of a recording and keeps it beside it, said for this
+ * version of the recording and no other: one sent meanwhile keeps its own.
+ * Null when there was nothing to keep.
+ */
+export async function saveOutline(songId: number, file: Blob, url: string): Promise<Song | null> {
+  const peaks = await peaksOf(file);
+  const version = /[?&]v=([0-9a-f]+)/.exec(url)?.[1];
+  if (!peaks || !version) return null;
+  return api<Song>(`/api/songs/${songId}/audio/peaks`, { method: 'PUT', body: { peaks, version } });
 }
 
 // Reading a large score takes a few seconds; past this, something is wrong.
@@ -258,17 +277,9 @@ export async function sendFiles(
       const song = await sendSongFile(songFileAddress(songId, role, dropped.instrumentId), content);
       if (role === 'museScore') isScoreSaved = true;
       if (role === 'audio') {
-        const peaks = await peaksOf(dropped.file);
-        // Said for this recording, and no other: one sent meanwhile keeps its own.
-        const version = /[?&]v=([0-9a-f]+)/.exec(song.audio?.url ?? '')?.[1];
-        if (peaks && version) {
-          await api<Song>(`/api/songs/${songId}/audio/peaks`, {
-            method: 'PUT',
-            body: { peaks, version },
-          }).catch(() => {
-            // The recording is saved; without its outline the screen draws plain bars.
-          });
-        }
+        await saveOutline(songId, dropped.file, song.audio?.url ?? '').catch(() => {
+          // The recording is saved; without its outline the screen draws plain bars.
+        });
       }
     } catch (error) {
       failures.push({

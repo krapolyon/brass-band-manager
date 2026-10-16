@@ -284,6 +284,40 @@ test.describe('a song', () => {
     await expect(mini).toHaveCount(0);
   });
 
+  test('MP3: a recording without its outline gets it from the browser of who manages songs, not of a member (#29)', async ({
+    page,
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    await sendFile(sisi, `/api/songs/${seven}/audio`, mp3);
+    await sisi.dispose();
+    const fetched = (page: Page) => {
+      const asked: string[] = [];
+      page.on('request', (request) => {
+        if (request.url().includes(`/api/songs/${seven}/audio`)) asked.push(request.method());
+      });
+      return asked;
+    };
+
+    // A member: the screen draws plain bars and asks for nothing.
+    let asked = fetched(page);
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}?mode=mp3`);
+    await expect(
+      page.getByRole('slider', { name: 'Position dans l’enregistrement' }),
+    ).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(asked).toEqual([]);
+
+    // Who manages songs: the recording is read to compute it. The made-up
+    // recording holds no sound, so nothing comes of it here.
+    await page.context().clearCookies();
+    asked = fetched(page);
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${seven}?mode=mp3`);
+    await expect.poll(() => asked).toContain('GET');
+  });
+
   test('PDF: the part of the member’s instrument comes first; another is one tap away, a missing one cannot be chosen', async ({
     page,
   }) => {

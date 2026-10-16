@@ -67,6 +67,13 @@ function write() {
   set('spacing', current.hasIncreasedSpacing ? 'increased' : null);
   // Read by what shows a notification or a tooltip, when the app has some.
   set('timeouts', current.hasExtendedTimeouts ? 'extended' : null);
+
+  // The browser and the phone colour their bars with the ground of the
+  // scheme in use: the status bar of an installed app shows no band of
+  // another colour (#28).
+  const ground = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim();
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (meta && ground !== '') meta.content = ground;
 }
 
 /** Applies the appearance and the accessibility options of whoever uses the app now. */

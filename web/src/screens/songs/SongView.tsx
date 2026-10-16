@@ -27,6 +27,7 @@ import {
   useSong,
 } from '../../songs.ts';
 import { keep, kept, useIsTablet } from './device.ts';
+import { saveOutline } from './files.ts';
 import { average, duration as clock, day } from './format.ts';
 import { LiveView } from './LiveView.tsx';
 import { MidiView } from './MidiView.tsx';
@@ -468,11 +469,42 @@ function NothingYet({ icon, title, text, action }: NothingYetProps) {
   );
 }
 
+// The recordings whose outline this page is computing: once each.
+const computing = new Set<string>();
+
+/**
+ * A recording without its outline, or with one of an older kind (#29), gets
+ * it from the browser of whoever manages songs, the first time they open its
+ * MP3 mode (model/songs.md, "The waveform of a recording"). Until then the
+ * waveform is a plain line of bars.
+ */
+function useOutline(song: Song) {
+  const me = useMe().data;
+  const queryClient = useQueryClient();
+  const canManage = me?.permissions.includes('manageSongs') ?? false;
+  const url = song.audio?.url ?? '';
+  const isMissing = song.audio !== null && song.audio.peaks === null;
+  useEffect(() => {
+    if (!canManage || !isMissing || url === '' || computing.has(url)) return;
+    computing.add(url);
+    (async () => {
+      const response = await fetch(url);
+      if (!response.ok) return;
+      const saved = await saveOutline(song.id, await response.blob(), url);
+      if (saved) queryClient.setQueryData(['songs', song.id], saved);
+    })().catch(() => {
+      // Tried again the next time the page is opened.
+      computing.delete(url);
+    });
+  }, [canManage, isMissing, url, song.id, queryClient]);
+}
+
 // Figma: Songs / Song — MP3. The recording of the band: its outline, which
 // the member touches or drags, and back and forward ten seconds.
 function AudioCard({ song }: { song: Song }) {
   const { t } = useTranslation();
   const player = usePlayer();
+  useOutline(song);
   const audio = song.audio;
   if (!audio) return null;
 
