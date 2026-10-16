@@ -1170,3 +1170,42 @@ button.songs-liveTile:disabled,
 .songs-spokenNames p {
   margin: 0;
 }
+
+/* ---------------------------------------------------------------
+   The Live mode driven by the MIDI player (Songs › 14): the piano button
+   beside the start measure, the reason when the song has no MIDI file, the
+   chip above the controls while the player drives the score, and the tracks
+   of its sheet, one line each.
+   --------------------------------------------------------------- */
+.songs-liveControls:has(> .songs-liveStart) {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.songs-liveControls:has(> .songs-liveStart) > :not(.songs-liveStart, .IconButton) {
+  grid-column: 1 / -1;
+}
+
+.songs-liveNoMidi {
+  margin: 0;
+}
+
+.songs-liveMidiChip {
+  justify-self: center;
+  align-self: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusFull);
+  background: none;
+  cursor: pointer;
+}
+
+.songs-liveMidiTracks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

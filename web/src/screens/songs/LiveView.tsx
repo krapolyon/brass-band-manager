@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
+import { Chip } from '../../components/Chip.tsx';
 import { FilterChip } from '../../components/FilterChip.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
@@ -10,10 +11,15 @@ import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Pictogram } from '../../components/Pictogram.tsx';
 import { SongPartRow } from '../../components/SongPartRow.tsx';
+import { SongPartTrack } from '../../components/SongPartTrack.tsx';
 import { TextField } from '../../components/TextField.tsx';
 import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import type { Song } from '../../songs.ts';
+import { mutedVolumeOf, TempoAndVolume, tempoRange, useTracks } from './MidiView.tsx';
+import { countedBpm, type MidiSong, readMidi, tickOfPlace, writtenAt } from './midi.ts';
+import { MidiEngine } from './midiEngine.ts';
+import { useMidiSettings } from './midiSettings.ts';
 import { usePlayer } from './Player.tsx';
 import { isCompound, partAlone, partsOf, readScore, type Timeline, timelineOf } from './score.ts';
 import './songs.css';
@@ -26,6 +32,11 @@ import './songs.css';
 //
 // The score is the MusicXML kept with the song (model/songs.md, "Generated
 // files"), drawn by Verovio, which is loaded only here.
+//
+// The Live mode can also be driven by the MIDI player (issue #10, Songs ›
+// 14): the piano button opens the settings the MIDI mode shares, and the
+// score then follows the position of the player, measure by measure, repeats
+// and jumps included, instead of the clock of the tempo.
 
 type TrackName = { name: string; instrumentId: number | null };
 
@@ -83,6 +94,20 @@ export function LiveView({ song, onClose }: Props) {
     retry: false,
   });
 
+  // The MIDI file, as the MIDI mode reads it: the same copy when it was opened.
+  const midiUrl = song.midi?.url ?? '';
+  const midi = useQuery({
+    queryKey: ['songs', song.id, 'midi', midiUrl],
+    queryFn: async () => {
+      const response = await fetch(midiUrl);
+      if (!response.ok) throw new Error('The MIDI file could not be loaded');
+      return readMidi(await response.arrayBuffer());
+    },
+    enabled: midiUrl !== '',
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
+  });
+
   // The Live mode takes the whole screen, in the dark scheme: a score is read
   // at night as well, and nothing else is on the screen. It is the browser's
   // own <dialog>, opened as a modal: the page behind cannot be reached, the
@@ -119,19 +144,27 @@ export function LiveView({ song, onClose }: Props) {
         </div>
       )}
       {file.data && file.data.parts.length > 0 && (
-        <LiveScore key={url} song={song} onClose={onClose} {...file.data} />
+        <LiveScore
+          key={url}
+          song={song}
+          onClose={onClose}
+          midi={midi.data && midi.data.tracks.length > 0 ? midi.data : null}
+          {...file.data}
+        />
       )}
     </dialog>
   );
 }
 
 type ScoreProps = Props & {
+  /** The MIDI file of the song, when it has one that plays. */
+  midi: MidiSong | null;
   score: Document;
   parts: { id: string; name: string }[];
   timeline: Timeline;
 };
 
-function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
+function LiveScore({ song, onClose, midi, score, parts, timeline }: ScoreProps) {
   const { t } = useTranslation();
   const me = useMe().data;
   const instruments = instrumentsOf(useSections().data);
@@ -159,15 +192,19 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
     choices.find((choice) => choice.id === chosenPart) ??
     choices.find((choice) => choice.own) ??
     choices[0];
-  const [panel, setPanel] = useState<'parts' | 'start' | null>(null);
+  const [panel, setPanel] = useState<'parts' | 'start' | 'midi' | null>(null);
 
   // ---- Where the song is ----
   const { measures, played, marks } = timeline;
   const firstBpm = song.bpm ?? timeline.bpm ?? 120;
   const [bpm, setBpm] = useState(firstBpm);
   const [state, setState] = useState<'ready' | 'tapping' | 'playing'>('ready');
+  // What moves the score while it plays: the clock of the tempo, or the MIDI player.
+  const [driver, setDriver] = useState<'clock' | 'midi'>('clock');
   // The place in the played order: the measure the song is at, or starts from.
   const [at, setAt] = useState(0);
+  const atNow = useRef(0);
+  atNow.current = at;
   const origin = useRef({ at: 0, time: 0 });
   const written = played[at] ?? 0;
   const label = measures[written]?.label ?? '1';
@@ -180,9 +217,94 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
     [measures, played, bpm, timeline.beatQuarters],
   );
 
+  // ---- The MIDI player, when it drives the score ----
+  const engine = useRef<MidiEngine | null>(null);
+  const fileBpm = midi ? countedBpm(midi) : 120;
+  const midiBandBpm = song.bpm ?? Math.round(fileBpm);
+  const [settings, setSettings] = useMidiSettings(song.id, midiBandBpm, midi?.tracks.length ?? 0);
+  const [sounds, setSounds] = useState<'loading' | 'ready' | 'failed'>('loading');
+  // One engine, made when the member first opens the sheet, kept until the
+  // Live mode closes: its sounds load while the member sets the tracks.
+  const engineFor = (file: MidiSong) => {
+    if (engine.current) return engine.current;
+    const created = new MidiEngine(file);
+    created.loaded.then(
+      () => setSounds('ready'),
+      () => setSounds('failed'),
+    );
+    created.onEnd = () => {
+      setState('ready');
+      setDriver('clock');
+      setAt(0);
+    };
+    engine.current = created;
+    return created;
+  };
+  useEffect(
+    () => () => {
+      engine.current?.dispose();
+      engine.current = null;
+    },
+    [],
+  );
+  // The settings shared with the MIDI mode reach the engine as they change.
+  useEffect(() => {
+    const player = engine.current;
+    if (!player) return;
+    settings.muted.forEach((isMuted, index) => {
+      player.setMuted(index, isMuted);
+    });
+    player.setMutedVolume(mutedVolumeOf(settings.mutedStep));
+    player.setSpeed(settings.bpm / fileBpm);
+  }, [settings, fileBpm]);
+
+  const playWithMidi = async () => {
+    if (!midi) return;
+    const player = engineFor(midi);
+    recording.pause();
+    player.seek(tickOfPlace(midi, at, played));
+    setDriver('midi');
+    setState('playing');
+    setPanel(null);
+    try {
+      await player.play();
+    } catch {
+      setSounds('failed');
+      setState('ready');
+      setDriver('clock');
+    }
+  };
+  // The chip of the MIDI player: the player pauses, and the sheet opens again.
+  const pauseMidi = () => {
+    engine.current?.pause();
+    setState('ready');
+    setDriver('clock');
+  };
+
+  // While the MIDI player drives it, the score follows where the player is.
+  useEffect(() => {
+    if (state !== 'playing' || driver !== 'midi' || !midi) return;
+    let frame = 0;
+    const follow = () => {
+      const player = engine.current;
+      if (player) {
+        const measure = writtenAt(midi, player.position(), played);
+        const from = atNow.current;
+        // The same written measure nearest to where the score is, going on:
+        // inside a repeat this keeps the pass the player is in.
+        const after = played.indexOf(measure, from);
+        const place = after !== -1 ? after : Math.max(0, played.lastIndexOf(measure, from));
+        if (place !== from) setAt(place);
+      }
+      frame = window.requestAnimationFrame(follow);
+    };
+    frame = window.requestAnimationFrame(follow);
+    return () => window.cancelAnimationFrame(frame);
+  }, [state, driver, midi, played]);
+
   // While playing, the clock says which measure the song is at.
   useEffect(() => {
-    if (state !== 'playing') return;
+    if (state !== 'playing' || driver !== 'clock') return;
     let frame = 0;
     const follow = () => {
       let index = origin.current.at;
@@ -202,7 +324,7 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
     };
     frame = window.requestAnimationFrame(follow);
     return () => window.cancelAnimationFrame(frame);
-  }, [state, played, secondsOf]);
+  }, [state, driver, played, secondsOf]);
 
   // The screen stays on while the song plays; the device takes it back after.
   // A browser lets go of it when the app is hidden: it is asked again on return.
@@ -235,12 +357,20 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
     setAt(index);
     setState('playing');
   };
-  const pause = () => setState('ready');
-  // Moves to a place of the played order, playing or not.
+  const pause = () => {
+    if (driver === 'midi') {
+      pauseMidi();
+      return;
+    }
+    setState('ready');
+  };
+  // Moves to a place of the played order, playing or not. The MIDI player,
+  // when it drives the score, goes there too.
   const moveTo = (index: number) => {
     const to = Math.min(Math.max(0, index), Math.max(0, played.length - 1));
     origin.current = { at: to, time: performance.now() };
     setAt(to);
+    if (driver === 'midi' && midi) engine.current?.seek(tickOfPlace(midi, to, played));
   };
   // The place of a written measure nearest to where the song is: before it
   // when the member goes back, after it when they go on. Inside a repeat this
@@ -534,6 +664,24 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
           {state === 'playing' ? (
             <>
               <p className="songs-liveHint textCaption">{t('songs.live.dragHint')}</p>
+              {driver === 'midi' && (
+                <button
+                  type="button"
+                  className="songs-liveMidiChip"
+                  aria-haspopup="dialog"
+                  onClick={() => {
+                    pauseMidi();
+                    setPanel('midi');
+                  }}
+                >
+                  <Chip kind="accent" icon="Piano">
+                    {t('songs.live.midi.following', {
+                      bpm: settings.bpm,
+                      count: settings.muted.filter((isMuted) => !isMuted).length,
+                    })}
+                  </Chip>
+                </button>
+              )}
               <div className="songs-liveBar">
                 {/* Not announced at each measure: a screen reader would never stop. */}
                 <p className="songs-liveTile" data-tile="measure">
@@ -550,7 +698,7 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
                 </button>
                 <p className="songs-liveTile" data-tile="tempo">
                   <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>
-                  <span className="textTitle">{bpm}</span>
+                  <span className="textTitle">{driver === 'midi' ? settings.bpm : bpm}</span>
                 </p>
               </div>
             </>
@@ -573,6 +721,24 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
                 </span>
                 <Icon name="ChevronDown" size={20} />
               </button>
+              <IconButton
+                kind="glass"
+                icon="Piano"
+                label={t('songs.live.midi.open')}
+                aria-haspopup="dialog"
+                aria-describedby={midi ? undefined : 'songs-liveNoMidi'}
+                disabled={!midi || drawing !== 'drawn'}
+                onClick={() => {
+                  if (!midi) return;
+                  engineFor(midi);
+                  setPanel('midi');
+                }}
+              />
+              {!midi && (
+                <p className="songs-liveNoMidi textCaption songs-muted" id="songs-liveNoMidi">
+                  {t('songs.live.midi.none')}
+                </p>
+              )}
               <div className="songs-liveBar">
                 <p className="songs-liveTile" data-tile="tempo">
                   <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>
@@ -669,6 +835,26 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
       </Panel>
 
       <Panel
+        open={panel === 'midi'}
+        onClose={() => setPanel(null)}
+        title={t('songs.live.midi.title')}
+      >
+        {panel === 'midi' && midi && (
+          <MidiChoice
+            midi={midi}
+            settings={settings}
+            onChange={setSettings}
+            bandBpm={midiBandBpm}
+            fileBpm={fileBpm}
+            measure={label}
+            total={measures.length}
+            sounds={sounds}
+            onPlay={playWithMidi}
+          />
+        )}
+      </Panel>
+
+      <Panel
         open={panel === 'start'}
         onClose={() => setPanel(null)}
         title={t('songs.live.startTitle')}
@@ -685,6 +871,90 @@ function LiveScore({ song, onClose, score, parts, timeline }: ScoreProps) {
         )}
       </Panel>
     </>
+  );
+}
+
+type MidiChoiceProps = {
+  midi: MidiSong;
+  settings: ReturnType<typeof useMidiSettings>[0];
+  onChange: ReturnType<typeof useMidiSettings>[1];
+  bandBpm: number;
+  fileBpm: number;
+  /** The measure the score starts from, as it is written: "33". */
+  measure: string;
+  total: number;
+  sounds: 'loading' | 'ready' | 'failed';
+  onPlay: () => void;
+};
+
+// Figma: Songs / Song — Live, the MIDI sheet (Songs › 14). The settings of
+// the MIDI mode, shared with it: the tracks and their mute, one line each
+// (no lane of notes here, owner, 2026-10-16), the tempo, the volume of the cut
+// tracks; the loop is not offered. Its button starts the player from the
+// measure chosen.
+function MidiChoice(props: MidiChoiceProps) {
+  const { midi, settings, onChange, bandBpm, fileBpm, measure, total, sounds, onPlay } = props;
+  const { t } = useTranslation();
+  const { tracks } = useTracks(midi);
+  const { slowest, fastest } = tempoRange(fileBpm, bandBpm);
+  const hasMuted = settings.muted.some(Boolean);
+
+  return (
+    <div className="songs-panel songs-liveMidi">
+      <p className="songs-muted">{t('songs.live.midi.lead')}</p>
+      {sounds === 'failed' && <Message kind="danger">{t('songs.midi.soundsError')}</Message>}
+      <section className="songs-midiTracks" aria-label={t('songs.midi.tracks')}>
+        <div className="songs-midiHeading">
+          <span className="textLabel songs-muted">
+            {t('songs.midi.measure', { measure, total })}
+          </span>
+          {hasMuted && (
+            <button
+              type="button"
+              className="songs-textButton textLabel"
+              onClick={() => onChange({ muted: settings.muted.map(() => false) })}
+            >
+              {t('songs.midi.unmuteAll')}
+            </button>
+          )}
+        </div>
+        <ul className="songs-liveMidiTracks">
+          {tracks.map(({ name, pictogram, own }, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: two tracks may carry the same name
+            <li key={index}>
+              <SongPartTrack
+                name={name}
+                pictogram={pictogram}
+                own={own}
+                muted={settings.muted[index]}
+                onToggleMute={() =>
+                  onChange({
+                    muted: settings.muted.map((value, at) => (at === index ? !value : value)),
+                  })
+                }
+                ownLabel={t('songs.midi.ownTrack')}
+                muteLabel={t('songs.midi.mute', { name })}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
+      <TempoAndVolume
+        bandBpm={bandBpm}
+        bpm={settings.bpm}
+        onBpm={(bpm) => onChange({ bpm: Math.min(Math.max(bpm, slowest), fastest) })}
+        mutedStep={settings.mutedStep}
+        onMutedStep={(mutedStep) => onChange({ mutedStep })}
+      />
+      <Button icon="Piano" disabled={sounds === 'failed'} onClick={onPlay}>
+        {t('songs.live.midi.play')}
+      </Button>
+      {sounds === 'loading' && (
+        <p role="status" className="textCaption songs-muted">
+          {t('songs.midi.soundsLoading')}
+        </p>
+      )}
+    </div>
   );
 }
 

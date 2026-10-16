@@ -557,13 +557,13 @@ test.describe('the MIDI player', () => {
     await expect(page.getByText('Mesure 3 sur 4')).toBeVisible();
 
     // Playing: the sounds of the app load, the song moves, and pause stops it.
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeVisible();
     await expect(page.getByText('Mesure 4 sur 4')).toBeVisible({ timeout: 20_000 });
     // The range is played again: the song comes back to its start.
     await expect(page.getByText('Mesure 3 sur 4')).toBeVisible({ timeout: 10_000 });
     await page.getByRole('button', { name: 'Mettre en pause' }).click();
-    await expect(page.getByRole('button', { name: 'Lire' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeVisible();
 
     await noOverflow(page);
   });
@@ -592,7 +592,7 @@ test.describe('the MIDI player', () => {
     await openMidi(page);
     await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 20_000 });
     expect(
       await page.evaluate(() => (window as unknown as { clocks: () => number }).clocks()),
@@ -650,7 +650,7 @@ test.describe('the MIDI player', () => {
     const lane = page.locator('.SongPartTrack-lane canvas').first();
     const drawn = () => lane.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
 
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 20_000 });
     // Two looks within the same measure show the same lane.
     const first = await drawn();
@@ -676,7 +676,7 @@ test.describe('the MIDI player', () => {
     });
     await withScore(playwright, page);
     await openMidi(page);
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(page.getByText(/Mesure [2-4] sur 4/)).toBeVisible({ timeout: 20_000 });
 
     expect(elsewhere).toEqual([]);
@@ -750,7 +750,9 @@ test.describe('the Live mode', () => {
     await expect(
       page.getByRole('button', { name: 'Changer de partition : Trompette' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
     await expect(page.locator('.songs-liveSheet g.measure')).toHaveCount(4);
     await expect(page.locator('[data-tile="tempo"]')).toContainText('120');
 
@@ -769,7 +771,7 @@ test.describe('the Live mode', () => {
     );
 
     // Playing: a measure of four beats at 120 lasts two seconds.
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(measure(page)).toContainText('3');
     await expect(
       page.getByText('Décalé ? Fais glisser la partition pour te recaler.'),
@@ -781,7 +783,7 @@ test.describe('the Live mode', () => {
     });
 
     // Pause keeps the place.
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await page.getByRole('button', { name: 'Mettre en pause' }).click();
     await expect(page.getByRole('button', { name: /On démarre à/ })).toContainText('Mesure 1');
 
@@ -802,7 +804,9 @@ test.describe('the Live mode', () => {
     // "Tuba" is a known spelling of the Souba.
     await page.getByRole('dialog').getByRole('button', { name: 'Souba' }).click();
     await expect(page.getByRole('button', { name: 'Changer de partition : Souba' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
 
     await page.getByRole('button', { name: 'Quitter le mode live' }).click();
     await expect(
@@ -819,12 +823,14 @@ test.describe('the Live mode', () => {
     sql("UPDATE song SET bpm = 240 WHERE name = 'Hey Ya'");
     await page.reload();
     await openLive(page);
-    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
     // The tempo of the band comes before the one written in the score (120).
     await expect(page.locator('[data-tile="tempo"]')).toContainText('240');
 
     const seen: string[] = [];
-    await page.getByRole('button', { name: 'Lire' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     const tile = page.locator('[data-tile="measure"] .textTitle');
     for (let look = 0; look < 80 && (await tile.count()) > 0; look++) {
       const now = await tile.textContent().catch(() => null);
@@ -832,6 +838,70 @@ test.describe('the Live mode', () => {
       await page.waitForTimeout(100);
     }
     expect(seen).toEqual(['1', '2', '1', '2', '3', '4']);
+  });
+
+  test('driven by the MIDI player: the settings of the MIDI mode, then the score follows the player through the repeat (#10)', async ({
+    page,
+  }) => {
+    // The first two measures are played twice: 1 2 1 2 3 4.
+    await withScore(page, 'repeat');
+    sql("UPDATE song SET bpm = 240 WHERE name = 'Hey Ya'");
+    await page.reload();
+
+    // A track cut in the MIDI mode is cut in the sheet of the Live mode: one state.
+    await page
+      .getByRole('group', { name: 'Modes du morceau' })
+      .getByRole('button', { name: 'MIDI' })
+      .click();
+    await page.getByRole('button', { name: 'Couper Souba' }).click();
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+
+    await page.getByRole('button', { name: 'Lire avec le MIDI' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Lire avec le MIDI' });
+    await expect(
+      sheet.getByText('La partition suit le lecteur, reprises et codas comprises.'),
+    ).toBeVisible();
+    await expect(sheet.getByRole('button', { name: 'Couper Souba', pressed: true })).toBeVisible();
+    // The tempo of the band, shared with the MIDI mode; the loop is not offered.
+    await expect(sheet.getByLabel('240 battements par minute')).toBeVisible();
+    await expect(sheet.getByText('En boucle')).toHaveCount(0);
+
+    const seen: string[] = [];
+    await sheet.getByRole('button', { name: 'Lire avec le MIDI' }).click();
+    await expect(sheet).toBeHidden();
+    const chip = page.getByRole('button', { name: 'Suit le MIDI · 240 · 1 piste' });
+    await expect(chip).toBeVisible({ timeout: 30_000 });
+    const tile = page.locator('[data-tile="measure"] .textTitle');
+    for (let look = 0; look < 120 && (await tile.count()) > 0; look++) {
+      const now = await tile.textContent().catch(() => null);
+      if (now && seen[seen.length - 1] !== now) seen.push(now);
+      await page.waitForTimeout(100);
+    }
+    expect(seen).toEqual(['1', '2', '1', '2', '3', '4']);
+    // The end of the song: ready again.
+    await expect(page.getByRole('button', { name: /On démarre à/ })).toBeVisible();
+
+    // The chip pauses the player and opens the sheet again.
+    await page.getByRole('button', { name: 'Lire avec le MIDI' }).click();
+    await sheet.getByRole('button', { name: 'Lire avec le MIDI' }).click();
+    await page.getByRole('button', { name: /Suit le MIDI/ }).click();
+    await expect(sheet).toBeVisible();
+  });
+
+  test('a song without a MIDI file shows the piano button disabled, with the reason', async ({
+    page,
+  }) => {
+    await withScore(page);
+    sql("UPDATE song SET midiPath = NULL WHERE name = 'Hey Ya'");
+    await page.reload();
+    await openLive(page);
+    const piano = page.getByRole('button', { name: 'Lire avec le MIDI' });
+    await expect(piano).toBeDisabled();
+    await expect(piano).toHaveAccessibleDescription('Pas de fichier MIDI pour ce morceau.');
+    await expect(page.getByText('Pas de fichier MIDI pour ce morceau.')).toBeVisible();
   });
 
   test('the part shown first is the one of the member’s instrument, wherever it is in the score', async ({
@@ -874,7 +944,9 @@ test.describe('the Live mode', () => {
   }) => {
     await withScore(page);
     await openLive(page);
-    await expect(page.getByRole('button', { name: 'Lire' })).toBeEnabled({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
     await page.getByRole('button', { name: 'Donner le tempo' }).click();
 
     const zone = page.getByRole('button', { name: /Tape le tempo/ });
@@ -898,7 +970,7 @@ test.describe('the Live mode', () => {
     await page.getByRole('button', { name: 'Mettre en pause' }).click();
     await page.getByRole('button', { name: 'Donner le tempo' }).click();
     await page.getByRole('button', { name: 'Annuler' }).click();
-    await expect(page.getByRole('button', { name: 'Lire' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeVisible();
   });
 });
 

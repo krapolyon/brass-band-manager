@@ -990,7 +990,16 @@
       "tapStart_other": "Tape {{count}} fois, et ça part sur le 1 suivant.",
       "tapSoFar_one": "{{bpm}} bpm pour l’instant. Encore un temps, et ça part sur le 1 suivant.",
       "tapSoFar_other": "{{bpm}} bpm pour l’instant. Encore {{count}} temps, et ça part sur le 1 suivant.",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "midi": {
+        "open": "Lire avec le MIDI",
+        "title": "Lire avec le MIDI",
+        "lead": "La partition suit le lecteur, reprises et codas comprises. Les réglages sont ceux du mode MIDI.",
+        "play": "Lire avec le MIDI",
+        "none": "Pas de fichier MIDI pour ce morceau.",
+        "following_one": "Suit le MIDI · {{bpm}} · {{count}} piste",
+        "following_other": "Suit le MIDI · {{bpm}} · {{count}} pistes"
+      }
     },
     "midi": {
       "loading": "Chargement du fichier MIDI…",
