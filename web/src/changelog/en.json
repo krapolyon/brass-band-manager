@@ -5,11 +5,11 @@
     "changes": [
       {
         "kind": "added",
-        "text": "Choose which notifications you get: playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument."
+        "text": "New types of notifications in a new settings screen : playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument."
       },
       {
         "kind": "added",
-        "text": "Your gigs in the calendar of your phone or your computer, kept up to date by itself."
+        "text": "Calendard sync of your gigs."
       },
       {
         "kind": "added",
@@ -17,15 +17,15 @@
       },
       {
         "kind": "added",
-        "text": "The Live mode can follow the MIDI player: the score scrolls with the music, repeats included."
+        "text": "The Live mode can follow the MIDI player: the score scrolls with the music."
       },
       {
         "kind": "changed",
-        "text": "In a setlist, swipe a song to the left to remove it; the handle moves it."
+        "text": "In a setlist, swipe a song to the left to remove it."
       },
       {
         "kind": "changed",
-        "text": "The phone that moves the live setlist on no longer rings for it."
+        "text": "The phone that moves the live setlist does no longer receive a next song notification."
       },
       {
         "kind": "fixed",
@@ -42,12 +42,12 @@
     "date": "2026-10-16",
     "changes": [
       {
-        "kind": "added",
-        "text": "The version number and what is new in the app, right here."
+        "kind": "changed",
+        "text": "The app now show this changelog."
       },
       {
         "kind": "changed",
-        "text": "The text size is set on each device: bigger on your phone, normal on the computer."
+        "text": "The text size adjustement is now a per-device setting."
       },
       {
         "kind": "changed",
