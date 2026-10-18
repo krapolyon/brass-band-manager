@@ -17,7 +17,7 @@
       },
       {
         "kind": "added",
-        "text": "The length of a song and of a setlist, and the setlist editor can propose songs, following the rules of the band."
+        "text": "Songs now have a length and style and difficulty information, used by the new setlist generator."
       },
       {
         "kind": "added",

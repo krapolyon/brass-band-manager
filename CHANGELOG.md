@@ -10,7 +10,7 @@ What changes in the app, version after version. This file is written by
 - Discord: the songs and gigs open their channel, and the sheet of a song shows the latest messages that tag your section.
 - Choose how each notification reaches you: by notification, by email, or both.
 - The band can give the installed app an icon of its own.
-- The length of a song and of a setlist, and the setlist editor can propose songs, following the rules of the band.
+- Songs now have a length and style and difficulty information, used by the new setlist generator.
 - The MIDI player can loop over several rehearsal marks that follow each other.
 
 ### Changed
