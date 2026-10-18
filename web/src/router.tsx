@@ -5,6 +5,7 @@ import { PasswordLinkScreen } from './screens/access/PasswordLinkScreen.tsx';
 import { SignInScreen } from './screens/access/SignInScreen.tsx';
 import { BandAppearanceScreen } from './screens/band/BandAppearanceScreen.tsx';
 import { BandCostumesScreen } from './screens/band/BandCostumesScreen.tsx';
+import { BandDiscordScreen } from './screens/band/BandDiscordScreen.tsx';
 import { BandMigrationsScreen } from './screens/band/BandMigrationsScreen.tsx';
 import { BandRemindersScreen } from './screens/band/BandRemindersScreen.tsx';
 import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
       { path: '/band/spellings', element: <BandSpellingsScreen /> },
       { path: '/band/costumes', element: <BandCostumesScreen /> },
       { path: '/band/reminders', element: <BandRemindersScreen /> },
+      { path: '/band/discord', element: <BandDiscordScreen /> },
       { path: '/band/migrations', element: <BandMigrationsScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/settings/profile', element: <ProfileScreen /> },

@@ -20,10 +20,17 @@ function daysOf(text: string): number | null | false {
   return /^\d{1,2}$/.test(text.trim()) && days >= 1 && days <= 90 ? days : false;
 }
 
-// Figma: Band settings / Gig reminders (section 4). How many days before a
-// gig its two reminders are sent, and from which hour. It changes what every
-// member receives: saved with its button. The reminders themselves are not
-// sent yet: the screen says so.
+/** The time between two songs as it is typed: a whole number from 0 to 300; false otherwise. */
+function gapOf(text: string): number | false {
+  const seconds = Number(text);
+  return /^\d{1,3}$/.test(text.trim()) && seconds <= 300 ? seconds : false;
+}
+
+// Figma: Band settings / Gigs and setlists (section 6, 0.3.0). How many days
+// before a gig its two reminders are sent, from which hour, and the time
+// counted between two songs of a setlist. It changes what every member
+// receives: saved with its button. The second reminder may come before or
+// after the first (Band v1.9).
 export function BandRemindersScreen() {
   const { t } = useTranslation();
   const push = usePush();
@@ -33,7 +40,8 @@ export function BandRemindersScreen() {
   const [first, setFirst] = useState('');
   const [second, setSecond] = useState('');
   const [hour, setHour] = useState('18');
-  const [errors, setErrors] = useState<{ first?: string; second?: string }>({});
+  const [gap, setGap] = useState('30');
+  const [errors, setErrors] = useState<{ first?: string; second?: string; gap?: string }>({});
   const [outcome, setOutcome] = useState<'saved' | 'failed' | null>(null);
   const [isSaving, setSaving] = useState(false);
 
@@ -42,6 +50,7 @@ export function BandRemindersScreen() {
     setFirst(band.gigFirstReminderDays === null ? '' : String(band.gigFirstReminderDays));
     setSecond(band.gigSecondReminderDays === null ? '' : String(band.gigSecondReminderDays));
     setHour(String(band.gigReminderHour));
+    setGap(String(band.setlistGapSeconds));
   }, [band]);
 
   if (canManage === null) return null;
@@ -50,20 +59,15 @@ export function BandRemindersScreen() {
   const save = async () => {
     const firstDays = daysOf(first);
     const secondDays = daysOf(second);
+    const gapSeconds = gapOf(gap);
     const found = {
       first: firstDays === false ? t('band.reminders.errors.days') : undefined,
-      second:
-        secondDays === false
-          ? t('band.reminders.errors.days')
-          : typeof firstDays === 'number' &&
-              typeof secondDays === 'number' &&
-              secondDays >= firstDays
-            ? t('band.reminders.errors.order')
-            : undefined,
+      second: secondDays === false ? t('band.reminders.errors.days') : undefined,
+      gap: gapSeconds === false ? t('band.reminders.errors.gap') : undefined,
     };
     setErrors(found);
     setOutcome(null);
-    if (found.first || found.second || firstDays === false || secondDays === false) return;
+    if (firstDays === false || secondDays === false || gapSeconds === false) return;
 
     setSaving(true);
     try {
@@ -73,6 +77,7 @@ export function BandRemindersScreen() {
           gigFirstReminderDays: firstDays,
           gigSecondReminderDays: secondDays,
           gigReminderHour: Number(hour),
+          setlistGapSeconds: gapSeconds,
         },
       });
       queryClient.setQueryData(['gigReminders'], saved);
@@ -136,6 +141,21 @@ export function BandRemindersScreen() {
               value: String(value),
               label: t('band.reminders.hourOption', { hour: value }),
             }))}
+          />
+        </Sheet>
+        <Sheet title={t('band.reminders.setlists')}>
+          <TextField
+            label={t('band.reminders.gap')}
+            inputMode="numeric"
+            hint={t('band.reminders.gapHint')}
+            error={errors.gap}
+            value={gap}
+            onChange={(event) => setGap(event.target.value)}
+            trailing={
+              <span className="band-unit textBodyLarge" aria-hidden="true">
+                {t('band.reminders.gapUnit')}
+              </span>
+            }
           />
         </Sheet>
       </div>

@@ -129,9 +129,9 @@ export function SettingsScreen() {
                 push
                   ? push.isSubscribed
                     ? t('settings.notifications.detailOn', {
-                        // The choices of the account that are on.
+                        // The choices of the account that are on, by any channel.
                         count: Object.values(notificationSettings ?? {}).filter(
-                          (channel) => channel === 'PUSH',
+                          (channel) => channel !== 'OFF',
                         ).length,
                       })
                     : t('settings.notifications.detailOff')

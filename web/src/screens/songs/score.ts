@@ -128,12 +128,80 @@ const childrenOf = (parent: Element, tag: string) =>
 const partElements = (score: Document) =>
   childrenOf(score.documentElement, 'part').filter((part) => part.getAttribute('id') !== null);
 
-/** The parts of a score, in its order. */
+/** Whether a part plays at least one note: a staff left empty holds rests only. */
+function hasNotes(part: Element): boolean {
+  return [...part.getElementsByTagName('note')].some(
+    (note) => note.getElementsByTagName('rest').length === 0,
+  );
+}
+
+/**
+ * The parts of a score, in its order. A part without any note (an
+ * instrument kept in the MuseScore file with an empty staff) is left out:
+ * the Live mode does not offer it (model/songs.md, "Display", issue #35).
+ */
 export function partsOf(score: Document): ScorePart[] {
-  return [...score.querySelectorAll('part-list > score-part')].map((part) => ({
-    id: part.getAttribute('id') ?? '',
-    name: part.querySelector('part-name')?.textContent?.trim() ?? '',
-  }));
+  const playing = new Set(
+    partElements(score)
+      .filter(hasNotes)
+      .map((part) => part.getAttribute('id')),
+  );
+  return [...score.querySelectorAll('part-list > score-part')]
+    .map((part) => ({
+      id: part.getAttribute('id') ?? '',
+      name: part.querySelector('part-name')?.textContent?.trim() ?? '',
+    }))
+    .filter((part) => playing.has(part.id));
+}
+
+/**
+ * The parts hidden in a MuseScore file (the instrument unticked in
+ * MuseScore: <show>0</show>), by their place in the score, from 0. Read
+ * from its .mscx, the text of the score.
+ */
+export function hiddenParts(mscx: string): number[] {
+  const document = new DOMParser().parseFromString(mscx, 'application/xml');
+  const score = document.getElementsByTagName('Score')[0];
+  if (!score) return [];
+  return childrenOf(score, 'Part').flatMap((part, index) =>
+    childrenOf(part, 'show').some((show) => show.textContent?.trim() === '0') ? [index] : [],
+  );
+}
+
+/**
+ * The same MusicXML with the parts of some places emptied: every note a
+ * rest of the same length, so that the measures, and the rehearsal marks
+ * the top part carries, stay where they are. A part emptied this way plays
+ * nothing, and partsOf() leaves it out (model/songs.md, "Display": a part
+ * hidden in the MuseScore file is not shown).
+ */
+export function withEmptiedParts(xml: string, places: number[]): string {
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  if (document.documentElement.localName !== 'score-partwise') return xml;
+  const parts = partElements(document);
+  for (const place of places) {
+    const part = parts[place];
+    if (!part) continue;
+    for (const note of [...part.getElementsByTagName('note')]) {
+      if (note.getElementsByTagName('rest').length > 0) continue;
+      // The other notes of a chord go: one rest takes the time of the chord.
+      if (childrenOf(note, 'chord').length > 0 || childrenOf(note, 'grace').length > 0) {
+        note.remove();
+        continue;
+      }
+      for (const child of [...note.children]) {
+        if (
+          !['duration', 'voice', 'type', 'dot', 'time-modification', 'staff'].includes(
+            child.tagName,
+          )
+        ) {
+          child.remove();
+        }
+      }
+      note.prepend(document.createElement('rest'));
+    }
+  }
+  return new XMLSerializer().serializeToString(document);
 }
 
 /**

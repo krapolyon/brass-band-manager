@@ -13,6 +13,18 @@ export const songStatuses = [
 ] as const;
 export type SongStatus = (typeof songStatuses)[number];
 
+/** What a song brings to a set, for the setlist generator (model/songs.md, "Setlist attributes"). */
+export const setCategories = [
+  'OPENER',
+  'PARTY',
+  'KNOWN',
+  'CHOREOGRAPHY',
+  'CHILL',
+  'ENCORE',
+  'STANDARD',
+] as const;
+export type SetCategory = (typeof setCategories)[number];
+
 /** The average of the band on a song, and how many current members answered. */
 export type LevelAverage = { average: number | null; count: number };
 
@@ -41,6 +53,17 @@ export type SongSummary = {
   };
   mastery: LevelAverage;
   enjoyment: LevelAverage;
+  /** How long the band plays it, in seconds; null when not known. */
+  durationSeconds: number | null;
+  /** The day it entered the repertoire, "2015-01-01"; null for the songs of before 0.3.0 not dated yet. */
+  inRepertoireOn: string | null;
+  setCategory: SetCategory;
+  isNeverFirst: boolean;
+  /** Never STANDARD nor the main category; in the order of the enum. */
+  otherCategories: SetCategory[];
+  /** Sections, in the order of the band. */
+  tiringSectionIds: number[];
+  trickySectionIds: number[];
 };
 
 export type SongFile = { url: string; size: number };
@@ -63,9 +86,31 @@ export type Song = SongSummary & {
   parts: (SongFile & { instrumentId: number })[];
   /** The levels of the signed-in member, seen by them only. */
   ownLevels: { masteryLevel: number | null; enjoymentLevel: number | null };
-  /** For who manages songs only. */
-  discordChannelId?: string | null;
+  /** The Discord channel of the song, for every member (since 0.3.0). */
+  discordChannelId: string | null;
+  /** The link that opens it in Discord; null without a channel or while the band has no server. */
+  discordUrl: string | null;
 };
+
+/** What GET /api/songs/{id}/discord answers: the messages that tag the section of the member. */
+export type SongDiscord = {
+  /** The Discord role of the section of the member; null when the section has none or the bot cannot read it. */
+  roleName: string | null;
+  /** The three latest, the latest first. */
+  messages: { id: string; author: string; postedAt: string; text: string; url: string }[];
+};
+
+/** The messages of the channel of a song, read when its sheet opens. Never an error: nothing to show is none. */
+export function useSongDiscord(songId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['songs', songId, 'discord'],
+    queryFn: () => api<SongDiscord>(`/api/songs/${songId}/discord`),
+    enabled,
+    // The server keeps what Discord said 10 minutes: asking more often brings nothing.
+    staleTime: 60_000,
+    retry: false,
+  });
+}
 
 /** What the form of a song sends: the whole record. */
 export type SongRecord = {
@@ -77,7 +122,15 @@ export type SongRecord = {
   versionOn: string | null;
   versionNote: string | null;
   clipUrl: string | null;
+  /** The link of the channel, or its identifier: the server keeps the identifier. */
   discordChannelId: string | null;
+  durationSeconds: number | null;
+  inRepertoireOn: string | null;
+  setCategory: SetCategory;
+  isNeverFirst: boolean;
+  otherCategories: SetCategory[];
+  tiringSectionIds: number[];
+  trickySectionIds: number[];
 };
 
 /** The kinds of file a song holds itself; a part is one per instrument. */

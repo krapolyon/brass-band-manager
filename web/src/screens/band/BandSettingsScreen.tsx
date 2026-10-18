@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { useGigReminders } from '../../band.ts';
+import { useDiscordSettings, useGigReminders } from '../../band.ts';
 import { BandMention } from '../../components/BandMention.tsx';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
-import { Chip } from '../../components/Chip.tsx';
 import { NavRow } from '../../components/NavRow.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { useCostumes } from '../../gigs.ts';
@@ -62,6 +61,7 @@ export function BandSettingsScreen() {
 
   const costumeCount = useCostumes().data?.length ?? 0;
   const band = useGigReminders(canManage === true).data;
+  const discord = useDiscordSettings(canManage === true, false).data;
   const canRunMigrations = useCanRunMigrations() === true;
   const pendingMigrations = usePendingMigrations().data;
 
@@ -72,13 +72,13 @@ export function BandSettingsScreen() {
   const days = [band?.gigFirstReminderDays, band?.gigSecondReminderDays].filter(
     (value): value is number => typeof value === 'number',
   );
-  const hour = band?.gigReminderHour ?? 18;
+  const gap = band?.setlistGapSeconds ?? 30;
   const remindersDetail =
     days.length === 2
-      ? t('band.reminders.detail', { first: days[0], second: days[1], hour })
+      ? t('band.reminders.detail', { first: days[0], second: days[1], gap })
       : days.length === 1
-        ? t('band.reminders.detailOne', { count: days[0], hour })
-        : t('band.reminders.detailNone');
+        ? t('band.reminders.detailOne', { count: days[0], gap })
+        : t('band.reminders.detailNone', { gap });
 
   const spellings = (
     <NavRow
@@ -163,12 +163,15 @@ export function BandSettingsScreen() {
         </div>
       </Sheet>
       <Sheet title={t('band.connections')}>
-        {/* A reserved row: the screen comes with the Discord feature. */}
         <NavRow
           icon="Message"
-          label="Discord"
-          detail={t('band.discord')}
-          trailing={<Chip>{t('band.soon')}</Chip>}
+          label={t('band.discordSettings.title')}
+          detail={
+            discord?.serverId
+              ? t('band.discordSettings.detailSet')
+              : t('band.discordSettings.detailUnset')
+          }
+          to="/band/discord"
         />
       </Sheet>
     </AppLayout>

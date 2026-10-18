@@ -6,6 +6,7 @@ import { ApiError, api } from '../../api.ts';
 import { type AttendanceAnswer, AttendanceChoices } from '../../components/AttendanceChoices.tsx';
 import { Button } from '../../components/Button.tsx';
 import { Chip } from '../../components/Chip.tsx';
+import { DiscordChannelCard } from '../../components/DiscordChannelCard.tsx';
 import { GigHeader } from '../../components/GigHeader.tsx';
 import { GigInfos } from '../../components/GigInfos.tsx';
 import { GigMeeting } from '../../components/GigMeeting.tsx';
@@ -503,7 +504,17 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
     );
   };
 
-  const infos = (
+  // Figma: Gigs / Gig — the Discord link (section 19, 0.3.0, issue #33):
+  // after the infos, for every member who sees the gig; no messages for a
+  // gig, the sentence and the button only. No card without a channel.
+  const discordCard = gig.discordUrl && (
+    <DiscordChannelCard
+      title={t('discord.title')}
+      text={t('gigs.gig.discordText')}
+      url={gig.discordUrl}
+    />
+  );
+  const gigInfos = (
     <GigInfos
       title={t('gigs.gig.infos')}
       headingLevel={cardLevel}
@@ -520,6 +531,12 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
         ...(gig.notes ? [{ label: t('gigs.gig.notes'), value: gig.notes }] : []),
       ]}
     />
+  );
+  const infos = (
+    <>
+      {gigInfos}
+      {discordCard}
+    </>
   );
   const notesCard = (title: string) =>
     gig.notes && (
@@ -614,6 +631,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
           </Button>
         )}
         {notesCard(t('gigs.gig.infos'))}
+        {discordCard}
         {canDelete && (
           <Button
             kind="danger"
@@ -634,6 +652,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       <>
         <Message>{t('gigs.gig.cancelled')}</Message>
         {notesCard(t('gigs.gig.infos'))}
+        {discordCard}
         {gig.canEdit && (
           <Button
             kind="secondary"
@@ -675,6 +694,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
             : t('gigs.gig.whoAnsweredDetail', { count }),
         )}
         {allAnswers()}
+        {discordCard}
       </>
     );
   } else if (moment === 'past') {
@@ -697,6 +717,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
         )}
         <GigSetlists gig={gig} headingLevel={cardLevel} canGoLive={false} />
         {allAnswers()}
+        {discordCard}
       </>
     );
   } else if (isConfirmed) {
@@ -743,6 +764,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
             <div className="gigs-mentions">{organisers}</div>
           </section>
         )}
+        {discordCard}
         {ownAnswerCard}
         {ownAnswersCard}
         {single && whoComes(single, true)}

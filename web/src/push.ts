@@ -109,19 +109,36 @@ export function usePushSwitch() {
   };
 }
 
+/** How a member is told of one kind of event (issue #27). */
+export type NotificationChannel = 'OFF' | 'PUSH' | 'EMAIL' | 'PUSH_AND_EMAIL';
+
 /**
- * What the member wants to be told of, on every device that receives
- * (model/members.md, "Notification settings"). A setting of the account, not
- * of this device. EMAIL will join the values later.
+ * What the member wants to be told of, and how, on every device that
+ * receives (model/members.md, "Notification settings"). A setting of the
+ * account, not of this device. The reminders are never OFF; the live setlist
+ * is never sent by email.
  */
 export type NotificationSettings = {
-  notifyGigPlayable: 'OFF' | 'PUSH';
-  notifyGigConfirmed: 'OFF' | 'PUSH';
-  notifyLiveSetlist: 'OFF' | 'PUSH';
-  notifySongNew: 'OFF' | 'PUSH';
-  notifySongScore: 'OFF' | 'PUSH';
-  notifySongPart: 'OFF' | 'PUSH';
+  notifyGigReminder: NotificationChannel;
+  notifyGigPlayable: NotificationChannel;
+  notifyGigConfirmed: NotificationChannel;
+  notifyLiveSetlist: NotificationChannel;
+  notifySongNew: NotificationChannel;
+  notifySongScore: NotificationChannel;
+  notifySongPart: NotificationChannel;
 };
+
+/** The two chips of a channel. */
+export function channelsOf(channel: NotificationChannel | undefined) {
+  return {
+    push: channel === 'PUSH' || channel === 'PUSH_AND_EMAIL',
+    email: channel === 'EMAIL' || channel === 'PUSH_AND_EMAIL',
+  };
+}
+
+export function channelOf({ push, email }: { push: boolean; email: boolean }): NotificationChannel {
+  return push ? (email ? 'PUSH_AND_EMAIL' : 'PUSH') : email ? 'EMAIL' : 'OFF';
+}
 
 const SETTINGS_KEY = ['notificationSettings'];
 
@@ -134,7 +151,7 @@ export function useNotificationSettings() {
 
 /**
  * Changes one setting at once: shown in the same instant, then saved with the
- * five others, and put back if the server refuses.
+ * six others, and put back if the server refuses.
  */
 // The last change sent: the answer of an older one, arriving late, does not
 // undo what the screen shows.

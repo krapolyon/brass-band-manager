@@ -107,14 +107,11 @@
   gap: var(--spaceMd);
 }
 
-.settings-categories[data-disabled="true"] {
-  opacity: 0.4;
-}
-
-/* High contrast: no text stands back, the switches say they are off by
-   themselves (disabled). */
-:root[data-contrast="more"] .settings-categories[data-disabled="true"] {
-  opacity: 1;
+/* The kinds of notifications of one category, each with its channels. */
+.settings-channels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceLg);
 }
 
 /* Calendar: the content of its two sheets. */

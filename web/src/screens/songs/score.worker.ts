@@ -11,7 +11,9 @@ import { unzipped } from './score.ts';
 // not open a second score once it has closed one.
 
 export type ScoreFiles = { midi: Uint8Array; musicXml: Uint8Array };
-export type ScoreAnswer = ({ ok: true } & ScoreFiles) | { ok: false };
+/** xml: the score as plain MusicXML, for the page to empty the hidden parts (it has the DOM). */
+type Read = ScoreFiles & { xml: string };
+export type ScoreAnswer = ({ ok: true } & Read) | { ok: false };
 
 type Score = {
   metadata(): Promise<{ parts: { name: string }[] }>;
@@ -67,7 +69,13 @@ self.onmessage = async (message: MessageEvent<Uint8Array>) => {
       await score.saveMidi(),
       parts.map((part) => part.name),
     );
-    answer = { ok: true, midi: await marked(score, named), musicXml: await score.saveMxl() };
+    const xml = await score.saveXml();
+    answer = {
+      ok: true,
+      midi: await marked(score, named, xml),
+      musicXml: await score.saveMxl(),
+      xml,
+    };
   } catch {
     // A file the engine cannot read: the song keeps its MuseScore file alone.
   }
@@ -77,14 +85,14 @@ self.onmessage = async (message: MessageEvent<Uint8Array>) => {
 // The MIDI file with the measures of the score where they are played, and
 // its rehearsal marks. Both are a comfort: when they cannot be read, the file
 // goes without them.
-async function marked(score: Score, midi: Uint8Array): Promise<Uint8Array> {
+async function marked(score: Score, midi: Uint8Array, xml: string): Promise<Uint8Array> {
   try {
     const { events } = await score.measurePositions();
     const measured = withMeasures(
       midi,
       events.map((played) => ({ seconds: played.position / 1000, measure: played.elid })),
     );
-    const marks = rehearsalMarks(await score.saveXml());
+    const marks = rehearsalMarks(xml);
     if (marks.length === 0) return measured;
     return withMarks(
       measured,

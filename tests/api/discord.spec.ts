@@ -358,3 +358,15 @@ test.describe('the messages of the channel of a song', () => {
     expect((await zaza.get('/api/songs/9999/discord')).status()).toBe(404);
   });
 });
+
+test('the summary of the band settings asks whether a server is set, without asking Discord', async ({
+  playwright,
+}) => {
+  sql(`UPDATE band SET discordServerId = '${server}'`);
+  discordAnswers(`/guilds/${server}`, { message: 'Missing Access' }, 403);
+  const jibe = await deviceOf(playwright, admin.email, admin.password);
+
+  const summary = await (await jibe.get('/api/band/discord?withoutBot')).json();
+
+  expect(summary).toMatchObject({ serverId: server, bot: 'none', roles: null });
+});

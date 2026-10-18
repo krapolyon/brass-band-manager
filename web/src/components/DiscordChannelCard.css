@@ -1,0 +1,27 @@
+.DiscordChannelCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  padding: var(--spaceLg);
+  border-radius: var(--radiusLg);
+  background: var(--sheet);
+}
+
+.DiscordChannelCard h2,
+.DiscordChannelCard-text {
+  margin: 0;
+}
+
+.DiscordChannelCard-text {
+  color: var(--textMuted);
+}
+
+.DiscordChannelCard-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}
+
+.DiscordChannelCard > .Button {
+  text-decoration: none;
+}

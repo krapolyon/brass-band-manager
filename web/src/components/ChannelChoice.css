@@ -1,0 +1,29 @@
+.ChannelChoice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ChannelChoice-texts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  /* A legend takes no gap of its parent: its own margin stands in. */
+  margin-bottom: var(--spaceXs);
+  padding: 0;
+  color: var(--text);
+}
+
+.ChannelChoice-description {
+  color: var(--textMuted);
+}
+
+.ChannelChoice-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}

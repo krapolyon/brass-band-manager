@@ -1,0 +1,29 @@
+.Stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spaceMd);
+}
+
+/* The number as Figma draws it: a title, without the look of a field. */
+.Stepper-value {
+  width: 3ch;
+  min-height: var(--controlHeightSm);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radiusSm);
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  appearance: textfield;
+}
+
+.Stepper-value::-webkit-inner-spin-button,
+.Stepper-value::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.Stepper .IconButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -16,10 +16,14 @@ export type Band = {
   defaultCountryCode: string;
   /** False on an instance without a mail server: no forgotten password by email. */
   canSendEmail: boolean;
+  /** Whether the band has a Discord server: the forms of songs and gigs then take the link of a channel. */
+  hasDiscord: boolean;
   /** Null when the band has no logo. */
   logoUrl: string | null;
-  /** The square icons made from the logo, by size in pixels. */
+  /** The square icons of the installed app, by size in pixels: made from its own icon, else from the logo. */
   icons: Record<'180' | '192' | '512', string> | null;
+  /** The icon the band gave for the installed app (its largest icon); null: the icons come from the logo. */
+  appIconUrl: string | null;
 };
 
 /** The band of this instance; null while the app is not installed. */
@@ -44,12 +48,37 @@ export type GigReminders = {
   gigSecondReminderDays: number | null;
   /** The hour of the day from which the reminders are sent, 0 to 23. */
   gigReminderHour: number;
+  /** The time counted between two songs of a setlist, 0 to 300 seconds. */
+  setlistGapSeconds: number;
 };
 
 export function useGigReminders(enabled: boolean) {
   return useQuery({
     queryKey: ['gigReminders'],
     queryFn: () => api<GigReminders>('/api/band/gigReminders'),
+    enabled,
+  });
+}
+
+// What GET /api/band/discord answers, to who manages the band
+// (api/src/Band/DiscordSettingsAction.php).
+export type DiscordSettings = {
+  serverId: string | null;
+  /** Whether the server configuration holds the token of a bot. */
+  hasBot: boolean;
+  /** none: no server, no bot, or not asked; refused: Discord said no; unreachable: no answer. */
+  bot: 'none' | 'connected' | 'refused' | 'unreachable';
+  serverName: string | null;
+  /** The roles a section can be tagged with; null when the bot could not read them. */
+  roles: { id: string; name: string }[] | null;
+  sections: { id: number; name: string; icon: string | null; discordRoleId: string | null }[];
+};
+
+/** The Discord settings of the band. `withBot` false: whether a server is set, without asking Discord. */
+export function useDiscordSettings(enabled: boolean, withBot = true) {
+  return useQuery({
+    queryKey: ['discordSettings', withBot],
+    queryFn: () => api<DiscordSettings>(`/api/band/discord${withBot ? '' : '?withoutBot'}`),
     enabled,
   });
 }

@@ -11,9 +11,12 @@ import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { PlayedDots } from '../../components/PlayedDots.tsx';
+import { SetlistLength } from '../../components/SetlistLength.tsx';
 import { SetlistSongRow } from '../../components/SetlistSongRow.tsx';
 import { SongPickerRow } from '../../components/SongPickerRow.tsx';
 import { SortableHandle, SortableList, useSortableRow } from '../../components/Sortable.tsx';
+import { Stepper } from '../../components/Stepper.tsx';
+import { SwitchRow } from '../../components/SwitchRow.tsx';
 import { TextArea } from '../../components/TextArea.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
 import { type Gig, useGig } from '../../gigs.ts';
@@ -22,6 +25,7 @@ import { type SongSummary, useSongs } from '../../songs.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { useLeaveGuard } from '../LeaveGuard.tsx';
 import { recogniseAny, type Spoken } from './dictation.ts';
+import { candidatesOf, isNew, lengthOf, type Proposal, propose, type Rule } from './generator.ts';
 import { useDictation } from './useDictation.ts';
 import './gigs.css';
 
@@ -61,7 +65,7 @@ const record = (draft: Draft) => ({
 // a song, a swipe to the left removes it (SetlistSongRow). For who manages
 // setlists.
 export function SetlistFormScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const params = useParams();
   const queryClient = useQueryClient();
@@ -81,6 +85,14 @@ export function SetlistFormScreen() {
   const [failure, setFailure] = useState<'failed' | 'tooLong' | null>(null);
   const [isSaving, setSaving] = useState(false);
   const canManage = me?.permissions.includes('manageSetlists') ?? false;
+  // "Proposer des morceaux" (Gigs › 19, issue #25): its sheet, its two
+  // choices, and the proposal the editor holds until it is changed by hand.
+  const [isProposing, setProposing] = useState(false);
+  const [proposedCount, setProposedCount] = useState(10);
+  const [includesNew, setIncludesNew] = useState(false);
+  const [proposal, setProposal] = useState<
+    (Proposal & { first: string; last: string; isEncore: boolean }) | null
+  >(null);
 
   // The dictation: what it knows of the songs, what it last heard, and the
   // choice it waits for.
@@ -202,6 +214,60 @@ export function SetlistFormScreen() {
       elsewhere.set(song.songId, (elsewhere.get(song.songId) ?? 0) + 1);
   }
   const playedElsewhere = (songId: number) => elsewhere.get(songId) ?? 0;
+
+  // What the generator reads: the songs the editor already has. "Today" by
+  // the clock of the device, as for the other dates of a gig.
+  const today = new Date().toLocaleDateString('sv');
+  const newSongs = candidatesOf(songs, true, today).filter((song) => isNew(song, today));
+  const candidates = candidatesOf(songs, includesNew, today);
+  const known = candidates.flatMap((song) => (song.durationSeconds ? [song.durationSeconds] : []));
+  const averageLength =
+    known.length > 0 ? known.reduce((sum, one) => sum + one, 0) / known.length : null;
+  const proposedMinutes =
+    averageLength === null
+      ? null
+      : Math.round(
+          (averageLength * proposedCount + gig.setlistGapSeconds * (proposedCount - 1)) / 60,
+        );
+  const isProposalShown =
+    proposal !== null &&
+    JSON.stringify(proposal.songIds) === JSON.stringify(draft.lines.map((line) => line.songId));
+  const draw = () => {
+    const drawn = propose({
+      songs,
+      count: proposedCount,
+      includeNew: includesNew,
+      avoid: [...elsewhere.keys()],
+      today,
+      random: Math.random,
+    });
+    const byId = new Map(songs.map((song) => [song.id, song]));
+    const lines = drawn.songIds.flatMap((songId) => {
+      const song = byId.get(songId);
+      return song ? [{ key: newKey(), songId, name: song.name }] : [];
+    });
+    const last = byId.get(drawn.songIds.at(-1) ?? 0);
+    setDraft({ ...draft, lines });
+    setProposal({
+      ...drawn,
+      first: lines[0]?.name ?? '',
+      last: lines.at(-1)?.name ?? '',
+      isEncore:
+        last?.setCategory === 'ENCORE' || (last?.otherCategories.includes('ENCORE') ?? false),
+    });
+    setProposing(false);
+    setSaid(t('gigs.setlist.form.propose.done', { count: lines.length }));
+  };
+  const lengthNow = lengthOf(
+    draft.lines.map(
+      (line) => songs.find((song) => song.id === line.songId)?.durationSeconds ?? null,
+    ),
+    gig.setlistGapSeconds,
+  );
+  const ruleNames = (dropped: Rule[]) =>
+    new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(
+      dropped.map((rule) => t(`gigs.setlist.form.propose.rules.${rule}`)),
+    );
   const inThis = (songId: number) => draft.lines.filter((line) => line.songId === songId).length;
   // The list of every song, from A to Z, narrowed by its search.
   const searched = plain(search);
@@ -428,7 +494,48 @@ export function SetlistFormScreen() {
               </ol>
             </SortableList>
           )}
+          {draft.lines.length > 0 && (
+            <SetlistLength
+              length={t('gigs.setlist.form.length', {
+                count: draft.lines.length,
+                minutes: lengthNow.minutes,
+              })}
+              note={
+                lengthNow.withoutLength > 0
+                  ? t('gigs.setlist.form.withoutLength', { count: lengthNow.withoutLength })
+                  : draft.lines.length > 1
+                    ? t('gigs.setlist.form.withGap', { gap: gig.setlistGapSeconds })
+                    : undefined
+              }
+            />
+          )}
         </section>
+        {isProposalShown && proposal && (
+          <>
+            <Message>
+              {[
+                t(
+                  proposal.isEncore
+                    ? 'gigs.setlist.form.propose.madeEncore'
+                    : 'gigs.setlist.form.propose.made',
+                  {
+                    first: proposal.first,
+                    last: proposal.last,
+                  },
+                ),
+                proposal.dropped.length > 0 &&
+                  t('gigs.setlist.form.propose.dropped', { rules: ruleNames(proposal.dropped) }),
+                proposal.isShort &&
+                  t('gigs.setlist.form.propose.short', { count: proposal.songIds.length }),
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            </Message>
+            <Button kind="secondary" icon="RotateCw" onClick={draw}>
+              {t('gigs.setlist.form.propose.again')}
+            </Button>
+          </>
+        )}
 
         {dictation.isListening ? (
           <>
@@ -613,6 +720,16 @@ export function SetlistFormScreen() {
                 )}
               </ul>
             )}
+            {!isProposalShown && (
+              <Button
+                kind="secondary"
+                icon="Lightbulb"
+                aria-haspopup="dialog"
+                onClick={() => setProposing(true)}
+              >
+                {t('gigs.setlist.form.propose.open')}
+              </Button>
+            )}
             <p className="gigs-muted textCaption">{t('gigs.setlist.form.help')}</p>
             {/* Under the keyboard, never seen: the page is long enough for the
                 field to reach the top of what is visible. */}
@@ -673,6 +790,54 @@ export function SetlistFormScreen() {
           <p className="visuallyHidden" role="status">
             {isPickerOpen ? said : ''}
           </p>
+        </div>
+      </Panel>
+
+      {/* A BottomSheet below 1024, a Dialog from 1024 (Gigs › 19, 20). */}
+      <Panel
+        open={isProposing}
+        onClose={() => setProposing(false)}
+        title={t('gigs.setlist.form.propose.title')}
+      >
+        <div className="gigs-sheet">
+          <p className="textBodyStrong" id="gigs-propose-count">
+            {t('gigs.setlist.form.propose.howMany')}
+          </p>
+          <Stepper
+            label={t('gigs.setlist.form.propose.howMany')}
+            value={proposedCount}
+            min={3}
+            max={30}
+            onChange={setProposedCount}
+          />
+          {proposedMinutes !== null && (
+            <p className="gigs-muted textCaption">
+              {t('gigs.setlist.form.propose.about', {
+                minutes: proposedMinutes,
+                gap: gig.setlistGapSeconds,
+              })}
+            </p>
+          )}
+          {newSongs.length > 0 && (
+            <SwitchRow
+              label={t('gigs.setlist.form.propose.includeNew')}
+              description={t('gigs.setlist.form.propose.includeNewHint', {
+                names: new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(
+                  newSongs.map((song) => song.name),
+                ),
+              })}
+              checked={includesNew}
+              onChange={setIncludesNew}
+            />
+          )}
+          {draft.lines.length > 0 && (
+            <Message>
+              {t('gigs.setlist.form.propose.replaces', { count: draft.lines.length })}
+            </Message>
+          )}
+          <Button onClick={draw}>
+            {t('gigs.setlist.form.propose.go', { count: proposedCount })}
+          </Button>
         </div>
       </Panel>
 

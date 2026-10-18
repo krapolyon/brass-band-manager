@@ -26,9 +26,9 @@ final class Bands
     public function view(): array
     {
         try {
-            $band = $this->database->fetchAssociative(
-                'SELECT name, defaultLanguage, defaultAccentTheme, defaultCountryCode FROM band WHERE id = 1',
-            );
+            // SELECT *: the sign-in screen reads this before the migrations
+            // are applied, when a column of a later version is not there yet.
+            $band = $this->database->fetchAssociative('SELECT * FROM band WHERE id = 1');
         } catch (TableNotFoundException) {
             // An empty database: the install creates its tables.
             $band = false;
@@ -44,6 +44,9 @@ final class Bands
             'defaultCountryCode' => $band['defaultCountryCode'],
             // Decides what the forgotten password screen offers.
             'canSendEmail' => $this->mailer->canSend(),
+            // Whether the band talks on Discord: the forms of songs and gigs
+            // then take the link of a channel. Not the server itself.
+            'hasDiscord' => is_string($band['discordServerId'] ?? null) && $band['discordServerId'] !== '',
             ...$this->logos->urls(),
         ];
     }
