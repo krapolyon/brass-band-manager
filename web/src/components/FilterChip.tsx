@@ -34,9 +34,14 @@ export function FilterChip({
       type="button"
       className="FilterChip textLabel"
       aria-pressed={pressed}
-      disabled={disabled || locked}
+      disabled={disabled}
+      // Locked stays in the tab order, so that the description of its group
+      // (why it cannot be off) is still read on reaching it.
+      aria-disabled={locked && !disabled ? true : undefined}
       data-locked={locked && !disabled ? '' : undefined}
-      onClick={() => onChange(!pressed)}
+      onClick={() => {
+        if (!locked) onChange(!pressed);
+      }}
     >
       {pressed ? (
         <Icon name="Check" size={20} />

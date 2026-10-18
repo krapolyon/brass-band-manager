@@ -342,10 +342,16 @@ export function SetlistFormScreen() {
     dictated.current = null;
   };
   // The field that adds a song keeps the focus: it is ready for the next one.
-  const readyForNext = () =>
-    window.requestAnimationFrame(() =>
-      form.current?.querySelector<HTMLInputElement>('.gigs-addSong input')?.focus(),
-    );
+  // Unless the focus went somewhere else in the meantime (a row reached from
+  // the keyboard): it is not taken back from there.
+  const readyForNext = () => {
+    const before = document.activeElement;
+    window.requestAnimationFrame(() => {
+      const now = document.activeElement;
+      if (now !== before && now !== document.body) return;
+      form.current?.querySelector<HTMLInputElement>('.gigs-addSong input')?.focus();
+    });
+  };
   const moveTo = (line: Line, to: number) => {
     const from = draft.lines.indexOf(line);
     if (from < 0 || to < 0 || to >= draft.lines.length || to === from) return;

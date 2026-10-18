@@ -165,9 +165,64 @@ test('the songs of the other setlists of the gig are avoided as long as there ar
     random: seeded(3),
   });
   expect(proposal.songIds.some((id) => avoid.includes(id))).toBe(false);
-  // Twelve asked: the avoided ones come back to fill.
-  const full = propose({ songs, count: 12, includeNew: false, avoid, today, random: seeded(3) });
-  expect(full.songIds).toHaveLength(12);
+  // Twelve asked: the avoided ones come back to fill, only as many as are missing.
+  for (let seed = 1; seed <= 30; seed++) {
+    const full = propose({
+      songs,
+      count: 12,
+      includeNew: false,
+      avoid,
+      today,
+      random: seeded(seed),
+    });
+    expect(full.songIds).toHaveLength(12);
+    expect(
+      full.songIds.filter((id) => avoid.includes(id)),
+      `seed ${seed}`,
+    ).toHaveLength(2);
+  }
+});
+
+test('a song of another setlist of the gig does not come back to keep a rule', () => {
+  // The only song that can open is in another setlist of the gig.
+  const opener = song({ setCategory: 'OPENER' });
+  const songs = [
+    opener,
+    song({ setCategory: 'KNOWN' }),
+    song({ setCategory: 'CHILL' }),
+    song({ setCategory: 'STANDARD' }),
+    song({ setCategory: 'PARTY' }),
+  ];
+  const proposal = propose({
+    songs,
+    count: 4,
+    includeNew: false,
+    avoid: [opener.id],
+    today,
+    random: seeded(5),
+  });
+  expect(proposal.songIds).not.toContain(opener.id);
+  expect(proposal.dropped[0]).toBe('opener');
+});
+
+test('when the encore cannot close, a party song does, before any rule is dropped', () => {
+  // The encore and the only song that can stand before it are both choreographies.
+  const songs = [
+    song({ setCategory: 'OPENER' }),
+    song({ setCategory: 'CHOREOGRAPHY' }),
+    song({ setCategory: 'ENCORE', otherCategories: ['CHOREOGRAPHY'] }),
+    song({ setCategory: 'PARTY' }),
+  ];
+  const proposal = propose({
+    songs,
+    count: 3,
+    includeNew: false,
+    avoid: [],
+    today,
+    random: seeded(9),
+  });
+  expect(proposal.dropped).toEqual([]);
+  expect(broken(proposal.songIds, songs)).toEqual([]);
 });
 
 test('a small repertoire drops the last rules first, and says which; too few songs say so', () => {

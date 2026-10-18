@@ -21,7 +21,9 @@ type Props = {
 // Figma: ChannelChoice. One kind of notification and how it reaches the
 // member: one chip per channel, Notification and E-mail, that wrap when the
 // text grows (model/members.md, "Notification settings"). Both off: nothing
-// is sent. A channel that cannot apply is hidden, never shown disabled.
+// is sent. E-mail is hidden where it cannot apply (the live setlist, a
+// server without mail); push is shown disabled on a device that does not
+// receive.
 export function ChannelChoice({
   label,
   description,

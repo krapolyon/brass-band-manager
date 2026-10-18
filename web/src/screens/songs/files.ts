@@ -240,17 +240,19 @@ async function withoutHiddenParts(
   mscz: Uint8Array,
   read: ScoreFiles & { xml: string },
 ): Promise<ScoreFiles> {
-  let hidden: number[] = [];
+  let hidden: ReturnType<typeof hiddenParts> = { places: [], partCount: 0 };
   try {
     const mscx = await unzipped(mscz, (name) => !name.includes('/') && name.endsWith('.mscx'));
     hidden = hiddenParts(new TextDecoder().decode(mscx));
   } catch {
     // Not an archive the app can open: nothing is known to be hidden.
   }
-  if (hidden.length === 0) return { midi: read.midi, musicXml: read.musicXml };
+  if (hidden.places.length === 0) return { midi: read.midi, musicXml: read.musicXml };
+  const xml = withEmptiedParts(read.xml, hidden.places, hidden.partCount);
   return {
-    midi: withoutNotes(read.midi, hidden),
-    musicXml: new TextEncoder().encode(withEmptiedParts(read.xml, hidden)),
+    midi: withoutNotes(read.midi, hidden.places, hidden.partCount),
+    // Left compressed when nothing had to be emptied.
+    musicXml: xml === read.xml ? read.musicXml : new TextEncoder().encode(xml),
   };
 }
 

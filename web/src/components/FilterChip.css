@@ -30,7 +30,8 @@
   border-radius: var(--radiusFull);
 }
 
-.FilterChip:disabled {
+.FilterChip:disabled,
+.FilterChip[data-locked] {
   cursor: default;
 }
 

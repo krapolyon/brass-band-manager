@@ -27,3 +27,7 @@
   opacity: 0.4;
   cursor: default;
 }
+
+:root[data-contrast="more"] .Stepper .IconButton:disabled {
+  opacity: 1;
+}

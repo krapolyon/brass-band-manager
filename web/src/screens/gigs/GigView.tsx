@@ -512,6 +512,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       title={t('discord.title')}
       text={t('gigs.gig.discordText')}
       url={gig.discordUrl}
+      headingLevel={cardLevel}
     />
   );
   const gigInfos = (

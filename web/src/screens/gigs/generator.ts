@@ -131,28 +131,53 @@ function shuffled<T>(list: T[], random: () => number): T[] {
   return copy;
 }
 
+type Draw = {
+  pool: CandidateSong[];
+  /** The songs of the other setlists of the gig. */
+  avoided: Set<number>;
+  /** How many of them the draw may take. */
+  avoidedAllowed: number;
+  count: number;
+  kept: number;
+  /** The last song is an encore when one fits; otherwise any closer. */
+  encoreLast: boolean;
+  random: () => number;
+};
+
 /**
- * One draw: the last song first (an encore when one fits), then the others
- * from the start. Null when the draw ends in a dead end.
+ * One draw: the last song first, then the others from the start, the songs
+ * not avoided tried before the avoided ones. Null when the draw ends in a
+ * dead end.
  */
-function draw(
-  pool: CandidateSong[],
-  count: number,
-  kept: number,
-  random: () => number,
-): CandidateSong[] | null {
+function draw({ pool, avoided, avoidedAllowed, count, kept, encoreLast, random }: Draw) {
   const order: (CandidateSong | undefined)[] = Array.from({ length: count });
   const used = new Set<number>();
+  let avoidedLeft = avoidedAllowed;
+  // Shuffled each time, the songs not avoided first.
+  const ordered = () => {
+    const mixed = shuffled(pool, random);
+    return [
+      ...mixed.filter((song) => !avoided.has(song.id)),
+      ...mixed.filter((song) => avoided.has(song.id) && avoidedLeft > 0),
+    ];
+  };
+  const take = (place: number, song: CandidateSong) => {
+    order[place] = song;
+    used.add(song.id);
+    if (avoided.has(song.id)) avoidedLeft -= 1;
+  };
+
   const last = count - 1;
-  const lasts = shuffled(pool, random).filter((song) => fits(song, last, count, undefined, kept));
-  const closer = (kept >= 2 ? lasts.find((song) => serves(song, 'ENCORE')) : undefined) ?? lasts[0];
+  const lasts = ordered().filter((song) => fits(song, last, count, undefined, kept));
+  const closer =
+    (encoreLast && kept >= 2 ? lasts.find((song) => serves(song, 'ENCORE')) : undefined) ??
+    lasts[0];
   if (!closer) return null;
-  order[last] = closer;
-  used.add(closer.id);
+  take(last, closer);
 
   for (let place = 0; place < last; place++) {
     const before = order[place - 1];
-    const next = shuffled(pool, random).find(
+    const next = ordered().find(
       (song) =>
         !used.has(song.id) &&
         fits(song, place, count, before, kept) &&
@@ -160,33 +185,40 @@ function draw(
         (place !== last - 1 || fits(closer, last, count, song, kept)),
     );
     if (!next) return null;
-    order[place] = next;
-    used.add(next.id);
+    take(place, next);
   }
   return order as CandidateSong[];
 }
 
 /**
  * Proposes the songs of a setlist. Keeps every rule it can, dropping the last
- * ones first when the repertoire does not allow them all.
+ * ones first when the repertoire does not allow them all. The songs of the
+ * other setlists of the gig come in only as many as are missing: a song
+ * played twice in a gig weighs more than a rule dropped.
  */
 export function propose({ songs, count, includeNew, avoid, today, random }: Options): Proposal {
-  const candidates = candidatesOf(songs, includeNew, today);
-  const fresh = candidates.filter((song) => !avoid.includes(song.id));
-  // The songs of the other setlists of the gig only when the others are not enough.
-  const pool = fresh.length >= count ? fresh : candidates;
+  const pool = candidatesOf(songs, includeNew, today);
+  const avoided = new Set(avoid.filter((id) => pool.some((song) => song.id === id)));
   const size = Math.min(count, pool.length);
   if (size === 0) return { songIds: [], dropped: [], isShort: count > 0 };
+  const missing = Math.max(0, size - (pool.length - avoided.size));
+  // At each number of rules: an encore last, then any closer.
+  const ways = [
+    { avoidedAllowed: missing, encoreLast: true },
+    { avoidedAllowed: missing, encoreLast: false },
+  ];
 
   for (let kept = rules.length; kept >= 0; kept--) {
-    for (let attempt = 0; attempt < TRIES; attempt++) {
-      const order = draw(pool, size, kept, random);
-      if (order) {
-        return {
-          songIds: order.map((song) => song.id),
-          dropped: rules.slice(kept),
-          isShort: size < count,
-        };
+    for (const way of ways) {
+      for (let attempt = 0; attempt < TRIES / ways.length; attempt++) {
+        const order = draw({ pool, avoided, count: size, kept, random, ...way });
+        if (order) {
+          return {
+            songIds: order.map((song) => song.id),
+            dropped: rules.slice(kept),
+            isShort: size < count,
+          };
+        }
       }
     }
   }

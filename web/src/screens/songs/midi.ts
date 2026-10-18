@@ -291,9 +291,12 @@ export function lengthOf(song: MidiSong, bandBpm: number | null): number | null 
  * #35). The tracks stay, with their tempos, time signatures and marks (the
  * first one carries them); without a note, the player does not show them.
  */
-export function withoutNotes(file: Uint8Array, places: number[]): Uint8Array {
+export function withoutNotes(file: Uint8Array, places: number[], partCount: number): Uint8Array {
   if (places.length === 0) return file;
   const midi = parseMidi(file);
+  // One track per part, as withTrackNames() checks too: otherwise the places
+  // would not be those of the tracks, and the wrong instrument would go quiet.
+  if (midi.tracks.length !== partCount) return file;
   midi.tracks = midi.tracks.map((events, index) => {
     if (!places.includes(index)) return events;
     const kept: MidiEvent[] = [];

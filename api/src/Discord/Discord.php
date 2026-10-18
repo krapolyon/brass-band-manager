@@ -16,7 +16,9 @@ namespace BrassBand\Discord;
 //
 // What Discord answers is kept 10 minutes in the temporary folder of the
 // server, never in the database: the messages belong to Discord (model,
-// principle "What an outside service says is not stored"). Any refusal or
+// principle "What an outside service says is not stored"). An answer past
+// its time is erased at the next request, and the folder is used only when
+// this app made it, for itself alone. Any refusal or
 // delay (no token, a channel the bot cannot see, too many requests) reads as
 // "nothing": the screens then show the link of the channel only.
 final class Discord
@@ -213,16 +215,56 @@ final class Discord
      */
     private function ask(string $path, bool $fresh = false): ?array
     {
+        $isKept = $this->ownFolder();
+        if ($isKept) {
+            $this->eraseOld();
+        }
         $file = $this->cacheFolder . '/' . hash('sha256', $path) . '.json';
-        $cached = $fresh ? null : $this->cached($file);
+        $cached = $fresh || !$isKept ? null : $this->cached($file);
         if ($cached !== null) {
             return $cached['answer'];
         }
 
         $answer = $this->transport !== null ? ($this->transport)($path) : $this->request($path);
-        $this->keep($file, $answer);
+        if ($isKept) {
+            $this->keep($file, $answer);
+        }
 
         return $answer;
+    }
+
+    /**
+     * True when the folder of the cache is this app's alone: made now if it
+     * is missing, refused when another account made it or anyone can open it
+     * (its name can be guessed, and the temporary folder of a host can be
+     * shared). Then nothing is kept and Discord is asked each time.
+     */
+    private function ownFolder(): bool
+    {
+        if (!is_dir($this->cacheFolder) && !@mkdir($this->cacheFolder, 0o700, true)) {
+            return false;
+        }
+        clearstatcache(true, $this->cacheFolder);
+        $owner = @fileowner($this->cacheFolder);
+        $mode = @fileperms($this->cacheFolder);
+        if ($owner === false || $mode === false || ($mode & 0o077) !== 0) {
+            return false;
+        }
+
+        return !function_exists('posix_geteuid') || $owner === posix_geteuid();
+    }
+
+    // Erases the answers past their time, so that the messages of a channel
+    // nobody opens again do not stay on the server.
+    private function eraseOld(): void
+    {
+        $limit = time() - self::CACHE_SECONDS;
+        foreach (glob($this->cacheFolder . '/*.json') ?: [] as $file) {
+            $writtenAt = @filemtime($file);
+            if ($writtenAt !== false && $writtenAt < $limit) {
+                @unlink($file);
+            }
+        }
     }
 
     /**
@@ -246,9 +288,6 @@ final class Discord
     {
         // What Discord gave is kept 10 minutes; a refusal or a silence one.
         $seconds = $answer !== null && $answer['status'] === 200 ? self::CACHE_SECONDS : self::FAILURE_SECONDS;
-        if (!is_dir($this->cacheFolder) && !@mkdir($this->cacheFolder, 0o700, true)) {
-            return;
-        }
         // Only this app reads it: the folder of a shared host can be shared.
         if (@file_put_contents($file, json_encode(['until' => time() + $seconds, 'answer' => $answer]), LOCK_EX) !== false) {
             @chmod($file, 0o600);

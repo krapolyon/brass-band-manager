@@ -7,6 +7,7 @@ import {
   discordServer,
   emptyDiscord,
   forgetDiscordCache,
+  onTestServer,
   otherServer,
   roles,
   server,
@@ -329,26 +330,68 @@ test.describe('the messages of the channel of a song', () => {
   }) => {
     const songId = aSongWithItsChannel();
     const jibe = await deviceOf(playwright, admin.email, admin.password);
+    // Nothing is known: no role named either, so the screen says nothing
+    // false ("nobody has tagged you") and shows the button alone.
     const nothing = async () => {
       forgetDiscordCache();
       const response = await jibe.get(`/api/songs/${songId}/discord`);
       expect(response.status()).toBe(200);
-      return (await response.json()).messages;
+      return response.json();
     };
 
+    // The roles unknown while the messages come: the messages are not shown
+    // under a sentence that says there is nothing.
+    discordAnswers(`/guilds/${server}/roles`, { retry_after: 2.5 }, 429);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
+    discordServer();
+
     discordAnswers(`/channels/${channel}/messages`, { message: 'Missing Access' }, 403);
-    expect(await nothing()).toEqual([]);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
     discordAnswers(`/channels/${channel}/messages`, { retry_after: 2.5 }, 429);
-    expect(await nothing()).toEqual([]);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
 
     sql(`UPDATE section SET discordRoleId = NULL WHERE name = 'Saxophone'`);
-    expect(await nothing()).toEqual([]);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
 
     sql(`UPDATE song SET discordChannelId = NULL`);
-    expect(await nothing()).toEqual([]);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
 
     sql(`UPDATE band SET discordServerId = NULL`);
-    expect(await nothing()).toEqual([]);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
+  });
+
+  test('what was kept is erased once its time is past, and a folder the app did not make is not used', async ({
+    playwright,
+  }) => {
+    const songId = aSongWithItsChannel();
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    await jibe.get(`/api/songs/${songId}/discord`);
+    const folder = onTestServer('ls -d /tmp/brassBandDiscord-*').trim();
+    expect(folder).not.toBe('');
+
+    // An answer past its time is erased on the next request, not only skipped.
+    onTestServer(`echo "{}" > ${folder}/old.json && touch -d @1 ${folder}/old.json`);
+    await jibe.get(`/api/songs/${songId}/discord`);
+    expect(onTestServer(`ls ${folder}`)).not.toContain('old.json');
+
+    // A folder of that name made by someone else, open to all: nothing is
+    // kept in it nor read from it.
+    onTestServer(`rm -rf ${folder} && mkdir -m 777 ${folder}`);
+    await jibe.get(`/api/songs/${songId}/discord`);
+    expect(onTestServer(`ls -A ${folder}`).trim()).toBe('');
+    discordMessages(channel, [
+      {
+        id: '9200',
+        author: 'Fifi',
+        day: '2026-10-12',
+        content: `<@&${roles.saxophones}> tout de suite`,
+        roles: [roles.saxophones],
+      },
+    ]);
+    expect((await (await jibe.get(`/api/songs/${songId}/discord`)).json()).messages[0].id).toBe(
+      '9200',
+    );
+    onTestServer(`rm -rf ${folder}`);
   });
 
   test('for members only, and an unknown song is not found', async ({ playwright, request }) => {

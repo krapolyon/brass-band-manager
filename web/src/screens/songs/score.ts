@@ -159,13 +159,17 @@ export function partsOf(score: Document): ScorePart[] {
  * MuseScore: <show>0</show>), by their place in the score, from 0. Read
  * from its .mscx, the text of the score.
  */
-export function hiddenParts(mscx: string): number[] {
+export function hiddenParts(mscx: string): { places: number[]; partCount: number } {
   const document = new DOMParser().parseFromString(mscx, 'application/xml');
   const score = document.getElementsByTagName('Score')[0];
-  if (!score) return [];
-  return childrenOf(score, 'Part').flatMap((part, index) =>
-    childrenOf(part, 'show').some((show) => show.textContent?.trim() === '0') ? [index] : [],
-  );
+  if (!score) return { places: [], partCount: 0 };
+  const parts = childrenOf(score, 'Part');
+  return {
+    places: parts.flatMap((part, index) =>
+      childrenOf(part, 'show').some((show) => show.textContent?.trim() === '0') ? [index] : [],
+    ),
+    partCount: parts.length,
+  };
 }
 
 /**
@@ -175,10 +179,13 @@ export function hiddenParts(mscx: string): number[] {
  * nothing, and partsOf() leaves it out (model/songs.md, "Display": a part
  * hidden in the MuseScore file is not shown).
  */
-export function withEmptiedParts(xml: string, places: number[]): string {
+export function withEmptiedParts(xml: string, places: number[], partCount: number): string {
   const document = new DOMParser().parseFromString(xml, 'application/xml');
   if (document.documentElement.localName !== 'score-partwise') return xml;
   const parts = partElements(document);
+  // The places are those of the MuseScore file: a file laid out another way
+  // is left alone rather than emptying the wrong part.
+  if (parts.length !== partCount) return xml;
   for (const place of places) {
     const part = parts[place];
     if (!part) continue;

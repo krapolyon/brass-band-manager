@@ -6,7 +6,8 @@ import { execFileSync } from 'node:child_process';
 // asked of Discord. The servers, channels, roles and people are made up.
 
 const ANSWERS = '/var/www/storage/discordAnswers';
-const onServer = (script: string, input?: string) =>
+/** Runs a shell command on the test server, as root. */
+export const onTestServer = (script: string, input?: string) =>
   execFileSync('docker', ['compose', 'exec', '-T', 'web-test', 'sh', '-c', script], {
     encoding: 'utf8',
     input,
@@ -24,12 +25,12 @@ export const roles = {
 
 /** Forgets every answer, and what the server kept of the earlier ones. */
 export function emptyDiscord(): void {
-  onServer(`rm -rf ${ANSWERS} /tmp/brassBandDiscord-*`);
+  onTestServer(`rm -rf ${ANSWERS} /tmp/brassBandDiscord-*`);
 }
 
 /** Forgets what the server kept, as 10 minutes later. */
 export function forgetDiscordCache(): void {
-  onServer('rm -rf /tmp/brassBandDiscord-*');
+  onTestServer('rm -rf /tmp/brassBandDiscord-*');
 }
 
 /**
@@ -39,7 +40,7 @@ export function forgetDiscordCache(): void {
  */
 export function discordAnswers(path: string, body: unknown, status = 200): void {
   const file = `${ANSWERS}/${path.replace(/^\//, '')}.json`;
-  onServer(
+  onTestServer(
     `mkdir -p "$(dirname '${file}')" && cat > '${file}'`,
     JSON.stringify(status === 200 ? body : { status, body }),
   );

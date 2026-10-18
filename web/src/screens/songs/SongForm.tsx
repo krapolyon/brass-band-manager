@@ -243,7 +243,8 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
           label={t('songs.form.setlists.duration')}
           hint={t('songs.form.setlists.durationHint')}
           error={message('duration') ?? message('durationSeconds')}
-          inputMode="numeric"
+          // Not "numeric": the keypad of an iPhone has no colon.
+          inputMode="text"
           placeholder="3:52"
           value={draft.duration}
           onChange={(event) =>
@@ -254,11 +255,7 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
           label={t('songs.form.setlists.category')}
           hint={t('songs.form.setlists.categoryHint')}
         >
-          <div
-            className="songs-choices"
-            role="radiogroup"
-            aria-label={t('songs.form.setlists.category')}
-          >
+          <div className="songs-choices" role="radiogroup">
             {setCategories.map((category) => (
               <ChoiceButton
                 key={category}

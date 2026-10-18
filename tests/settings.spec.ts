@@ -410,6 +410,11 @@ test.describe('notifications by channel (#23, #27)', () => {
     // The reminders keep one channel at least: the last one on cannot be turned off.
     const reminder = chip(page, 'Rappels de présence', 'Notification');
     await expect(reminder).toBeDisabled();
+    // Still reached from the keyboard, and pressing it changes nothing.
+    await reminder.focus();
+    await expect(reminder).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(reminder).toHaveAttribute('aria-pressed', 'true');
     await chip(page, 'Rappels de présence', 'E-mail').click();
     await expect(reminder).toBeEnabled();
     await reminder.click();

@@ -493,6 +493,15 @@ test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
     await sheet.getByRole('button', { name: 'Un de moins' }).click();
     await count.fill('3');
     await expect(sheet.getByRole('button', { name: 'Un de moins' })).toBeDisabled();
+    // Typed digit by digit, "15" passes through "1" without being changed.
+    await count.fill('');
+    await count.pressSequentially('15');
+    await expect(count).toHaveValue('15');
+    await count.blur();
+    await expect(count).toHaveValue('15');
+    await count.fill('99');
+    await count.blur();
+    await expect(count).toHaveValue('30');
     await count.fill('7');
     await expect(sheet.getByText('Au répertoire depuis moins de 2 mois : Freed.')).toBeVisible();
     await sheet.getByRole('button', { name: 'Proposer 7 morceaux' }).click();
