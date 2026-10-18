@@ -280,7 +280,8 @@
   .gigs-pane .SetlistCard,
   .gigs-pane .GigSlotWhoComes,
   .gigs-pane .GigInfos,
-  .gigs-pane .GigMeeting {
+  .gigs-pane .GigMeeting,
+  .gigs-pane .DiscordChannelCard {
     background: var(--control);
     --badgeRing: var(--ground);
   }

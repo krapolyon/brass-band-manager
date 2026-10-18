@@ -1,4 +1,13 @@
 {
+  "0.3.0": {
+    "Discord: the songs and gigs open their channel, and the sheet of a song shows the latest messages that tag your section.": "Discord : les morceaux et les plans ouvrent leur salon, et la fiche d’un morceau montre les derniers messages qui taguent ton pupitre.",
+    "Choose how each notification reaches you: by notification, by email, or both.": "Choisis comment chaque notification t’arrive : par notification, par e-mail, ou les deux.",
+    "The band can give the installed app an icon of its own.": "La fanfare peut donner à l’app installée une icône bien à elle.",
+    "The length of a song and of a setlist, and the setlist editor can propose songs, following the rules of the band.": "La durée d’un morceau et d’une setlist, et l’éditeur de setlist peut proposer des morceaux, en suivant les règles de la fanfare.",
+    "The MIDI player can loop over several rehearsal marks that follow each other.": "Le lecteur MIDI peut boucler sur plusieurs repères qui se suivent.",
+    "The reminders to answer reach you by email when none of your devices receives notifications.": "Les rappels de présence t’arrivent par e-mail quand aucun de tes appareils ne reçoit les notifications.",
+    "An instrument hidden or left empty in the MuseScore file no longer shows in the MIDI player nor in the Live mode.": "Un instrument masqué ou laissé vide dans le fichier MuseScore n’apparaît plus dans le lecteur MIDI ni dans le mode Live."
+  },
   "0.2.0": {
     "New types of notifications in a new settings screen: playable and confirmed gigs, the live setlist, new songs, new MuseScore files, new parts for your instrument.": "Nouveaux types de notifications dans un nouvel écran de réglages : plans jouables et confirmés, setlist live, nouveaux morceaux, mise à jour de fichier MuseScore, ou PDF pour ton instru.",
     "Calendar sync of your gigs.": "Ajout et synchronisation automatique des plans dans ton agenda.",
