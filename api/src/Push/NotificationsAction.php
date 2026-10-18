@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Push;
 
 use BrassBand\Access\CurrentMember;
+use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
 use Doctrine\DBAL\Connection;
@@ -12,7 +13,8 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // GET /api/me/notifications: the notification settings of the signed-in
-// member. PUT sets the six at once. Seen and changed by the member only, like
+// member. PUT sets the seven at once; a channel a setting does not allow
+// (the reminders off, the live setlist by email) is refused. Seen and changed by the member only, like
 // the other preferences (model/members.md, "Notification settings"): the
 // address names nobody.
 //
@@ -31,6 +33,13 @@ final class NotificationsAction
 
         if ($request->getMethod() === 'PUT') {
             $input = Input::from($request, NotificationsInput::class);
+            $errors = new FieldErrors();
+            foreach (NotificationSetting::cases() as $setting) {
+                if (!$setting->allows($input->{$setting->column()})) {
+                    $errors->add($setting->column(), 'invalid');
+                }
+            }
+            $errors->throwIfAny();
             $this->database->update('member', [...$input->columns(), 'updatedByMemberId' => $me->id], ['id' => $me->id]);
         }
 

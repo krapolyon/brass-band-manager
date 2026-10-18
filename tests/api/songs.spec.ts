@@ -78,9 +78,10 @@ test.describe('who may do what', () => {
     expect(sql('SELECT COUNT(*) FROM memberSong')).toBe('0');
   });
 
-  test('a member sees every song whatever its status, by name, and not the Discord channel', async ({
+  test('a member sees every song whatever its status, by name, and its Discord channel as a link', async ({
     playwright,
   }) => {
+    sql(`UPDATE band SET discordServerId = '1000312294715883560'`);
     addSong('Toxic', 'ABANDONED');
     addSong('Crazy', 'PROPOSED');
     const songId = addSong('Hey Ya', 'TEMPORARY');
@@ -94,27 +95,35 @@ test.describe('who may do what', () => {
         'bpm',
         'coverUrl',
         'createdAt',
+        'durationSeconds',
         'enjoyment',
         'fileSizes',
         'id',
+        'inRepertoireOn',
+        'isNeverFirst',
         'mastery',
         'name',
         'originalArtist',
         'originalTitle',
+        'otherCategories',
         'partCount',
+        'setCategory',
         'status',
+        'tiringSectionIds',
+        'trickySectionIds',
         'versionOn',
       ].sort(),
     );
 
+    // Since 0.3.0 every member sees the channel, as a link (Songs v1.7).
     const song = await (await zaza.get(`/api/songs/${songId}`)).json();
-    expect(song).toMatchObject({ name: 'Hey Ya', status: 'TEMPORARY', parts: [], audio: null });
-    expect(song).not.toHaveProperty('discordChannelId');
-
-    // Who manages songs sees it.
-    const sisi = await deviceOf(playwright, email('Sisi'));
-    expect(await (await sisi.get(`/api/songs/${songId}`)).json()).toMatchObject({
+    expect(song).toMatchObject({
+      name: 'Hey Ya',
+      status: 'TEMPORARY',
+      parts: [],
+      audio: null,
       discordChannelId: '1203984756120394875',
+      discordUrl: 'https://discord.com/channels/1000312294715883560/1203984756120394875',
     });
   });
 
@@ -149,6 +158,7 @@ test.describe('who may do what', () => {
     playwright,
     request,
   }) => {
+    sql(`UPDATE band SET discordServerId = '1000312294715883560'`);
     const sisi = await deviceOf(playwright, email('Sisi'));
 
     const created = await sisi.post('/api/songs', {
@@ -272,12 +282,212 @@ test.describe('the record of a song', () => {
   });
 
   test('one Discord channel per song', async ({ playwright }) => {
+    sql(`UPDATE band SET discordServerId = '1000312294715883560'`);
     const sisi = await deviceOf(playwright, email('Sisi'));
     const channel = { discordChannelId: '1203984756120394875' };
     await sisi.post('/api/songs', { data: songRecord(channel) });
 
     const twin = await sisi.post('/api/songs', { data: songRecord({ name: 'Crazy', ...channel }) });
     expect((await twin.json()).fields).toEqual({ discordChannelId: 'duplicate' });
+  });
+});
+
+test.describe('the Discord channel of a song (0.3.0)', () => {
+  const server = '1000312294715883560';
+  const channel = '1000359811281600622';
+
+  test('typed as the link of the channel or as its identifier; the app keeps the identifier', async ({
+    playwright,
+  }) => {
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const sisi = await deviceOf(playwright, email('Sisi'));
+
+    for (const typed of [
+      ` https://discord.com/channels/${server}/${channel} `,
+      `https://discord.com/channels/${server}/${channel}/1000359811281600999`,
+      `https://discordapp.com/channels/${server}/${channel}`,
+      channel,
+    ]) {
+      const saved = await sisi.post('/api/songs', {
+        data: songRecord({ discordChannelId: typed }),
+      });
+      expect(saved.status(), typed).toBe(201);
+      expect(await saved.json(), typed).toMatchObject({
+        discordChannelId: channel,
+        discordUrl: `https://discord.com/channels/${server}/${channel}`,
+      });
+      sql('DELETE FROM song');
+    }
+  });
+
+  test('a link of another server, a link that is not one of a channel, or any channel without a server, is refused', async ({
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    // The band has no server yet: no channel can be typed.
+    const noServer = await sisi.post('/api/songs', {
+      data: songRecord({ discordChannelId: channel }),
+    });
+    expect((await noServer.json()).fields).toEqual({ discordChannelId: 'invalid' });
+
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const faults: [string, string][] = [
+      [`https://discord.com/channels/1000999999999999999/${channel}`, 'otherServer'],
+      [`https://discord.com/channels/${server}`, 'invalid'],
+      [`http://discord.com/channels/${server}/${channel}`, 'invalid'],
+      [`https://discord.example.org/channels/${server}/${channel}`, 'invalid'],
+      ['salon-du-morceau', 'invalid'],
+      ['12345', 'invalid'],
+    ];
+    for (const [typed, problem] of faults) {
+      const refused = await sisi.post('/api/songs', {
+        data: songRecord({ discordChannelId: typed }),
+      });
+      expect(await refused.json(), typed).toEqual({
+        error: 'invalidInput',
+        fields: { discordChannelId: problem },
+      });
+    }
+    expect(sql('SELECT COUNT(*) FROM song')).toBe('0');
+  });
+
+  test('a song keeps the channel it has when the band has no server: no link is shown', async ({
+    playwright,
+  }) => {
+    const songId = addSong('Crazy');
+    sql(`UPDATE song SET discordChannelId = '${channel}' WHERE id = ${songId}`);
+    const sisi = await deviceOf(playwright, email('Sisi'));
+
+    const saved = await sisi.put(`/api/songs/${songId}`, {
+      data: songRecord({ name: 'Crazy', discordChannelId: channel }),
+    });
+    expect(await saved.json()).toMatchObject({ discordChannelId: channel, discordUrl: null });
+  });
+});
+
+test.describe('what the setlist generator reads (0.3.0)', () => {
+  const sectionId = (name: string) => Number(sql(`SELECT id FROM section WHERE name = '${name}'`));
+
+  test('who manages songs gives the length, the categories, never first, tiring and tricky; every member reads them', async ({
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    const created = await sisi.post('/api/songs', {
+      data: songRecord({
+        durationSeconds: 232,
+        inRepertoireOn: '2015-01-01',
+        setCategory: 'PARTY',
+        isNeverFirst: true,
+        otherCategories: ['ENCORE', 'KNOWN'],
+        tiringSectionIds: [sectionId('Trompette')],
+        trickySectionIds: [sectionId('Souba'), sectionId('Saxophone')],
+      }),
+    });
+    expect(created.status()).toBe(201);
+    const song = await created.json();
+    const attributes = {
+      durationSeconds: 232,
+      inRepertoireOn: '2015-01-01',
+      setCategory: 'PARTY',
+      isNeverFirst: true,
+      // In the order of the enum, and of the sections of the band.
+      otherCategories: ['KNOWN', 'ENCORE'],
+      tiringSectionIds: [sectionId('Trompette')],
+      trickySectionIds: [sectionId('Saxophone'), sectionId('Souba')],
+    };
+    expect(song).toMatchObject(attributes);
+
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    expect((await (await zaza.get('/api/songs')).json())[0]).toMatchObject(attributes);
+
+    // Sent whole: what is left out goes back to its default.
+    const edited = await sisi.put(`/api/songs/${song.id}`, { data: songRecord() });
+    expect(await edited.json()).toMatchObject({
+      durationSeconds: null,
+      inRepertoireOn: null,
+      setCategory: 'STANDARD',
+      isNeverFirst: false,
+      otherCategories: [],
+      tiringSectionIds: [],
+      trickySectionIds: [],
+    });
+    expect(sql('SELECT COUNT(*) FROM songOtherCategory')).toBe('0');
+  });
+
+  test('a length out of bounds, a day to come, Standard or the main category among the others, or an unknown section is refused', async ({
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    const faults: [Record<string, unknown>, string][] = [
+      [{ durationSeconds: 9 }, 'durationSeconds'],
+      [{ durationSeconds: 1201 }, 'durationSeconds'],
+      [{ inRepertoireOn: '2099-01-01' }, 'inRepertoireOn'],
+      [{ inRepertoireOn: '2026-02-30' }, 'inRepertoireOn'],
+      [{ otherCategories: ['STANDARD'] }, 'otherCategories'],
+      [{ setCategory: 'PARTY', otherCategories: ['PARTY'] }, 'otherCategories'],
+      [{ tiringSectionIds: [9999] }, 'tiringSectionIds'],
+      [{ trickySectionIds: [9999] }, 'trickySectionIds'],
+    ];
+    for (const [changes, field] of faults) {
+      const refused = await sisi.post('/api/songs', { data: songRecord(changes) });
+      expect(await refused.json(), JSON.stringify(changes)).toEqual({
+        error: 'invalidInput',
+        fields: { [field]: 'invalid' },
+      });
+    }
+    // An unknown category is not even read.
+    expect(
+      (await sisi.post('/api/songs', { data: songRecord({ setCategory: 'TEUF' }) })).status(),
+    ).toBe(422);
+    // The database keeps the rules too.
+    const songId = addSong('Crazy');
+    expect(() =>
+      sql(`INSERT INTO songOtherCategory (songId, category) VALUES (${songId}, 'STANDARD')`),
+    ).toThrow();
+    expect(() => sql(`UPDATE song SET durationSeconds = 5 WHERE id = ${songId}`)).toThrow();
+    expect(sql('SELECT COUNT(*) FROM song')).toBe('1');
+  });
+
+  test('the day a song enters the repertoire is set by the app the first time, then kept', async ({
+    playwright,
+  }) => {
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    const today = new Date().toISOString().slice(0, 10);
+    const proposed = await (
+      await sisi.post('/api/songs', { data: songRecord({ status: 'PROPOSED' }) })
+    ).json();
+    expect(proposed.inRepertoireOn).toBeNull();
+
+    const entered = await sisi.put(`/api/songs/${proposed.id}/status`, {
+      data: { status: 'IN_REPERTOIRE' },
+    });
+    expect((await entered.json()).inRepertoireOn).toBe(today);
+
+    // Corrected by hand, it stays when the status moves on and comes back.
+    await sisi.put(`/api/songs/${proposed.id}`, {
+      data: songRecord({ inRepertoireOn: '2015-01-01' }),
+    });
+    await sisi.put(`/api/songs/${proposed.id}/status`, { data: { status: 'ABANDONED' } });
+    const back = await sisi.put(`/api/songs/${proposed.id}/status`, {
+      data: { status: 'IN_REPERTOIRE' },
+    });
+    expect((await back.json()).inRepertoireOn).toBe('2015-01-01');
+
+    // Created straight in the repertoire: today, unless a day is given.
+    const created = await (
+      await sisi.post('/api/songs', { data: songRecord({ name: 'Crazy' }) })
+    ).json();
+    expect(created.inRepertoireOn).toBe(today);
+  });
+
+  test('a member cannot change them', async ({ playwright }) => {
+    const songId = addSong('Crazy');
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const refused = await zaza.put(`/api/songs/${songId}`, {
+      data: songRecord({ name: 'Crazy', setCategory: 'PARTY' }),
+    });
+    expect(refused.status()).toBe(403);
+    expect(sql('SELECT setCategory FROM song')).toBe('STANDARD');
   });
 });
 

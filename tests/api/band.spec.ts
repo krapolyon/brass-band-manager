@@ -24,6 +24,7 @@ test('the band is public: its name, its logo and its three defaults', async ({ r
     canSendEmail: true,
     logoUrl: null,
     icons: null,
+    appIconUrl: null,
   });
 });
 

@@ -7,20 +7,30 @@ namespace BrassBand\Push;
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\ApiError;
 use BrassBand\Mail\AllowedRecipients;
+use BrassBand\Mail\Emails;
+use BrassBand\Mail\Mailer;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 
-// Push notifications: the devices that accepted them (pushSubscription,
-// model/members.md) and the sending. Used by every notification of the app:
-// the reminders and the live setlist, a gig playable or confirmed, a new song,
-// score or part. A device belongs to a session: signed out, it receives
-// nothing. The address and the secret of a device never leave the server.
+// Notifications: the devices that accepted them (pushSubscription,
+// model/members.md) and the sending, by push, by email or both. Used by every
+// notification of the app: the reminders and the live setlist, a gig playable
+// or confirmed, a new song, score or part. A device belongs to a session:
+// signed out, it receives nothing. The address and the secret of a device
+// never leave the server.
 //
-// What a member receives is a setting of their account (NotificationSetting):
-// a sender names the setting its notification depends on, and the members
-// who turned it off get nothing. The device that made the request can be
-// left out: it does not ring for what it just did.
+// What a member receives, and how, is a setting of their account
+// (NotificationSetting, issue #27): a sender names the setting its
+// notification depends on, and each member gets it through the channels they
+// chose. The device that made the request can be left out of the push: it
+// does not ring for what it just did. An email is sent whatever the device.
+//
+// The email has the same text as the push, and a link that opens the gig or
+// the song (api/resources/emails.<language>.json, "notification"). Without a
+// mail server, a choice saved with email is read as push. The reminders to
+// answer always reach the member: chosen by push only, they go by email when
+// no device of the member accepts notifications.
 final class Push
 {
     // The push services of the browsers. The server only ever writes to
@@ -45,6 +55,7 @@ final class Push
         private readonly ?string $publicKey,
         private readonly ?PushTransport $transport,
         private readonly AllowedRecipients $recipients,
+        private readonly ?Mailer $mailer = null,
     ) {
     }
 
@@ -98,15 +109,16 @@ final class Push
     }
 
     /**
-     * Sends a notification to every device of some members, once the answer
-     * of the request has left: whoever asked does not wait for the phones.
+     * Sends a notification to some members, by the channels each one chose,
+     * once the answer of the request has left: whoever asked does not wait
+     * for the phones nor for the mail server.
      *
      * @param list<int> $memberIds
      * @param callable(int $memberId, string $language): ?array<string, mixed> $notification What the device shows (title, body, tag, url…), written for one member in their language; null sends them nothing
      * @param int $ttl Seconds a push service keeps it for a device that is off
      * @param string|null $topic Replaces, at the push service, a notification of the same topic not delivered yet
-     * @param NotificationSetting|null $setting The setting of the account this notification depends on; null for one that is always sent (the reminders)
-     * @param int|null $exceptSessionId The session of the device that made the request: it receives nothing
+     * @param NotificationSetting|null $setting The setting of the account this notification depends on; null for a push always sent
+     * @param int|null $exceptSessionId The session of the device that made the request: it receives no push
      */
     public function toMembers(
         array $memberIds,
@@ -116,23 +128,79 @@ final class Push
         ?NotificationSetting $setting = null,
         ?int $exceptSessionId = null,
     ): void {
-        if ($this->transport === null || $memberIds === []) {
+        $canEmail = $this->mailer !== null && $this->mailer->canSend();
+        if ($memberIds === [] || ($this->transport === null && !$canEmail)) {
             return;
         }
+
         // The column comes from the enum, never from what was sent.
-        $wanted = $setting === null ? '' : ' AND m.' . $setting->column() . " = '" . NotificationChannel::PUSH->value . "'";
+        $channel = $setting === null ? "'PUSH'" : 'm.' . $setting->column();
+        $members = $this->database->fetchAllAssociative(
+            "SELECT m.id, m.language, m.email, {$channel} AS channel,
+                EXISTS (
+                    SELECT 1 FROM pushSubscription p JOIN memberSession s ON s.id = p.memberSessionId
+                    WHERE s.memberId = m.id AND s.expiresAt > UTC_TIMESTAMP()
+                ) AS hasDevice
+             FROM member m
+             WHERE m.id IN (?) AND m.status IN ('ACTIVE', 'POWER_MEMBER')",
+            [$memberIds],
+            [ArrayParameterType::INTEGER],
+        );
+
+        $byPush = [];
+        $byEmail = [];
+        foreach ($members as $member) {
+            $chosen = NotificationChannel::tryFrom((string) $member['channel']) ?? NotificationChannel::PUSH;
+            // Without a mail server, email is read as push.
+            if (!$canEmail && $chosen->hasEmail()) {
+                $chosen = NotificationChannel::PUSH;
+            }
+            $hasDevice = $this->transport !== null && (bool) $member['hasDevice'];
+            if ($chosen->hasPush()) {
+                $byPush[] = (int) $member['id'];
+            }
+            $isReminderWithoutDevice = $setting === NotificationSetting::GIG_REMINDER && $chosen === NotificationChannel::PUSH && !$hasDevice;
+            if ($canEmail && ($chosen->hasEmail() || $isReminderWithoutDevice)) {
+                // The email says why it came: chosen, or for want of a device.
+                $byEmail[] = [...$member, 'email' => (string) $member['email'], 'isChosen' => $chosen->hasEmail()];
+            }
+        }
+
+        // Written once per member, for both channels.
+        $written = [];
+        $write = static function (int $memberId, string $language) use (&$written, $notification): ?array {
+            if (!array_key_exists($memberId, $written)) {
+                $written[$memberId] = $notification($memberId, $language);
+            }
+
+            return $written[$memberId];
+        };
+
+        if ($this->transport !== null && $byPush !== []) {
+            $this->pushTo($byPush, $write, $ttl, $topic, $exceptSessionId);
+        }
+        if ($byEmail !== [] && $this->mailer !== null) {
+            $this->emailTo($byEmail, $write);
+        }
+    }
+
+    /**
+     * @param list<int> $memberIds
+     * @param callable(int, string): ?array<string, mixed> $write
+     */
+    private function pushTo(array $memberIds, callable $write, int $ttl, ?string $topic, ?int $exceptSessionId): void
+    {
         $devices = $this->database->fetchAllAssociative(
             'SELECT p.endpoint, p.p256dhKey, p.authKey, m.id AS memberId, m.language, m.email
              FROM pushSubscription p
              JOIN memberSession s ON s.id = p.memberSessionId AND s.expiresAt > UTC_TIMESTAMP()
              JOIN member m ON m.id = s.memberId
-             WHERE m.id IN (?) AND m.status IN (\'ACTIVE\', \'POWER_MEMBER\') AND s.id <> ?' . $wanted,
+             WHERE m.id IN (?) AND s.id <> ?',
             [$memberIds, $exceptSessionId ?? 0],
             [ArrayParameterType::INTEGER, ParameterType::INTEGER],
         );
 
         $messages = [];
-        $written = [];
         $putAside = 0;
         foreach ($devices as $device) {
             // An instance that only writes to some members notifies nobody else.
@@ -140,9 +208,7 @@ final class Push
                 $putAside++;
                 continue;
             }
-            $memberId = (int) $device['memberId'];
-            $written[$memberId] ??= [$notification($memberId, (string) $device['language'])];
-            $payload = $written[$memberId][0];
+            $payload = $write((int) $device['memberId'], (string) $device['language']);
             if ($payload === null) {
                 continue;
             }
@@ -155,7 +221,7 @@ final class Push
             ];
         }
         AllowedRecipients::logPutAside('notification', $putAside);
-        if ($messages === []) {
+        if ($messages === [] || $this->transport === null) {
             return;
         }
 
@@ -170,6 +236,53 @@ final class Push
                     [$gone],
                     [ArrayParameterType::STRING],
                 );
+            }
+        });
+    }
+
+    /**
+     * One email per member, with the text of the push and a link to the gig
+     * or the song. They leave together, after the answer.
+     *
+     * @param list<array<string, mixed>> $members
+     * @param callable(int, string): ?array<string, mixed> $write
+     */
+    private function emailTo(array $members, callable $write): void
+    {
+        $mailer = $this->mailer;
+        if ($mailer === null) {
+            return;
+        }
+        $band = (string) $this->database->fetchOne('SELECT name FROM band WHERE id = 1');
+        $emails = [];
+        foreach ($members as $member) {
+            $language = (string) $member['language'];
+            $payload = $write((int) $member['id'], $language);
+            if ($payload === null) {
+                continue;
+            }
+            $path = is_string($payload['url'] ?? null) && str_starts_with($payload['url'], '/') ? $payload['url'] : '/';
+            $text = Emails::text($member['isChosen'] ? 'notification' : 'notificationWithoutDevice', $language, [
+                'title' => is_string($payload['title'] ?? null) ? $payload['title'] : '',
+                'body' => is_string($payload['body'] ?? null) ? $payload['body'] : '',
+                'link' => $mailer->url($path),
+                'settings' => $mailer->url('/settings/notifications'),
+            ]);
+            $emails[] = ['to' => (string) $member['email'], ...$text];
+        }
+        if ($emails === []) {
+            return;
+        }
+
+        AfterResponse::add(static function () use ($mailer, $band, $emails): void {
+            foreach ($emails as $email) {
+                try {
+                    $mailer->send($email['to'], $band, $email['subject'], $email['body']);
+                } catch (\Throwable $failure) {
+                    // The others still leave. The log names the kind of
+                    // failure, never the address.
+                    error_log('A notification email was not sent: ' . $failure::class);
+                }
             }
         });
     }

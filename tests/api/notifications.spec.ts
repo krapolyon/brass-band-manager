@@ -1,12 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
 import { addGig, addSetlist, addSong, answerOf, day, organise } from '../support/gigs.ts';
+import { emptyMailbox, mailsAfterAWhile, receivedMails } from '../support/mail.ts';
 import { emptyPushes, sentPushes, subscribe } from '../support/push.ts';
-import { addMember, admin, deviceOf, install, memberId } from '../support/scenario.ts';
+import { addMember, admin, deviceOf, install, memberId, signIn } from '../support/scenario.ts';
 import { museScore, pdf, sendFile, songRecord } from '../support/songFiles.ts';
 
-// The notification settings of an account and the notifications of 0.2.0.
-// Rules: model/members.md ("Notification settings"), model/gigs.md
+// The notification settings of an account, their channels (0.3.0, issue
+// #27) and the notifications of 0.2.0. Rules: model/members.md
+// ("Notification settings"), model/gigs.md
 // ("Notifications of a gig", entry 4 "Life cycle"), model/songs.md
 // ("Notifications"). The test server writes the notifications to a file and
 // sends none. The gigs and the songs are examples; nobody here is real.
@@ -17,6 +19,7 @@ import { museScore, pdf, sendFile, songRecord } from '../support/songFiles.ts';
 test.beforeEach(async ({ playwright, baseURL }) => {
   emptyDatabase();
   emptyPushes();
+  await emptyMailbox();
   const setup = await playwright.request.newContext({ baseURL });
   await install(setup);
   await setup.dispose();
@@ -30,6 +33,7 @@ test.beforeEach(async ({ playwright, baseURL }) => {
 const band = 'La Fanfare des Cuivres Déchaînés';
 const email = (nickname: string) => `${nickname.toLowerCase()}@example.org`;
 const settings = {
+  notifyGigReminder: 'PUSH',
   notifyGigPlayable: 'PUSH',
   notifyGigConfirmed: 'PUSH',
   notifyLiveSetlist: 'PUSH',
@@ -46,14 +50,20 @@ const turnOff = (nickname: string, setting: keyof typeof settings) =>
   sql(`UPDATE member SET ${setting} = 'OFF' WHERE id = ${memberId(nickname)}`);
 
 test.describe('the settings of an account', () => {
-  test('six settings, all on at first; the member changes them for every device', async ({
+  test('seven settings, all by push at first; the member changes them for every device', async ({
     playwright,
   }) => {
     const zaza = await deviceOf(playwright, email('Zaza'));
     const other = await deviceOf(playwright, email('Zaza'));
 
     expect(await (await zaza.get('/api/me/notifications')).json()).toEqual(settings);
-    const changed = { ...settings, notifyGigPlayable: 'OFF', notifySongPart: 'OFF' };
+    const changed = {
+      ...settings,
+      notifyGigReminder: 'PUSH_AND_EMAIL',
+      notifyGigPlayable: 'OFF',
+      notifySongNew: 'EMAIL',
+      notifySongPart: 'OFF',
+    };
     const saved = await zaza.put('/api/me/notifications', { data: changed });
     expect(saved.status()).toBe(200);
     expect(await saved.json()).toEqual(changed);
@@ -68,11 +78,29 @@ test.describe('the settings of an account', () => {
   }) => {
     const zaza = await deviceOf(playwright, email('Zaza'));
     for (const data of [
-      { ...settings, notifyGigPlayable: 'EMAIL' },
+      { ...settings, notifyGigPlayable: 'SMS' },
       { ...settings, notifySongNew: undefined },
       { ...settings, colorScheme: 'DARK' },
     ]) {
       expect((await zaza.put('/api/me/notifications', { data })).status()).toBe(422);
+    }
+    // The reminders are never off; the live setlist is never sent by email.
+    for (const [field, value] of [
+      ['notifyGigReminder', 'OFF'],
+      ['notifyLiveSetlist', 'EMAIL'],
+      ['notifyLiveSetlist', 'PUSH_AND_EMAIL'],
+    ]) {
+      const refused = await zaza.put('/api/me/notifications', {
+        data: { ...settings, [field as string]: value },
+      });
+      expect(await refused.json(), `${field} ${value}`).toEqual({
+        error: 'invalidInput',
+        fields: { [field as string]: 'invalid' },
+      });
+    }
+    // The database refuses them too, whatever writes to it.
+    for (const change of [`notifyGigReminder = 'OFF'`, `notifyLiveSetlist = 'EMAIL'`]) {
+      expect(() => sql(`UPDATE member SET ${change} WHERE id = ${memberId('Zaza')}`)).toThrow();
     }
     expect(await (await zaza.get('/api/me/notifications')).json()).toEqual(settings);
   });
@@ -353,5 +381,109 @@ test.describe('songs', () => {
     sql(`UPDATE member SET status = 'LEFT' WHERE id = ${memberId('Zaza')}`);
     await sonia.post('/api/songs', { data: songRecord({ name: 'Rasputin' }) });
     expect(sentPushes()).toEqual([]);
+  });
+});
+
+test.describe('the channel of each notification', () => {
+  // The texts of a notification and of its email are the same; the email
+  // adds the link that opens the song or the gig (appUrl of the test server).
+  test('by email only, by push only, or both: each member as they chose', async ({
+    playwright,
+  }) => {
+    const sonia = await deviceOf(playwright, email('Sonia'));
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const riton = await deviceOf(playwright, email('Riton'));
+    const lulu = await deviceOf(playwright, email('Lulu'));
+    for (const [name, device] of Object.entries({ zaza, riton, lulu }))
+      await subscribe(device, name);
+    sql(`UPDATE member SET notifySongNew = 'EMAIL' WHERE id = ${memberId('Zaza')}`);
+    sql(`UPDATE member SET notifySongNew = 'PUSH_AND_EMAIL' WHERE id = ${memberId('Riton')}`);
+
+    const created = await sonia.post('/api/songs', {
+      data: songRecord({ name: 'Rasputin', originalArtist: 'Boney M.', status: 'PROPOSED' }),
+    });
+    const songId = (await created.json()).id;
+
+    expect(received()).toEqual([
+      `lulu: ${band} – Nouveau morceau`,
+      `riton: ${band} – Nouveau morceau`,
+    ]);
+    const mails = await receivedMails(2);
+    expect(mails.map((mail) => mail.to).sort()).toEqual([email('Riton'), email('Zaza')]);
+    const mail = mails.find((one) => one.to === email('Zaza'));
+    expect(mail?.subject).toBe(`${band} – Nouveau morceau`);
+    expect(mail?.from).toBe(`${band} <app@example.org>`);
+    expect(mail?.text).toContain('Rasputin – Boney M.');
+    expect(mail?.text).toContain(`Ouvrir dans l’app : http://localhost:8081/songs/${songId}`);
+    expect(mail?.text).toContain('parce que tu l’as choisi');
+    expect(mail?.text).toContain('http://localhost:8081/settings/notifications');
+  });
+
+  test('the email is sent whatever the device: the one that acted is spared the push only', async ({
+    playwright,
+  }) => {
+    const sonia = await deviceOf(playwright, email('Sonia'));
+    await subscribe(sonia, 'sonia');
+    sql(`UPDATE member SET notifySongNew = 'PUSH_AND_EMAIL' WHERE id = ${memberId('Sonia')}`);
+
+    await sonia.post('/api/songs', { data: songRecord({ name: 'Rasputin' }) });
+
+    expect(sentPushes()).toEqual([]);
+    expect((await receivedMails(1))[0]?.to).toBe(email('Sonia'));
+  });
+
+  test('the reminders: by push when a device receives, by email when none does, as chosen otherwise', async ({
+    playwright,
+  }) => {
+    // Jibé, Zaza, Riton, Lulu, Sissi and Sonia have not answered.
+    const { gigId } = addGig('Carnaval de quartier', { startsOn: day(20) });
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const riton = await deviceOf(playwright, email('Riton'));
+    await subscribe(zaza, 'zaza');
+    await subscribe(riton, 'riton');
+    // Riton chose email as well; Lulu email only; Sissi and Sonia keep push,
+    // without any device that receives; Jibé answered.
+    sql(`UPDATE member SET notifyGigReminder = 'PUSH_AND_EMAIL' WHERE id = ${memberId('Riton')}`);
+    sql(`UPDATE member SET notifyGigReminder = 'EMAIL' WHERE id = ${memberId('Lulu')}`);
+    sql(
+      `INSERT INTO gigSlotAttendance (gigSlotId, memberId, answer) SELECT id, ${memberId('Jibé')}, 'YES' FROM gigSlot WHERE gigId = ${gigId}`,
+    );
+
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    expect((await jibe.post(`/api/gigs/${gigId}/reminder`)).status()).toBe(200);
+
+    expect(received()).toEqual([
+      `riton: ${band} – Présence manquante`,
+      `zaza: ${band} – Présence manquante`,
+    ]);
+    const mails = await receivedMails(4);
+    expect(mails.map((mail) => mail.to).sort()).toEqual(
+      [email('Lulu'), email('Riton'), email('Sissi'), email('Sonia')].sort(),
+    );
+    const withoutDevice = mails.find((mail) => mail.to === email('Sissi'));
+    expect(withoutDevice?.subject).toBe(`${band} – Présence manquante`);
+    expect(withoutDevice?.text).toContain('Carnaval de quartier');
+    expect(withoutDevice?.text).toContain(`http://localhost:8081/gigs/${gigId}`);
+    expect(withoutDevice?.text).toContain('aucun de tes appareils ne reçoit');
+    expect(mails.find((mail) => mail.to === email('Lulu'))?.text).toContain(
+      'parce que tu l’as choisi',
+    );
+  });
+
+  test('without a mail server, a choice saved with email is read as push', async ({
+    playwright,
+  }) => {
+    const noMail = 'http://localhost:8082';
+    const sonia = await playwright.request.newContext({ baseURL: noMail });
+    await signIn(sonia, email('Sonia'));
+    const zaza = await playwright.request.newContext({ baseURL: noMail });
+    await signIn(zaza, email('Zaza'));
+    await subscribe(zaza, 'zaza');
+    sql(`UPDATE member SET notifySongNew = 'EMAIL' WHERE id = ${memberId('Zaza')}`);
+
+    await sonia.post('/api/songs', { data: songRecord({ name: 'Rasputin' }) });
+
+    expect(received()).toEqual([`zaza: ${band} – Nouveau morceau`]);
+    expect(await mailsAfterAWhile()).toEqual([]);
   });
 });

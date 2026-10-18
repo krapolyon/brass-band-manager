@@ -2,5 +2,13 @@
   "passwordLink": {
     "subject": "Ton nouveau mot de passe pour {band}",
     "body": "Bonjour,\n\nQuelqu’un, sans doute toi, a demandé à choisir un nouveau mot de passe pour l’app de {band}. Ouvre ce lien :\n\n{link}\n\nIl marche une fois, pendant une heure.\n\nTu n’as rien demandé ? Ignore ce message : ton mot de passe ne change pas.\n"
+  },
+  "notification": {
+    "subject": "{title}",
+    "body": "{body}\n\nOuvrir dans l’app : {link}\n\n—\nTu reçois cet e-mail parce que tu l’as choisi dans tes réglages de notifications : {settings}\n"
+  },
+  "notificationWithoutDevice": {
+    "subject": "{title}",
+    "body": "{body}\n\nOuvrir dans l’app : {link}\n\n—\nTu reçois ce rappel par e-mail parce qu’aucun de tes appareils ne reçoit les notifications de l’app. Tes réglages de notifications : {settings}\n"
   }
 }

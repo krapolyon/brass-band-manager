@@ -41,6 +41,9 @@ services:
       BRASS_BAND_PUSH_LOG: /var/www/storage/pushLog.jsonl
       # The tiles of the map are asked at this address, which the tests answer.
       BRASS_BAND_MAP_TILES_URL: http://localhost:8081/testTiles/tilejson.json
+      # Discord is a folder of answers the tests write (tests/support/discord.ts):
+      # nothing is asked of Discord.
+      BRASS_BAND_DISCORD_ANSWERS: /var/www/storage/discordAnswers
     depends_on:
       db:
         condition: service_healthy
@@ -66,6 +69,8 @@ services:
       BRASS_BAND_DATABASE: brassBandTest
       BRASS_BAND_APP_URL: http://localhost:8082
       BRASS_BAND_NO_MAIL: "1"
+      # The same file as the test server: what an instance without email sends.
+      BRASS_BAND_PUSH_LOG: /var/www/storage/pushLog.jsonl
     depends_on:
       db:
         condition: service_healthy

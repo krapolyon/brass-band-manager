@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Gigs;
 
+use BrassBand\Push\NotificationSetting;
 use BrassBand\Push\Push;
 use BrassBand\Push\PushTexts;
 use Doctrine\DBAL\ArrayParameterType;
@@ -11,8 +12,9 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 
 // The reminders of gigs (model/gigs.md, rules "Reminder" and "Automatic
-// reminders"): a push notification to the ACTIVE members who have not
-// answered for one slot at least of a gig. Never to a power member. One
+// reminders"): a notification to the ACTIVE members who have not answered
+// for one slot at least of a gig, by push, email or both as each one chose
+// (notifyGigReminder, never off; by email when no device receives). Never to a power member. One
 // notification per member, whatever the number of gigs: its text has one line
 // per gig. A reminder does not say who sent it.
 final class Reminders
@@ -68,7 +70,7 @@ final class Reminders
                 'renotify' => true,
                 'url' => count($mine) === 1 ? "/gigs/{$mine[0]}" : '/gigs',
             ];
-        }, Push::TTL_REMINDER);
+        }, Push::TTL_REMINDER, setting: NotificationSetting::GIG_REMINDER);
 
         $this->database->executeStatement(
             'UPDATE gig SET remindedAt = ?, updatedByMemberId = ? WHERE id IN (?)',

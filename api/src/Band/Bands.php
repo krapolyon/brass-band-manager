@@ -44,19 +44,20 @@ final class Bands
             'defaultCountryCode' => $band['defaultCountryCode'],
             // Decides what the forgotten password screen offers.
             'canSendEmail' => $this->mailer->canSend(),
-            ...($this->logos->urls() ?? ['logoUrl' => null, 'icons' => null]),
+            ...$this->logos->urls(),
         ];
     }
 
     /**
-     * The reminders of gigs: null for a reminder that is not sent.
+     * The reminders of gigs (null for a reminder that is not sent) and the
+     * time between two songs of a setlist.
      *
      * @return array<string, int|null>
      */
     public function gigReminders(): array
     {
         $band = $this->database->fetchAssociative(
-            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour FROM band WHERE id = 1',
+            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band WHERE id = 1',
         );
         if ($band === false) {
             throw new ApiError(404, 'notInstalled');
@@ -66,6 +67,7 @@ final class Bands
             'gigFirstReminderDays' => $band['gigFirstReminderDays'] === null ? null : (int) $band['gigFirstReminderDays'],
             'gigSecondReminderDays' => $band['gigSecondReminderDays'] === null ? null : (int) $band['gigSecondReminderDays'],
             'gigReminderHour' => (int) $band['gigReminderHour'],
+            'setlistGapSeconds' => (int) $band['setlistGapSeconds'],
         ];
     }
 }

@@ -114,7 +114,7 @@ test('replacing the logo replaces its files, and removing it removes them', asyn
   expect(old.headers()['cache-control']).toBe('no-cache');
 
   const removed = await request.delete('/api/band/logo');
-  expect(await removed.json()).toEqual({ logoUrl: null, icons: null });
+  expect(await removed.json()).toEqual({ logoUrl: null, icons: null, appIconUrl: null });
   expect(sql('SELECT logoPath IS NULL FROM band')).toBe('1');
   expect(storedFiles('band')).toEqual([]);
   expect((await request.get(second.logoUrl)).status()).toBe(404);
@@ -314,4 +314,95 @@ test('the storage folder forbids the web server to serve it directly', async ({ 
     { encoding: 'utf8' },
   );
   expect(rule.trim()).toBe('Require all denied');
+});
+
+test.describe('the icon of the installed app (0.3.0, issue #34)', () => {
+  test('a square image of its own: the icons come from it, the logo stays the logo', async ({
+    request,
+  }) => {
+    await signIn(request, admin.email, admin.password);
+    const logo = await (await request.put('/api/band/logo', { data: logoInput() })).json();
+
+    const saved = await request.put('/api/band/appIcon', { data: logoInput(png(512)) });
+
+    expect(saved.status()).toBe(200);
+    const urls = await saved.json();
+    expect(urls.logoUrl).toBe(logo.logoUrl);
+    expect(urls.appIconUrl).toMatch(/^\/api\/band\/icon\/512\?v=[0-9a-f]{16}$/);
+    expect(urls.icons['192']).not.toBe(logo.icons['192']);
+    expect(await (await request.get('/api/band')).json()).toMatchObject(urls);
+    expect(sql('SELECT iconPath FROM band')).toMatch(/^band\/[0-9a-f]{16}\/appIcon\.png$/);
+    // The logo and its icons, the icon and its icons.
+    expect(storedFiles('band')).toHaveLength(8);
+    const manifest = await (await request.get('/api/manifest')).json();
+    expect(manifest.icons[1].src).toBe(urls.icons['512']);
+    expect((await request.get(urls.icons['180'])).headers()['content-type']).toBe('image/png');
+
+    // Removed: the icons are those of the logo again.
+    const removed = await (await request.delete('/api/band/appIcon')).json();
+    expect(removed).toEqual({ ...logo, appIconUrl: null });
+    expect(storedFiles('band')).toHaveLength(4);
+    expect(sql('SELECT iconPath IS NULL FROM band')).toBe('1');
+  });
+
+  test('without a logo, the icon alone makes the icons; removing the logo keeps them', async ({
+    request,
+  }) => {
+    await signIn(request, admin.email, admin.password);
+    await request.put('/api/band/logo', { data: logoInput() });
+    const icon = await (
+      await request.put('/api/band/appIcon', { data: logoInput(png(600)) })
+    ).json();
+
+    const afterLogo = await (await request.delete('/api/band/logo')).json();
+
+    expect(afterLogo).toEqual({ logoUrl: null, icons: icon.icons, appIconUrl: icon.appIconUrl });
+    expect((await request.get('/api/band/icon/192')).status()).toBe(200);
+  });
+
+  test('an image that is not square, too small, an SVG or too heavy is refused', async ({
+    request,
+  }) => {
+    await signIn(request, admin.email, admin.password);
+    const faults: [Buffer, string][] = [
+      [png(600, 512), 'notSquare'],
+      [png(256), 'tooSmall'],
+      [svg, 'invalid'],
+      [Buffer.alloc(2_000_001, 1), 'tooBig'],
+    ];
+    for (const [image, problem] of faults) {
+      const refused = await request.put('/api/band/appIcon', { data: logoInput(image) });
+      expect(await refused.json(), problem).toEqual({
+        error: 'invalidInput',
+        fields: { appIcon: problem },
+      });
+    }
+    // Icons that are not the PNGs of the three sizes are refused too.
+    const wrongIcons = await request.put('/api/band/appIcon', {
+      data: { ...logoInput(png(512)), icon192: png(180).toString('base64') },
+    });
+    expect((await wrongIcons.json()).fields).toEqual({ appIcon: 'invalid' });
+    expect(storedFiles('band')).toEqual([]);
+  });
+
+  test('only who manages the band gives or removes it', async ({ playwright, baseURL }) => {
+    const visitor = await playwright.request.newContext({ baseURL });
+    expect((await visitor.put('/api/band/appIcon', { data: logoInput(png(512)) })).status()).toBe(
+      401,
+    );
+    expect((await visitor.delete('/api/band/appIcon')).status()).toBe(401);
+    await visitor.dispose();
+
+    const member = await playwright.request.newContext({ baseURL });
+    await signIn(
+      member,
+      addMember({ nickname: 'Sisi', roles: ['SONG_MANAGER', 'GIG_MANAGER', 'MEMBER_MANAGER'] }),
+    );
+    expect((await member.put('/api/band/appIcon', { data: logoInput(png(512)) })).status()).toBe(
+      403,
+    );
+    expect((await member.delete('/api/band/appIcon')).status()).toBe(403);
+    await member.dispose();
+    expect(storedFiles('band')).toEqual([]);
+  });
 });

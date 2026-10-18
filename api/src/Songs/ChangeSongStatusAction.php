@@ -27,10 +27,17 @@ final class ChangeSongStatusAction
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $arguments): ResponseInterface
     {
         $me = CurrentMember::of($request);
-        $songId = (int) $this->songs->row((int) $arguments['id'])['id'];
+        $song = $this->songs->row((int) $arguments['id']);
+        $songId = (int) $song['id'];
         $status = Input::from($request, SongStatusInput::class)->status;
 
-        $this->database->update('song', ['status' => $status->value, 'updatedByMemberId' => $me->id], ['id' => $songId]);
+        $changes = ['status' => $status->value, 'updatedByMemberId' => $me->id];
+        // The day it first enters the repertoire (model/songs.md, "Setlist
+        // attributes"): kept when it was already set, by the app or by hand.
+        if ($status === SongStatus::IN_REPERTOIRE && $song['status'] !== $status->value && $song['inRepertoireOn'] === null) {
+            $changes['inRepertoireOn'] = (new \DateTimeImmutable('now'))->format('Y-m-d');
+        }
+        $this->database->update('song', $changes, ['id' => $songId]);
 
         return Json::write($response, $this->songs->one($me, $songId));
     }
