@@ -7,6 +7,7 @@ namespace BrassBand\Gigs;
 use BrassBand\Access\AccessRules;
 use BrassBand\Access\CurrentMember;
 use BrassBand\Access\Permission;
+use BrassBand\Discord\DiscordLinks;
 use BrassBand\Http\ApiError;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
@@ -15,7 +16,8 @@ use Doctrine\DBAL\ParameterType;
 // What the actions on gigs share: who sees and who edits a gig, what a gig
 // looks like in an answer, and whether it is playable. Rules: model/gigs.md.
 //
-// A gig in DRAFT is seen by those who may edit it only. A gig is edited by
+// A gig in DRAFT is seen by those who may edit it only. Its Discord channel
+// is seen by every member who sees it (since 0.3.0). A gig is edited by
 // whoever manages gigs and by its organisers. Whether a slot is playable is
 // computed from the answers each time it is asked, never stored.
 final class Gigs
@@ -153,6 +155,8 @@ final class Gigs
         $canEdit = $this->mayEdit($viewer, $gigId);
         $slots = $this->slots($viewer, [$gigId], withAnswers: true)[$gigId] ?? [];
 
+        $serverId = DiscordLinks::bandServer($this->database);
+        $channelId = is_string($gig['discordChannelId']) ? $gig['discordChannelId'] : null;
         $view = [
             ...self::summary($gig, $slots),
             'canEdit' => $canEdit,
@@ -186,10 +190,13 @@ final class Gigs
             ),
             // Shown from CONFIRMED on: before, the band does not know it plays.
             'setlists' => $gig['status'] === GigStatus::CONFIRMED->value ? $this->setlists->ofGig($gigId) : [],
+            // The channel of the gig, for every member who sees it, as a link
+            // (since 0.3.0). No link while the band has no server.
+            'discordChannelId' => $channelId,
+            'discordUrl' => $serverId === null || $channelId === null ? null : DiscordLinks::channelUrl($serverId, $channelId),
+            // What the setlist editor counts between two songs (band.setlistGapSeconds).
+            'setlistGapSeconds' => (int) $this->database->fetchOne('SELECT setlistGapSeconds FROM band WHERE id = 1'),
         ];
-        if ($canEdit) {
-            $view['discordChannelId'] = $gig['discordChannelId'];
-        }
 
         return $view;
     }

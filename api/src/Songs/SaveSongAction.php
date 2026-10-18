@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Songs;
 
 use BrassBand\Access\CurrentMember;
+use BrassBand\Discord\DiscordLinks;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
@@ -40,7 +41,8 @@ final class SaveSongAction
         $me = CurrentMember::of($request);
         $songId = isset($arguments['id']) ? (int) $arguments['id'] : null;
         $current = $songId === null ? null : $this->songs->row($songId);
-        $record = $this->check(Input::from($request, SongInput::class), $songId);
+        $input = Input::from($request, SongInput::class);
+        $record = $this->check($input, $songId, $current);
 
         // Fetched before anything is saved, and outside the transaction: it
         // asks another server, which can take seconds. Only when the video
@@ -52,13 +54,16 @@ final class SaveSongAction
 
         $written = $thumbnail === null ? null : $this->files->store($thumbnail['name'], $thumbnail['content']);
         try {
-            [$songId, $replaced] = $this->database->transactional(function () use ($songId, $record, $keepsThumbnail, $written, $me): array {
+            [$songId, $replaced] = $this->database->transactional(function () use ($songId, $record, $keepsThumbnail, $written, $me, $input): array {
                 $record['updatedByMemberId'] = $me->id;
                 if ($songId === null) {
                     $this->database->insert('song', [...$record, 'clipThumbnailPath' => $written]);
+                    $songId = (int) $this->database->lastInsertId();
+                    $this->saveAttributes($songId, $input, $me->id);
 
-                    return [(int) $this->database->lastInsertId(), null];
+                    return [$songId, null];
                 }
+                $this->saveAttributes($songId, $input, $me->id);
                 // Read again with the row held: the thumbnail to delete is
                 // the one the song has now.
                 $previous = $this->songs->row($songId, lock: true)['clipThumbnailPath'];
@@ -90,9 +95,10 @@ final class SaveSongAction
     /**
      * Checks the record and returns it as it will be saved.
      *
+     * @param array<string, mixed>|null $current
      * @return array<string, mixed>
      */
-    private function check(SongInput $input, ?int $songId): array
+    private function check(SongInput $input, ?int $songId, ?array $current): array
     {
         $errors = new FieldErrors();
         $errors->text('name', $input->name, 80);
@@ -104,22 +110,43 @@ final class SaveSongAction
 
         // A real day, and not in the future. "Today" is not the same day
         // everywhere at once: tomorrow by the clock of the server is accepted.
-        $versionOn = $input->versionOn === null || trim($input->versionOn) === '' ? null : trim($input->versionOn);
-        if ($versionOn !== null) {
-            $day = \DateTimeImmutable::createFromFormat('!Y-m-d', $versionOn, new \DateTimeZone('UTC'));
-            if ($day === false || $day->format('Y-m-d') !== $versionOn || $day > new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC'))) {
-                $errors->add('versionOn', 'invalid');
-            }
-        }
+        $versionOn = self::day($errors, 'versionOn', $input->versionOn);
         $versionNote = $errors->optionalText('versionNote', $input->versionNote, 1000, lines: true);
 
         $clipUrl = $errors->optionalText('clipUrl', $input->clipUrl, 255);
         if ($clipUrl !== null && ClipThumbnails::videoId($clipUrl) === null) {
             $errors->add('clipUrl', 'invalid');
         }
-        $discordChannelId = $errors->optionalText('discordChannelId', $input->discordChannelId, 20);
-        if ($discordChannelId !== null && preg_match('/\A[0-9]{17,20}\z/', $discordChannelId) !== 1) {
-            $errors->add('discordChannelId', 'invalid');
+        $discordChannelId = DiscordLinks::channelField(
+            $errors,
+            'discordChannelId',
+            $input->discordChannelId,
+            DiscordLinks::bandServer($this->database),
+            is_string($current['discordChannelId'] ?? null) ? $current['discordChannelId'] : null,
+        );
+
+        // What the setlist generator reads (model/songs.md, "Setlist attributes").
+        if ($input->durationSeconds !== null && ($input->durationSeconds < 10 || $input->durationSeconds > 1200)) {
+            $errors->add('durationSeconds', 'invalid');
+        }
+        $inRepertoireOn = self::day($errors, 'inRepertoireOn', $input->inRepertoireOn);
+        foreach ($input->otherCategories as $category) {
+            // Another category is never Standard, nor the main one.
+            if ($category === SetCategory::STANDARD || $category === $input->setCategory) {
+                $errors->add('otherCategories', 'invalid');
+            }
+        }
+        $sectionIds = array_map('intval', $this->database->fetchFirstColumn('SELECT id FROM section'));
+        foreach (['tiringSectionIds' => $input->tiringSectionIds, 'trickySectionIds' => $input->trickySectionIds] as $field => $ids) {
+            if (array_diff($ids, $sectionIds) !== []) {
+                $errors->add($field, 'invalid');
+            }
+        }
+        // Set by the app the first time the song enters the repertoire, then
+        // corrected by hand (model/songs.md, "Setlist attributes").
+        $isEntering = $input->status === SongStatus::IN_REPERTOIRE && ($current['status'] ?? null) !== SongStatus::IN_REPERTOIRE->value;
+        if ($inRepertoireOn === null && $isEntering) {
+            $inRepertoireOn = (new \DateTimeImmutable('now', new \DateTimeZone(date_default_timezone_get())))->format('Y-m-d');
         }
 
         // Two songs cannot have the same name, nor the same Discord channel.
@@ -143,6 +170,41 @@ final class SaveSongAction
             'versionNote' => $versionNote,
             'clipUrl' => $clipUrl,
             'discordChannelId' => $discordChannelId,
+            'durationSeconds' => $input->durationSeconds,
+            'inRepertoireOn' => $inRepertoireOn,
+            'setCategory' => $input->setCategory->value,
+            'isNeverFirst' => (int) $input->isNeverFirst,
         ];
+    }
+
+    // A real day, and not in the future. "Today" is not the same day
+    // everywhere at once: tomorrow by the clock of the server is accepted.
+    private static function day(FieldErrors $errors, string $field, ?string $typed): ?string
+    {
+        $value = $typed === null || trim($typed) === '' ? null : trim($typed);
+        if ($value !== null) {
+            $day = \DateTimeImmutable::createFromFormat('!Y-m-d', $value, new \DateTimeZone('UTC'));
+            if ($day === false || $day->format('Y-m-d') !== $value || $day > new \DateTimeImmutable('tomorrow', new \DateTimeZone('UTC'))) {
+                $errors->add($field, 'invalid');
+            }
+        }
+
+        return $value;
+    }
+
+    // The other categories and the sections of a song, replaced whole.
+    private function saveAttributes(int $songId, SongInput $input, int $memberId): void
+    {
+        $lists = [
+            'songOtherCategory' => ['category', array_unique(array_map(fn (SetCategory $category) => $category->value, $input->otherCategories))],
+            'songTiringSection' => ['sectionId', array_unique($input->tiringSectionIds)],
+            'songTrickySection' => ['sectionId', array_unique($input->trickySectionIds)],
+        ];
+        foreach ($lists as $table => [$column, $values]) {
+            $this->database->delete($table, ['songId' => $songId]);
+            foreach ($values as $value) {
+                $this->database->insert($table, ['songId' => $songId, $column => $value, 'updatedByMemberId' => $memberId]);
+            }
+        }
     }
 }

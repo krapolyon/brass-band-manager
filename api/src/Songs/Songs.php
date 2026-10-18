@@ -5,16 +5,17 @@ declare(strict_types=1);
 namespace BrassBand\Songs;
 
 use BrassBand\Access\CurrentMember;
-use BrassBand\Access\Permission;
+use BrassBand\Discord\DiscordLinks;
 use BrassBand\Http\ApiError;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 // What the actions on songs share: what a song looks like in an answer, and
 // who sees what of it. Rules: model/songs.md.
 //
 // Every signed-in member sees every song and every file, whatever the
-// status. Two things are not for everyone: the Discord channel, shown to who
-// manages songs, and the levels of a member, shown to that member only. The
+// status, and its Discord channel as a link (since 0.3.0). One thing is not
+// for everyone: the levels of a member, shown to that member only. The
 // others get the average of the band and the number of answers, never the
 // level of a named member.
 final class Songs
@@ -23,6 +24,7 @@ final class Songs
     // table is never sent by accident.
     private const COLUMNS = 's.id, s.name, s.originalTitle, s.originalArtist, s.bpm, s.status, s.versionOn,
         s.versionNote, s.clipUrl, s.clipThumbnailPath, s.discordChannelId,
+        s.durationSeconds, s.inRepertoireOn, s.setCategory, s.isNeverFirst,
         s.coverPath, s.museScorePath, s.midiPath, s.musicXmlPath, s.audioPath, s.createdAt';
 
     // The levels of the band on each song: the average of the current
@@ -56,7 +58,9 @@ final class Songs
             [$this->instrumentOf($viewer)],
         );
 
-        return array_map(fn (array $song) => $this->summary($song), $songs);
+        $attributes = $this->attributes(array_map(fn (array $song) => (int) $song['id'], $songs));
+
+        return array_map(fn (array $song) => $this->summary($song, $attributes[(int) $song['id']] ?? null), $songs);
     }
 
     /**
@@ -94,8 +98,14 @@ final class Songs
         $address = "/api/songs/{$songId}";
         $audio = $this->files->view("{$address}/audio", $song['audioPath']);
 
+        $serverId = DiscordLinks::bandServer($this->database);
+        $channelId = is_string($song['discordChannelId']) ? $song['discordChannelId'] : null;
         $view = [
-            ...$this->summary($song),
+            ...$this->summary($song, $this->attributes([$songId])[$songId] ?? null),
+            // The channel of the song, for every member: the link opens it in
+            // Discord. No link while the band has no server.
+            'discordChannelId' => $channelId,
+            'discordUrl' => $serverId === null || $channelId === null ? null : DiscordLinks::channelUrl($serverId, $channelId),
             'versionNote' => $song['versionNote'],
             'clipUrl' => $song['clipUrl'],
             // What the player shows: the identifier the server read and checked,
@@ -122,10 +132,6 @@ final class Songs
                 'enjoymentLevel' => self::level($levels === false ? null : $levels['enjoymentLevel']),
             ],
         ];
-        if ($viewer->can(Permission::MANAGE_SONGS)) {
-            $view['discordChannelId'] = $song['discordChannelId'];
-        }
-
         return $view;
     }
 
@@ -167,10 +173,48 @@ final class Songs
     }
 
     /**
+     * The other categories and the sections of songs, by song: what the
+     * setlist generator reads, with the main category (model/songs.md,
+     * "Setlist attributes").
+     *
+     * @param list<int> $songIds
+     * @return array<int, array{otherCategories: list<string>, tiringSectionIds: list<int>, trickySectionIds: list<int>}>
+     */
+    private function attributes(array $songIds): array
+    {
+        if ($songIds === []) {
+            return [];
+        }
+        // In the order of the enum for the categories, of the band for the sections.
+        $lists = [
+            'otherCategories' => 'SELECT songId, category AS value FROM songOtherCategory WHERE songId IN (?) ORDER BY songId, category',
+            'tiringSectionIds' => 'SELECT t.songId, t.sectionId AS value FROM songTiringSection t JOIN section c ON c.id = t.sectionId WHERE t.songId IN (?) ORDER BY t.songId, c.position, c.name',
+            'trickySectionIds' => 'SELECT t.songId, t.sectionId AS value FROM songTrickySection t JOIN section c ON c.id = t.sectionId WHERE t.songId IN (?) ORDER BY t.songId, c.position, c.name',
+        ];
+        $found = [];
+        foreach ($lists as $key => $sql) {
+            foreach ($this->database->fetchAllAssociative($sql, [$songIds], [ArrayParameterType::INTEGER]) as $row) {
+                $found[$key][(int) $row['songId']][] = $row['value'];
+            }
+        }
+        $attributes = [];
+        foreach ($songIds as $songId) {
+            $attributes[$songId] = [
+                'otherCategories' => array_map('strval', $found['otherCategories'][$songId] ?? []),
+                'tiringSectionIds' => array_map('intval', $found['tiringSectionIds'][$songId] ?? []),
+                'trickySectionIds' => array_map('intval', $found['trickySectionIds'][$songId] ?? []),
+            ];
+        }
+
+        return $attributes;
+    }
+
+    /**
      * @param array<string, mixed> $song
+     * @param array{otherCategories: list<string>, tiringSectionIds: list<int>, trickySectionIds: list<int>}|null $attributes
      * @return array<string, mixed>
      */
-    private function summary(array $song): array
+    private function summary(array $song, ?array $attributes): array
     {
         $address = "/api/songs/{$song['id']}";
         $size = fn (mixed $path): ?int => $this->files->view($address, $path)['size'] ?? null;
@@ -183,6 +227,12 @@ final class Songs
             'bpm' => $song['bpm'] === null ? null : (int) $song['bpm'],
             'status' => $song['status'],
             'versionOn' => $song['versionOn'],
+            // What the setlist editor and its generator read.
+            'durationSeconds' => $song['durationSeconds'] === null ? null : (int) $song['durationSeconds'],
+            'inRepertoireOn' => $song['inRepertoireOn'],
+            'setCategory' => $song['setCategory'],
+            'isNeverFirst' => (bool) $song['isNeverFirst'],
+            ...($attributes ?? ['otherCategories' => [], 'tiringSectionIds' => [], 'trickySectionIds' => []]),
             // The home screen shows the songs of the repertoire created last.
             'createdAt' => str_replace(' ', 'T', (string) $song['createdAt']) . 'Z',
             'coverUrl' => $this->files->view("{$address}/cover", $song['coverPath'])['url'] ?? null,

@@ -18,7 +18,19 @@ final class SongInput
         public readonly ?string $versionOn = null,
         public readonly ?string $versionNote = null,
         public readonly ?string $clipUrl = null,
+        // The link of the channel, or its identifier (DiscordLinks).
         public readonly ?string $discordChannelId = null,
+        // m:ss is read by the front: the API receives seconds.
+        public readonly ?int $durationSeconds = null,
+        public readonly ?string $inRepertoireOn = null,
+        public readonly SetCategory $setCategory = SetCategory::STANDARD,
+        public readonly bool $isNeverFirst = false,
+        /** @var list<SetCategory> */
+        public readonly array $otherCategories = [],
+        /** @var list<int> */
+        public readonly array $tiringSectionIds = [],
+        /** @var list<int> */
+        public readonly array $trickySectionIds = [],
     ) {
     }
 }

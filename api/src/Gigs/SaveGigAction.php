@@ -6,6 +6,7 @@ namespace BrassBand\Gigs;
 
 use BrassBand\Access\AccessRules;
 use BrassBand\Access\CurrentMember;
+use BrassBand\Discord\DiscordLinks;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
@@ -124,10 +125,15 @@ final class SaveGigAction
             $errors->add('longitude', 'invalid');
         }
 
-        $discordChannelId = $errors->optionalText('discordChannelId', $input->discordChannelId, 20);
-        if ($discordChannelId !== null && preg_match('/\A[0-9]{17,20}\z/', $discordChannelId) !== 1) {
-            $errors->add('discordChannelId', 'invalid');
-        }
+        // The link of the channel or its identifier, of the server of the band.
+        $current = $gigId === null ? null : $this->gigs->row($gigId)['discordChannelId'];
+        $discordChannelId = DiscordLinks::channelField(
+            $errors,
+            'discordChannelId',
+            $input->discordChannelId,
+            DiscordLinks::bandServer($this->database),
+            is_string($current) ? $current : null,
+        );
         if ($discordChannelId !== null && $this->database->fetchOne('SELECT 1 FROM gig WHERE discordChannelId = ? AND id <> ?', [$discordChannelId, $gigId ?? 0]) !== false) {
             $errors->add('discordChannelId', 'duplicate');
         }
