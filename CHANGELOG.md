@@ -3,6 +3,24 @@
 What changes in the app, version after version. This file is written by
 `npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.
 
+## 0.3.0 — 2026-10-18
+
+### Added
+
+- Discord: the songs and gigs open their channel, and the sheet of a song shows the latest messages that tag your section.
+- Choose how each notification reaches you: by notification, by email, or both.
+- The band can give the installed app an icon of its own.
+- Songs now have a length and style and difficulty information, used by the new setlist generator.
+- The MIDI player can loop over several rehearsal marks that follow each other.
+
+### Changed
+
+- The reminders to answer reach you by email when none of your devices receives notifications.
+
+### Fixed
+
+- An instrument hidden or left empty in the MuseScore file no longer shows in the MIDI player nor in the Live mode.
+
 ## 0.2.0 — 2026-10-16
 
 ### Added

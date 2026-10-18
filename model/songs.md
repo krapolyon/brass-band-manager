@@ -1,5 +1,7 @@
 # Business dictionary — Songs domain
 
+> v1.8 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · A part hidden in the MuseScore file is shown neither by the MIDI player nor by the Live mode (issue #35)
+> v1.7 — 2026-10-18 · Validated by the owner (0.3.0) · Model: `songs.dbml` v1.7 · No migration yet · What the setlist generator reads, taken from the repertoire file the band used until now (issue #25): the length of a song, the day it entered the repertoire, its categories, never first, tiring and tricky for some sections; the Discord channel shown to every member as a link (issue #33); a MIDI track without notes is not shown (issue #35); the loop of the MIDI player over several rehearsal marks that follow each other
 > v1.6 — 2026-10-16 · No change to the tables · Milestone 0.2.0, with Members v1.21 (migration `013_notificationsAndCalendar.sql`): the notifications of a new song, a new MuseScore file and a new part (issue #23); the outline of a recording measures its loudness, and an outline of an older kind is computed again (issue #29); the Live mode driven by the MIDI player (issue #10)
 > v1.5 — 2026-10-13 · Decided with the design of the home screen (Figma, page `Home`): the latest songs of the repertoire. No change to the schema
 > v1.4 — 2026-10-13 · Dictation of a setlist, decided with the owner after its prototype: the phrases it learns for a song (`songSpokenName`, entry 4), edited by whoever manages songs in the form of the song (Figma, page `Songs`, section 7) · Migration: `011_songSpokenName.sql`
@@ -27,7 +29,14 @@ A piece the band plays, is learning or considers learning. Every song is a cover
 | `versionNote` | Version note | Note de version | No | Nouveau pont avant le dernier refrain, la fin est doublée | 0 to 300 | Can hold several lines |
 | `clipUrl` | Video clip | Clip | No | https://www.youtube.com/watch?v=… | 30 to 100 | The address of a YouTube video. Played inside the app. See "Clip" |
 | `clipThumbnailPath` | Clip thumbnail | Vignette du clip | No | — | — | Never typed: fetched by the server. See "Clip" |
-| `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per song |
+| `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per song. Typed as the link of the channel ("Copier le lien du salon" in Discord) or as its identifier; the app keeps the identifier, and refuses a link of another server than the band's |
+| `durationSeconds` | Length | Durée | No | 3:52 | 4 to 5 | Typed as m:ss, from 0:10 to 20:00. See "Setlist attributes" |
+| `inRepertoireOn` | In the repertoire since | Au répertoire depuis | No | 2015-01-01 | — | Never in the future. See "Setlist attributes" |
+| `setCategory` | Category | Catégorie | Yes | PARTY | — | Standard by default. See "Setlist attributes" |
+| `isNeverFirst` | Never first | Jamais en premier | Yes | false | — | |
+| `songOtherCategory` | Can also be | Peut aussi servir de | No | ENCORE | — | Zero to several categories, never Standard nor the main one |
+| `songTiringSection` | Tiring for | Fatigant pour | No | Trompette | — | Zero to several sections |
+| `songTrickySection` | Tricky for | Ça tricote pour | No | Saxophone | — | Zero to several sections |
 | `coverPath` | Cover art | Jaquette | No | — | — | An image file: JPEG, PNG or WebP, square. See "Files" |
 | `museScorePath` | MuseScore file | Fichier MuseScore | No | — | — | A `.mscz` file. See "Files" |
 | `midiPath` | MIDI file | Fichier MIDI | No | — | — | A `.mid` or `.midi` file. See "Files" |
@@ -58,6 +67,7 @@ The status labels in French are "Proposé", "Montage en cours", "Au répertoire"
 - **The waveform of a recording.** The MP3 mode draws the recording as bars the member touches or drags. Its outline is computed once per recording, not each time it is played: by the browser that sends the recording, and kept in a small file beside it, which goes when the recording goes. Each bar is the loudness of its slice of the recording (the root mean square of its samples), against the loudest slice: a quiet intro is low, a chorus high. The loudest sample of each slice was used until 0.2.0, and gave a flat outline on every recording, since a produced recording reaches its peak almost everywhere (issue #29). The outline says how it was computed: an outline of the older kind is not shown, and is computed again by the browser of whoever manages songs, the next time they open the MP3 mode of the song (decided with the owner on 2026-10-16). Until then the waveform is a plain line of bars.
 - **Generated files.** The MuseScore file is the source of the score. When one is sent, the browser of whoever sends it produces two files from it and sends them with it: the MIDI file, whose tracks are named after the staves of the score, and the score as MusicXML, which the reading mode shows. Both replace the ones in place. MuseScore cannot run on the host, so nothing is converted there.
 - **Rehearsal marks.** The rehearsal marks of the MuseScore file ("Repère", added with Ctrl+M) are offered by the MIDI player to choose the range it plays again (they are written in the MIDI file the app produces, each at the measure it is played at), and by the reading mode to choose where to start (it reads them in the score). A staff text or a system text is not a mark: it can say anything (owner, 2026-10-13).
+- **A loop over several rehearsal marks** (decided on 2026-10-18, 0.3.0). The marks of the loop are boxes to tick, not a single choice: one mark, or several that follow each other. Ticking a mark further on ticks those between, so the range has no hole; unticking the first or the last mark shortens the range; unticking a mark in the middle ends the range just before it. The loop goes from the first measure of the first mark to the last measure of the last mark, and the two measure fields follow. The button says the measures ("Boucler les mesures 17 à 40").
 - **The reading mode ("Live")** shows the part of the member's instrument, found by the name of its staff as a track is (entry 2, "Reading the name of a track"); any other part is one tap away. The score rises line by line at the tempo: the one of the band (`bpm`), else the one written in the score, or the one the member taps. Repeats and voltas are followed, and bring the score back down; a jump written in words (D.S., D.C., to the coda) is not, and the member drags the score there (owner, 2026-10-13). Nothing about it is saved.
 - **The reading mode driven by the MIDI player** (decided on 2026-10-15, issue #10). In the reading mode, a piano button beside the start measure opens "Lire avec le MIDI": the tracks of the MIDI file with their mute, the tempo and the volume of the muted tracks, which are the settings of the MIDI mode of the song (one state for both modes; the loop is not offered here). Its button starts the MIDI player from the chosen measure, and the score follows the position of the player, repeats and codas included, instead of the clock of the tempo. While it plays, a chip says so ("Suit le MIDI · 124 · 6 pistes") and reopens the sheet, which pauses the player. There is no MIDI player of its own outside the song (no mini-player). A song without a MIDI file shows the piano button disabled, with the reason.
 - **When the conversion fails**, the MuseScore file is kept and the import says that the MIDI player and the reading mode have nothing for this song. A `.mid` or a MusicXML file exported by hand from MuseScore and dropped with the others is then used: a file dropped by hand counts only when the MuseScore file gave none. Without one, the MIDI file and the MusicXML the song had from an earlier MuseScore file are removed: they are no longer those of its score.
@@ -100,6 +110,27 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 - **Deleting a song** is for a song created by mistake. It deletes its files, its parts and the levels members gave it. A song used by a setlist cannot be deleted (Gigs domain, `setlistSong`).
 - **Deleting always asks first**, says what goes with the song and that it cannot be undone, and offers to set the status to `ABANDONED` instead.
 
+### Setlist attributes
+Taken on 2026-10-18 from the repertoire file the band kept for its setlist generator (`repertoire.yml`, issue #25), without what the band no longer wants: the songs that need two basses, the titles for the Sacem, the full title (the original title and artist already say it).
+
+| Category (`setCategory`) | Label (fr) | As main category | As another category |
+|---|---|---|---|
+| `OPENER` | Début | In the first half of a set only | Can be the first song |
+| `PARTY` | Teuf | In the second half only | Can be the last song |
+| `KNOWN` | Connu | Anywhere | — |
+| `CHOREOGRAPHY` | Chorée | Anywhere; two never follow each other | Same rule |
+| `CHILL` | Chill | Anywhere | — |
+| `ENCORE` | Rappel | Last only | Preferred as the last song |
+| `STANDARD` | Standard | Anywhere | Not offered |
+
+- **One main category, others besides.** The main category decides where the generator may place the song; another category only says it can serve as such, for instance a party song that can close as an encore. The rules of the generator are in the Gigs domain, entry 4.
+- **Never first** (`isNeverFirst`): the band has to be warmed up.
+- **Tiring** for some sections (`songTiringSection`): the song is never placed in the second half of a set. The sections say for whom, for information.
+- **Tricky** for some sections (`songTrickySection`, "ça tricote"): two songs tricky for the same section never follow each other (decided on 2026-10-18; the file of the band said any two tricky songs, but a hard song for the saxophones then one for the trumpets tires nobody twice).
+- **Length** (`durationSeconds`). When a MIDI file is sent, or produced from the MuseScore file, its length is proposed, repeats played, at the tempo of the band when `bpm` is filled (the length of the file times its tempo divided by `bpm`, both counted on the beat of the time signature). Never the length of the recording: it can hold applause and talk (decided on 2026-10-18). Whoever manages songs corrects it; a length typed by hand is not replaced by a file sent afterwards. Gives the length of a setlist (Gigs domain).
+- **In the repertoire since** (`inRepertoireOn`). Set to the day the status first becomes `IN_REPERTOIRE`; corrected by hand, for the songs of before the app (the import kit sets the 1st of January of the year of the file). The sheet of the song shows the year. **A song is new** for 2 months after this day (decided on 2026-10-18): the generator leaves it out unless asked. It replaces the tag "nouveau" of the file of the band, which had to be removed by hand.
+- **The latest songs** of the home screen keep their rule for now (the songs created last); `inRepertoireOn` could order them later.
+
 ### Notifications
 Decided on 2026-10-16 (issue #23), with the settings of each member (Members domain, "Notification settings"). A notification names the song, never a member, and opens it.
 
@@ -120,11 +151,12 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 ### Access rights
 | Who | View | Create | Edit | Change status | Delete |
 |---|---|---|---|---|---|
-| Any signed-in member | Every field and every file, whatever the status, except `discordChannelId` | No | No | No | No |
-| `SONG_MANAGER`, `ADMIN` | The same, and `discordChannelId` | Yes | Yes, files included | Yes | Yes |
+| Any signed-in member | Every field and every file, whatever the status; `discordChannelId` as a link to the channel (changed in v1.7) | No | No | No | No |
+| `SONG_MANAGER`, `ADMIN` | The same | Yes | Yes, files included | Yes | Yes |
 
 ### Instance settings
-- The Discord server of the band (`band.discordServerId` in the overview model) comes with the Discord feature. Until then `discordChannelId` is stored and shown by no screen but the form of the song. A band without Discord leaves it empty.
+- The Discord server of the band (`band.discordServerId`, Band domain). Without it, `discordChannelId` cannot be typed and no link is shown. A band without Discord leaves both empty.
+- The time counted between two songs of a setlist (`band.setlistGapSeconds`).
 
 ### Personal data
 - None. A song holds nothing about a person of the band.
@@ -132,7 +164,11 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 ### Display
 - The internal name is the name shown in every representation. The original title and the original artist appear on the sheet of the song.
 - Missing cover art: the placeholder of `Song/Tile` (the music icon on a plain square).
-- Missing tempo, version, clip or file: the line is not shown.
+- Missing tempo, version, clip, length or file: the line is not shown.
+- **Discord** (issue #33, decided on 2026-10-18). A song that has a channel shows, at the end of its sheet, a card "Discussion": the messages of its channel that tag the section of the member, then a button that opens the channel in Discord. The app reads the last 100 messages of the channel through the bot of the band (Band domain, "Discord") when a member opens the song, keeps those that mention the Discord role of the section of the member (`section.discordRoleId`), and shows the three latest, the latest first: who wrote it (their name on Discord), the day, and the text over four lines at most. A tap on a message opens it in Discord. What Discord answers is kept 10 minutes on the server, never in the database: the messages belong to Discord. Without a bot, without a role for the section, or when nothing tags it, the card holds the button only; when Discord does not answer, the button too, with no error shown.
+- **The categories** are shown on the sheet of the song, in "À propos": the main one first, the others after, then never first, tiring and tricky with their sections. The length as m:ss, the year it entered the repertoire.
+- **A MIDI track without any note** (an instrument kept in the MuseScore file with an empty staff) is not shown by the MIDI player nor by the Live mode (issue #35).
+- **A part hidden in the MuseScore file** (the instrument unticked in MuseScore, its staff invisible) is not shown either, even when it holds notes (decided on 2026-10-18, issue #35: a hidden cornet with a few leftover chords showed as an almost empty track). The browser that reads a MuseScore file leaves it out of the MIDI file and of the MusicXML it produces. A song sent before 0.3.0 keeps its files until its MuseScore file is sent again.
 - Representations in the design library (Figma, checked on 2026-10-13): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/Latest` (the latest songs of the repertoire, pinned on the home screen: a slot of three `Song/Row` without their status), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import), `Song/PickerRow` (a song in the list that adds songs to a setlist, with its `PlayedDots`: Gigs domain). Missing: none needed yet.
 
 ## 2. Part and alias (`songPart`, `instrumentAlias`)
@@ -277,6 +313,11 @@ A phrase the dictation of a setlist heard for a song, besides its name, kept so 
 - The dictation itself: Gigs domain, the form of a setlist (Figma, page `Gigs`, section 11).
 
 ## 5. Open questions
+
+Decided by the owner on 2026-10-18 (v1.7): Discord shows the messages that tag the section of the member, then the link; a song is new for 2 months; tricky for the same section; the length read from the MIDI file; a MIDI track without notes is hidden; the loop can span several rehearsal marks that follow each other.
+
+Proposed, to settle while it is built: a MIDI file dropped with a MuseScore file is replaced by the one the MuseScore file gives ("Import"); the import could say so (issue #35).
+
 
 None blocking. Validated by the owner on 2026-10-12 (v1.0).
 

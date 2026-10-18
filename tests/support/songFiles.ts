@@ -40,7 +40,7 @@ const builtScores = new Map<string, Buffer>();
  * (makeScore.mjs), never kept. With "repeat", the first two measures are
  * played twice; with "lastEid", the file is written as MuseScore 4.4 does.
  */
-export function readableScore(variant: '' | 'repeat' | 'lastEid' = ''): Buffer {
+export function readableScore(variant: '' | 'repeat' | 'lastEid' | 'hiddenPart' = ''): Buffer {
   let built = builtScores.get(variant);
   if (!built) {
     built = Buffer.from(

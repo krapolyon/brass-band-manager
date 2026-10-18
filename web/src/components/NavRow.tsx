@@ -1,11 +1,14 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Icon, type IconName } from './Icon.tsx';
+import { Pictogram } from './Pictogram.tsx';
 import './NavRow.css';
 
 type Props = {
   /** Figma: "Icon" and "Show icon". */
   icon?: IconName;
+  /** The pictogram of a section (section.icon) in the place of the icon; null: the generic one. */
+  pictogram?: string | null;
   label: string;
   /** Figma: "Detail" and "Show detail". */
   detail?: string;
@@ -32,6 +35,7 @@ type Props = {
 // `to`, `href` nor `onClick`, it only informs.
 export function NavRow({
   icon,
+  pictogram,
   label,
   detail,
   tone = 'default',
@@ -47,6 +51,7 @@ export function NavRow({
   const content = (
     <>
       {icon && <Icon name={icon} />}
+      {pictogram !== undefined && <Pictogram name={pictogram} />}
       <span className="NavRow-texts">
         <span className="NavRow-label textBodyLarge">{label}</span>
         {detail && <span className="NavRow-detail textCaption">{detail}</span>}

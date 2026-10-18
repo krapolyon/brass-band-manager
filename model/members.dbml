@@ -1,4 +1,6 @@
 // Domain: Members
+// v1.23 — 2026-10-18 — validated, for 0.3.1 (not in the migration of 0.3.0): the names, email, phone and address of a member encrypted in the database, the email found through emailHash (issue #32)
+// v1.22 — 2026-10-18 — validated (0.3.0): section.discordRoleId, the role that tags a section on Discord (issue #33); the channel of each notification, push, email or both, and the reminders to answer by push or email (issue #27); no Discord account on a member
 // v1.21 — 2026-10-16 — migration 013 (0.2.0): textSizePercent dropped; the six notification settings of the account (notificationChannel, issue #23); calendarToken, the personal iCal address of a member (issue #21); pushSubscription serves the new notifications
 // v1.20 — 2026-10-15 — no migration: the text size is a setting of the device (issue #18); textSizePercent is no longer read nor written from 0.1.1 and is dropped in the next release, as the rule for member requires (docs/architecture.md, "Not locking oneself out")
 // v1.18 — 2026-10-13 — no change to the tables: a device that accepted notifications also receives the live setlist of a gig (dictionary, with Gigs v1.3)
@@ -40,6 +42,7 @@ Table section {
   id integer [pk]
   name varchar [not null, unique, note: 'In the band\'s own words, for instance "P\'tites basses". Never translated.']
   position integer [not null, note: 'Order in which sections are listed, starting at 1. Two sections with the same position are ordered by name.']
+  discordRoleId varchar [unique, note: 'Identifier of the Discord role that tags this section, for instance the role shown as @saxophoniste: digits only. Chosen by an admin among the roles of the server, which the bot of the band reads. Empty: the section is not tagged, and the sheet of a song shows its members the link of the channel only.']
   icon varchar [note: 'Key of one of the section pictograms shipped with the app, for instance trumpet. Empty means the generic pictogram. The list of keys is the one of the design system; the API refuses any other value.']
   Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is.'
 }
@@ -63,11 +66,13 @@ Enum memberStatus {
   LEFT [note: 'Has left the band. Cannot sign in; history kept.']
 }
 
-// How a member is told of one kind of event. EMAIL will come later (decided
-// with the owner): the enum stays open, the channel is not modelled apart.
+// How a member is told of one kind of event (issue #27). Not every
+// value is allowed for every setting: see the notes of the fields.
 Enum notificationChannel {
   OFF [note: 'The member receives nothing of this kind']
   PUSH [note: 'A push notification, on every device of the member that accepts notifications']
+  EMAIL [note: 'An email to the address of the member']
+  PUSH_AND_EMAIL [note: 'Both']
 }
 
 Enum colorScheme {
@@ -79,15 +84,16 @@ Enum colorScheme {
 Table member {
   id integer [pk]
   nickname varchar [not null, unique, note: '🔒 Personal data — purpose: identification. The name shown everywhere in the app.']
-  firstName varchar [not null, note: '🔒 Personal data — purpose: identification']
-  lastName varchar [not null, note: '🔒 Personal data — purpose: identification']
-  email varchar [not null, unique, note: '🔒 Personal data — purpose: sign-in, and directory of the band. Stored in lowercase.']
-  mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band. Stored in international format, for instance +33612345678.']
-  streetAddress varchar [note: '🔒 Personal data — purpose: directory of the band. Number and street; can hold several lines.']
-  postalCode varchar [note: '🔒 Personal data — purpose: directory of the band']
-  city varchar [note: '🔒 Personal data — purpose: directory of the band']
-  countryCode varchar [note: '🔒 Personal data — purpose: directory of the band. Two-letter ISO 3166-1 code, for instance FR. The country name is displayed by the app in the member\'s language.']
-  addressInstructions varchar [note: '🔒 Personal data — purpose: directory of the band. How to get in: door code, floor, where to park.']
+  firstName varchar [not null, note: '🔒 Personal data — purpose: identification. Encrypted in the database (see the dictionary, "Encryption").']
+  lastName varchar [not null, note: '🔒 Personal data — purpose: identification. Encrypted in the database (see the dictionary, "Encryption").']
+  email varchar [not null, unique, note: '🔒 Personal data — purpose: sign-in, and directory of the band. Stored in lowercase. Encrypted in the database (see the dictionary, "Encryption"). Never searched directly: sign-in finds the member by emailHash.']
+  emailHash varchar [not null, unique, note: 'HMAC-SHA256 of the email in lowercase, with a key of the server configuration. Lets sign-in, the forgotten password and the uniqueness of the email work on an encrypted email. Never sent to the front.']
+  mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band. Stored in international format, for instance +33612345678. Encrypted in the database (see the dictionary, "Encryption").']
+  streetAddress varchar [note: '🔒 Personal data — purpose: directory of the band. Number and street; can hold several lines. Encrypted in the database (see the dictionary, "Encryption").']
+  postalCode varchar [note: '🔒 Personal data — purpose: directory of the band. Encrypted in the database (see the dictionary, "Encryption").']
+  city varchar [note: '🔒 Personal data — purpose: directory of the band. Encrypted in the database (see the dictionary, "Encryption").']
+  countryCode varchar [note: '🔒 Personal data — purpose: directory of the band. Two-letter ISO 3166-1 code, for instance FR. The country name is displayed by the app in the member\'s language. Encrypted in the database (see the dictionary, "Encryption").']
+  addressInstructions varchar [note: '🔒 Personal data — purpose: directory of the band. How to get in: door code, floor, where to park. Encrypted in the database (see the dictionary, "Encryption").']
   photoPath varchar [note: '🔒 Personal data — purpose: recognising each other in the band. File of the profile photo, relative to the storage folder of the app; the file is on the disk, not in the database. Empty when the member has no photo. Erased when the member leaves.']
   instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member.']
   passwordHash varchar [note: 'Result of PHP password_hash(). Required when the status is ACTIVE or POWER_MEMBER, empty while it is INVITED. Never sent to the front.']
@@ -104,9 +110,10 @@ Table member {
   hasReducedMotion boolean [not null, default: false, note: 'Accessibility option: no animation or transition of large amplitude. Also applied when the device asks for it.']
   hasExtendedTimeouts boolean [not null, default: false, note: 'Accessibility option: notifications and tooltips stay on screen until the member closes them']
 
-  notifyGigPlayable notificationChannel [not null, default: 'PUSH', note: 'A gig the member organises, or answered yes, maybe or if needed on one slot of, becomes playable (Gigs domain)']
+  notifyGigReminder notificationChannel [not null, default: 'PUSH', note: 'The reminders to answer for a gig (Gigs domain). Never OFF: a band needs the answers. Sent by email whatever this setting when no device of the member accepts notifications.']
+  notifyGigPlayable notificationChannel [not null, default: 'PUSH', note: 'A gig the member organises, or answered yes, maybe or if needed on one slot of, becomes playable (Gigs domain). Any channel.']
   notifyGigConfirmed notificationChannel [not null, default: 'PUSH', note: 'The same gigs, when one becomes CONFIRMED (Gigs domain)']
-  notifyLiveSetlist notificationChannel [not null, default: 'PUSH', note: 'The live setlist of a slot the member answered yes to (Gigs domain)']
+  notifyLiveSetlist notificationChannel [not null, default: 'PUSH', note: 'The live setlist of a slot the member answered yes to (Gigs domain). OFF or PUSH only: an email arrives too late for the next song.']
   notifySongNew notificationChannel [not null, default: 'PUSH', note: 'A song is created (Songs domain)']
   notifySongScore notificationChannel [not null, default: 'PUSH', note: 'A new MuseScore file replaces the one of a song (Songs domain)']
   notifySongPart notificationChannel [not null, default: 'PUSH', note: 'A part for the instrument of the member is added to a song or replaced (Songs domain)']

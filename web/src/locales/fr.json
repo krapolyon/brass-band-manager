@@ -439,12 +439,10 @@
     "account": "Mon compte",
     "notifications": {
       "title": "Notifications",
-      "lead": "Cet appareil reçoit ou non. Ce que tu reçois se règle une fois, pour tous tes appareils.",
+      "lead": "Cet appareil reçoit ou non. Ce que tu reçois, et comment, se règle une fois pour tous tes appareils.",
       "detailOn": "Sur cet appareil · {{count}} choix",
       "detailOff": "Pas sur cet appareil",
       "thisDevice": "Sur cet appareil",
-      "reminders": "Rappels de présence",
-      "remindersHint": "Non désactivables : on a besoin que tu répondes. Les power members ne sont pas relancés.",
       "needsInstall": "Sur iPhone, les notifs n’arrivent que si l’app est sur ton écran d’accueil. Ajoute-la, rouvre-la depuis là, puis active les rappels.",
       "install": "Ajouter l’app à l’écran d’accueil",
       "installSteps": "Dans Safari, touche le bouton Partager, puis « Sur l’écran d’accueil ». Rouvre ensuite l’app depuis son icône.",
@@ -460,22 +458,21 @@
       },
       "device": "Recevoir les notifications",
       "deviceHint": "Sur cet appareil.",
-      "deviceOff": "Active les notifications sur cet appareil pour choisir les types de notifs.",
+      "deviceOff": "Active les notifications sur cet appareil pour les recevoir ici. Les e-mails, eux, se choisissent sans.",
       "gigs": "Plans",
       "songs": "Morceaux",
-      "always": "Toujours",
       "choices": {
         "notifyGigPlayable": {
           "label": "Plans jouables",
-          "hint": "Que je brasse, ou si j’ai répondu “oui”, “peut-être et si besoin”."
+          "hint": "Que je brasse, ou si j’ai répondu « oui », « peut-être » et si besoin."
         },
         "notifyGigConfirmed": {
           "label": "Plans validés",
-          "hint": "Que je brasse, ou si j’ai répondu “oui”, “peut-être et si besoin”."
+          "hint": "Que je brasse, ou si j’ai répondu « oui », « peut-être » et si besoin."
         },
         "notifyLiveSetlist": {
           "label": "Prochain morceau de la setlist",
-          "hint": "Pour l’info en “live” de la setlist"
+          "hint": "Pour l’info en « live » de la setlist. Par notification seulement : un e-mail arriverait trop tard."
         },
         "notifySongNew": {
           "label": "Nouveau morceau"
@@ -487,6 +484,11 @@
         "notifySongPart": {
           "label": "Nouvelle partition",
           "hint": "Pour mon instrument"
+        },
+        "notifyGigReminder": {
+          "label": "Rappels de présence",
+          "hint": "Tant que tu n’as pas répondu. Au moins un des deux : sans appareil qui reçoit les notifications, ils arrivent par e-mail.",
+          "hintWithoutEmail": "Tant que tu n’as pas répondu."
         }
       }
     },
@@ -714,19 +716,27 @@
     "lead": "Ce qui fait que cette app est la vôtre. Réservé aux admins.",
     "adminsOnly": "Cette page est réservée aux admins de la fanfare. Tu penses devoir y être ? Vois ça avec l’un d’eux.",
     "backToSettings": "Retour aux réglages",
-    "connections": "Branchements",
-    "discord": "Les fils de discussion des morceaux",
-    "soon": "Bientôt",
+    "connections": "Intégrations",
     "appearance": {
       "title": "Apparence",
-      "detail": "Nom, logo, couleur, langue",
+      "detail": "Nom, logo, icône, couleur, langue",
       "lead": "Le nom, le logo, la couleur et la langue de votre app. Le nom et le logo se voient avant même la connexion.",
-      "nameAndLogo": "Nom et logo",
-      "logoHint": "PNG, SVG, JPEG ou WebP, 2 Mo maximum. Il sert aussi d’icône à l’app installée.",
+      "nameAndLogo": "Nom, logo et icône",
+      "logoHint": "PNG, SVG, JPEG ou WebP, 2 Mo maximum.",
       "accentNote": "Celle de la fanfare. Chaque fanfaron peut en choisir une autre pour lui, dans ses réglages.",
       "language": "Langue par défaut",
       "languageNote": "Celle des nouveaux fanfarons. Chacun peut changer la sienne.",
-      "logoRefused": "Ce logo a été refusé. Le reste est enregistré : choisis une autre image."
+      "logoRefused": "Ce logo a été refusé. Le reste est enregistré : choisis une autre image.",
+      "appIcon": "Icône de l’app",
+      "appIconHint": "Carrée, PNG, JPEG ou WebP, 512 px de côté au moins. Sans icône, l’app la fabrique à partir du logo.",
+      "appIconPreview": "Aperçu sur l’écran d’accueil d’un téléphone",
+      "appIconRefused": "Cette icône a été refusée. Le reste est enregistré : choisis une autre image.",
+      "appIconErrors": {
+        "notSquare": "Cette image fait {{width}} × {{height}} px : il faut un carré. Recadre-la, puis choisis-la de nouveau.",
+        "tooSmall": "Cette image fait {{size}} px de côté : il en faut 512 au moins.",
+        "tooBig": "Ce fichier pèse {{size}} Mo. Choisis une image de 2 Mo au plus.",
+        "wrongType": "Ce fichier n’est pas une image PNG, JPEG ou WebP. Choisis-en une autre."
+      }
     },
     "sections": {
       "title": "Pupitres et instruments",
@@ -811,29 +821,33 @@
       }
     },
     "reminders": {
-      "title": "Rappels des plans",
-      "detail": "{{first}} et {{second}} jours avant, à partir de {{hour}} h",
-      "detailOne_one": "{{count}} jour avant, à partir de {{hour}} h",
-      "detailOne_other": "{{count}} jours avant, à partir de {{hour}} h",
-      "detailNone": "Aucun rappel",
-      "lead": "Ceux qui n’ont pas répondu reçoivent une notification avant le plan. Les power members ne sont jamais relancés.",
+      "title": "Plans et setlists",
+      "detail": "Rappels {{first}} et {{second}} jours avant, {{gap}} s entre deux morceaux",
+      "detailOne_one": "Rappel {{count}} jour avant, {{gap}} s entre deux morceaux",
+      "detailOne_other": "Rappel {{count}} jours avant, {{gap}} s entre deux morceaux",
+      "detailNone": "Aucun rappel, {{gap}} s entre deux morceaux",
+      "lead": "Les rappels de ceux qui n’ont pas répondu, et le temps compté entre deux morceaux d’une setlist.",
       "notYet": "Cette installation n’envoie pas encore de notifications : ces réglages sont gardés pour le jour où elle le fera.",
-      "first": "Premier rappel",
-      "second": "Second rappel",
+      "first": "Première relance",
+      "second": "Seconde relance",
       "days": "Jours avant le plan",
-      "firstHint": "De 1 à 90. Vide : pas de premier rappel.",
-      "secondHint": "Moins que le premier. Vide : pas de second rappel.",
-      "hourTitle": "Heure d’envoi",
+      "firstHint": "Vide : pas de premier rappel.",
+      "secondHint": "Vide : pas de second rappel.",
+      "hourTitle": "Heure d’envoi des relances",
       "hour": "À partir de",
       "hourHint": "À l’heure de la fanfare. Pas de rappel un jour où quelqu’un a déjà relancé le plan.",
       "hourOption": "{{hour}} h",
-      "save": "Enregistrer les rappels",
-      "saved": "Les rappels sont enregistrés.",
-      "failed": "Les rappels ne sont pas enregistrés. Réessaie dans un instant.",
+      "save": "Enregistrer",
+      "saved": "Les réglages sont enregistrés.",
+      "failed": "Les réglages ne sont pas enregistrés. Réessaie dans un instant.",
       "errors": {
         "days": "Un nombre de 1 à 90.",
-        "order": "Le second rappel vient après le premier : moins de jours avant le plan."
-      }
+        "gap": "Un nombre de 0 à 300 secondes."
+      },
+      "setlists": "Setlists",
+      "gap": "Entre deux morceaux",
+      "gapHint": "De 0 à 300 secondes. Compté pour donner la durée d’une setlist.",
+      "gapUnit": "s"
     },
     "migrations": {
       "title": "Mise à jour de la base",
@@ -865,6 +879,34 @@
         "applying": "Mise à jour en cours…",
         "cancel": "Annuler"
       }
+    },
+    "discordSettings": {
+      "title": "Discord",
+      "detailSet": "Serveur relié : les salons s’ouvrent depuis les morceaux et les plans",
+      "detailUnset": "Pas encore relié : colle le lien d’un salon du serveur",
+      "lead": "Les salons des morceaux et des plans s’ouvrent depuis l’app, et chacun voit les messages qui taguent son pupitre.",
+      "server": "Serveur",
+      "link": "Lien du salon du serveur",
+      "linkHint": "Dans Discord, appui long ou clic droit sur un salon : « Copier le lien du salon ».",
+      "linkRecognized": "Lien reconnu : le serveur est enregistré.",
+      "linkInvalid": "Ce lien n’est pas celui d’un salon Discord. Dans Discord : « Copier le lien du salon », puis colle-le ici.",
+      "bot": "Bot de la fanfare",
+      "botConnected": "Le bot est connecté au serveur {{server}}.",
+      "botConnectedNoName": "Le bot est connecté au serveur.",
+      "botNone": "Pas encore de bot : les salons s’ouvrent, mais personne ne voit les messages qui taguent son pupitre.",
+      "botHelp": "Celui qui héberge l’app crée le bot dans Discord, l’invite sur le serveur et met son jeton dans la configuration du serveur. Les rôles des pupitres se choisissent ensuite ici.",
+      "botRefused": "Le bot ne joint pas le serveur : vérifie qu’il y est invité et que son jeton est le bon. Les salons s’ouvrent quand même.",
+      "botUnreachable": "Discord ne répond pas pour l’instant. Réessaie dans un moment.",
+      "roles": "Rôles des pupitres",
+      "rolesLead": "Le rôle Discord qui tague chaque pupitre, comme @saxophoniste. Choisis-le parmi les rôles du serveur.",
+      "noRole": "Aucun rôle",
+      "roleSheetLead": "Le rôle Discord qui tague le pupitre, parmi les rôles du serveur {{server}}.",
+      "roleSheetLeadNoName": "Le rôle Discord qui tague le pupitre, parmi les rôles du serveur.",
+      "roleGone": "Un rôle qui n’est plus sur le serveur",
+      "save": "Enregistrer",
+      "saved": "Les réglages Discord sont enregistrés.",
+      "failed": "Les réglages Discord ne sont pas enregistrés. Réessaie dans un instant.",
+      "roleTaken": "Ce rôle tague déjà un autre pupitre."
     }
   },
   "songs": {
@@ -1031,7 +1073,7 @@
       "loopRange": "Mesures {{from}} à {{to}}",
       "loopTitle": "Lecture en boucle",
       "loopIntro": "À la fin de la plage, le lecteur repart à son début, jusqu’à ce que tu arrêtes la boucle.",
-      "loopMarks": "Repères du morceau",
+      "loopMarks": "Repères du morceau, un ou plusieurs qui se suivent",
       "loopMeasures": "Ou choisis les mesures",
       "loopMarksHint": "Les repères viennent du fichier MuseScore ; sans repère, seules les mesures se choisissent.",
       "loopFrom": "De la mesure",
@@ -1042,7 +1084,10 @@
       "loopInvalid_other": "Choisis deux mesures entre 1 et {{count}}, la première avant la seconde.",
       "loopStart": "Boucler les mesures {{from}} à {{to}}",
       "loopChoose": "Boucler",
-      "loopStop": "Arrêter la boucle"
+      "loopStop": "Arrêter la boucle",
+      "loopMarksRule": "Cocher un repère plus loin coche ceux d’entre les deux : la boucle va du premier au dernier.",
+      "loopHintWithMarks_one": "Le morceau a 1 mesure ; sans repère, seules les mesures se choisissent.",
+      "loopHintWithMarks_other": "Le morceau a {{count}} mesures ; sans repère, seules les mesures se choisissent."
     },
     "song": {
       "more": "Plus d’actions",
@@ -1108,7 +1153,18 @@
       "notFoundTitle": "Ce morceau n’existe pas",
       "notFound": "Il a peut-être été supprimé.",
       "backToList": "Retour aux morceaux",
-      "fullScreenTitle": "Partition en plein écran"
+      "fullScreenTitle": "Partition en plein écran",
+      "inRepertoireSince": "Au répertoire depuis",
+      "duration": "Durée",
+      "forSetlists": "Pour les setlists",
+      "neverFirst": "jamais en premier",
+      "tiringFor": "Fatigant pour",
+      "trickyFor": "Ça tricote pour",
+      "discord": {
+        "tagged": "Les messages du salon Discord qui taguent {{role}}.",
+        "nothingTagged": "Personne n’a encore tagué {{role}} dans le salon de ce morceau.",
+        "nothingToShow": "Rien à afficher, consulte le salon Discord"
+      }
     },
     "delete": {
       "title": "Supprimer {{name}} ?",
@@ -1136,9 +1192,8 @@
       "clipUrl": "Clip YouTube",
       "clipPlaceholder": "Colle l’adresse YouTube",
       "clipHint": "Une adresse YouTube. La vignette est récupérée une fois, par le serveur.",
-      "discord": "Salon Discord",
-      "discordPlaceholder": "Identifiant du salon",
-      "discordHint": "L’identifiant du salon du morceau, en chiffres. Facultatif.",
+      "discord": "Lien du salon Discord",
+      "discordHint": "Dans Discord : « Copier le lien du salon ». Chacun l’ouvre depuis le morceau. Facultatif.",
       "errors_one": "Un champ est à corriger.",
       "errors_other": "{{count}} champs sont à corriger.",
       "error": {
@@ -1148,9 +1203,28 @@
         "bpm": "Un nombre entier entre 20 et 400.",
         "versionOn": "Une vraie date, pas dans le futur.",
         "clipUrl": "Ce n’est pas l’adresse d’une vidéo YouTube.",
-        "discord": "L’identifiant ne contient que des chiffres, entre 17 et 20.",
         "discordDuplicate": "Ce salon est déjà celui d’un autre morceau.",
-        "invalid": "Cette valeur n’est pas acceptée."
+        "invalid": "Cette valeur n’est pas acceptée.",
+        "duration": "Une durée en minutes et secondes, de 0:10 à 20:00, comme 3:52.",
+        "inRepertoireOn": "Cette date est dans le futur."
+      },
+      "setlists": {
+        "title": "Pour les setlists",
+        "lead": "Ce que lit le générateur de setlists.",
+        "duration": "Durée",
+        "durationHint": "Lue dans le fichier MIDI. Corrige-la si besoin.",
+        "category": "Catégorie",
+        "categoryHint": "Elle décide où il se place : Début en première moitié, Teuf en seconde, Rappel à la fin.",
+        "otherCategories": "Peut aussi servir de",
+        "neverFirst": "Jamais en premier",
+        "neverFirstHint": "Il faut être chauffé.",
+        "tiringSectionIds": "Fatigant pour",
+        "tiringSectionIdsHint": "Jamais en seconde moitié de set.",
+        "trickySectionIds": "Ça tricote pour",
+        "trickySectionIdsHint": "Deux morceaux qui tricotent pour le même pupitre ne se suivent jamais.",
+        "inRepertoireOn": "Au répertoire depuis",
+        "inRepertoireOnHint": "Mise par l’app quand il passe au répertoire. Un morceau est nouveau pendant 2 mois.",
+        "inRepertoireOnClear": "Retirer la date d’entrée au répertoire"
       }
     },
     "edit": {
@@ -1279,6 +1353,15 @@
       "noRatingLabel": "{{kind}} : pas de réponse",
       "noVersion": "—",
       "phoneOnlyDesktop": "Le tableau de gestion s’affiche sur un écran plus large. Sur téléphone, gère un morceau depuis sa fiche."
+    },
+    "setCategory": {
+      "OPENER": "Début",
+      "PARTY": "Teuf",
+      "KNOWN": "Connu",
+      "CHOREOGRAPHY": "Chorée",
+      "CHILL": "Chill",
+      "ENCORE": "Rappel",
+      "STANDARD": "Standard"
     }
   },
   "gigs": {
@@ -1325,7 +1408,7 @@
         "suggestion": "Ajouter {{name}}",
         "alreadyAt": "{{name}} · déjà en n° {{position}}",
         "noMatch": "Aucun morceau au répertoire ni temporaire ne ressemble à ça.",
-        "help": "Glisse vers la gauche pour supprimer. Si tu vois un rond, c’est que ce morceau est déjà dans une autre setlist du plan",
+        "help": "Tape quelques lettres, dicte, ouvre la liste, ou laisse l’app proposer. La poignée déplace un morceau ; glisser la ligne vers la gauche le retire.",
         "added": "{{name}} ajouté en n° {{position}}.",
         "moved": "{{name}} passe en n° {{position}}.",
         "removed": "{{name}} retiré de la setlist.",
@@ -1363,7 +1446,40 @@
           "nothing": "Aucun morceau ne s’appelle « {{search}} ». La liste ne contient que les morceaux au répertoire et les temporaires.",
           "empty": "La liste ne contient que les morceaux au répertoire et les temporaires."
         },
-        "removeSong": "Retirer {{name}}"
+        "removeSong": "Retirer {{name}}",
+        "length_one": "{{count}} morceau · ≈ {{minutes}} min",
+        "length_other": "{{count}} morceaux · ≈ {{minutes}} min",
+        "withoutLength_one": "{{count}} morceau sans durée",
+        "withoutLength_other": "{{count}} morceaux sans durée",
+        "withGap": "dont {{gap}} s entre deux morceaux",
+        "propose": {
+          "open": "Proposer des morceaux",
+          "title": "Proposer une setlist",
+          "howMany": "Combien de morceaux ?",
+          "about": "Environ {{minutes}} min, avec {{gap}} s entre deux morceaux.",
+          "includeNew": "Inclure les nouveaux morceaux",
+          "includeNewHint": "Au répertoire depuis moins de 2 mois : {{names}}.",
+          "replaces_one": "Remplace le morceau de cette setlist. Rien n’est enregistré avant « Enregistrer la setlist ».",
+          "replaces_other": "Remplace les {{count}} morceaux de cette setlist. Rien n’est enregistré avant « Enregistrer la setlist ».",
+          "go_one": "Proposer {{count}} morceau",
+          "go_other": "Proposer {{count}} morceaux",
+          "done_one": "{{count}} morceau proposé.",
+          "done_other": "{{count}} morceaux proposés.",
+          "madeEncore": "Proposée par l’app : de {{first}} pour démarrer à {{last}} en rappel. Retouche-la à la main, ou tire-en une autre.",
+          "made": "Proposée par l’app : de {{first}} pour démarrer à {{last}} pour finir. Retouche-la à la main, ou tire-en une autre.",
+          "dropped": "Le répertoire ne permet pas de tout respecter : {{rules}}.",
+          "short_one": "Le répertoire n’a que {{count}} morceau à proposer.",
+          "short_other": "Le répertoire n’a que {{count}} morceaux à proposer.",
+          "again": "Une autre proposition",
+          "rules": {
+            "opener": "pas de morceau de début pour ouvrir",
+            "closer": "pas de Teuf ni de Rappel pour finir",
+            "halves": "un Début ou un Teuf hors de sa moitié",
+            "tiring": "un morceau fatigant en seconde moitié",
+            "neighbours": "deux chorées, ou deux morceaux qui tricotent pour le même pupitre, à la suite",
+            "alternate": "des catégories qui se répètent"
+          }
+        }
       },
       "liveScreen": {
         "next": "Suivant",
@@ -1512,7 +1628,8 @@
       "changeStatus": "Changer le statut",
       "delete": "Supprimer le plan",
       "deleteDetail": "Seulement un brouillon sans réponse",
-      "manage": "Gérer le plan"
+      "manage": "Gérer le plan",
+      "discordText": "Ce que la fanfare se dit sur ce plan est dans son salon Discord."
     },
     "whoComes": {
       "pending_one": "1 n’a pas répondu",
@@ -1677,8 +1794,9 @@
           "tooLong": "C’est trop long : 4 000 caractères au plus."
         },
         "discordChannelId": {
-          "invalid": "L’identifiant d’un salon Discord fait 17 à 20 chiffres.",
-          "duplicate": "Ce salon est déjà celui d’un autre plan."
+          "invalid": "Ce lien n’est pas celui d’un salon Discord. Dans Discord : « Copier le lien du salon », puis colle-le ici.",
+          "duplicate": "Ce salon est déjà celui d’un autre plan.",
+          "otherServer": "Ce salon est sur un autre serveur Discord que celui de la fanfare."
         },
         "organizerIds": {
           "invalid": "Un brasseur n’est plus dans la fanfare : retire-le."
@@ -1687,7 +1805,10 @@
           "invalid": "Un déguiz n’existe plus : recharge la page."
         }
       },
-      "noRight": "Créer ou modifier un plan, c’est pour ceux qui gèrent les plans et pour ses brasseurs. Tu penses devoir y être ? Vois ça avec un admin."
+      "noRight": "Créer ou modifier un plan, c’est pour ceux qui gèrent les plans et pour ses brasseurs. Tu penses devoir y être ? Vois ça avec un admin.",
+      "notesAndDiscord": "Infos diverses et Discord",
+      "discord": "Lien du salon Discord",
+      "discordHint": "Dans Discord : « Copier le lien du salon ». Chacun l’ouvre depuis le plan. Facultatif."
     },
     "slot": {
       "newTitle": "Nouvelle présence",
@@ -1724,6 +1845,23 @@
       "validate_one": "Valider le brasseur",
       "validate_other": "Valider les {{count}} brasseurs",
       "nobody": "Aucun fanfaron à ce nom."
+    }
+  },
+  "channelChoice": {
+    "push": "Notification",
+    "email": "E-mail"
+  },
+  "stepper": {
+    "fewer": "Un de moins",
+    "more": "Un de plus"
+  },
+  "discord": {
+    "open": "Ouvrir dans Discord",
+    "title": "Discussion",
+    "link": {
+      "placeholder": "https://discord.com/channels/…",
+      "invalid": "Ce lien n’est pas celui d’un salon Discord. Dans Discord : « Copier le lien du salon », puis colle-le ici.",
+      "otherServer": "Ce salon est sur un autre serveur Discord que celui de la fanfare."
     }
   }
 }

@@ -437,6 +437,115 @@ const phrases = () =>
     "SELECT CONCAT(s.name, '=', n.phrase) FROM songSpokenName n JOIN song s ON s.id = n.songId ORDER BY n.id",
   );
 
+test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
+  /** A song with what the generator reads. */
+  function songWith(name: string, category: string, seconds: number | null, changes = '') {
+    const songId = addSong(name);
+    sql(
+      `UPDATE song SET setCategory = '${category}', durationSeconds = ${seconds ?? 'NULL'}${changes} WHERE id = ${songId}`,
+    );
+    return songId;
+  }
+
+  test('the editor says how long the setlist lasts, with the time between two songs of the band', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = confirmed();
+    const songs = [
+      songWith('Toxic', 'STANDARD', 210),
+      songWith('Valerie', 'STANDARD', 210),
+      songWith('Crazy', 'STANDARD', null),
+    ];
+    const setlistId = addSetlist(gigId, slotId, songs);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/${setlistId}`);
+    // 3:30 + 3:30 + 2 × 0:30 = 8 min; Crazy has no length.
+    await expect(page.getByText('3 morceaux · ≈ 8 min')).toBeVisible();
+    await expect(page.getByText('1 morceau sans durée')).toBeVisible();
+  });
+
+  test('“Proposer des morceaux” fills the editor by the rules; nothing is saved before the button', async ({
+    page,
+  }) => {
+    const { gigId } = confirmed();
+    songWith('Bonfire', 'OPENER', 200);
+    songWith('Canned Heat', 'KNOWN', 230);
+    songWith('Valerie', 'CHILL', 220);
+    songWith('Crazy', 'CHOREOGRAPHY', 240);
+    songWith('Toxic', 'STANDARD', 200);
+    songWith('Biffy', 'ENCORE', 180);
+    songWith('Uptown Funk', 'PARTY', 270);
+    // New in the repertoire: offered only when asked.
+    songWith(
+      'Freed',
+      'KNOWN',
+      250,
+      `, inRepertoireOn = '${new Date().toISOString().slice(0, 10)}'`,
+    );
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}`);
+    await page.getByRole('button', { name: 'Nouvelle setlist' }).click();
+
+    await page.getByRole('button', { name: 'Proposer des morceaux' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Proposer une setlist' });
+    const count = sheet.getByRole('spinbutton', { name: 'Combien de morceaux ?' });
+    await expect(count).toHaveValue('10');
+    await sheet.getByRole('button', { name: 'Un de moins' }).click();
+    await count.fill('3');
+    await expect(sheet.getByRole('button', { name: 'Un de moins' })).toBeDisabled();
+    // Typed digit by digit, "15" passes through "1" without being changed.
+    await count.fill('');
+    await count.pressSequentially('15');
+    await expect(count).toHaveValue('15');
+    await count.blur();
+    await expect(count).toHaveValue('15');
+    await count.fill('99');
+    await count.blur();
+    await expect(count).toHaveValue('30');
+    await count.fill('7');
+    await expect(sheet.getByText('Au répertoire depuis moins de 2 mois : Freed.')).toBeVisible();
+    await sheet.getByRole('button', { name: 'Proposer 7 morceaux' }).click();
+
+    // Bonfire opens, Biffy closes as an encore: the only ones that can.
+    const rows = page.locator('.SetlistSongRow');
+    await expect(rows).toHaveCount(7);
+    await expect(rows.first()).toContainText('Bonfire');
+    await expect(rows.last()).toContainText('Biffy');
+    await expect(rows.filter({ hasText: 'Freed' })).toHaveCount(0);
+    await expect(
+      page.getByText('Proposée par l’app : de Bonfire pour démarrer à Biffy en rappel.', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Une autre proposition' })).toBeVisible();
+    expect(sql('SELECT COUNT(*) FROM setlist')).toBe('0');
+
+    await page.getByRole('button', { name: 'Enregistrer la setlist' }).click();
+    await expect(page).toHaveURL(`/gigs/${gigId}`);
+    expect(sql('SELECT COUNT(*) FROM setlistSong')).toBe('7');
+  });
+
+  test('a repertoire too small says which rule could not be kept, and how many songs it had', async ({
+    page,
+  }) => {
+    const { gigId } = confirmed();
+    songWith('Bonfire', 'OPENER', 200);
+    songWith('Crazy', 'CHOREOGRAPHY', 240);
+    songWith('Single Ladies', 'CHOREOGRAPHY', 200);
+    songWith('Uptown Funk', 'PARTY', 270);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}`);
+    await page.getByRole('button', { name: 'Nouvelle setlist' }).click();
+    await page.getByRole('button', { name: 'Proposer des morceaux' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Proposer 10 morceaux' }).click();
+
+    await expect(page.locator('.SetlistSongRow')).toHaveCount(4);
+    await expect(page.getByText('pour finir', { exact: false })).toBeVisible();
+    await expect(page.getByText('deux chorées', { exact: false })).toBeVisible();
+    await expect(page.getByText('Le répertoire n’a que 4 morceaux à proposer.')).toBeVisible();
+  });
+});
+
 test.describe('dictating a setlist', () => {
   test('songs said one by one are added; two that sound alike are chosen between, and the choice is learned', async ({
     page,
@@ -888,7 +997,7 @@ test.describe('notifications on a device', () => {
     await page.getByRole('link', { name: /Notifications/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Notifications' })).toBeVisible();
     await expect(
-      page.getByText('Cet appareil reçoit ou non. Ce que tu reçois se règle une fois'),
+      page.getByText('Cet appareil reçoit ou non. Ce que tu reçois, et comment, se règle une fois'),
     ).toBeVisible();
     const reminders = page.getByRole('switch', { name: 'Recevoir les notifications' });
     await expect(reminders).toBeChecked();

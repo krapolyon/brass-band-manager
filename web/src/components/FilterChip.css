@@ -29,3 +29,18 @@
   border: 2px solid var(--textMuted);
   border-radius: var(--radiusFull);
 }
+
+.FilterChip:disabled,
+.FilterChip[data-locked] {
+  cursor: default;
+}
+
+/* A chip that cannot change here stands back; in high contrast nothing does,
+   and the button says it is disabled by itself. */
+.FilterChip:disabled:not([data-locked]) {
+  opacity: 0.4;
+}
+
+:root[data-contrast="more"] .FilterChip:disabled {
+  opacity: 1;
+}

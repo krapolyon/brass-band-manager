@@ -78,6 +78,15 @@ return [
     // sends the address of the member's device to that server.
     // 'mapTilesUrl' => 'https://vector.openstreetmap.org/shortbread_v1/tilejson.json',
 
+    // The bot of the band, which reads the Discord channels of songs to show
+    // the messages that tag the section of each member (docs/discord-bot.md
+    // says how to create it). The token is a password: it stays here, never
+    // in the database or the repository. Empty, the songs and gigs still
+    // open their channels; no message is shown.
+    'discord' => [
+        'botToken' => '',
+    ],
+
     // There is deliberately no "session" setting here: without one, the
     // session cookie only travels over HTTPS, which is what the host must do.
 ];

@@ -1209,3 +1209,29 @@ button.songs-liveTile:disabled,
   padding: 0;
   list-style: none;
 }
+
+/* The form of a song, "Pour les setlists" (0.3.0): the line under the title
+   of the card, and the categories, one choice in a radio group that wraps. */
+.songs-formNote {
+  margin: 0;
+  color: var(--textMuted);
+}
+
+.songs-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spaceXs);
+}
+
+/* The marks of the loop: a group of boxes, its legend the label above them. */
+.songs-loopMarks {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.songs-loopMarks legend {
+  margin-bottom: var(--spaceXs);
+  padding: 0;
+}

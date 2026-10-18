@@ -269,6 +269,53 @@ export function countedBpm(song: MidiSong): number {
 }
 
 /**
+ * How long the band plays the song, in seconds, read from its MIDI file:
+ * repeats played (the file plays them already), to the end of its last note,
+ * at the tempo of the band when it has one (model/songs.md, "Setlist
+ * attributes": the length of the file times its tempo divided by `bpm`, both
+ * counted on the beat). Null outside 0:10 to 20:00, the bounds of the model.
+ */
+export function lengthOf(song: MidiSong, bandBpm: number | null): number | null {
+  let end = 0;
+  for (const track of song.tracks) {
+    for (const note of track.notes) end = Math.max(end, note.tick + note.ticks);
+  }
+  const fileSeconds = secondsAt(song, end);
+  const seconds = Math.round(bandBpm ? (fileSeconds * countedBpm(song)) / bandBpm : fileSeconds);
+  return seconds >= 10 && seconds <= 1200 ? seconds : null;
+}
+
+/**
+ * The same MIDI file without the notes of some tracks, by their place from 0:
+ * the parts hidden in the MuseScore file (model/songs.md, "Display", issue
+ * #35). The tracks stay, with their tempos, time signatures and marks (the
+ * first one carries them); without a note, the player does not show them.
+ */
+export function withoutNotes(file: Uint8Array, places: number[], partCount: number): Uint8Array {
+  if (places.length === 0) return file;
+  const midi = parseMidi(file);
+  // One track per part, as withTrackNames() checks too: otherwise the places
+  // would not be those of the tracks, and the wrong instrument would go quiet.
+  if (midi.tracks.length !== partCount) return file;
+  midi.tracks = midi.tracks.map((events, index) => {
+    if (!places.includes(index)) return events;
+    const kept: MidiEvent[] = [];
+    let carried = 0;
+    for (const event of events) {
+      if (event.type === 'noteOn' || event.type === 'noteOff') {
+        // Its time goes to the next event that stays.
+        carried += event.deltaTime;
+        continue;
+      }
+      kept.push({ ...event, deltaTime: event.deltaTime + carried });
+      carried = 0;
+    }
+    return kept;
+  });
+  return new Uint8Array(writeMidi(midi));
+}
+
+/**
  * The same MIDI file with its tracks named again, one name per track in the
  * order of the file. Used when the file is produced from a MuseScore file:
  * the tracks then carry the names of the staves (model/songs.md, "Reading
@@ -410,4 +457,40 @@ export function rehearsalMarks(musicXml: string): { measure: number; name: strin
     }
   });
   return marks;
+}
+
+/**
+ * The marks a range of measures is made of, by their index in the order of
+ * the score: those it holds whole, when it starts with the first of them and
+ * ends with the last. Typed measures that do not fall on marks tick none.
+ */
+export function marksIn(marks: MarkRange[], range: { from: number; to: number }): number[] {
+  const held = marks.flatMap((mark, index) =>
+    mark.from >= range.from && mark.to <= range.to ? [index] : [],
+  );
+  const first = marks[held[0] ?? -1];
+  const last = marks[held[held.length - 1] ?? -1];
+  return first?.from === range.from && last?.to === range.to ? held : [];
+}
+
+/** The names of the marks a range is made of. */
+export function namesOf(marks: MarkRange[], range: { from: number; to: number }): string[] {
+  return marksIn(marks, range).flatMap((index) => marks[index]?.name ?? []);
+}
+
+/**
+ * The marks ticked after one is ticked or unticked (model/songs.md, "A loop
+ * over several rehearsal marks"): ticking a mark further on ticks those
+ * between, so the range has no hole; unticking the first or the last
+ * shortens it; unticking one in the middle ends it just before. Null: none.
+ */
+export function tickedAfter(ticked: number[], index: number, on: boolean): [number, number] | null {
+  const first = ticked[0];
+  const last = ticked[ticked.length - 1];
+  if (first === undefined || last === undefined) return on ? [index, index] : null;
+  if (on) return [Math.min(first, index), Math.max(last, index)];
+  if (index === first && index === last) return null;
+  if (index === first) return [first + 1, last];
+  if (index === last) return [first, last - 1];
+  return [first, index - 1];
 }

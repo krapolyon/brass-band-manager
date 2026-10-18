@@ -152,3 +152,9 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* The unit after a number typed in a field: "30 s". */
+.band-unit {
+  padding-inline-end: var(--spaceXs);
+  color: var(--textMuted);
+}

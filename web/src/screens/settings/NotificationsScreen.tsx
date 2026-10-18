@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useBand } from '../../band.ts';
 import { Button } from '../../components/Button.tsx';
-import { Chip } from '../../components/Chip.tsx';
+import { ChannelChoice, type Channels } from '../../components/ChannelChoice.tsx';
 import { Message } from '../../components/Message.tsx';
-import { NavRow } from '../../components/NavRow.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { SwitchRow } from '../../components/SwitchRow.tsx';
 import {
+  channelOf,
+  channelsOf,
   type NotificationSettings,
   pushSupport,
   useNotificationSettings,
@@ -19,19 +21,29 @@ import { AppLayout } from '../AppLayout.tsx';
 import './settings.css';
 
 // The settings of the account, by category, in the order of Figma.
-const gigSettings = ['notifyGigPlayable', 'notifyGigConfirmed', 'notifyLiveSetlist'] as const;
+const gigSettings = [
+  'notifyGigReminder',
+  'notifyGigPlayable',
+  'notifyGigConfirmed',
+  'notifyLiveSetlist',
+] as const;
 const songSettings = ['notifySongNew', 'notifySongScore', 'notifySongPart'] as const;
 
-// Figma: Members / Settings — notifications, by category (page Members,
-// section 11). Whether this device receives is the switch of the device: it
-// is what asks the browser for its permission. What the member receives is
-// set once, on the account, for every device (model/members.md,
-// "Notification settings"). With the device off, the categories are shown
-// disabled and kept. The reminders to answer are not a choice.
+// Figma: Members / Settings — notifications by channel (page Members,
+// section 12, 0.3.0, issue #27). Whether this device receives is the switch
+// of the device: it is what asks the browser for its permission. What the
+// member receives, and how, is set once, on the account, for every device
+// (model/members.md, "Notification settings"): one ChannelChoice per kind,
+// Notification and E-mail. With the device off, the notification chips are
+// kept and cannot change here; the e-mail chips stay active. The reminders
+// to answer keep one channel at least; the live setlist has no e-mail.
+// Without a mail server, the e-mail chips are hidden and a choice saved with
+// e-mail reads as a notification, as the server sends it.
 export function NotificationsScreen() {
   const { t } = useTranslation();
   const push = usePush();
   const settings = useNotificationSettings();
+  const canEmail = useBand().data?.canSendEmail ?? false;
   const save = useSaveNotificationSettings();
   const { enable, disable } = usePushSwitch();
   const [isBusy, setBusy] = useState(false);
@@ -61,20 +73,30 @@ export function NotificationsScreen() {
     }
   };
 
-  const choose = async (setting: keyof NotificationSettings, on: boolean) => {
+  const choose = async (setting: keyof NotificationSettings, wanted: Channels) => {
     setFailure(null);
-    if (!(await save({ [setting]: on ? 'PUSH' : 'OFF' }))) setFailure('failed');
+    if (!(await save({ [setting]: channelOf(wanted) }))) setFailure('failed');
   };
   const row = (setting: keyof NotificationSettings) => {
-    const description = t(`settings.notifications.choices.${setting}.hint`, { defaultValue: '' });
+    const showEmail = canEmail && setting !== 'notifyLiveSetlist';
+    const saved = channelsOf(settings.data?.[setting]);
+    // Without e-mail, a choice saved with e-mail is sent as a notification.
+    const value = showEmail ? saved : { push: saved.push || saved.email, email: false };
+    const hintKey =
+      setting === 'notifyGigReminder' && !canEmail
+        ? 'settings.notifications.choices.notifyGigReminder.hintWithoutEmail'
+        : `settings.notifications.choices.${setting}.hint`;
+    const description = t(hintKey, { defaultValue: '' });
     return (
-      <SwitchRow
+      <ChannelChoice
         key={setting}
         label={t(`settings.notifications.choices.${setting}.label`)}
         description={description || undefined}
-        checked={settings.data?.[setting] === 'PUSH'}
-        disabled={!isOn || !settings.data}
-        onChange={(on) => choose(setting, on)}
+        value={value}
+        showEmail={showEmail}
+        neverOff={setting === 'notifyGigReminder'}
+        pushDisabled={!isOn || !settings.data}
+        onChange={(wanted) => choose(setting, wanted)}
       />
     );
   };
@@ -117,20 +139,13 @@ export function NotificationsScreen() {
         push.data && !isOn && <Message>{t('settings.notifications.deviceOff')}</Message>
       )}
 
-      {/* Off on this device: the choices are kept, and cannot be changed here. */}
-      <div className="settings-categories" data-disabled={isOn ? undefined : 'true'}>
+      {/* Off on this device: the notification chips are kept, and cannot be changed here. */}
+      <div className="settings-categories">
         <Sheet title={t('settings.notifications.gigs')}>
-          <div className="settings-rows">
-            <NavRow
-              label={t('settings.notifications.reminders')}
-              detail={t('settings.notifications.remindersHint')}
-              trailing={<Chip>{t('settings.notifications.always')}</Chip>}
-            />
-            {gigSettings.map(row)}
-          </div>
+          <div className="settings-channels">{gigSettings.map(row)}</div>
         </Sheet>
         <Sheet title={t('settings.notifications.songs')}>
-          <div className="settings-rows">{songSettings.map(row)}</div>
+          <div className="settings-channels">{songSettings.map(row)}</div>
         </Sheet>
       </div>
 

@@ -1,5 +1,6 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
+// v0.8 — 2026-10-18 — aligned with 0.3.0 (Band v1.7, Members v1.22, Songs v1.7, Gigs v1.7), validated: icon of the app, time between two songs, Discord role of a section, length and setlist attributes of a song
 // v0.7 — 2026-10-13 — aligned with Gigs v1.0, validated: dates and place on the gig, five statuses, slots without dates, no stops, costumes, setlists tied to a gig and no longer a later feature, reminders of the band, push subscription tied to a session
 // v0.6 — 2026-10-12 — aligned with Songs v1.0, validated: five statuses, one field per file instead of songFile, Discord channel, aliases moved to songs, levels of a member on a song
 // v0.5 — 2026-10-11 — aligned with Members v1.14 and Band v1.5, both validated: country of the band
@@ -21,11 +22,13 @@ Table band {
   id integer [pk]
   name varchar [not null]
   logoPath varchar
+  iconPath varchar [note: 'Square image the icons of the installed app are made from; empty: made from the logo']
   defaultLanguage varchar [not null, note: 'Locale given to new members, for instance fr']
   defaultAccentTheme varchar [not null, note: 'Accent theme shown to members who have not chosen one']
   defaultCountryCode varchar [not null, note: 'Country of the band: reads phone numbers typed without a prefix']
   gigFirstReminderDays integer [note: 'Days before a gig of its first reminder. With the second one and the hour, detailed in band.dbml.']
   discordServerId varchar [note: 'Discord server of the band. The bot token stays in the server configuration.']
+  setlistGapSeconds integer [note: 'Time counted between two songs to give the length of a setlist']
   Note: 'The band this instance belongs to. Holds a single row. Colours and other display settings are detailed in the band domain.'
 }
 
@@ -76,6 +79,7 @@ Table section {
   name varchar [not null, unique]
   position integer [not null]
   icon varchar [note: 'Key of one of the section pictograms shipped with the app']
+  discordRoleId varchar [note: 'Discord role that tags the section, for instance @saxophoniste']
   Note: 'A group of instruments that play the same kind of part (a "pupitre" in the French locale). A section is present at a gig as soon as one of its members is. Detailed in members.dbml.'
 }
 
@@ -129,6 +133,8 @@ Table song {
   status songStatus [not null]
   clipUrl varchar [note: 'YouTube video of the original, played inside the app']
   discordChannelId varchar [note: 'Discord channel where the band discusses this song']
+  durationSeconds integer [note: 'Length, read from the MIDI file']
+  setCategory varchar [note: 'Main category for the setlist generator; the others, never first, tiring and tricky sections are detailed in songs.dbml']
   Note: 'A piece the band plays, is learning or considers learning. Detailed in songs.dbml: version, and its files (cover art, MuseScore, MIDI, recording), one field per file.'
 }
 

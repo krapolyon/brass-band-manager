@@ -1,0 +1,13 @@
+/* One line in Figma; it wraps when the text grows. */
+.SetlistLength {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spaceXs);
+  margin: 0;
+  color: var(--text);
+}
+
+.SetlistLength-note {
+  color: var(--textMuted);
+}

@@ -356,11 +356,12 @@ test.describe('appearance and accessibility', () => {
   });
 });
 
-test.describe('notifications by category (#23)', () => {
+test.describe('notifications by channel (#23, #27)', () => {
   // This device was asked already: the sheet of a first opening stays shut.
   const askedBefore = (page: Page) =>
     page.addInitScript(() => localStorage.setItem('pushAsked', '1'));
-  const choices = [
+  const kinds = [
+    'Rappels de présence',
     'Plans jouables',
     'Plans validés',
     'Prochain morceau de la setlist',
@@ -368,8 +369,13 @@ test.describe('notifications by category (#23)', () => {
     'Nouveau MuseScore',
     'Nouvelle partition',
   ];
+  /** The chip of one channel of one kind: a toggle button in the group of the kind. */
+  const chip = (page: Page, kind: string, channel: 'Notification' | 'E-mail') =>
+    page
+      .getByRole('group', { name: new RegExp(`^${kind}`) })
+      .getByRole('button', { name: channel });
 
-  test('the device switch first; with it off, the six choices of the account are shown disabled and kept', async ({
+  test('the device switch first; with it off, the notification chips are kept and cannot change, the e-mail ones can', async ({
     page,
   }) => {
     await fakePush(page);
@@ -380,39 +386,51 @@ test.describe('notifications by category (#23)', () => {
     const device = page.getByRole('switch', { name: 'Recevoir les notifications' });
     await expect(device).not.toBeChecked();
     await expect(
-      page.getByText('Active les notifications sur cet appareil pour choisir les types de notifs.'),
+      page.getByText('Active les notifications sur cet appareil pour les recevoir ici.'),
     ).toBeVisible();
-    for (const name of choices) {
-      await expect(page.getByRole('switch', { name })).toBeChecked();
-      await expect(page.getByRole('switch', { name })).toBeDisabled();
+    for (const kind of kinds) {
+      await expect(chip(page, kind, 'Notification'), kind).toHaveAttribute('aria-pressed', 'true');
+      await expect(chip(page, kind, 'Notification'), kind).toBeDisabled();
     }
-    // The reminders are no choice: always sent.
-    await expect(page.getByText('Rappels de présence')).toBeVisible();
-    await expect(page.getByText('Toujours', { exact: true })).toBeVisible();
-    await expect(page.getByRole('switch', { name: 'Rappels de présence' })).toHaveCount(0);
+    // The live setlist has no e-mail: it would arrive too late.
+    await expect(chip(page, 'Prochain morceau de la setlist', 'E-mail')).toHaveCount(0);
+    await chip(page, 'Nouveau morceau', 'E-mail').click();
+    await expect.poll(() => zaza('notifySongNew')).toBe('PUSH_AND_EMAIL');
 
-    // On: the choices can be changed, each at once, for every device.
+    // On: each chip changes at once, for every device.
     await device.click();
     await expect(device).toBeChecked();
-    await expect(page.getByText('Active les notifications sur cet appareil')).toHaveCount(0);
-    await page.getByRole('switch', { name: 'Plans jouables' }).click();
-    await page.getByRole('switch', { name: 'Nouvelle partition' }).click();
+    await chip(page, 'Plans jouables', 'Notification').click();
+    await chip(page, 'Nouvelle partition', 'Notification').click();
+    await chip(page, 'Nouvelle partition', 'E-mail').click();
     await expect
       .poll(() => zaza('notifyGigPlayable, notifyGigConfirmed, notifySongPart'))
-      .toBe('OFF\tPUSH\tOFF');
+      .toBe('OFF\tPUSH\tEMAIL');
 
-    // The summary counts the choices that are on.
+    // The reminders keep one channel at least: the last one on cannot be turned off.
+    const reminder = chip(page, 'Rappels de présence', 'Notification');
+    await expect(reminder).toBeDisabled();
+    // Still reached from the keyboard, and pressing it changes nothing.
+    await reminder.focus();
+    await expect(reminder).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(reminder).toHaveAttribute('aria-pressed', 'true');
+    await chip(page, 'Rappels de présence', 'E-mail').click();
+    await expect(reminder).toBeEnabled();
+    await reminder.click();
+    await expect(chip(page, 'Rappels de présence', 'E-mail')).toBeDisabled();
+    await expect.poll(() => zaza('notifyGigReminder')).toBe('EMAIL');
+    await expect(
+      page.getByText('sans appareil qui reçoit les notifications, ils arrivent par e-mail', {
+        exact: false,
+      }),
+    ).toBeVisible();
+
+    // The summary counts the kinds that reach the member, by any channel.
     await page.goto('/settings');
     await expect(page.getByRole('link', { name: /Notifications/ })).toContainText(
-      'Sur cet appareil · 4 choix',
+      'Sur cet appareil · 6 choix',
     );
-
-    // Off again on this device: the choices stay as they were.
-    await page.getByRole('link', { name: /Notifications/ }).click();
-    await device.click();
-    await expect(page.getByRole('switch', { name: 'Plans jouables' })).toBeDisabled();
-    await expect(page.getByRole('switch', { name: 'Plans jouables' })).not.toBeChecked();
-    expect(zaza('notifyGigPlayable')).toBe('OFF');
   });
 
   test('a refused change goes back, and says so', async ({ page }) => {
@@ -421,15 +439,36 @@ test.describe('notifications by category (#23)', () => {
     await signIn(page);
     await page.goto('/settings/notifications');
     await page.getByRole('switch', { name: 'Recevoir les notifications' }).click();
-    const choice = page.getByRole('switch', { name: 'Nouveau morceau' });
+    const choice = chip(page, 'Nouveau morceau', 'Notification');
     await expect(choice).toBeEnabled();
     await page.route('**/api/me/notifications', (route) =>
       route.request().method() === 'PUT' ? route.abort() : route.continue(),
     );
     await choice.click();
     await expect(page.getByText('Le réglage n’a pas changé.')).toBeVisible();
-    await expect(choice).toBeChecked();
+    await expect(choice).toHaveAttribute('aria-pressed', 'true');
     expect(zaza('notifySongNew')).toBe('PUSH');
+  });
+
+  test.describe('on an instance without a mail server', () => {
+    test.use({ baseURL: 'http://localhost:8082' });
+
+    test('no e-mail chip, and a choice saved with e-mail reads as a notification', async ({
+      page,
+    }) => {
+      sql(`UPDATE member SET notifySongNew = 'EMAIL' WHERE email = 'zaza@example.org'`);
+      await fakePush(page, 'granted');
+      await askedBefore(page);
+      await signIn(page);
+      await page.goto('/settings/notifications');
+
+      await expect(page.getByRole('button', { name: 'E-mail' })).toHaveCount(0);
+      await expect(chip(page, 'Nouveau morceau', 'Notification')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await expect(page.getByText('Tant que tu n’as pas répondu.', { exact: true })).toBeVisible();
+    });
   });
 });
 

@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.7 — 2026-10-18 — validated (0.3.0), no change to the tables: the Discord channel of a gig is shown to every member as a link and typed in the form (issue #33); the length of a setlist and the setlist generator (issue #25) (dictionary)
 // v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications when a gig becomes playable or confirmed, the live setlist follows the setting of each member (issue #23); the setlist editor shows how often a song is played in the gig and adds songs from a list (issue #20); the calendar feed of a member (issue #21) (dictionary)
 // v1.5 — 2026-10-15 — no change to the tables: a confirmed gig can be put back to ACCEPTED or PROPOSED by hand (issue #17); streetAddress and setlist.description are typed over several lines (issue #15); the end date of a gig can be removed (issue #16) (dictionary)
 // v1.4 — 2026-10-13 — migration 012, decided with the design of the home screen: gig.proposedAt, the instant a gig first reaches a status members see; a gig is marked as new for 15 days after it.
@@ -47,7 +48,7 @@ Table gig {
   latitude decimal [note: 'Exact point of the meeting, in decimal degrees, for instance 45.767300. For a place that is hard to find. Filled with longitude or not at all. 🔒 Personal data when the gig is at someone\'s home, as the address.']
   longitude decimal [note: 'In decimal degrees, for instance 4.834400. Filled with latitude or not at all.']
   notes text [note: 'Anything else members need to know, as free text over several lines. No contact details of the client: they have no field in the first version.']
-  discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this gig: digits only. Empty for a band without Discord. Stored, and shown by no screen before the Discord feature, as for a song.']
+  discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this gig: digits only. Empty for a band without Discord. Read by the app from the link of the channel, pasted by whoever may edit the gig. Every member who sees the gig sees it as a link that opens the channel in Discord.']
   remindedAt timestamp [note: 'Last time the members who have not answered were reminded, by the app or by the button. Empty when they never were. No automatic reminder is sent on a day one was already sent.']
   proposedAt timestamp [note: 'The instant the gig first reaches a status members see (PROPOSED, ACCEPTED or CONFIRMED). Empty while it has only been a draft. Set once, never changed afterwards, even when the gig is cancelled then reopened. The home screen marks the gig as new for 15 days after it.']
   Note: 'A concert the band is asked to play, from the first contact to the day itself (a "plan" in the French locale). Has one slot at least.'

@@ -26,10 +26,11 @@ import {
   isPlaced,
   isQuestion,
   placeFiles,
+  proposedLength,
   sendFiles,
   withDropped,
 } from './files.ts';
-import { today } from './format.ts';
+import { duration, today } from './format.ts';
 import { useRefusal } from './SongEditScreen.tsx';
 import {
   checkDraft,
@@ -170,6 +171,16 @@ export function ImportScreen() {
         versionNote: t('songs.import.firstVersion'),
       });
     }
+    // The length is proposed from the MIDI file the files give, at the tempo
+    // of the file: the record has no tempo of the band yet.
+    proposedLength(placed, null).then((seconds) => {
+      if (seconds === null) return;
+      setDraft((current) =>
+        current && !current.isDurationTyped && current.duration === ''
+          ? { ...current, duration: duration(seconds) }
+          : current,
+      );
+    });
     setStep(2);
   };
 

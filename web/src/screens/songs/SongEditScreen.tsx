@@ -19,11 +19,12 @@ import {
   isPlaced,
   placeFiles,
   placeOf,
+  proposedLength,
   type SendFailure,
   sendFiles,
   withDropped,
 } from './files.ts';
-import { day, weight } from './format.ts';
+import { day, duration, weight } from './format.ts';
 import {
   checkDraft,
   draftOf,
@@ -103,7 +104,19 @@ export function SongEditScreen() {
   const drop = async (files: File[]) => {
     try {
       const placed = await placeFiles(files);
-      setDropped((current) => withDropped(current, placed));
+      const next = withDropped(dropped, placed);
+      setDropped(next);
+      // A MIDI file among them proposes the length of the song, at the tempo
+      // of the band; a length already there, saved or typed, stays.
+      const bpm = Number(draft?.bpm) || data?.bpm || null;
+      proposedLength(next, bpm).then((seconds) => {
+        if (seconds === null) return;
+        setDraft((current) =>
+          current && !current.isDurationTyped
+            ? { ...current, duration: duration(seconds) }
+            : current,
+        );
+      });
       // A file that is not of a song, or a part whose instrument its name
       // does not tell: said at once, and not kept.
       setRefused(

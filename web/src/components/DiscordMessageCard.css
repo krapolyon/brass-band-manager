@@ -1,0 +1,30 @@
+.DiscordMessageCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXxs);
+  padding: var(--spaceMd);
+  border-radius: var(--radiusMd);
+  background: var(--control);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.DiscordMessageCard-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spaceXs);
+}
+
+.DiscordMessageCard-day {
+  color: var(--textMuted);
+}
+
+.DiscordMessageCard-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}

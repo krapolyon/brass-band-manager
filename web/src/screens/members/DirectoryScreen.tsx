@@ -136,8 +136,8 @@ type SheetProps = { member: Member; instrument: string; sectionIcon: string | nu
 
 // Figma: Members / Directory — member sheet. What a member gave to be
 // reached: a line that is missing is not shown, and an action that cannot be
-// done is not offered. (The Discord action is drawn, and waits for the
-// Discord feature.)
+// done is not offered. No Discord action: the band uses Discord through the
+// channels of songs and gigs, not through private messages (Members v1.22).
 function MemberSheet({ member, instrument, sectionIcon }: SheetProps) {
   const { t, i18n } = useTranslation();
   const bandCountry = useBand().data?.defaultCountryCode ?? '';

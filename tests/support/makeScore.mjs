@@ -23,6 +23,11 @@ const repeatOf = (measure) =>
         measure === 1 ? '<barline location="right"><repeat direction="backward"/></barline>' : '',
       ];
 
+// "hiddenPart" as the first argument: two more parts, "Cornet" that plays
+// but is hidden in MuseScore (<show>0</show>), and "Clairon" whose staff is
+// empty (issue #35).
+const hasHiddenPart = process.argv[2] === 'hiddenPart';
+
 // "lastEid" as the first argument: the file as MuseScore 4.4 writes it, with
 // a line the engine does not know, which makes it open an empty score.
 const withLastEid = (mscx) =>
@@ -72,11 +77,36 @@ const part = (id, octave) =>
           .join('')}${repeatOf(measure)[1]}</measure>`,
     )
     .join('')}</part>`;
+// A staff of rests only, four whole measures.
+const emptyPart = (id) =>
+  `<part id="${id}">${[0, 1, 2, 3]
+    .map(
+      (measure) =>
+        `<measure number="${measure + 1}">${
+          measure === 0
+            ? '<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>'
+            : ''
+        }<note><rest/><duration>4</duration><type>whole</type></note></measure>`,
+    )
+    .join('')}</part>`;
+const scorePart = (id, name, channel, program) =>
+  `<score-part id="${id}"><part-name>${name}</part-name><midi-instrument id="${id}-I1"><midi-channel>${channel}</midi-channel><midi-program>${program}</midi-program></midi-instrument></score-part>`;
 const musicXml = `<?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="3.1"><part-list>
-<score-part id="P1"><part-name>Trompette</part-name><midi-instrument id="P1-I1"><midi-channel>1</midi-channel><midi-program>57</midi-program></midi-instrument></score-part>
-<score-part id="P2"><part-name>Tuba</part-name><midi-instrument id="P2-I1"><midi-channel>2</midi-channel><midi-program>59</midi-program></midi-instrument></score-part>
-</part-list>${part('P1', 4)}${part('P2', 2)}</score-partwise>`;
+${scorePart('P1', 'Trompette', 1, 57)}
+${scorePart('P2', 'Tuba', 2, 59)}
+${hasHiddenPart ? `${scorePart('P3', 'Cornet', 3, 57)}${scorePart('P4', 'Clairon', 4, 57)}` : ''}
+</part-list>${part('P1', 4)}${part('P2', 2)}${hasHiddenPart ? `${part('P3', 5)}${emptyPart('P4')}` : ''}</score-partwise>`;
+
+// The third part hidden, as MuseScore writes an instrument unticked.
+const withHiddenThirdPart = (mscx) => {
+  let seen = 0;
+  return Buffer.from(
+    Buffer.from(mscx)
+      .toString('utf8')
+      .replace(/<Part( [^>]*)?>/g, (tag) => (++seen === 3 ? `${tag}\n      <show>0</show>` : tag)),
+  );
+};
 
 const WebMscore = createRequire(import.meta.url)('webmscore');
 await WebMscore.ready;
@@ -84,5 +114,7 @@ const score = await WebMscore.load('musicxml', new TextEncoder().encode(musicXml
 const file =
   process.argv[2] === 'lastEid'
     ? zipOf('score.mscx', withLastEid(await score.saveMsc('mscx')))
-    : await score.saveMsc('mscz');
+    : hasHiddenPart
+      ? zipOf('score.mscx', withHiddenThirdPart(await score.saveMsc('mscx')))
+      : await score.saveMsc('mscz');
 process.stdout.write(Buffer.from(file).toString('base64'), () => process.exit(0));

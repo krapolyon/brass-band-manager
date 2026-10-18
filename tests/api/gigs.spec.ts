@@ -102,9 +102,10 @@ test.describe('who may do what', () => {
     expect(sql('SELECT COUNT(*) FROM gigSlotAttendance')).toBe('0');
   });
 
-  test('a member sees every gig but the drafts, the nearest first, and not the Discord channel', async ({
+  test('a member sees every gig but the drafts, the nearest first, and its Discord channel as a link', async ({
     playwright,
   }) => {
+    sql(`UPDATE band SET discordServerId = '1000312294715883560'`);
     addGig('Brouillon', 'DRAFT', day(5));
     addGig('Loin', 'CONFIRMED', day(60));
     const { gigId } = addGig('Proche', 'PROPOSED', day(10));
@@ -133,10 +134,17 @@ test.describe('who may do what', () => {
     expect(gigs[0]).toMatchObject({ status: 'PROPOSED', canEdit: false, isPlayable: false });
 
     const gig = await (await zaza.get(`/api/gigs/${gigId}`)).json();
-    expect(gig).toMatchObject({ name: 'Proche', canEdit: false, organizers: [], costumes: [] });
-    expect(gig).not.toHaveProperty('discordChannelId');
+    // Since 0.3.0 every member who sees the gig sees its channel (Gigs v1.7).
+    expect(gig).toMatchObject({
+      name: 'Proche',
+      canEdit: false,
+      organizers: [],
+      costumes: [],
+      discordChannelId: '1203984756120394875',
+      discordUrl: 'https://discord.com/channels/1000312294715883560/1203984756120394875',
+    });
 
-    // Who manages gigs sees it, and the drafts.
+    // Who manages gigs sees the drafts.
     const gigi = await deviceOf(playwright, email('Gigi'));
     expect(await (await gigi.get(`/api/gigs/${gigId}`)).json()).toMatchObject({
       canEdit: true,
@@ -339,6 +347,7 @@ test.describe('the record of a gig', () => {
   });
 
   test('two gigs can bear the same name, not the same Discord channel', async ({ playwright }) => {
+    sql(`UPDATE band SET discordServerId = '1000312294715883560'`);
     const gigi = await deviceOf(playwright, email('Gigi'));
     const channel = { discordChannelId: '1203984756120394875' };
     expect((await gigi.post('/api/gigs', { data: gigRecord(channel) })).status()).toBe(201);
@@ -1082,6 +1091,7 @@ test.describe('found by the review', () => {
   test('a gig keeps its own Discord channel when it is saved again, and long texts are refused', async ({
     playwright,
   }) => {
+    sql(`UPDATE band SET discordServerId = '1000312294715883560'`);
     const gigi = await deviceOf(playwright, email('Gigi'));
     const channel = { discordChannelId: '1203984756120394875' };
     const gigId = (await (await gigi.post('/api/gigs', { data: gigRecord(channel) })).json()).id;
@@ -1226,7 +1236,7 @@ test.describe('the picture of a costume', () => {
 });
 
 test.describe('the reminders of the band', () => {
-  test('only the admin sets them, within the bounds of the model', async ({
+  test('only the admin sets them, with the time between two songs, within the bounds of the model', async ({
     playwright,
     request,
   }) => {
@@ -1234,11 +1244,13 @@ test.describe('the reminders of the band', () => {
     const gigi = await deviceOf(playwright, email('Gigi'));
     const reminders = (data: Record<string, unknown>) => ({ data });
 
-    // Install gives the defaults: 15 days, 5 days, from 18.
+    // Install gives the defaults: 15 days, 5 days, from 18, and 30 s
+    // between two songs of a setlist (the screen "Plans et setlists").
     expect(await (await jibe.get('/api/band/gigReminders')).json()).toEqual({
       gigFirstReminderDays: 15,
       gigSecondReminderDays: 5,
       gigReminderHour: 18,
+      setlistGapSeconds: 30,
     });
     // Read by who sets them only: the public answer of the band does not hold them.
     expect((await gigi.get('/api/band/gigReminders')).status()).toBe(403);
@@ -1248,6 +1260,7 @@ test.describe('the reminders of the band', () => {
       gigFirstReminderDays: 10,
       gigSecondReminderDays: 2,
       gigReminderHour: 9,
+      setlistGapSeconds: 45,
     });
     expect((await gigi.put('/api/band/gigReminders', asked)).status()).toBe(403);
     expect((await request.put('/api/band/gigReminders', asked)).status()).toBe(401);
@@ -1256,33 +1269,90 @@ test.describe('the reminders of the band', () => {
       asked.data,
     );
     // A number of days left out: this reminder is not sent.
-    const none = await jibe.put('/api/band/gigReminders', reminders({ gigReminderHour: 0 }));
+    const none = await jibe.put(
+      '/api/band/gigReminders',
+      reminders({ gigReminderHour: 0, setlistGapSeconds: 0 }),
+    );
     expect(await none.json()).toMatchObject({
       gigFirstReminderDays: null,
       gigSecondReminderDays: null,
       gigReminderHour: 0,
+      setlistGapSeconds: 0,
     });
+    // The second reminder no longer has to come after the first (Band v1.9).
+    const sameDay = await jibe.put(
+      '/api/band/gigReminders',
+      reminders({
+        gigFirstReminderDays: 5,
+        gigSecondReminderDays: 8,
+        gigReminderHour: 18,
+        setlistGapSeconds: 30,
+      }),
+    );
+    expect(sameDay.status()).toBe(200);
+    await jibe.put(
+      '/api/band/gigReminders',
+      reminders({ gigReminderHour: 0, setlistGapSeconds: 0 }),
+    );
 
     const faults: [Record<string, unknown>, string][] = [
       [{ gigFirstReminderDays: 0, gigReminderHour: 18 }, 'gigFirstReminderDays'],
       [{ gigFirstReminderDays: 91, gigReminderHour: 18 }, 'gigFirstReminderDays'],
       [{ gigSecondReminderDays: 0, gigReminderHour: 18 }, 'gigSecondReminderDays'],
-      // The second reminder comes after the first.
-      [
-        { gigFirstReminderDays: 5, gigSecondReminderDays: 5, gigReminderHour: 18 },
-        'gigSecondReminderDays',
-      ],
       [{ gigFirstReminderDays: 5, gigReminderHour: 24 }, 'gigReminderHour'],
+      [{ gigReminderHour: 18, setlistGapSeconds: 301 }, 'setlistGapSeconds'],
+      [{ gigReminderHour: 18, setlistGapSeconds: -1 }, 'setlistGapSeconds'],
     ];
     for (const [data, field] of faults) {
-      const refused = await jibe.put('/api/band/gigReminders', reminders(data));
+      const refused = await jibe.put(
+        '/api/band/gigReminders',
+        reminders({ setlistGapSeconds: 30, ...data }),
+      );
       expect(await refused.json(), JSON.stringify(data)).toEqual({
         error: 'invalidInput',
         fields: { [field]: 'invalid' },
       });
     }
     expect(
-      sql('SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour FROM band'),
-    ).toBe('NULL\tNULL\t0');
+      sql(
+        'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band',
+      ),
+    ).toBe('NULL\tNULL\t0\t0');
+  });
+});
+
+test.describe('Discord and setlists (0.3.0)', () => {
+  test('the channel of a gig is typed as a link of the server of the band, and every member who sees the gig gets it', async ({
+    playwright,
+  }) => {
+    const server = '1000312294715883560';
+    const channel = '1000359811281600622';
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    const noServer = await gigi.post('/api/gigs', {
+      data: gigRecord({ discordChannelId: channel }),
+    });
+    expect((await noServer.json()).fields).toEqual({ discordChannelId: 'invalid' });
+
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const other = await gigi.post('/api/gigs', {
+      data: gigRecord({
+        discordChannelId: `https://discord.com/channels/1000999999999999999/${channel}`,
+      }),
+    });
+    expect((await other.json()).fields).toEqual({ discordChannelId: 'otherServer' });
+
+    const created = await gigi.post('/api/gigs', {
+      data: gigRecord({ discordChannelId: `https://discord.com/channels/${server}/${channel}` }),
+    });
+    const gigId = (await created.json()).id;
+    sql(`UPDATE gig SET status = 'PROPOSED' WHERE id = ${gigId}`);
+
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    expect(await (await zaza.get(`/api/gigs/${gigId}`)).json()).toMatchObject({
+      discordChannelId: channel,
+      discordUrl: `https://discord.com/channels/${server}/${channel}`,
+      // What the setlist editor counts between two songs.
+      setlistGapSeconds: 30,
+    });
   });
 });

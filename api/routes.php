@@ -29,10 +29,12 @@ use BrassBand\Band\Bands;
 use BrassBand\Calendar\CalendarAction;
 use BrassBand\Calendar\CalendarFeed;
 use BrassBand\Calendar\CalendarFeedAction;
+use BrassBand\Band\DiscordSettingsAction;
 use BrassBand\Band\ShowBandAction;
 use BrassBand\Band\ShowGigRemindersAction;
 use BrassBand\Band\UpdateBandAction;
 use BrassBand\Band\UpdateGigRemindersAction;
+use BrassBand\Discord\Discord;
 use BrassBand\Gigs\AnswerAction;
 use BrassBand\Gigs\ChangeGigStatusAction;
 use BrassBand\Gigs\CostumePictures;
@@ -110,6 +112,7 @@ use BrassBand\Songs\AddAliasAction;
 use BrassBand\Songs\ChangeSongStatusAction;
 use BrassBand\Songs\ClipThumbnails;
 use BrassBand\Songs\DeleteAliasAction;
+use BrassBand\Songs\DiscordMessagesAction;
 use BrassBand\Songs\DictationAction;
 use BrassBand\Songs\DeleteSongAction;
 use BrassBand\Songs\DownloadArchiveAction;
@@ -135,7 +138,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{storageFolder: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string} $config
+ * @param array{storageFolder: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -166,6 +169,8 @@ return function (App $app, Connection $database, array $config): void {
     $costumePictures = new CostumePictures($database, $files);
     $gigPush = new GigPush($database, $push);
     $songPush = new SongPush($database, $push);
+    // The bot of the band, which reads Discord (docs/discord-bot.md).
+    $discord = Discord::from($config);
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -215,6 +220,7 @@ return function (App $app, Connection $database, array $config): void {
         $songPush,
         $migrations,
         $currentPassword,
+        $discord,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
@@ -246,6 +252,8 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/songs', new ListSongsAction($songs));
         $group->get('/api/songs/archive', new DownloadArchiveAction($database, $songs, $songFiles));
         $group->get('/api/songs/{id:[0-9]+}', new ShowSongAction($songs));
+        // The messages of its Discord channel that tag the section of the member.
+        $group->get('/api/songs/{id:[0-9]+}/discord', new DiscordMessagesAction($database, $songs, $discord));
         foreach (['cover', 'clipThumbnail', 'audio', 'midi', 'musicXml', 'museScore'] as $kind) {
             $group->get("/api/songs/{id:[0-9]+}/{$kind}", new ShowSongFileAction($database, $songs, $songFiles, $kind));
         }
@@ -385,5 +393,10 @@ return function (App $app, Connection $database, array $config): void {
         $group->put('/api/band/gigReminders', new UpdateGigRemindersAction($database, $bands))->add($manageBand);
         $group->put('/api/band/logo', new UpdateLogoAction($logos))->add($manageBand);
         $group->delete('/api/band/logo', new DeleteLogoAction($logos))->add($manageBand);
+        $discordSettings = new DiscordSettingsAction($database, $discord);
+        $group->get('/api/band/discord', $discordSettings)->add($manageBand);
+        $group->put('/api/band/discord', $discordSettings)->add($manageBand);
+        $group->put('/api/band/appIcon', new UpdateLogoAction($logos, appIcon: true))->add($manageBand);
+        $group->delete('/api/band/appIcon', new DeleteLogoAction($logos, appIcon: true))->add($manageBand);
     })->add(new RequireSession($sessions, $cookie));
 };

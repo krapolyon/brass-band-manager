@@ -192,7 +192,7 @@ test.describe('the directory', () => {
     await expect(sheet).toContainText('12 bis rue des Tanneurs, 69007 Lyon');
     await expect(sheet).toContainText('Code 4812B');
     await expect(sheet.getByRole('link', { name: 'Y aller' })).toHaveAttribute('href', /Tanneurs/);
-    // The Discord action waits for its feature.
+    // No Discord action: the band uses the channels of songs and gigs (Members v1.22).
     await expect(sheet.getByText('Discord')).toHaveCount(0);
 
     await sheet.getByRole('button', { name: 'Fermer' }).click();

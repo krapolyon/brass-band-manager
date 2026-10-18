@@ -26,9 +26,9 @@ final class Bands
     public function view(): array
     {
         try {
-            $band = $this->database->fetchAssociative(
-                'SELECT name, defaultLanguage, defaultAccentTheme, defaultCountryCode FROM band WHERE id = 1',
-            );
+            // SELECT *: the sign-in screen reads this before the migrations
+            // are applied, when a column of a later version is not there yet.
+            $band = $this->database->fetchAssociative('SELECT * FROM band WHERE id = 1');
         } catch (TableNotFoundException) {
             // An empty database: the install creates its tables.
             $band = false;
@@ -44,19 +44,23 @@ final class Bands
             'defaultCountryCode' => $band['defaultCountryCode'],
             // Decides what the forgotten password screen offers.
             'canSendEmail' => $this->mailer->canSend(),
-            ...($this->logos->urls() ?? ['logoUrl' => null, 'icons' => null]),
+            // Whether the band talks on Discord: the forms of songs and gigs
+            // then take the link of a channel. Not the server itself.
+            'hasDiscord' => is_string($band['discordServerId'] ?? null) && $band['discordServerId'] !== '',
+            ...$this->logos->urls(),
         ];
     }
 
     /**
-     * The reminders of gigs: null for a reminder that is not sent.
+     * The reminders of gigs (null for a reminder that is not sent) and the
+     * time between two songs of a setlist.
      *
      * @return array<string, int|null>
      */
     public function gigReminders(): array
     {
         $band = $this->database->fetchAssociative(
-            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour FROM band WHERE id = 1',
+            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band WHERE id = 1',
         );
         if ($band === false) {
             throw new ApiError(404, 'notInstalled');
@@ -66,6 +70,7 @@ final class Bands
             'gigFirstReminderDays' => $band['gigFirstReminderDays'] === null ? null : (int) $band['gigFirstReminderDays'],
             'gigSecondReminderDays' => $band['gigSecondReminderDays'] === null ? null : (int) $band['gigSecondReminderDays'],
             'gigReminderHour' => (int) $band['gigReminderHour'],
+            'setlistGapSeconds' => (int) $band['setlistGapSeconds'],
         ];
     }
 }

@@ -22,8 +22,10 @@ test('the band is public: its name, its logo and its three defaults', async ({ r
     defaultCountryCode: 'FR',
     // The test server has a mail server.
     canSendEmail: true,
+    hasDiscord: false,
     logoUrl: null,
     icons: null,
+    appIconUrl: null,
   });
 });
 

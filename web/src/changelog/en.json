@@ -1,5 +1,39 @@
 [
   {
+    "version": "0.3.0",
+    "date": "2026-10-18",
+    "changes": [
+      {
+        "kind": "added",
+        "text": "Discord: the songs and gigs open their channel, and the sheet of a song shows the latest messages that tag your section."
+      },
+      {
+        "kind": "added",
+        "text": "Choose how each notification reaches you: by notification, by email, or both."
+      },
+      {
+        "kind": "added",
+        "text": "The band can give the installed app an icon of its own."
+      },
+      {
+        "kind": "added",
+        "text": "Songs now have a length and style and difficulty information, used by the new setlist generator."
+      },
+      {
+        "kind": "added",
+        "text": "The MIDI player can loop over several rehearsal marks that follow each other."
+      },
+      {
+        "kind": "changed",
+        "text": "The reminders to answer reach you by email when none of your devices receives notifications."
+      },
+      {
+        "kind": "fixed",
+        "text": "An instrument hidden or left empty in the MuseScore file no longer shows in the MIDI player nor in the Live mode."
+      }
+    ]
+  },
+  {
     "version": "0.2.0",
     "date": "2026-10-16",
     "changes": [

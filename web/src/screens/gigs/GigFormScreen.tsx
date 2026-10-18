@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { ApiError, api } from '../../api.ts';
+import { useBand } from '../../band.ts';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
 import { FilterChip } from '../../components/FilterChip.tsx';
@@ -42,6 +43,8 @@ type Draft = {
   /** "45.7673, 4.8344", as it is pasted from a map. */
   coordinates: string;
   notes: string;
+  /** The link of the channel, or its identifier: the server keeps the identifier. */
+  discordChannelId: string;
   organizerIds: number[];
   costumeIds: number[];
   slots: SlotDraft[];
@@ -61,6 +64,7 @@ const emptyDraft = (): Draft => ({
   city: '',
   coordinates: '',
   notes: '',
+  discordChannelId: '',
   organizerIds: [],
   costumeIds: [],
   slots: [{ key: 'first', id: null, name: '', note: '', costumeId: null }],
@@ -79,6 +83,7 @@ const draftOf = (gig: Gig): Draft => ({
   coordinates:
     gig.latitude !== null && gig.longitude !== null ? `${gig.latitude}, ${gig.longitude}` : '',
   notes: gig.notes ?? '',
+  discordChannelId: gig.discordChannelId ?? '',
   organizerIds: gig.organizers.map((organiser) => organiser.id),
   costumeIds: gig.costumes.map((costume) => costume.id),
   slots: gig.slots.map((slot) => ({
@@ -103,6 +108,7 @@ const shownFields = [
   'city',
   'coordinates',
   'notes',
+  'discordChannelId',
   'organizerIds',
   'costumeIds',
 ];
@@ -128,6 +134,7 @@ export function GigFormScreen() {
   const gigId = params.id ? Number(params.id) : null;
   const existing = useGig(gigId ?? 0, gigId !== null);
   const me = useMe().data;
+  const hasDiscord = useBand().data?.hasDiscord ?? false;
   const members = useMembers().data ?? [];
   const sections = useSections().data;
   const costumes = useCostumes().data ?? [];
@@ -234,8 +241,7 @@ export function GigFormScreen() {
           city: draft.city || null,
           ...(coordinatesOf(draft.coordinates) ?? { latitude: null, longitude: null }),
           notes: draft.notes || null,
-          // Not on the form: kept as it is.
-          discordChannelId: existing.data?.discordChannelId ?? null,
+          discordChannelId: draft.discordChannelId.trim() || null,
           organizerIds,
           costumeIds: draft.costumeIds,
         },
@@ -556,7 +562,7 @@ export function GigFormScreen() {
           />
         </Sheet>
 
-        <Sheet title={t('gigs.form.notes')}>
+        <Sheet title={t('gigs.form.notesAndDiscord')}>
           <TextArea
             label={t('gigs.form.notes')}
             hint={t('gigs.form.notesHint')}
@@ -566,6 +572,19 @@ export function GigFormScreen() {
             maxLength={4000}
             onChange={(event) => set('notes', event.target.value)}
           />
+          {/* Without a server, no channel can be typed (model/gigs.md, entry 1). */}
+          {(hasDiscord || draft.discordChannelId !== '') && (
+            <TextField
+              label={t('gigs.form.discord')}
+              placeholder={t('discord.link.placeholder')}
+              hint={t('gigs.form.discordHint')}
+              error={errors.discordChannelId}
+              inputMode="url"
+              autoComplete="off"
+              value={draft.discordChannelId}
+              onChange={(event) => set('discordChannelId', event.target.value)}
+            />
+          )}
         </Sheet>
       </div>
 

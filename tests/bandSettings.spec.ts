@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import { channel, discordServer, emptyDiscord, roles, server } from './support/discord.ts';
 import { png } from './support/images.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
 import { emptyStorage, storedFiles } from './support/storage.ts';
@@ -38,21 +39,20 @@ const card = (page: Page, name: string) =>
 const sheet = (page: Page) => page.getByRole('dialog');
 const save = (page: Page) => sheet(page).getByRole('button', { name: 'Enregistrer' });
 
-test('the summary leads to the appearance and to the sections, and reserves a row for Discord', async ({
-  page,
-}) => {
+test('the summary leads to the appearance, the sections and Discord', async ({ page }) => {
   await signIn(page);
   await page.goto('/settings');
   await page.getByRole('link', { name: /Réglages de la fanfare/ }).click();
 
   await expect(title(page)).toHaveText('La fanfare');
   await expect(page.getByRole('link', { name: /Apparence/ })).toContainText(
-    'Nom, logo, couleur, langue',
+    'Nom, logo, icône, couleur, langue',
   );
   await expect(page.getByRole('link', { name: /Pupitres et instruments/ })).toContainText(
     '3 pupitres, 4 instruments',
   );
-  await expect(page.getByText('Bientôt')).toBeVisible();
+  // 0.3.0: the row of Discord leads to its screen, and says whether a server is set.
+  await expect(page.getByRole('link', { name: /Discord/ })).toContainText('Pas encore relié');
 });
 
 test.describe('appearance', () => {
@@ -112,6 +112,121 @@ test.describe('appearance', () => {
     await expect(page).toHaveURL('/band');
     expect(sql('SELECT logoPath IS NULL FROM band')).toBe('1');
     expect(storedFiles('band')).toEqual([]);
+  });
+});
+
+test.describe('the icon of the installed app (0.3.0, #34)', () => {
+  test('a square image becomes the icon, shown as a phone shows it, and can be removed', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto('/band/appearance');
+    const field = page.getByRole('group', { name: 'Icône de l’app' });
+    const tile = page.locator('.BandTile');
+    await expect(tile).toContainText('La Fanfare des Cuivres Déchaînés');
+    await expect(tile).toContainText('Aperçu sur l’écran d’accueil d’un téléphone');
+
+    await field
+      .locator('input[type=file]')
+      .setInputFiles({ name: 'icone.png', mimeType: 'image/png', buffer: png(512) });
+    await expect(tile.locator('img')).toHaveAttribute('src', /^data:image\/png/);
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page).toHaveURL('/band');
+    expect(sql('SELECT iconPath IS NOT NULL FROM band')).toBe('1');
+
+    await page.goto('/band/appearance');
+    await page
+      .getByRole('group', { name: 'Icône de l’app' })
+      .getByRole('button', { name: 'Retirer' })
+      .click();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page).toHaveURL('/band');
+    expect(sql('SELECT iconPath IS NULL FROM band')).toBe('1');
+  });
+
+  test('an image that is not square, or too small, is refused with its size, before anything is sent', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto('/band/appearance');
+    const field = page.getByRole('group', { name: 'Icône de l’app' });
+    await field
+      .locator('input[type=file]')
+      .setInputFiles({ name: 'large.png', mimeType: 'image/png', buffer: png(600, 512) });
+    await expect(field).toContainText('Cette image fait 600 × 512 px : il faut un carré.');
+    await field
+      .locator('input[type=file]')
+      .setInputFiles({ name: 'petite.png', mimeType: 'image/png', buffer: png(256) });
+    await expect(field).toContainText('Cette image fait 256 px de côté : il en faut 512 au moins.');
+    await expect(page.locator('.BandTile img')).toHaveCount(0);
+  });
+});
+
+test.describe('Discord (0.3.0, #33)', () => {
+  test.beforeEach(() => emptyDiscord());
+
+  test('the server is read from the link of a channel; the bot reaches it; each section gets a role', async ({
+    page,
+  }) => {
+    discordServer();
+    await signIn(page);
+    await page.goto('/band');
+    await page.getByRole('link', { name: /Discord/ }).click();
+    await expect(title(page)).toHaveText('Discord');
+
+    await page
+      .getByLabel('Lien du salon du serveur')
+      .fill(`https://discord.com/channels/${server}/${channel}`);
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Lien reconnu : le serveur est enregistré.')).toBeVisible();
+    await expect(page.getByText('Le bot est connecté au serveur Les Cuivres.')).toBeVisible();
+    expect(sql('SELECT discordServerId FROM band')).toBe(server);
+
+    // The role of a section is chosen in a sheet, among the roles of the server.
+    await page.getByRole('button', { name: /^Trompette/ }).click();
+    const choose = sheet(page);
+    await expect(choose.getByRole('radio', { name: 'Aucun rôle' })).toBeChecked();
+    await choose.getByRole('radio', { name: '@trompettiste' }).click();
+    await expect(page.getByRole('button', { name: /^Trompette/ })).toContainText('@trompettiste');
+    // A role another section has is not offered again.
+    await page.getByRole('button', { name: /^Saxophone/ }).click();
+    await expect(sheet(page).getByRole('radio', { name: '@trompettiste' })).toBeDisabled();
+    await sheet(page).getByRole('radio', { name: '@saxophoniste' }).click();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Les réglages Discord sont enregistrés.')).toBeVisible();
+    expect(
+      sql(
+        'SELECT name, discordRoleId FROM section WHERE discordRoleId IS NOT NULL ORDER BY position',
+      ),
+    ).toBe(`Trompette\t${roles.trumpets}\nSaxophone\t${roles.saxophones}`);
+
+    await page.goto('/band');
+    await expect(page.getByRole('link', { name: /Discord/ })).toContainText('Serveur relié');
+  });
+
+  test('a link that is not one of Discord is said under the field, and nothing is saved', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto('/band/discord');
+    await page.getByLabel('Lien du salon du serveur').fill('https://example.org/salon');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(
+      page.getByText('Ce lien n’est pas celui d’un salon Discord.', { exact: false }),
+    ).toBeVisible();
+    expect(sql('SELECT discordServerId IS NULL FROM band')).toBe('1');
+  });
+
+  test('a bot the server refuses is said, and no role can be chosen', async ({ page }) => {
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    await signIn(page);
+    await page.goto('/band/discord');
+    await expect(
+      page.getByText('Le bot ne joint pas le serveur : vérifie qu’il y est invité', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText('Rôles des pupitres')).toHaveCount(0);
   });
 });
 
@@ -253,7 +368,7 @@ test('only an admin opens the settings of the band', async ({ page }) => {
   for (const email of ['momo@example.org', 'zaza@example.org']) {
     await page.context().clearCookies();
     await signIn(page, email, memberPassword);
-    for (const address of ['/band', '/band/appearance', '/band/sections']) {
+    for (const address of ['/band', '/band/appearance', '/band/sections', '/band/discord']) {
       await page.goto(address);
       await expect(title(page), `${email} ${address}`).toHaveText('Pas par ici');
       await expect(page.getByText('réservée aux admins')).toBeVisible();
@@ -276,7 +391,14 @@ test('at the largest text size with every option on, the settings of the band ca
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
 
-  for (const address of ['/band', '/band/appearance', '/band/sections']) {
+  // The sections last: the test goes on there.
+  for (const address of [
+    '/band',
+    '/band/appearance',
+    '/band/reminders',
+    '/band/discord',
+    '/band/sections',
+  ]) {
     await page.goto(address);
     await expect(title(page)).toBeVisible();
     expect(await overflow(), address).toBeLessThanOrEqual(0);

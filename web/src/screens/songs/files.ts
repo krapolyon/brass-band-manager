@@ -6,6 +6,8 @@ import {
   sendSongFile,
   songFileAddress,
 } from '../../songs.ts';
+import { lengthOf, readMidi, withoutNotes } from './midi.ts';
+import { hiddenParts, unzipped, withEmptiedParts } from './score.ts';
 import type { ScoreAnswer, ScoreFiles } from './score.worker.ts';
 
 // The files dropped on a song, between the moment they are dropped and the
@@ -185,7 +187,19 @@ const SCORE_TIMEOUT = 90_000;
  * MuseScore engine in a worker (score.worker.ts). Null when the engine cannot
  * read the file: the song then keeps its MuseScore file alone.
  */
-export async function scoreFilesOf(file: Blob): Promise<ScoreFiles | null> {
+// Read once per file: the length proposed at the drop and the files sent at
+// the save come from the same reading.
+const readScores = new WeakMap<Blob, Promise<ScoreFiles | null>>();
+
+export function scoreFilesOf(file: Blob): Promise<ScoreFiles | null> {
+  const known = readScores.get(file);
+  if (known) return known;
+  const reading = readScore(file);
+  readScores.set(file, reading);
+  return reading;
+}
+
+async function readScore(file: Blob): Promise<ScoreFiles | null> {
   let worker: Worker;
   try {
     worker = new Worker(new URL('./score.worker.ts', import.meta.url), { type: 'module' });
@@ -204,12 +218,42 @@ export async function scoreFilesOf(file: Blob): Promise<ScoreFiles | null> {
       worker.onerror = () => settle({ ok: false });
       worker.postMessage(bytes, [bytes.buffer]);
     });
-    return answer.ok ? { midi: answer.midi, musicXml: answer.musicXml } : null;
+    // Read again: the bytes sent to the worker are its own now.
+    return answer.ok
+      ? await withoutHiddenParts(new Uint8Array(await file.arrayBuffer()), answer)
+      : null;
   } catch {
     return null;
   } finally {
     worker.terminate();
   }
+}
+
+/**
+ * The MIDI file and the MusicXML of a score without its hidden parts (the
+ * instruments unticked in MuseScore): their notes go, the tracks and the
+ * measures stay (model/songs.md, "Display", issue #35). The MusicXML is then
+ * sent as plain MusicXML. A score the app cannot open itself keeps its files
+ * as the engine gave them.
+ */
+async function withoutHiddenParts(
+  mscz: Uint8Array,
+  read: ScoreFiles & { xml: string },
+): Promise<ScoreFiles> {
+  let hidden: ReturnType<typeof hiddenParts> = { places: [], partCount: 0 };
+  try {
+    const mscx = await unzipped(mscz, (name) => !name.includes('/') && name.endsWith('.mscx'));
+    hidden = hiddenParts(new TextDecoder().decode(mscx));
+  } catch {
+    // Not an archive the app can open: nothing is known to be hidden.
+  }
+  if (hidden.places.length === 0) return { midi: read.midi, musicXml: read.musicXml };
+  const xml = withEmptiedParts(read.xml, hidden.places, hidden.partCount);
+  return {
+    midi: withoutNotes(read.midi, hidden.places, hidden.partCount),
+    // Left compressed when nothing had to be emptied.
+    musicXml: xml === read.xml ? read.musicXml : new TextEncoder().encode(xml),
+  };
 }
 
 export type SendFailure = {
@@ -305,4 +349,29 @@ export async function sendFiles(
   onProgress(total, total);
 
   return { failures, scoreNotRead: isScoreSaved && read === null && missing.length > 0 };
+}
+
+/**
+ * The length of a song proposed from the files dropped for it, in seconds:
+ * from the MIDI file the MuseScore file gives, else from a MIDI file dropped
+ * alone; never from the recording, which can hold applause (model/songs.md,
+ * "Setlist attributes"). Null when there is none, or it cannot be read.
+ */
+export async function proposedLength(
+  files: DroppedFile[],
+  bandBpm: number | null,
+): Promise<number | null> {
+  const placed = files.filter(isPlaced);
+  const score = placed.find((file) => file.role === 'museScore');
+  const midi = placed.find((file) => file.role === 'midi');
+  try {
+    const bytes = score
+      ? ((await scoreFilesOf(score.file))?.midi ?? null)
+      : midi
+        ? new Uint8Array(await midi.file.arrayBuffer())
+        : null;
+    return bytes ? lengthOf(readMidi(bytes), bandBpm) : null;
+  } catch {
+    return null;
+  }
 }

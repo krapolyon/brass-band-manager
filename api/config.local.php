@@ -54,6 +54,14 @@ return [
     // The test server reads the tiles of the map at an address of its own,
     // which the tests answer: they ask nothing of another site.
     ...(getenv('BRASS_BAND_MAP_TILES_URL') !== false ? ['mapTilesUrl' => getenv('BRASS_BAND_MAP_TILES_URL')] : []),
+    // The bot of the band (docs/discord-bot.md). The local stack has none:
+    // the songs and gigs open their channels, and show no message. The test
+    // server reads the answers of a made-up Discord from files the tests
+    // write (docker-compose.yml, tests/support/discord.ts), with a token that
+    // is no token.
+    'discord' => getenv('BRASS_BAND_DISCORD_ANSWERS')
+        ? ['botToken' => 'test-only', 'answersFrom' => getenv('BRASS_BAND_DISCORD_ANSWERS')]
+        : ['botToken' => ''],
     'session' => [
         // The local stack has no HTTPS, and a browser refuses a secure cookie without it.
         'secureCookie' => false,

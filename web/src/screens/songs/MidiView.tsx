@@ -21,10 +21,13 @@ import {
   type MidiSong,
   type MidiTrack,
   markRanges,
+  marksIn,
   measureAt,
   measureCount,
   measureTicks,
+  namesOf,
   readMidi,
+  tickedAfter,
 } from './midi.ts';
 import { MidiEngine } from './midiEngine.ts';
 import { useMidiSettings } from './midiSettings.ts';
@@ -449,12 +452,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
             label={t('songs.midi.loop')}
             detail={
               isLooping && range
-                ? [
-                    t('songs.midi.loopRange', range),
-                    marks.find((mark) => mark.from === range.from && mark.to === range.to)?.name,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')
+                ? [t('songs.midi.loopRange', range), ...namesOf(marks, range)].join(', ')
                 : t('songs.midi.loopOff')
             }
             onClick={() => setChoosing(true)}
@@ -495,9 +493,12 @@ type LoopChoiceProps = {
   onStop: () => void;
 };
 
-// Figma: Songs / Song — MIDI, choosing the loop. The rehearsal marks of the
-// score come first, each with the measures up to the next one: choosing one
-// fills the range, which can also be typed.
+// Figma: Songs / Song — MIDI, the loop over several marks (sections 15 and
+// 16, 0.3.0). The rehearsal marks of the score come first, each with its
+// measures, as boxes to tick: one, or several that follow each other. The
+// loop goes from the first measure of the first mark to the last of the
+// last, and the two measure fields follow; typing measures unticks the
+// marks that no longer match.
 function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoiceProps) {
   const { t } = useTranslation();
   const [from, setFrom] = useState(String(range.from));
@@ -505,6 +506,13 @@ function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoi
 
   const first = Number(from);
   const last = Number(to);
+  const ticked = marksIn(marks, { from: first, to: last });
+  const tick = (index: number, on: boolean) => {
+    const next = tickedAfter(ticked, index, on);
+    if (!next) return;
+    setFrom(String(marks[next[0]]?.from ?? first));
+    setTo(String(marks[next[1]]?.to ?? last));
+  };
   const isValid = useMemo(
     () =>
       Number.isInteger(first) &&
@@ -526,23 +534,19 @@ function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoi
       <p className="songs-muted">{t('songs.midi.loopIntro')}</p>
       {marks.length > 0 && (
         <>
-          <h3 className="textLabel">{t('songs.midi.loopMarks')}</h3>
-          <div className="songs-statuses" role="radiogroup" aria-label={t('songs.midi.loopMarks')}>
-            {marks.map((mark) => (
+          <fieldset className="songs-statuses songs-loopMarks">
+            <legend className="textLabel">{t('songs.midi.loopMarks')}</legend>
+            {marks.map((mark, index) => (
               // A mark played twice comes twice, from another measure.
               <ListRow
                 key={`${mark.from}-${mark.name}`}
-                group="loopMark"
                 label={mark.name}
                 detail={t('songs.midi.loopRange', { from: mark.from, to: mark.to })}
-                selected={first === mark.from && last === mark.to}
-                onSelect={() => {
-                  setFrom(String(mark.from));
-                  setTo(String(mark.to));
-                }}
+                checked={ticked.includes(index)}
+                onCheck={(on) => tick(index, on)}
               />
             ))}
-          </div>
+          </fieldset>
           <h3 className="textLabel">{t('songs.midi.loopMeasures')}</h3>
         </>
       )}
@@ -562,7 +566,9 @@ function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoi
         />
       </div>
       <p className="textCaption songs-muted">
-        {t('songs.midi.loopHint', { count: total })} {t('songs.midi.loopMarksHint')}
+        {marks.length > 0
+          ? `${t('songs.midi.loopMarksRule')} ${t('songs.midi.loopHintWithMarks', { count: total })}`
+          : `${t('songs.midi.loopHint', { count: total })} ${t('songs.midi.loopMarksHint')}`}
       </p>
       <Button type="submit" disabled={!isValid}>
         {isValid

@@ -639,35 +639,42 @@ test.describe('the band settings', () => {
     );
   });
 
-  test('the admin sets the reminders; a wrong number is said under its field', async ({ page }) => {
+  test('the admin sets the reminders and the time between two songs; a wrong number is said under its field', async ({
+    page,
+  }) => {
     await signIn(page);
     await page.goto('/band');
-    await expect(page.getByRole('link', { name: /Rappels des plans/ })).toContainText(
-      '15 et 5 jours avant, à partir de 18 h',
+    await expect(page.getByRole('link', { name: /Plans et setlists/ })).toContainText(
+      'Rappels 15 et 5 jours avant, 30 s entre deux morceaux',
     );
-    await page.getByRole('link', { name: /Rappels des plans/ }).click();
+    await page.getByRole('link', { name: /Plans et setlists/ }).click();
 
     const [first, second] = [
       page.getByLabel('Jours avant le plan').nth(0),
       page.getByLabel('Jours avant le plan').nth(1),
     ];
+    const gap = page.getByLabel('Entre deux morceaux');
     await expect(first).toHaveValue('15');
-    await first.fill('3');
-    await page.getByRole('button', { name: 'Enregistrer les rappels' }).click();
-    await expect(page.getByText('Le second rappel vient après le premier')).toBeVisible();
+    await expect(gap).toHaveValue('30');
     await first.fill('120');
-    await page.getByRole('button', { name: 'Enregistrer les rappels' }).click();
+    await gap.fill('400');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByText('Un nombre de 1 à 90.')).toBeVisible();
-    expect(sql('SELECT gigFirstReminderDays FROM band')).toBe('15');
+    await expect(page.getByText('Un nombre de 0 à 300 secondes.')).toBeVisible();
+    expect(sql('SELECT gigFirstReminderDays, setlistGapSeconds FROM band')).toBe('15\t30');
 
-    await first.fill('10');
+    // The second reminder may now come before the first (Band v1.9).
+    await first.fill('3');
     await second.fill('');
+    await gap.fill('45');
     await page.getByLabel('À partir de').selectOption('9');
-    await page.getByRole('button', { name: 'Enregistrer les rappels' }).click();
-    await expect(page.getByText('Les rappels sont enregistrés.')).toBeVisible();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(page.getByText('Les réglages sont enregistrés.')).toBeVisible();
     expect(
-      sql('SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour FROM band'),
-    ).toBe('10\tNULL\t9');
+      sql(
+        'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band',
+      ),
+    ).toBe('3\tNULL\t9\t45');
   });
 
   test('costumes and reminders are for admins: anyone else is told so', async ({ page }) => {
@@ -1003,8 +1010,9 @@ test.describe('what must not go wrong', () => {
   test('on a tablet the list is a grid of two, and a gig takes the whole screen without the tab bar', async ({
     page,
   }) => {
+    // The same day: two days apart can fall in two months, two groups of the list.
     const first = addGig('Carnaval', { startsOn: day(12) });
-    addGig('Fête de la soupe', { startsOn: day(14) });
+    addGig('Fête de la soupe', { startsOn: day(12) });
     await page.setViewportSize({ width: 768, height: 1024 });
     await asMember(page, 'Zaza');
     await page.goto('/gigs');
@@ -1273,8 +1281,63 @@ test.describe('what must not go wrong', () => {
     sql('UPDATE band SET gigFirstReminderDays = 1, gigSecondReminderDays = NULL');
     await signIn(page);
     await page.goto('/band');
-    await expect(page.getByRole('link', { name: /Rappels des plans/ })).toContainText(
-      '1 jour avant',
+    await expect(page.getByRole('link', { name: /Plans et setlists/ })).toContainText(
+      'Rappel 1 jour avant',
     );
+  });
+});
+
+test.describe('Discord (0.3.0, #33)', () => {
+  const server = '1000312294715883560';
+  const channel = '1000359811281600622';
+
+  test('every member who sees the gig sees the card of its channel; no channel, no card', async ({
+    page,
+  }) => {
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const { gigId } = addGig('Anniversaire de Margaux', { startsOn: day(10) });
+    sql(`UPDATE gig SET discordChannelId = '${channel}' WHERE id = ${gigId}`);
+    const other = addGig('Fête de la soupe', { startsOn: day(11) });
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+
+    const card = page.locator('.DiscordChannelCard');
+    await expect(card.getByRole('heading', { name: 'Discussion' })).toBeVisible();
+    await expect(card).toContainText(
+      'Ce que la fanfare se dit sur ce plan est dans son salon Discord.',
+    );
+    await expect(card.getByRole('link', { name: 'Ouvrir dans Discord' })).toHaveAttribute(
+      'href',
+      `https://discord.com/channels/${server}/${channel}`,
+    );
+    await page.goto(`/gigs/${other.gigId}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Fête de la soupe' })).toBeVisible();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('the link of the channel is typed in the form, and a link of another server is said under it', async ({
+    page,
+  }) => {
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const { gigId } = addGig('Anniversaire de Margaux', { startsOn: day(10) });
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/edit`);
+    const field = page.getByLabel('Lien du salon Discord');
+    await field.fill(`https://discord.com/channels/1000999999999999999/${channel}`);
+    await page.getByRole('button', { name: /Enregistrer/ }).click();
+    await expect(
+      page.getByText('Ce salon est sur un autre serveur Discord que celui de la fanfare.'),
+    ).toBeVisible();
+    await field.fill(`https://discord.com/channels/${server}/${channel}`);
+    await page.getByRole('button', { name: /Enregistrer/ }).click();
+    await expect(page).toHaveURL(`/gigs/${gigId}`);
+    expect(sql(`SELECT discordChannelId FROM gig WHERE id = ${gigId}`)).toBe(channel);
+
+    // Without a server, no field.
+    sql('UPDATE band SET discordServerId = NULL');
+    sql(`UPDATE gig SET discordChannelId = NULL WHERE id = ${gigId}`);
+    await page.goto(`/gigs/${gigId}/edit`);
+    await expect(page.getByRole('heading', { name: 'Infos diverses et Discord' })).toBeVisible();
+    await expect(page.getByLabel('Lien du salon Discord')).toHaveCount(0);
   });
 });

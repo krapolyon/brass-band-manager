@@ -87,8 +87,12 @@ export type Gig = Omit<GigSummary, 'slots'> & {
   slots: GigSlot[];
   /** Shown from "Validé" on; empty before. */
   setlists: Setlist[];
-  /** Sent to who may edit the gig only. */
-  discordChannelId?: string | null;
+  /** The Discord channel of the gig, for every member who sees it (since 0.3.0). */
+  discordChannelId: string | null;
+  /** The link that opens it in Discord; null without a channel or while the band has no server. */
+  discordUrl: string | null;
+  /** The time counted between two songs of a setlist (band.setlistGapSeconds). */
+  setlistGapSeconds: number;
 };
 
 export type SetlistSong = { position: number; songId: number; name: string };

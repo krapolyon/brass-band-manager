@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
+import { DiscordChannelCard } from '../../components/DiscordChannelCard.tsx';
+import { DiscordMessageCard } from '../../components/DiscordMessageCard.tsx';
 import { Icon, type IconName } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
 import { LevelScale } from '../../components/LevelScale.tsx';
@@ -16,7 +18,7 @@ import { Sheet } from '../../components/Sheet.tsx';
 import { SongHeader } from '../../components/SongHeader.tsx';
 import { SongPartRow } from '../../components/SongPartRow.tsx';
 import { Waveform } from '../../components/Waveform.tsx';
-import { instrumentsOf, useSections } from '../../members.ts';
+import { instrumentsOf, type Section, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import {
   downloadAddress,
@@ -25,6 +27,7 @@ import {
   type SongStatus,
   songStatuses,
   useSong,
+  useSongDiscord,
 } from '../../songs.ts';
 import { keep, kept, useIsTablet } from './device.ts';
 import { saveOutline } from './files.ts';
@@ -56,7 +59,8 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
   const queryClient = useQueryClient();
   const me = useMe().data;
   const song = useSong(songId);
-  const instruments = instrumentsOf(useSections().data);
+  const sections = useSections().data;
+  const instruments = instrumentsOf(sections);
   const isTablet = useIsTablet();
   const [search, setSearch] = useSearchParams();
   const [panel, setPanel] = useState<'more' | 'parts' | 'status' | null>(null);
@@ -289,11 +293,13 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
                   <dt>{t('songs.song.status')}</dt>
                   <dd className="textBodyStrong">{t(`songs.status.${data.status}`)}</dd>
                 </div>
+                <SetlistFacts song={data} sections={sections ?? []} />
               </dl>
             </Sheet>
 
             <Levels song={data} onSaved={refresh} />
           </div>
+          {data.discordUrl && <DiscordCard song={data} url={data.discordUrl} />}
         </div>
       </SongHeader>
 
@@ -624,6 +630,82 @@ function Clip({ song }: { song: Song }) {
         </a>
       )}
     </div>
+  );
+}
+
+// Figma: Songs / Song — "À propos" (0.3.0): what the setlist generator
+// reads, a line each, in the order of Figma. A line without a value is not
+// shown (model/songs.md, "Display"): a Standard song with no other category
+// has no line "Pour les setlists".
+function SetlistFacts({ song, sections }: { song: Song; sections: Section[] }) {
+  const { t, i18n } = useTranslation();
+  const names = (ids: number[]) =>
+    new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(
+      sections.filter((section) => ids.includes(section.id)).map((section) => section.name),
+    );
+  const categories = [
+    ...(song.setCategory === 'STANDARD' ? [] : [song.setCategory]),
+    ...song.otherCategories,
+  ].map((category) => t(`songs.setCategory.${category}`));
+  if (song.isNeverFirst) categories.push(t('songs.song.neverFirst'));
+  const facts: [string, string][] = [
+    ...(song.inRepertoireOn
+      ? [[t('songs.song.inRepertoireSince'), song.inRepertoireOn.slice(0, 4)] as [string, string]]
+      : []),
+    ...(song.durationSeconds
+      ? [[t('songs.song.duration'), clock(song.durationSeconds)] as [string, string]]
+      : []),
+    ...(categories.length > 0
+      ? [[t('songs.song.forSetlists'), categories.join(', ')] as [string, string]]
+      : []),
+    ...(song.tiringSectionIds.length > 0
+      ? [[t('songs.song.tiringFor'), names(song.tiringSectionIds)] as [string, string]]
+      : []),
+    ...(song.trickySectionIds.length > 0
+      ? [[t('songs.song.trickyFor'), names(song.trickySectionIds)] as [string, string]]
+      : []),
+  ];
+
+  return facts.map(([label, value]) => (
+    <div key={label}>
+      <dt>{label}</dt>
+      <dd className="textBodyStrong">{value}</dd>
+    </div>
+  ));
+}
+
+// Figma: Songs / Song — the Discord card (section 15, 0.3.0, issue #33). It
+// ends the sheet when the song has a channel. It asks the API for the
+// messages that tag the section of the member when the sheet opens; until
+// they come, when none does, or when Discord does not answer, the card shows
+// its sentence and its button only, with no error.
+function DiscordCard({ song, url }: { song: Song; url: string }) {
+  const { t, i18n } = useTranslation();
+  const asked = useSongDiscord(song.id, true);
+  const discord = asked.data;
+  const messages = discord?.messages ?? [];
+  // While the messages come: the button alone.
+  const text = asked.isPending
+    ? undefined
+    : messages.length > 0 && discord?.roleName
+      ? t('songs.song.discord.tagged', { role: `@${discord.roleName}` })
+      : discord?.roleName
+        ? t('songs.song.discord.nothingTagged', { role: `@${discord.roleName}` })
+        : t('songs.song.discord.nothingToShow');
+
+  return (
+    <DiscordChannelCard title={t('discord.title')} text={text} url={url}>
+      {messages.length > 0 &&
+        messages.map((message) => (
+          <DiscordMessageCard
+            key={message.id}
+            author={message.author}
+            day={day(message.postedAt.slice(0, 10), i18n.language, 'short')}
+            text={message.text}
+            url={message.url}
+          />
+        ))}
+    </DiscordChannelCard>
   );
 }
 

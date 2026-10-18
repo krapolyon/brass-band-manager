@@ -1,6 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import {
+  channel,
+  discordAnswers,
+  discordMessages,
+  discordServer,
+  emptyDiscord,
+  roles,
+  server,
+} from './support/discord.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from './support/scenario.ts';
 import {
   addSong,
@@ -465,14 +474,20 @@ test.describe('a song', () => {
 test.describe('the MIDI player', () => {
   // A song imported with a MuseScore file the app can read: two staves,
   // "Trompette" and "Tuba", four measures at 120.
-  async function withScore(playwright: Parameters<typeof deviceOf>[0], page: Page) {
+  async function withScore(
+    playwright: Parameters<typeof deviceOf>[0],
+    page: Page,
+    variant: '' | 'hiddenPart' = '',
+  ) {
     await asMember(page, 'Sisi');
     await page.goto('/songs/new');
-    await page
-      .locator('input[type=file]')
-      .setInputFiles([
-        { name: 'Hey Ya.mscz', mimeType: 'application/octet-stream', buffer: readableScore() },
-      ]);
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: 'Hey Ya.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore(variant),
+      },
+    ]);
     await page.getByRole('button', { name: 'Continuer' }).click();
     await page.getByLabel('Titre original').fill('Hey Ya!');
     await page.getByLabel('Interprète original').fill('OutKast');
@@ -535,6 +550,19 @@ test.describe('the MIDI player', () => {
       timeout: 30_000,
     });
     await openMidi(page);
+    await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+  });
+
+  test('a part hidden in MuseScore, and a staff without any note, are not shown (#35)', async ({
+    page,
+    playwright,
+  }) => {
+    // "Cornet" plays but is hidden in the MuseScore file; "Clairon" is empty.
+    await withScore(playwright, page, 'hiddenPart');
+    await openMidi(page);
+
+    const tracks = page.getByRole('region', { name: 'Pistes' });
+    await expect(tracks.locator('.SongPartTrack-name')).toHaveText([/^Trompette/, 'Souba']);
     await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
   });
 
@@ -646,13 +674,19 @@ test.describe('the MIDI player', () => {
       .click();
     const panel = page.getByRole('dialog', { name: 'Lecture en boucle' });
 
-    // The score has one mark, "Refrain", on its third measure of four.
-    const mark = panel.getByRole('radio', { name: /Refrain/ });
+    // The score has one mark, "Refrain", on its third measure of four: a box
+    // to tick (0.3.0: one mark or several that follow each other).
+    const mark = panel.getByRole('checkbox', { name: /Refrain/ });
     await expect(mark).toHaveAccessibleName(/Refrain\s*Mesures 3 à 4/);
     await expect(mark).not.toBeChecked();
     await mark.check();
     await expect(panel.getByLabel('De la mesure')).toHaveValue('3');
     await expect(panel.getByLabel('À la mesure')).toHaveValue('4');
+    // Typing measures unticks a mark that no longer matches.
+    await panel.getByLabel('À la mesure').fill('3');
+    await expect(mark).not.toBeChecked();
+    await panel.getByLabel('À la mesure').fill('4');
+    await expect(mark).toBeChecked();
     await panel.getByRole('button', { name: 'Boucler les mesures 3 à 4' }).click();
 
     await expect(page.getByText('Mesures 3 à 4, Refrain')).toBeVisible();
@@ -720,7 +754,7 @@ test.describe('the MIDI player', () => {
 test.describe('the Live mode', () => {
   // A song imported with a MuseScore file the app can read: "Trompette" and
   // "Tuba", four measures of four beats at 120, a mark "Refrain" on the third.
-  async function withScore(page: Page, variant: '' | 'repeat' = '') {
+  async function withScore(page: Page, variant: '' | 'repeat' | 'hiddenPart' = '') {
     await asMember(page, 'Sisi');
     await page.goto('/songs/new');
     await page.locator('input[type=file]').setInputFiles([
@@ -846,6 +880,17 @@ test.describe('the Live mode', () => {
     await expect(
       page.getByRole('group', { name: 'Modes du morceau' }).getByRole('button', { name: 'PDF' }),
     ).toHaveAttribute('aria-current', 'true');
+  });
+
+  test('a part hidden in MuseScore, and a staff without any note, are not offered (#35)', async ({
+    page,
+  }) => {
+    await withScore(page, 'hiddenPart');
+    await openLive(page);
+    await page.getByRole('button', { name: 'Changer de partition : Trompette' }).click();
+    const panel = page.getByRole('dialog');
+    await expect(panel.getByRole('button', { name: 'Souba' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: /Cornet|Clairon/ })).toHaveCount(0);
   });
 
   test('a repeat is followed: the measures come again, and the score with them', async ({
@@ -1005,6 +1050,195 @@ test.describe('the Live mode', () => {
     await page.getByRole('button', { name: 'Donner le tempo' }).click();
     await page.getByRole('button', { name: 'Annuler' }).click();
     await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeVisible();
+  });
+});
+
+test.describe('Discord and the setlists (0.3.0)', () => {
+  const sectionId = (name: string) => sql(`SELECT id FROM section WHERE name = '${name}'`);
+  // Seven Nation with what the setlist generator reads, its channel, and the
+  // Trompette section tagged by a role of the server of the band.
+  function withSetlistDetails() {
+    sql(
+      `UPDATE song SET durationSeconds = 232, inRepertoireOn = '2015-01-01', setCategory = 'PARTY', isNeverFirst = TRUE WHERE id = ${seven}`,
+    );
+    sql(`INSERT INTO songOtherCategory (songId, category) VALUES (${seven}, 'ENCORE')`);
+    sql(
+      `INSERT INTO songTiringSection (songId, sectionId) VALUES (${seven}, ${sectionId('Trompette')})`,
+    );
+    sql(
+      `INSERT INTO songTrickySection (songId, sectionId) VALUES (${seven}, ${sectionId('Saxophone')})`,
+    );
+  }
+  function withChannel() {
+    emptyDiscord();
+    discordServer();
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    sql(`UPDATE section SET discordRoleId = '${roles.trumpets}' WHERE name = 'Trompette'`);
+    sql(`UPDATE song SET discordChannelId = '${channel}' WHERE id = ${seven}`);
+  }
+
+  test('“À propos” says the length, the year, the categories and the sections', async ({
+    page,
+  }) => {
+    withSetlistDetails();
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    const about = page.getByRole('region', { name: 'À propos' }).or(page.locator('.songs-facts'));
+    await expect(about.getByText('Au répertoire depuis')).toBeVisible();
+    await expect(about).toContainText('2015');
+    await expect(about).toContainText('3:52');
+    await expect(about).toContainText('Teuf, Rappel, jamais en premier');
+    await expect(about).toContainText('Fatigant pour');
+    await expect(about).toContainText('Ça tricote pour');
+    // Crazy has none of it: no such line.
+    await page.goto(`/songs/${sql("SELECT id FROM song WHERE name = 'Crazy'")}`);
+    await expect(page.getByText('Pour les setlists')).toHaveCount(0);
+    await expect(page.getByText('Durée', { exact: true })).toHaveCount(0);
+  });
+
+  test('the Discord card shows the messages that tag the section of the member, then opens the channel', async ({
+    page,
+  }) => {
+    withChannel();
+    discordMessages(channel, [
+      {
+        id: '9003',
+        author: 'Fanfan',
+        day: '2026-10-01',
+        content: `<@&${roles.trumpets}> mesures 36-37`,
+        roles: [roles.trumpets],
+      },
+      {
+        id: '9002',
+        author: 'Gégé',
+        day: '2026-09-28',
+        content: `<@&${roles.saxophones}> pour les saxos`,
+        roles: [roles.saxophones],
+      },
+    ]);
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+
+    const card = page.locator('.DiscordChannelCard');
+    await expect(card.getByRole('heading', { name: 'Discussion' })).toBeVisible();
+    await expect(card).toContainText('Les messages du salon Discord qui taguent @trompettiste.');
+    const message = card.getByRole('link', { name: /Fanfan/ });
+    await expect(message).toContainText('@trompettiste mesures 36-37');
+    await expect(message).toHaveAttribute(
+      'href',
+      `https://discord.com/channels/${server}/${channel}/9003`,
+    );
+    await expect(card).not.toContainText('pour les saxos');
+    await expect(card.getByRole('link', { name: 'Ouvrir dans Discord' })).toHaveAttribute(
+      'href',
+      `https://discord.com/channels/${server}/${channel}`,
+    );
+  });
+
+  test('nothing that tags the section, or a Discord that does not answer: the button only, no error', async ({
+    page,
+  }) => {
+    withChannel();
+    discordMessages(channel, []);
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    const card = page.locator('.DiscordChannelCard');
+    await expect(card).toContainText(
+      'Personne n’a encore tagué @trompettiste dans le salon de ce morceau.',
+    );
+    await expect(card.getByRole('link', { name: 'Ouvrir dans Discord' })).toBeVisible();
+
+    emptyDiscord();
+    discordAnswers(`/guilds/${server}/roles`, { message: 'Missing Access' }, 403);
+    await page.reload();
+    await expect(card).toContainText('Rien à afficher, consulte le salon Discord');
+    await expect(card.getByRole('link', { name: /Fanfan|Gégé/ })).toHaveCount(0);
+
+    // No channel: no card.
+    sql(`UPDATE song SET discordChannelId = NULL`);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Seven Nation', level: 1 })).toBeVisible();
+    await expect(card).toHaveCount(0);
+  });
+
+  test('who manages songs fills “Pour les setlists” and the link of the channel; a wrong length or link is said', async ({
+    page,
+  }) => {
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${seven}/edit`);
+    await expect(page.getByRole('heading', { name: 'Pour les setlists' })).toBeVisible();
+
+    await page.getByLabel('Durée').fill('352');
+    const category = page.getByRole('group', { name: 'Catégorie' });
+    await category.getByRole('radio', { name: 'Teuf' }).check();
+    // The main category is not offered among the others.
+    const others = page.getByRole('group', { name: 'Peut aussi servir de' });
+    await expect(others.getByRole('checkbox', { name: 'Teuf' })).toHaveCount(0);
+    await others.getByRole('checkbox', { name: 'Rappel' }).check();
+    await page.getByRole('switch', { name: 'Jamais en premier' }).click();
+    await page
+      .getByRole('group', { name: 'Fatigant pour' })
+      .getByRole('button', { name: 'Trompette' })
+      .click();
+    await page
+      .getByLabel('Lien du salon Discord')
+      .fill(`https://discord.com/channels/1000999999999999999/${channel}`);
+    await page.getByRole('button', { name: 'Enregistrer' }).first().click();
+    await expect(
+      page.getByText('Une durée en minutes et secondes, de 0:10 à 20:00, comme 3:52.'),
+    ).toBeVisible();
+
+    await page.getByLabel('Durée').fill('3:52');
+    await page.getByRole('button', { name: 'Enregistrer' }).first().click();
+    await expect(
+      page.getByText('Ce salon est sur un autre serveur Discord que celui de la fanfare.'),
+    ).toBeVisible();
+    await page
+      .getByLabel('Lien du salon Discord')
+      .fill(`https://discord.com/channels/${server}/${channel}`);
+    await page.getByRole('button', { name: 'Enregistrer' }).first().click();
+    await expect(page).toHaveURL(`/songs/${seven}`);
+    expect(
+      sql(
+        `SELECT durationSeconds, setCategory, isNeverFirst, discordChannelId FROM song WHERE id = ${seven}`,
+      ),
+    ).toBe(`232\tPARTY\t1\t${channel}`);
+    expect(sql(`SELECT category FROM songOtherCategory WHERE songId = ${seven}`)).toBe('ENCORE');
+    expect(sql(`SELECT sectionId FROM songTiringSection WHERE songId = ${seven}`)).toBe(
+      sectionId('Trompette'),
+    );
+  });
+
+  test('without a Discord server, the form has no field for a channel', async ({ page }) => {
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${seven}/edit`);
+    await expect(page.getByRole('heading', { name: 'Pour les setlists' })).toBeVisible();
+    await expect(page.getByLabel('Lien du salon Discord')).toHaveCount(0);
+  });
+
+  test('the import proposes the length read from the MIDI file the MuseScore file gives', async ({
+    page,
+  }) => {
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    // Four measures at 120, the first two played twice: six measures, 12 seconds.
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: 'Hey Ya.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore('repeat'),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await expect(page.getByLabel('Durée')).toHaveValue('0:12', { timeout: 30_000 });
+    await page.getByLabel('Titre original').fill('Hey Ya!');
+    await page.getByLabel('Interprète original').fill('OutKast');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+    expect(sql("SELECT durationSeconds FROM song WHERE name = 'Hey Ya'")).toBe('12');
   });
 });
 

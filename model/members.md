@@ -1,5 +1,7 @@
 # Business dictionary — Members domain
 
+> v1.23 — 2026-10-18 · Validated, for 0.3.1 · Model: `members.dbml` v1.23 · The names, email, phone and address of a member encrypted in the database (issue #32), see "Encryption". Not part of the migration of 0.3.0
+> v1.22 — 2026-10-18 · Validated by the owner (0.3.0) · Model: `members.dbml` v1.22 · No migration yet · The channel of each notification, push, email or both, and the reminders to answer by push or email (issue #27); the Discord role of a section (issue #33); no Discord account on a member
 > v1.21 — 2026-10-16 · Model: `members.dbml` · Migration: `013_notificationsAndCalendar.sql` (0.2.0) · `textSizePercent` dropped; the six notification settings of the account (issue #23); `calendarToken`, the personal calendar address (issue #21); push subscriptions serve the new notifications (Gigs v1.6, Songs v1.6)
 > v1.20 — 2026-10-15 · Model: `members.dbml` · No migration · The text size is a setting of the device, no longer of the account (issue #18). `textSizePercent` stays in the table, read and written by no code, and is dropped in 0.2.0: a column of `member` is removed in two releases
 > v1.19 — 2026-10-13 · No change to the tables · Decided with the deployment: the permission to run the migrations, for the admin (Band v1.7); on an empty database, the install creates the tables once the install key is accepted
@@ -19,7 +21,8 @@ A person who plays or has played in the band, and their account in the app: the 
 | `nickname` | Nickname | Surnom | Yes | Jibé · Marilou la Tornade | 3 to 20 | The name shown everywhere. Unique in the band, compared without regard to case. Like the two other names, it holds at least one letter or digit |
 | `firstName` | First name | Prénom | Yes | Jean-Baptiste · Marie-Lou | 3 to 20 | |
 | `lastName` | Last name | Nom | Yes | Morel-Dubois · Fontaine | 3 to 25 | |
-| `email` | Email address | Adresse email | Yes | jb.morel@example.org | 15 to 40 | Unique. Stored in lowercase. Is the sign-in identifier |
+| `email` | Email address | Adresse email | Yes | jb.morel@example.org | 15 to 40 | Unique. Stored in lowercase. Is the sign-in identifier. Encrypted: see "Encryption" |
+| `emailHash` | — | — | Yes | — | 64 | Never displayed, never sent to the front. See "Encryption" |
 | `mobilePhone` | Mobile phone | Téléphone mobile | No | +33612345678 | 12 | Stored in international format, displayed in the local format. A number typed without its country prefix is read as a number of the country of the band (`band.defaultCountryCode`) |
 | `streetAddress` | Address | Adresse | No | 12 bis rue des Tanneurs | 10 to 60 | Can hold several lines |
 | `postalCode` | Postal code | Code postal | No | 69007 | 5 to 10 | Free text: formats differ between countries |
@@ -38,7 +41,8 @@ A person who plays or has played in the band, and their account in the app: the 
 | `hasLegibleFont` | More legible font | Police plus lisible | Yes | false | — | Accessibility option |
 | `hasReducedMotion` | Reduced motion | Mouvement réduit | Yes | false | — | Accessibility option |
 | `hasExtendedTimeouts` | Extended timeouts | Délais augmentés | Yes | false | — | Accessibility option |
-| `notifyGigPlayable` | Playable gigs | Plans jouables | Yes | PUSH | — | Notification setting: `OFF` or `PUSH`. See "Notification settings" |
+| `notifyGigReminder` | Reminders to answer | Rappels de présence | Yes | PUSH | — | Notification setting: never `OFF`. See "Notification settings" |
+| `notifyGigPlayable` | Playable gigs | Plans jouables | Yes | PUSH | — | Notification setting. See "Notification settings" |
 | `notifyGigConfirmed` | Confirmed gigs | Plans validés | Yes | PUSH | — | Notification setting |
 | `notifyLiveSetlist` | Next song of the setlist | Prochain morceau de la setlist | Yes | PUSH | — | Notification setting |
 | `notifySongNew` | New song | Nouveau morceau | Yes | PUSH | — | Notification setting |
@@ -140,9 +144,9 @@ Exporting the list of members asks for the password again.
 - Session durations, the number of wrong passwords tolerated and the validity of a password link are fixed in the code for now, with the defaults written in the model.
 
 ### Personal data
-- `nickname`, `firstName`, `lastName`: identification. Seen by every signed-in member.
-- `email`: sign-in and directory of the band. Seen by every signed-in member.
-- `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode`, `addressInstructions`: directory of the band, so that members can reach and visit each other. Given by the member, optional, seen by every signed-in member, erased when the member leaves.
+- `nickname`, `firstName`, `lastName`: identification. Seen by every signed-in member. The two names are encrypted in the database (see "Encryption"), the nickname is not.
+- `email`: sign-in and directory of the band, and the reminders and notifications a member chose to receive by email. Seen by every signed-in member. Encrypted, found through `emailHash`.
+- `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode`, `addressInstructions`: directory of the band, so that members can reach and visit each other. Given by the member, optional, seen by every signed-in member, erased when the member leaves. Encrypted.
 - `photoPath`: recognising each other in the band. Given by the member or by someone who manages members, optional, seen by signed-in members only, never public, never in an export, erased when the member leaves.
 - Preferences (language, appearance, theme, accessibility options, notification settings) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export. The text size is not even known to the server: it stays on the device.
 - `calendarToken`: the personal calendar address of the member, so that a calendar app can subscribe to the gigs they come to. Created only when the member asks for it, seen by the member only, never in an export, erased when the member leaves. Whoever holds the address reads the gigs this member said they come to (name, dates, place), nothing else.
@@ -156,22 +160,27 @@ Exporting the list of members asks for the password again.
 - Representations in the design library (Figma, `Design system` page): `Member/Card` (the directory), `Member/Row` (lists), `Member/TableRow` with `Member/TableHeader` (managing members on a desktop), `Member/Header` (the member's sheet), `Member/Mention`, and the base component `Avatar` (photo, or initials when there is none).
 
 ### Notification settings
-Decided with the owner on 2026-10-16 (issue #23). **What a member receives belongs to the account; whether a device receives belongs to the device.** A device accepts or refuses notifications (`pushSubscription`, entry 3); the six settings below say which kinds the member wants, on every device that accepts them. They follow the member from one device to another.
+Decided with the owner on 2026-10-16 (issue #23), the channels on 2026-10-18 (issue #27). **What a member receives, and how, belongs to the account; whether a device receives belongs to the device.** A device accepts or refuses notifications (`pushSubscription`, entry 3); the seven settings below say, kind by kind, whether the member is told and through which channel. They follow the member from one device to another.
 
-| Setting | Label (fr) | What it sends | To whom |
-|---|---|---|---|
-| `notifyGigPlayable` | Plans jouables | A gig becomes playable (Gigs domain, "Notifications") | The members who organise the gig or answered yes, maybe or if needed on one of its slots |
-| `notifyGigConfirmed` | Plans validés | A gig becomes `CONFIRMED` | The same |
-| `notifyLiveSetlist` | Prochain morceau de la setlist | The live setlist (Gigs domain, entry 4) | The members who answered yes to the slot of the setlist |
-| `notifySongNew` | Nouveau morceau | A song is created (Songs domain, "Notifications") | Every current member |
-| `notifySongScore` | Nouveau MuseScore | The MuseScore file of a song is replaced | Every current member |
-| `notifySongPart` | Nouvelle partition | A part is added or replaced | The current members who play the instrument of the part |
+| Setting | Label (fr) | What it sends | To whom | Channels |
+|---|---|---|---|---|
+| `notifyGigReminder` | Rappels de présence | The reminders to answer for a gig (Gigs domain) | `ACTIVE` members who have not answered, never `POWER_MEMBER` ones | Push, email, or both: never off |
+| `notifyGigPlayable` | Plans jouables | A gig becomes playable (Gigs domain, "Notifications") | The members who organise the gig or answered yes, maybe or if needed on one of its slots | Any |
+| `notifyGigConfirmed` | Plans validés | A gig becomes `CONFIRMED` | The same | Any |
+| `notifyLiveSetlist` | Prochain morceau de la setlist | The live setlist (Gigs domain, entry 4) | The members who answered yes to the slot of the setlist | Off or push: an email arrives too late for the next song |
+| `notifySongNew` | Nouveau morceau | A song is created (Songs domain, "Notifications") | Every current member | Any |
+| `notifySongScore` | Nouveau MuseScore | The MuseScore file of a song is replaced | Every current member | Any |
+| `notifySongPart` | Nouvelle partition | A part is added or replaced | The current members who play the instrument of the part | Any |
 
-- Each setting is `OFF` or `PUSH`, `PUSH` by default. The values hold a channel so that `EMAIL` can be added later without a new field (decided with the owner); it is not offered yet.
-- **The reminders to answer for a gig are not a setting**: a band needs the answers. They go to `ACTIVE` members as before, never to `POWER_MEMBER` ones (Gigs domain). The screen shows them as a row that cannot be turned off, with the chip "Toujours".
+- Each setting is `PUSH` by default: nothing changes for a member until they choose.
+- **A push goes to every device of the member that accepts notifications.** A member none of whose devices accepts receives no push: for the six kinds that can be off, that is their choice (they refused on their devices).
+- **The reminders to answer always reach the member.** When `notifyGigReminder` is `PUSH` and no device of the member accepts notifications, the reminder is sent by email. The screen says so under the setting.
+- **An email** goes to the address of the member, in their language, with the same text as the notification and a link that opens the gig or the song. Its texts are in `api/resources/emails.<language>.json`, beside the email of a forgotten password. One email per event: no digest for now.
+- **Without a mail server** (`canSendEmail` false, Band domain), the screen offers push only, and a setting saved with email is read as push. The reminders to answer then reach only the members who have a device that accepts notifications, as before 0.3.0.
+- **The limit of the host** (100 emails per hour on OVH Perso) is not a concern (owner, 2026-10-18): email is a choice, push the default, and the band does not add two songs the same day once its repertoire is in. The emails of one event leave together; a refusal of the mail server is logged, without the address.
 - Seen and changed by the member only, like the other preferences; never shown to anyone else, never in an export. A setting applies at once, with no save button.
-- When the device the member uses does not receive notifications, the screen shows the settings disabled: they are kept, and apply to the other devices of the member that receive.
-- The device that sent an action never receives the notification of that action: "Suivant" pressed on a phone does not ring that phone. The other devices of the same member do.
+- When the device the member uses does not receive notifications, the push part of the settings is shown disabled: it is kept, and applies to the other devices of the member that receive. The email part stays active.
+- The device that sent an action never receives the push of that action: "Suivant" pressed on a phone does not ring that phone. The other devices of the same member do. An email is sent whatever the device.
 
 ### Calendar address
 Decided with the owner on 2026-10-16 (issue #21): **a subscribed calendar (iCal), never a write into anybody's calendar.**
@@ -184,6 +193,17 @@ Decided with the owner on 2026-10-16 (issue #21): **a subscribed calendar (iCal)
 - **Who sees it**: the member only, on their calendar screen. Not sent in `GET /api/me`, never shown to anyone else, an admin included, never in an export, never written to a log.
 - Stored in clear, unlike a session token: the screen shows the address again whenever the member wants to copy it, and it gives read access to the gigs of one member, nothing else. A copy of the database lets its holder read those gigs, which the database already holds.
 - The screen does not know whether the address is used: the app does not record when a calendar app reads it (decided with the owner). The settings summary says only whether an address exists.
+
+### Encryption
+Decided with the owner on 2026-10-18 (issue #32), **for 0.3.1**: 0.3.0 does not encrypt. The fields that identify a member or say where to reach them are encrypted in the database: `firstName`, `lastName`, `email`, `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode` and `addressInstructions`. A copy of the database that leaks, a backup for instance, holds none of them in clear.
+
+- **What it protects.** A dump or a backup of the database read without the server configuration. It does not protect against someone who reaches the files of the server: the key is there, as the password of the database is. This is said plainly in `docs/architecture.md`.
+- **The key** is written in the server configuration (`config.php`), never in the database or the repository. It is kept apart from the backups of the database: **a lost key is lost data**, with no way back. The install writes a new key; the deployment documentation says where to keep a copy.
+- **The email is found through its hash.** Sign-in, the forgotten password and the check that an email is unique compare `emailHash`, a keyed hash of the address in lowercase. An address is then compared exactly, letter by letter: "Jibé@" and "jibe@" are two addresses, which they are for the mail server too.
+- **No search or sort in the database** on these fields. The lists of members are ordered by nickname, which stays in clear; a search on the names of members is done by the API once the rows are read (about 30 members).
+- **Not encrypted**: the nickname (shown everywhere, unique, compared without regard to case or accents), the photo (a file on the disk, never served without sign-in), the instrument, the status, the preferences, the answers and levels of a member.
+- **The export** writes these fields in clear in its zip, which is protected by the password asked before an export; the import encrypts them with the key of the server that receives them (`export-import.md`).
+- **Moving to encryption** follows the rule of the columns sign-in reads (`docs/architecture.md`, "Not locking oneself out"): `email` changes kind, so it is done in two releases. 0.3.1 adds the encrypted columns and `emailHash`, fills them and reads them; the release after removes the columns in clear. For the code: the rows that exist are encrypted by PHP, not by the SQL of a migration, which cannot use the key; how is proposed in the pull request.
 
 ### Accessibility options
 The default design is not required to reach the highest level of the accessibility guidelines (WCAG AAA). The options below must let a member bring the app to level AA at least, and to AAA wherever that is feasible.
@@ -213,6 +233,7 @@ An instrument is what a member plays. A section groups the instruments that play
 |---|---|---|---|---|---|---|
 | `section.name` | Section | Pupitre | Yes | P'tites basses | 5 to 15 | Unique. In the band's own words, never translated |
 | `section.position` | Order | Ordre | Yes | 4 | — | Order of the sections in every list |
+| `section.discordRoleId` | Discord role | Rôle Discord | No | @saxophoniste (stored as 1100458311290118204) | 17 to 20 digits | Chosen by an admin among the roles of the Discord server, which the bot reads. Unique. Empty: the section is not tagged |
 | `section.icon` | Pictogram | Pictogramme | No | trumpet | — | One of the section pictograms shipped with the app. Empty: the generic pictogram |
 | `instrument.name` | Instrument | Instrument | Yes | Trombone Sib | 5 to 15 | Unique across the band. Never translated |
 | `instrument.sectionId` | Section | Pupitre | Yes | Trombone | — | An instrument belongs to exactly one section |
@@ -329,4 +350,4 @@ Noted for later domains:
 
 - How presence per section makes a gig slot playable: Gigs domain. `POWER_MEMBER` members count in it like `ACTIVE` ones.
 - Reminders to answer for a gig are sent to `ACTIVE` members only, never to `POWER_MEMBER` ones: Gigs domain.
-- The Discord account of a member (`discordUserId`), so that the directory can open their Discord profile: Discord feature. The directory screens reserve the button; it is not to be built before.
+- The Discord account of a member (`discordUserId`): not kept with the Discord feature (owner, 2026-10-18: the band uses Discord through its channels, not through private messages). The Discord button of the member sheet is removed from Figma.

@@ -13,9 +13,9 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // PUT /api/band/gigReminders: how many days before a gig its two reminders
-// are sent, and from which hour. Asks for MANAGE_BAND. Rules: model/band.md,
-// "Reminders of a gig". The reminders themselves are not sent yet: these are
-// the settings they will read.
+// are sent, from which hour, and the time counted between two songs of a
+// setlist (the screen "Plans et setlists"). Asks for MANAGE_BAND. Rules:
+// model/band.md, "Reminders of a gig" and "Length of a setlist".
 final class UpdateGigRemindersAction
 {
     public function __construct(
@@ -37,12 +37,13 @@ final class UpdateGigRemindersAction
         if ($second !== null && ($second < 1 || $second > 90)) {
             $errors->add('gigSecondReminderDays', 'invalid');
         }
-        // The second reminder comes after the first: fewer days before the gig.
-        if ($first !== null && $second !== null && $second >= $first) {
-            $errors->add('gigSecondReminderDays', 'invalid');
-        }
+        // The second reminder may fall before, after or on the day of the
+        // first (Band v1.9): the same day, it is sent once.
         if ($input->gigReminderHour < 0 || $input->gigReminderHour > 23) {
             $errors->add('gigReminderHour', 'invalid');
+        }
+        if ($input->setlistGapSeconds < 0 || $input->setlistGapSeconds > 300) {
+            $errors->add('setlistGapSeconds', 'invalid');
         }
         $errors->throwIfAny();
 
@@ -52,6 +53,7 @@ final class UpdateGigRemindersAction
                 'gigFirstReminderDays' => $first,
                 'gigSecondReminderDays' => $second,
                 'gigReminderHour' => $input->gigReminderHour,
+                'setlistGapSeconds' => $input->setlistGapSeconds,
                 'updatedByMemberId' => CurrentMember::of($request)->id,
             ],
             ['id' => 1],

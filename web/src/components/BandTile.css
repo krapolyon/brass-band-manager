@@ -1,0 +1,43 @@
+.BandTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spaceXs);
+  margin: 0;
+  padding: var(--spaceMd) var(--spaceMd);
+  border-radius: var(--radiusMd);
+  background: var(--control);
+  text-align: center;
+}
+
+/* 60 px, rounded as a phone rounds an icon: drawn at a fixed size, like an icon. */
+.BandTile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.75rem;
+  height: 3.75rem;
+  overflow: hidden;
+  border-radius: var(--radiusSm);
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.BandTile-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A phone shows about 12 characters under an icon, then an ellipsis. */
+.BandTile-name {
+  max-width: 12ch;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.BandTile-caption {
+  color: var(--textMuted);
+}
