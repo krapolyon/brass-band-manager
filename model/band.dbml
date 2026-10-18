@@ -1,4 +1,5 @@
 // Domain: Band
+// v1.8 — 2026-10-18 — validated (0.3.0), no change to the table: the second reminder of a gig no longer has to come after the first (owner)
 // v1.7 — 2026-10-18 — validated (0.3.0): iconPath, the icon of the installed app (issue #34); discordServerId, the Discord server of the band (issue #33); setlistGapSeconds, the time between two songs of a setlist (issue #25)
 // v1.6 — 2026-10-13 — validated with Gigs v1.0, migration 008: the two reminders of a gig and the hour they are sent at
 // v1.5 — 2026-10-11 — validated: defaultAccentTheme; country of the band (defaultCountryCode), migration 004
@@ -23,7 +24,7 @@ Table band {
   defaultAccentTheme varchar [not null, note: 'Key of the accent theme shown to members who have not chosen one, for instance copper. One of the accent themes shipped with the app; the API refuses any other value. Set at install to the first theme of the list.']
   defaultCountryCode varchar [not null, note: 'Two-letter ISO 3166-1 code of the country of the band, for instance FR. A phone number typed without its country prefix is read as a number of this country. Set at install from the language the install was done in.']
   gigFirstReminderDays integer [default: 15, note: 'How many days before a gig the members who have not answered are reminded a first time, from 1 to 90. Empty: no first reminder.']
-  gigSecondReminderDays integer [default: 5, note: 'How many days before a gig they are reminded a second time: fewer than the first. Empty: no second reminder.']
+  gigSecondReminderDays integer [default: 5, note: 'How many days before a gig they are reminded a second time, from 1 to 90, with no rule against the first: a reminder is never sent twice the same day. Empty: no second reminder.']
   gigReminderHour integer [not null, default: 18, note: 'Hour of the day from which the reminders are sent, from 0 to 23, on the clock of the server, which is set to the time zone of the band.']
   discordServerId varchar [note: 'Identifier of the Discord server of the band: digits only. Empty for a band without Discord. With it, a song or a gig that has a channel opens it in Discord, and the bot of the band reads the channels of songs. Read by the app from the link of any channel of the server, pasted by an admin. The token of the bot stays in the server configuration.']
   setlistGapSeconds integer [not null, default: 30, note: 'Time counted between two songs when the app gives the length of a setlist, in seconds, from 0 to 300. Edited by an admin in the band settings, with the reminders of gigs.']
