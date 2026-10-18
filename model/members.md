@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.24 — 2026-10-18 · Validated, for 0.3.1 · No change to the tables · The install guide of the app on a phone, offered once per device (issue #36), entry 3 "Install guide"
 > v1.23 — 2026-10-18 · Validated, for 0.3.1 · Model: `members.dbml` v1.23 · The names, email, phone and address of a member encrypted in the database (issue #32), see "Encryption". Not part of the migration of 0.3.0
 > v1.22 — 2026-10-18 · Validated by the owner (0.3.0) · Model: `members.dbml` v1.22 · No migration yet · The channel of each notification, push, email or both, and the reminders to answer by push or email (issue #27); the Discord role of a section (issue #33); no Discord account on a member
 > v1.21 — 2026-10-16 · Model: `members.dbml` · Migration: `013_notificationsAndCalendar.sql` (0.2.0) · `textSizePercent` dropped; the six notification settings of the account (issue #23); `calendarToken`, the personal calendar address (issue #21); push subscriptions serve the new notifications (Gigs v1.6, Songs v1.6)
@@ -315,6 +316,14 @@ A session is a device on which a member is signed in. A password link is a singl
 - The member turns notifications off on a device from the app, which deletes the subscription. A subscription the push service reports as gone is deleted too.
 - A notification names a gig or a song and nothing about a member.
 - Which kinds of notifications a member receives is a setting of the account (entry 1, "Notification settings"), not of the device.
+
+### Install guide
+Decided with the owner on 2026-10-18 (issue #36), **for 0.3.1**. The app asks to be put on the home screen of a phone: installed, it opens full screen, and on an iPhone it is the only way to receive notifications.
+
+- **When.** Once per device: right after a member signs in, or completes an invitation, on a phone or a tablet, in a browser. Never when the app is already installed (opened from its icon), never on a computer: Chrome and Edge offer to install it themselves.
+- **What.** A screen that says why in one line, then how, for the device: on Android, a button "Installer l'app" that opens the install window of the browser when the browser offers one, else three steps through its menu ⋮; on an iPhone or an iPad in Safari, three steps through ⋯ then Partager, "Sur l'écran d'accueil" with "Ouvrir comme app web" left on; on an iPhone in another browser, "open this link in Safari" with a button that copies the link. The steps are drawn with the icons of the app, never with pictures of the system, which change with each version.
+- **Later.** "Plus tard" closes it. The app never offers it again by itself; it stays in the settings ("Installer l'app", in "Mon compte"), shown only while the app is not installed on that device. The button of the notifications screen on an iPhone ("Ajouter l'app à l'écran d'accueil") opens the same guide.
+- **Kept on the device**, in the storage of the browser, like the text size: whether the guide was offered. Nothing is sent to the server, nothing is stored about the device.
 
 ### Personal data
 - No IP address and no device name is stored.

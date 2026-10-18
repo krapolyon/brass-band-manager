@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.8 — 2026-10-18 — validated, for 0.3.1, no change to the tables: an answer IF_NEEDED counts for the playability of a slot, without being a yes (issue #37) (dictionary)
 // v1.7 — 2026-10-18 — validated (0.3.0), no change to the tables: the Discord channel of a gig is shown to every member as a link and typed in the form (issue #33); the length of a setlist and the setlist generator (issue #25) (dictionary)
 // v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications when a gig becomes playable or confirmed, the live setlist follows the setting of each member (issue #23); the setlist editor shows how often a song is played in the gig and adds songs from a list (issue #20); the calendar feed of a member (issue #21) (dictionary)
 // v1.5 — 2026-10-15 — no change to the tables: a confirmed gig can be put back to ACCEPTED or PROPOSED by hand (issue #17); streetAddress and setlist.description are typed over several lines (issue #15); the end date of a gig can be removed (issue #16) (dictionary)
@@ -77,7 +78,7 @@ Table gigSlot {
   position integer [not null, note: 'Order of the slots of a gig, starting at 1']
   note varchar [note: 'Information specific to this slot, for instance "Parade, no amplification". Can hold several lines.']
   costumeId integer [ref: > costume.id, note: 'The costume worn at this slot, one of the costumes of the gig (gigCostume). Empty when none is decided.']
-  Note: 'A moment of a gig for which members say whether they come: a roll call (a "présence" in the French locale). Playable as soon as every section has one member who answered yes; a gig is playable as soon as one of its slots is. Never stored: computed from the answers.'
+  Note: 'A moment of a gig for which members say whether they come: a roll call (a "présence" in the French locale). Playable as soon as every section has one member who answered yes or if needed; a gig is playable as soon as one of its slots is. Never stored: computed from the answers.'
 
   indexes {
     (id, gigId) [unique, note: 'Target of the reference of a setlist to its slot, which keeps the slot in the gig of the setlist']
@@ -88,7 +89,7 @@ Enum attendanceAnswer {
   YES
   NO
   MAYBE
-  IF_NEEDED [note: 'Would rather not come, but can make the effort if that saves the gig ("si besoin" in the French locale). Does not count as a yes.']
+  IF_NEEDED [note: 'Would rather not come, but can make the effort if that saves the gig ("si besoin" in the French locale). Not a yes, but counts for the playability of the slot (issue #37).']
 }
 
 Table gigSlotAttendance {
