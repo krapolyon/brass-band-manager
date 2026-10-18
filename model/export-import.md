@@ -1,5 +1,6 @@
 # Export and import of the data — format 1
 
+> v1.2 — 2026-10-18 · Validated · The new fields of a song and of the band travel with them (0.3.0); the encrypted fields of a member travel in clear in the zip (0.3.1, Members v1.23)
 > v1.1 — 2026-10-13 · The phrases the dictation learned (`songSpokenName`, Songs v1.4) travel with the songs
 > v1.0 — 2026-10-13 · Decided with the owner during the design of gigs · Not built yet · Screens: Figma, page `Band settings`, section 5
 
@@ -57,6 +58,7 @@ A reference to a member is its email, to a song its name, to an instrument its n
 - **Inside an imported row, its own lists are replaced**: the roles of a member, the parts and the phrases of a song, the slots, organisers, costumes, answers and setlists of a gig. A gig of the file therefore arrives exactly as it was exported.
 - **`band`** is overwritten, except the settings that only make sense on one host (none today; the Discord settings will be listed here when they exist).
 - **A reference that cannot be found** (an answer from a member who is neither in the file nor on the server) makes the import refuse, with the list of what is missing. Nothing is imported in part.
+- **Encrypted fields** (Members domain, "Encryption") are written in clear in the file and encrypted again with the key of the server that imports them; `emailHash` is not exported, it is computed again.
 - **Passwords** travel as their hashes (`passwordHash`, PHP `password_hash()`): they are never readable, and the members keep their passwords. A member who was invited and has not set one arrives as invited, without a pending link: the admin sends a new invitation.
 - **Positions** (`section.position`, `instrument.position`, `costume.position`, …) are taken from the file.
 

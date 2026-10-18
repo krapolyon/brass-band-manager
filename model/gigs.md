@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.7 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · The Discord channel of a gig is typed in its form and shown to every member as a link (issue #33); the length of a setlist and the setlist generator (issue #25)
 > v1.6 — 2026-10-16 · No change to the tables · Milestone 0.2.0, with Members v1.21 (migration `013_notificationsAndCalendar.sql`): a gig that becomes playable or confirmed is notified, the live setlist follows the setting of each member and spares the device that moved it (issue #23); the setlist editor counts how often a song is played in the gig, adds songs from a list, and removes a song by a swipe (issue #20); the calendar feed of a member (issue #21)
 > v1.5 — 2026-10-15 · No change to the tables · From the beta (milestone 0.1.1): a confirmed gig can be put back to `ACCEPTED` or `PROPOSED` by hand (#17); the end date can be removed (#16); the address and the description of a setlist are typed over several lines (#15)
 > v1.4 — 2026-10-13 · Decided with the design of the home screen (Figma, page `Home`): `gig.proposedAt`, the instant a gig first reaches a status members see; a gig is new for 15 days after it; the gig of the day and the answers in place on the home screen · Migration: `012_gigProposedAt.sql`
@@ -34,7 +35,7 @@ A concert the band is asked to play, from the first contact to the day itself. I
 | `city` | City | Ville | No | Lyon | Up to 30 characters | Can be filled without the street |
 | `latitude`, `longitude` | GPS coordinates | Coordonnées GPS | No | 45.767300, 4.834400 | 6 decimals | Both or neither. Typed or pasted as one text, "45.7673, 4.8344". Latitude from -90 to 90, longitude from -180 to 180 |
 | `notes` | Information | Infos diverses | No | Parking behind the town hall, meal provided | A few lines | Free text |
-| `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per gig |
+| `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per gig. Typed as the link of the channel or its identifier, as for a song. Shown as a row that opens the channel in Discord |
 | `remindedAt` | Last reminder | Dernière relance | — | 2026-11-20 18:00 | — | Never typed: set when a reminder is sent |
 | `proposedAt` | Proposed | Proposé | — | 2026-10-12 21:14 | — | Never typed: set once, the first time the gig reaches `PROPOSED`, `ACCEPTED` or `CONFIRMED`. Empty for a gig that has only been a draft |
 
@@ -93,8 +94,8 @@ A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the l
 ### Access rights
 | Who | View | Create | Edit, slots and costumes included | Change status | Remind | Delete |
 |---|---|---|---|---|---|---|
-| Any signed-in member | Every gig except those in `DRAFT`, with every field except `discordChannelId` | No | No | No | No | No |
-| An organiser of the gig | This gig whatever its status, `discordChannelId` included | No | Yes, this gig, its organisers included | Yes, this gig | Yes, this gig | No |
+| Any signed-in member | Every gig except those in `DRAFT`, every field, `discordChannelId` as a link (changed in v1.7) | No | No | No | No | No |
+| An organiser of the gig | This gig whatever its status | No | Yes, this gig, its organisers included | Yes, this gig | Yes, this gig | No |
 | `GIG_MANAGER`, `ADMIN` | Every gig, `DRAFT` included | Yes | Yes | Yes | Yes | Yes, a gig in `DRAFT` only: a gig members have seen is cancelled, not deleted |
 
 The right of an organiser depends on the gig, not on a role: the shared layer checks "manages gigs, or organises this gig" in one place, used by every action on a gig.
@@ -206,6 +207,16 @@ The notification names the song being played and the two after it: “3/6 · Pro
 - **Adding from a list** (issue #20). Besides typing and dictating, a button beside the microphone opens every song a setlist can hold (`IN_REPERTOIRE`, `TEMPORARY`), in alphabetical order, with a search field. A song already in this setlist shows a tick. A tap appends the song at the end of the setlist and the list stays open; a second tap appends it again (a song can come twice). The list closes with its cross or by dragging it down.
 - **Moving and removing a song** (issue #20). The handle moves a song. A song is removed by sliding its row to the left, which reveals "Retirer", or by sliding it further. Without a pointer: the row takes the focus, Delete removes it, and Alt with the up or down arrow moves it. The menu of a song, with Monter and Descendre, is gone.
 - A live setlist can still be edited; its position stays the same number, and who manages setlists corrects it by scrolling if needed.
+- **Length of a setlist** (issue #25). The lengths of its songs (read from their MIDI file), plus the time between two songs of the band (`band.setlistGapSeconds`, 30 s by default) between each of them: 6 songs of 3:30 make 21:00 + 5 × 0:30 = 23:30. Shown rounded to the minute ("≈ 24 min"). Songs without a length are left out of the sum, and the screen says how many ("2 morceaux sans durée"). Computed, never stored.
+- **Proposing a setlist** (issue #25, the generator the band used until now, `JCrache/krapo`). In the editor of a setlist, who manages setlists asks the app to propose its songs. Two choices: how many songs (10 by default, 3 to 30), and whether to include the new songs (off by default; a song is new for 2 months after it entered the repertoire, Songs domain, "Setlist attributes"). The app picks among the songs a setlist can hold (`IN_REPERTOIRE`, `TEMPORARY`), and avoids those already in the other setlists of the gig as long as there are enough. Each proposal follows these rules:
+  - the first song is an opener (main or other category), never a song that is never first;
+  - the last is a party song, an encore if one fits;
+  - a song whose main category is opener stays in the first half, party in the second half, encore at the end only;
+  - a tiring song stays in the first half;
+  - two choreographies never follow each other, nor two songs tricky for the same section;
+  - the categories alternate as much as they can.
+  
+  When the rules cannot all be kept (a small repertoire), the app keeps the order of this list, drops the last rules first, and says it. The proposal replaces the songs of the setlist in the editor; nothing is saved until "Enregistrer la setlist", and "Une autre" draws again. The songs are then moved, removed and added by hand as usual. Draws are random: nothing about them is stored.
 - Later, not modelled: how often each song is played, counted from the setlists of past gigs.
 
 ### Access rights
@@ -252,5 +263,8 @@ Changed with this domain:
 - **Overview** (v0.7) and **scoping**: slots without dates, no stops, costumes, setlists tied to a gig and built in the first version, at the end of this domain.
 
 ## 7. Open questions
+
+For later: the generator could also aim at a length ("45 minutes") rather than a number of songs.
+
 
 None. Decided by the owner on 2026-10-13: the five statuses, `CONFIRMED` set by the app or forced; a cancelled gig can be reopened; organisers edit their gig and answer for others; one meeting time per gig; optional coordinates; the costumes of the gig as the reference, managed by the admin; the reminder button and two automatic reminders; setlists built in this domain, last.

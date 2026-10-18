@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.7 — 2026-10-18 — validated (0.3.0): the length of a song (durationSeconds) and the day it entered the repertoire (inRepertoireOn); what the setlist generator reads, taken from the repertoire file of the band (issue #25): a main category and other ones, never first, tiring and tricky for some sections; the Discord channel is shown to every member as a link (issue #33)
 // v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications of a new song, a new MuseScore file and a new part (issue #23); the outline of a recording measures loudness and is versioned (issue #29); the Live mode can be driven by the MIDI player (issue #10) (dictionary)
 // v1.4 — 2026-10-13 — songSpokenName: the phrases the dictation of a setlist learned for a song, migration 011
 // v1.3 — 2026-10-13 — rules of the reading mode and of the rehearsal marks (dictionary only, no schema change)
@@ -30,6 +31,19 @@ Enum songStatus {
   ABANDONED [note: 'No longer played, or given up before it was ready. Kept for history.']
 }
 
+// What the setlist generator reads (issue #25). The French labels are
+// those the band already used: Début, Teuf, Connu, Chorée, Chill,
+// Rappel, Standard.
+Enum setCategory {
+  OPENER [note: 'Good to start a set. As main category: placed in the first half only']
+  PARTY [note: 'Energetic, gets the crowd going ("teuf"). As main category: placed in the second half only']
+  KNOWN [note: 'Known by the audience']
+  CHOREOGRAPHY [note: 'Has a choreography ("chorée"). Two never follow each other']
+  CHILL [note: 'Quieter']
+  ENCORE [note: 'Played as an encore ("rappel"). As main category: placed last only']
+  STANDARD [note: 'Neither of the above: placed anywhere']
+}
+
 Table song {
   id integer [pk]
   name varchar [not null, unique, note: 'The name the band gives to the song, shown everywhere in the app. Often shorter than the original title. Never translated.']
@@ -41,13 +55,48 @@ Table song {
   versionNote varchar [note: 'What changed in the current version of the arrangement, for instance a new ending. Can hold several lines.']
   clipUrl varchar [note: 'Address of the video clip of the original song. The address of a YouTube video, the only site played for now. The clip is played inside the app, once the member asks for it.']
   clipThumbnailPath varchar [note: 'Thumbnail of the clip, relative to the storage folder of the app. Fetched once from the video site by the server when clipUrl is saved, so that showing it reports no member to that site. Empty when there is no clip or when it could not be fetched. Never typed by anyone.']
-  discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this song: digits only. Empty for a band without Discord. Stored, and shown by no screen before the Discord feature.']
+  discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this song: digits only. Empty for a band without Discord. Read by the app from the link of the channel, pasted by whoever manages songs. Every member sees it as a link that opens the channel in Discord.']
+  durationSeconds integer [note: 'How long the band plays the song, in seconds, from 10 to 1200, shown as m:ss. Read from the MIDI file when one is sent, never from the recording (it can hold applause); then typed or corrected by whoever manages songs. Empty: not known. Gives the length of a setlist.']
+  inRepertoireOn date [note: 'Day the song entered the repertoire. Set by the app the first time the status becomes IN_REPERTOIRE, corrected by hand. A song is new for the setlist generator for 2 months after it.']
+  setCategory setCategory [not null, default: 'STANDARD', note: 'Main category of the song for the setlist generator. Decides where the generator may place it (see the enum).']
+  isNeverFirst boolean [not null, default: false, note: 'Never placed first in a set: the band has to be warmed up ("pas en premier").']
   coverPath varchar [note: 'File of the cover art of the original song (JPEG, PNG or WebP, square), relative to the storage folder of the app. Empty when the song has none.']
   museScorePath varchar [note: 'MuseScore file of the arrangement (.mscz), relative to the storage folder of the app. The source of the score.']
   midiPath varchar [note: 'MIDI file of the arrangement, relative to the storage folder of the app. Produced from the MuseScore file by the browser that sends it, its tracks named after the staves; or exported by hand.']
   musicXmlPath varchar [note: 'The score as MusicXML (.musicxml or .mxl), relative to the storage folder of the app. Produced from the MuseScore file by the browser that sends it, or exported by hand. What the reading mode shows.']
   audioPath varchar [note: 'Recording of the song played by the band (mp3 or m4a), relative to the storage folder of the app.']
   Note: 'A piece the band plays, is learning or considers learning. Every song is a cover: it has an original title, an original artist and the cover art of the original.'
+}
+
+// What a song brings to a set, besides its main category
+Table songOtherCategory {
+  songId integer [not null, ref: > song.id]
+  category setCategory [not null, note: 'Any category but STANDARD and the main category of the song']
+  Note: 'A category a song can also serve as, for instance a party song that can close as an encore. Places the song nowhere by itself: the generator looks for it where that category is wanted (first song, last song).'
+
+  indexes {
+    (songId, category) [pk]
+  }
+}
+
+Table songTiringSection {
+  songId integer [not null, ref: > song.id]
+  sectionId integer [not null, ref: > section.id]
+  Note: 'A section for which the song is tiring ("fatigant"). A song with at least one is never placed in the second half of a set.'
+
+  indexes {
+    (songId, sectionId) [pk]
+  }
+}
+
+Table songTrickySection {
+  songId integer [not null, ref: > song.id]
+  sectionId integer [not null, ref: > section.id]
+  Note: 'A section for which the song is technically hard ("ça tricote"). Two songs that are tricky for the same section never follow each other.'
+
+  indexes {
+    (songId, sectionId) [pk]
+  }
 }
 
 // ---------------------------------------------------------------
@@ -114,12 +163,20 @@ Table instrument {
   Note: 'Members domain: see members.dbml'
 }
 
+Table section {
+  id integer [pk]
+  Note: 'Members domain: see members.dbml'
+}
+
 // ---------------------------------------------------------------
 // Groups
 // ---------------------------------------------------------------
 
 TableGroup songs {
   song
+  songOtherCategory
+  songTiringSection
+  songTrickySection
   songPart
   instrumentAlias
   songSpokenName
@@ -129,4 +186,5 @@ TableGroup songs {
 TableGroup external {
   member
   instrument
+  section
 }

@@ -80,7 +80,7 @@ When a join table has a life of its own (dates, status, role) and a business nam
 - A table from another domain appears only through its key, with a note pointing to its domain, inside an `external` group.
 - Cardinalities: `>` many to one, `<` one to many, `-` one to one. Never `<>`: always an explicit join table.
 - **Technical audit trail** (`createdAt`, `updatedAt`, author): a global convention, present on every table in the SQL, never repeated in the DBML. Only history that has a business meaning is modelled.
-- **Personal data**: start the note with `🔒 Personal data`, then the purpose. Sensitive data in the GDPR sense is marked `🔒🔒 Sensitive data` and has to be justified to the owner before it is added.
+- **Personal data**: start the note with `🔒 Personal data`, then the purpose. Sensitive data in the GDPR sense is marked `🔒🔒 Sensitive data` and has to be justified to the owner before it is added. A field encrypted in the database says so at the end of its note ("Encrypted in the database"), and the dictionary of its domain has a section "Encryption".
 - **File header**: a history, most recent version first.
 
 ```dbml
@@ -145,8 +145,9 @@ TableGroup members {
 7. **Translatable or not.** Enum values are translated by the app, through a key built from the enum and the value. Rows of a reference table and user content (song titles, place names) are stored in the band's own language and never translated.
 8. **Instance settings under control.** What varies from one band to another goes through typed, deliberate settings in `band`, not through an "everything generic" model or a catch-all JSON field. Secrets (the Discord bot token, for instance) stay in the server configuration, outside the database and outside the repository.
 9. **Rules live in the model**: uniqueness, required values, allowed values, dependencies between fields, bounds.
-10. **Personal data**: collect only what serves an identified purpose, mark each field, and say in the dictionary entry who can see what.
-11. **Keep it small.** About thirty members and fifty songs per band. Do not model what no planned screen uses.
+10. **Personal data**: collect only what serves an identified purpose, mark each field, and say in the dictionary entry who can see what. The fields that identify a member or say where to reach them (names, email, phone, address) are encrypted in the database (decided on 2026-10-18, built in 0.3.1). An encrypted field is never searched or sorted by the database: a field that must be found (the email at sign-in) gets a keyed hash beside it (`emailHash`), which also holds its uniqueness. The key is server configuration.
+11. **What an outside service says is not stored.** Content read from another service (the messages of a Discord channel) is shown, kept a few minutes in a cache of the server at most, and never written to the database. The model holds only the identifiers that link to it (`discordChannelId`, `discordRoleId`).
+12. **Keep it small.** About thirty members and fifty songs per band. Do not model what no planned screen uses.
 
 Anti-patterns: polymorphic reference (`targetType` + `targetId`), implicit many-to-many, a "type" field that changes the meaning of the other fields, a status deduced from several fields, an ambiguous field name (`date`, `type`, `value`).
 
