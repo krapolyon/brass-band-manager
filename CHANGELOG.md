@@ -7,19 +7,19 @@ What changes in the app, version after version. This file is written by
 
 ### Added
 
-- In the list of songs of a setlist, filter the songs not played yet in the gig, and by mood.
+- In the list of songs of a setlist, the songs not played yet in the gig can be filtered, and by mood.
 - A gig shows the messages of its Discord channel that tag the app.
 
 ### Changed
 
-- A song shows the Discord messages that tag both the app and your section, all of them, without the tag of the app.
+- A song shows the Discord messages that tag both the app and the section of the signed-in member; the tag of the app is taken out of the message.
 - A song you have not rated yet says so, and a rating more than a year old asks whether you still agree.
 - The steps to install the app on an iPhone follow Safari as it is today.
 - The mood “Medium” is now called “Normal”.
 
 ### Fixed
 
-- The Live mode draws the key signature of scores saved with MuseScore 4. Send the MuseScore file of a song again to see it.
+- The Live mode draws the key signature of scores saved with MuseScore 4.
 
 ## 0.3.1 — 2026-10-23
 

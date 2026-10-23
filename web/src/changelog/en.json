@@ -5,7 +5,7 @@
     "changes": [
       {
         "kind": "added",
-        "text": "In the list of songs of a setlist, filter the songs not played yet in the gig, and by mood."
+        "text": "In the list of songs of a setlist, the songs not played yet in the gig can be filtered, and by mood."
       },
       {
         "kind": "added",
@@ -13,7 +13,7 @@
       },
       {
         "kind": "changed",
-        "text": "A song shows the Discord messages that tag both the app and your section, all of them, without the tag of the app."
+        "text": "A song shows the Discord messages that tag both the app and the section of the signed-in member; the tag of the app is taken out of the message."
       },
       {
         "kind": "changed",
@@ -29,7 +29,7 @@
       },
       {
         "kind": "fixed",
-        "text": "The Live mode draws the key signature of scores saved with MuseScore 4. Send the MuseScore file of a song again to see it."
+        "text": "The Live mode draws the key signature of scores saved with MuseScore 4."
       }
     ]
   },

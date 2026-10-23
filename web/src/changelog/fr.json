@@ -1,12 +1,12 @@
 {
   "0.3.2": {
-    "In the list of songs of a setlist, filter the songs not played yet in the gig, and by mood.": "Dans la liste des morceaux d’une setlist, filtre les morceaux pas encore joués sur le plan, et par ambiance.",
+    "In the list of songs of a setlist, the songs not played yet in the gig can be filtered, and by mood.": "Dans la liste des morceaux d’une setlist, on peut filtrer les morceaux pas encore joués sur le plan, et par ambiance.",
     "A gig shows the messages of its Discord channel that tag the app.": "Un plan affiche les messages de son salon Discord qui taguent l’app.",
-    "A song shows the Discord messages that tag both the app and your section, all of them, without the tag of the app.": "Un morceau affiche les messages Discord qui taguent à la fois l’app et ton pupitre, tous, sans le tag de l’app.",
+    "A song shows the Discord messages that tag both the app and the section of the signed-in member; the tag of the app is taken out of the message.": "Un morceau affiche les messages Discord qui taguent à la fois l’app et le pupitre du musicien connecté, le tag de l’app est retiré du message.",
     "A song you have not rated yet says so, and a rating more than a year old asks whether you still agree.": "Un morceau que tu n’as pas encore noté te le dit, et une note de plus d’un an te demande si tu es toujours d’accord.",
     "The steps to install the app on an iPhone follow Safari as it is today.": "Les étapes pour installer l’app sur iPhone suivent Safari tel qu’il est aujourd’hui.",
     "The mood “Medium” is now called “Normal”.": "L’ambiance « Médium » s’appelle désormais « Normal ».",
-    "The Live mode draws the key signature of scores saved with MuseScore 4. Send the MuseScore file of a song again to see it.": "Le mode Live dessine l’armure des partitions enregistrées avec MuseScore 4. Renvoie le fichier MuseScore d’un morceau pour la voir."
+    "The Live mode draws the key signature of scores saved with MuseScore 4.": "Le mode Live dessine l’armure des partitions enregistrées avec MuseScore 4."
   },
   "0.3.1": {
     "After sign-in, a phone offers once to put the app on its home screen, with the steps for that phone. It stays in the settings, under “Install the app”, while the app is not installed.": "Après la connexion, un téléphone propose une fois de mettre l’app sur son écran d’accueil, avec les étapes pour ce téléphone. Elle reste dans les réglages, « Installer l’app », tant que l’app n’est pas installée.",
