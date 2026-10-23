@@ -819,7 +819,10 @@ test.describe('the MIDI player', () => {
 test.describe('the Live mode', () => {
   // A song imported with a MuseScore file the app can read: "Trompette" and
   // "Tuba", four measures of four beats at 120, a mark "Refrain" on the third.
-  async function withScore(page: Page, variant: '' | 'repeat' | 'hiddenPart' = '') {
+  async function withScore(
+    page: Page,
+    variant: '' | 'repeat' | 'hiddenPart' | 'keySignature' = '',
+  ) {
     await asMember(page, 'Sisi');
     await page.goto('/songs/new');
     await page.locator('input[type=file]').setInputFiles([
@@ -861,6 +864,52 @@ test.describe('the Live mode', () => {
     await page.goto(`/songs/${crazy}`);
     await openLive(page);
     await expect(page.getByRole('button', { name: 'Ajouter le fichier MuseScore' })).toBeVisible();
+  });
+
+  test('draws the sharps and the flats of a key written by MuseScore 4, as each instrument reads it, on every line (#41)', async ({
+    page,
+  }) => {
+    await withScore(page, 'keySignature');
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const sheet = page.locator('.songs-liveSheet');
+    // Every sign of the key is drawn from a glyph the drawing holds itself.
+    const signs = async () =>
+      sheet.evaluate((element) => {
+        const drawn = [...element.querySelectorAll('g.keySig g.keyAccid use')];
+        const ids = drawn.map((use) =>
+          (use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').slice(1),
+        );
+        return {
+          lines: element.querySelectorAll('g.system').length,
+          perLine: drawn.length / Math.max(1, element.querySelectorAll('g.system').length),
+          glyphs: [...new Set(ids.map((id) => id.split('-')[0]))],
+          isEveryGlyphThere: ids.every((id) => element.querySelector(`[id="${id}"]`) !== null),
+          isShown: [...element.querySelectorAll('g.keySig')].every(
+            (key) => (key as SVGGraphicsElement).getBBox().width > 0,
+          ),
+        };
+      });
+
+    // The trumpet in B flat: C major in concert, so it reads two sharps
+    // (SMuFL E262), on every line.
+    await expect.poll(async () => (await signs()).perLine).toBe(2);
+    expect(await signs()).toMatchObject({
+      glyphs: ['E262'],
+      isEveryGlyphThere: true,
+      isShown: true,
+    });
+
+    // The tuba, a known spelling of the Souba: three flats (E260).
+    await page.getByRole('button', { name: 'Changer de partition : Trompette' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Souba' }).click();
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await expect.poll(async () => (await signs()).perLine).toBe(3);
+    expect(await signs()).toMatchObject({ glyphs: ['E260'], isEveryGlyphThere: true });
   });
 
   test('shows the part of the member’s instrument, starts where asked, follows the tempo and comes back at the end', async ({
