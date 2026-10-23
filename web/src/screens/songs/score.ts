@@ -113,7 +113,9 @@ export async function unzipped(
  * again for its staff: the concert key moved by the transposition of the
  * instrument of the part, which is what MuseScore shows with "concert pitch"
  * off. A key the file already writes the older way, a custom or an atonal key
- * are left as they are. Plain text: a worker has no DOMParser.
+ * are left as they are. Not followed: an instrument changed in the middle of a
+staff (the first one counts for the whole staff). Plain text: a worker has
+no DOMParser.
  */
 export function withWrittenKeys(mscx: string): string {
   // Each part holds its staves, in order, and says how its instrument
@@ -143,7 +145,13 @@ export function withWrittenKeys(mscx: string): string {
       return staff.replace(/<KeySig>[\s\S]*?<\/KeySig>/g, (key) => {
         const concert = /<concertKey>(-?\d+)<\/concertKey>/.exec(key)?.[1];
         if (concert === undefined || /<(accidental|custom)>/.test(key)) return key;
-        const written = writtenKey(Number(concert), interval);
+        // MuseScore may say the key it shows (<actualKey>): it is kept when it
+        // is the same key, so that its choice between sharps and flats (five
+        // flats rather than seven sharps) stays. A file saved in concert
+        // pitch shows the concert key there: then it is not the same key.
+        const computed = writtenKey(Number(concert), interval);
+        const actual = Number(/<actualKey>(-?\d+)<\/actualKey>/.exec(key)?.[1] ?? Number.NaN);
+        const written = (actual - computed) % 12 === 0 ? actual : computed;
         return key
           .replace(/\s*<actualKey>-?\d+<\/actualKey>/, '')
           .replace(/<concertKey>-?\d+<\/concertKey>/, `<accidental>${written}</accidental>`);

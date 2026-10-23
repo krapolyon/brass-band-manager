@@ -17,7 +17,6 @@
 button.Message {
   width: 100%;
   border: none;
-  font: inherit;
   text-align: start;
   cursor: pointer;
 }

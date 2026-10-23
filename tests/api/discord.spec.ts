@@ -516,7 +516,7 @@ test.describe('the messages of the channel of a gig (#45)', () => {
         expect.objectContaining({ id: '9202', text: '@trompettiste prenez vos sourdines' }),
       ],
     });
-    // Any member who sees the gig: the admin, who manages members, too.
+    // Any member who sees the gig: who manages members or gigs, too.
     for (const who of [email('Momo'), email('Sisi')]) {
       const member = await deviceOf(playwright, who);
       const theirs = await (await member.get(`/api/gigs/${gigId}/discord`)).json();
