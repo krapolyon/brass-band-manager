@@ -214,7 +214,7 @@ test.describe('a gig that becomes playable or confirmed', () => {
       `zaza: ${band} – Plan jouable`,
     ]);
     expect(sentPushes()[0]?.payload).toMatchObject({
-      body: 'Fête des Lumières – ven. 3 déc. : chaque pupitre a un oui',
+      body: 'Fête des Lumières – ven. 3 déc. : chaque pupitre a quelqu’un',
       url: `/gigs/${gigId}`,
     });
 
@@ -269,6 +269,38 @@ test.describe('a gig that becomes playable or confirmed', () => {
     turnOff('Zaza', 'notifyGigConfirmed');
     await jibe.put(`/api/gigs/${gigId}/status`, { data: { status: 'ACCEPTED' } });
     await jibe.put(`/api/gigs/${gigId}/status`, { data: { status: 'CONFIRMED' } });
+    expect(sentPushes()).toEqual([]);
+  });
+
+  test('the last section covered by an if needed: the app confirms the gig, and says so once (#37)', async ({
+    playwright,
+  }) => {
+    const accepted = addGig('Vide-grenier', { status: 'ACCEPTED', startsOn: '2027-10-16' });
+    const proposed = addGig('Fête des Lumières', { status: 'PROPOSED', startsOn: '2027-12-03' });
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    await subscribe(jibe, 'jibe');
+    await subscribe(zaza, 'zaza');
+    for (const gig of [accepted, proposed]) {
+      // Every section but the trumpets has a yes.
+      answerOf('Jibé', gig.slotId, 'YES');
+      for (const nickname of ['Riton', 'Lulu']) answerOf(nickname, gig.slotId, 'NO');
+    }
+
+    // Zaza would rather not come, but can: the gig is confirmed thanks to her.
+    expect(
+      await (await answer(zaza, accepted.gigId, accepted.slotId, 'IF_NEEDED')).json(),
+    ).toMatchObject({ status: 'CONFIRMED', isPlayable: true });
+    expect(received()).toEqual([`jibe: ${band} – Plan validé`]);
+    emptyPushes();
+
+    // A gig still proposed becomes playable, told once.
+    expect(
+      await (await answer(zaza, proposed.gigId, proposed.slotId, 'IF_NEEDED')).json(),
+    ).toMatchObject({ status: 'PROPOSED', isPlayable: true });
+    expect(received()).toEqual([`jibe: ${band} – Plan jouable`]);
+    emptyPushes();
+    await answer(zaza, proposed.gigId, proposed.slotId, 'YES');
     expect(sentPushes()).toEqual([]);
   });
 

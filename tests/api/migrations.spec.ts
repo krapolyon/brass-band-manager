@@ -79,7 +79,9 @@ test('nothing is applied without the password, or with a wrong one, which counts
   expect(await wrong.json()).toEqual({ error: 'invalidInput', fields: { password: 'invalid' } });
 
   expect(sql(`SELECT COUNT(*) FROM schemaMigration WHERE name = '${LAST}'`)).toBe('0');
-  expect(sql(`SELECT failedSignInCount FROM member WHERE email = '${admin.email}'`)).toBe('1');
+  expect(sql(`SELECT failedSignInCount FROM member WHERE nickname = '${admin.nickname}'`)).toBe(
+    '1',
+  );
 });
 
 test('at the fifth wrong password the device is signed out and nothing was applied', async ({
@@ -100,7 +102,7 @@ test('while sign-in is locked, even the right password applies nothing', async (
   unapplyLast();
   await signIn(request, admin.email, admin.password);
   sql(
-    `UPDATE member SET signInLockedUntil = NOW() + INTERVAL 10 MINUTE WHERE email = '${admin.email}'`,
+    `UPDATE member SET signInLockedUntil = NOW() + INTERVAL 10 MINUTE WHERE nickname = '${admin.nickname}'`,
   );
 
   const response = await request.post('/api/migrations', { data: { password: admin.password } });

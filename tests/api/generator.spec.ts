@@ -3,14 +3,17 @@ import {
   type CandidateSong,
   isNew,
   lengthOf,
+  positionsOf,
   propose,
   type Rule,
+  type SetPosition,
   seeded,
 } from '../../web/src/screens/gigs/generator.ts';
 
-// The setlist generator (model/gigs.md, entry 4, issue #25), run as it is,
-// without a browser, with a fixed random seed: the same draw each time. The
-// songs are made-up rows; their names do not matter here.
+// The setlist generator (model/gigs.md v1.9, entry 4; model/songs.md v1.9,
+// "Setlist attributes"; issues #25 and #47), run as it is, without a browser,
+// with a fixed random seed: the same draw each time. The songs are made-up
+// rows; their names do not matter here.
 
 const today = '2026-10-18';
 let lastId = 0;
@@ -19,9 +22,8 @@ function song(changes: Partial<CandidateSong> = {}): CandidateSong {
   return {
     id: lastId,
     status: 'IN_REPERTOIRE',
-    setCategory: 'STANDARD',
-    otherCategories: [],
-    isNeverFirst: false,
+    mood: 'MEDIUM',
+    positions: ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF'],
     tiringSectionIds: [],
     trickySectionIds: [],
     inRepertoireOn: '2015-01-01',
@@ -29,96 +31,228 @@ function song(changes: Partial<CandidateSong> = {}): CandidateSong {
   };
 }
 
-/** A repertoire where every rule can be kept for ten songs. */
-function repertoire(): CandidateSong[] {
-  return [
-    song({ setCategory: 'OPENER' }),
-    song({ setCategory: 'OPENER', tiringSectionIds: [1] }),
-    song({ setCategory: 'KNOWN', otherCategories: ['OPENER'] }),
-    song({ setCategory: 'CHOREOGRAPHY' }),
-    song({ setCategory: 'CHOREOGRAPHY', trickySectionIds: [2] }),
-    song({ setCategory: 'CHILL' }),
-    song({ setCategory: 'CHILL', trickySectionIds: [2] }),
-    song({ setCategory: 'KNOWN' }),
-    song({ setCategory: 'STANDARD' }),
-    song({ setCategory: 'STANDARD', isNeverFirst: true }),
-    song({ setCategory: 'PARTY' }),
-    song({ setCategory: 'PARTY', otherCategories: ['ENCORE'] }),
-    song({ setCategory: 'ENCORE' }),
-    song({ setCategory: 'PARTY', tiringSectionIds: [3] }),
-  ];
+/**
+ * A repertoire of `size` songs where every rule can be kept for a set of up
+ * to `size` songs: enough openers and closers, some tiring, some tricky.
+ */
+function repertoire(size = 36): CandidateSong[] {
+  return Array.from({ length: size }, (_, index) => {
+    const positions: SetPosition[] =
+      index % 6 === 0
+        ? ['START', 'FIRST_HALF']
+        : index % 6 === 1
+          ? ['SECOND_HALF', 'END']
+          : index % 6 === 2
+            ? ['START', 'END', 'MIDDLE']
+            : ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF'];
+    return song({
+      positions,
+      mood: index % 3 === 0 ? 'CHILL' : index % 3 === 1 ? 'PARTY' : 'MEDIUM',
+      tiringSectionIds: index % 7 === 3 ? [1] : [],
+      trickySectionIds: index % 5 === 4 ? [2] : [],
+    });
+  });
 }
 
 /** Every rule a proposal breaks, checked apart from the generator. */
 function broken(songIds: number[], songs: CandidateSong[]): Rule[] {
   const order = songIds.map((id) => songs.find((one) => one.id === id) as CandidateSong);
-  const serves = (one: CandidateSong, category: CandidateSong['setCategory']) =>
-    one.setCategory === category || one.otherCategories.includes(category);
   const count = order.length;
   const found = new Set<Rule>();
-  const first = order[0] as CandidateSong;
-  const last = order[count - 1] as CandidateSong;
-  if (!serves(first, 'OPENER') || first.isNeverFirst) found.add('opener');
-  if (!serves(last, 'PARTY') && !serves(last, 'ENCORE')) found.add('closer');
   order.forEach((one, place) => {
-    const inFirstHalf = place < count / 2;
-    if (one.setCategory === 'OPENER' && !inFirstHalf) found.add('halves');
-    if (one.setCategory === 'PARTY' && inFirstHalf) found.add('halves');
-    if (one.setCategory === 'ENCORE' && place !== count - 1) found.add('halves');
-    if (one.tiringSectionIds.length > 0 && !inFirstHalf) found.add('tiring');
-    const before = order[place - 1];
-    if (!before) return;
-    if (serves(one, 'CHOREOGRAPHY') && serves(before, 'CHOREOGRAPHY')) found.add('neighbours');
-    if (one.trickySectionIds.some((section) => before.trickySectionIds.includes(section))) {
-      found.add('neighbours');
+    const isFirst = place < 3;
+    const isLast = place >= count - 3;
+    const centre = (place + 0.5) / count;
+    const allowed: SetPosition[] =
+      isFirst && isLast
+        ? ['START', 'END']
+        : isFirst
+          ? ['START']
+          : isLast
+            ? ['END']
+            : [
+                centre < 0.5 ? 'FIRST_HALF' : 'SECOND_HALF',
+                ...(centre >= 0.35 && centre <= 0.65 ? (['MIDDLE'] as const) : []),
+              ];
+    if (!one.positions.some((position) => allowed.includes(position))) found.add('positions');
+    if (
+      one.tiringSectionIds.length > 0 &&
+      centre >= 0.5 &&
+      !(isLast && one.positions.includes('END'))
+    ) {
+      found.add('tiring');
     }
-    if (one.setCategory !== 'STANDARD' && one.setCategory === before.setCategory) {
-      found.add('alternate');
+    const before = order[place - 1];
+    if (
+      before &&
+      one.trickySectionIds.some((section) => before.trickySectionIds.includes(section))
+    ) {
+      found.add('tricky');
     }
   });
   return [...found];
 }
 
-test('ten songs that keep every rule, the same for the same seed, another for another seed', () => {
-  const songs = repertoire();
-  const options = { songs, count: 10, includeNew: false, avoid: [], today };
-
-  const first = propose({ ...options, random: seeded(42) });
-
-  expect(first.songIds).toHaveLength(10);
-  expect(new Set(first.songIds).size).toBe(10);
-  expect(first).toMatchObject({ dropped: [], isShort: false });
-  expect(broken(first.songIds, songs)).toEqual([]);
-  expect(propose({ ...options, random: seeded(42) }).songIds).toEqual(first.songIds);
-  expect(propose({ ...options, random: seeded(7) }).songIds).not.toEqual(first.songIds);
+test('the places of a set: Début for the first three, Fin for the last three, halves and middle counted at the centre', () => {
+  // 10 songs: centres 0.05 … 0.95.
+  expect(Array.from({ length: 10 }, (_, place) => positionsOf(place, 10))).toEqual([
+    ['START'],
+    ['START'],
+    ['START'],
+    ['FIRST_HALF', 'MIDDLE'], // 0.35
+    ['FIRST_HALF', 'MIDDLE'], // 0.45
+    ['SECOND_HALF', 'MIDDLE'], // 0.55
+    ['SECOND_HALF', 'MIDDLE'], // 0.65
+    ['END'],
+    ['END'],
+    ['END'],
+  ]);
+  // 5 songs or fewer: a place among the first three and the last three takes either.
+  expect(Array.from({ length: 5 }, (_, place) => positionsOf(place, 5))).toEqual([
+    ['START'],
+    ['START'],
+    ['START', 'END'],
+    ['END'],
+    ['END'],
+  ]);
+  expect(positionsOf(1, 3)).toEqual(['START', 'END']);
+  // 30 songs: place 4 (centre 0.15) is the first half only.
+  expect(positionsOf(4, 30)).toEqual(['FIRST_HALF']);
 });
 
-test('the rules hold over many draws, and an encore closes when one fits', () => {
+test('sets of 3, 5, 10 and 30 songs keep every rule; the same seed gives the same set', () => {
   const songs = repertoire();
-  for (let seed = 1; seed <= 200; seed++) {
+  for (const count of [3, 5, 10, 30]) {
+    for (let seed = 1; seed <= 40; seed++) {
+      const proposal = propose({
+        songs,
+        count,
+        includeNew: false,
+        avoid: [],
+        today,
+        random: seeded(seed),
+      });
+      expect(proposal.songIds, `${count} songs, seed ${seed}`).toHaveLength(count);
+      expect(new Set(proposal.songIds).size).toBe(count);
+      expect(proposal.dropped, `${count} songs, seed ${seed}`).toEqual([]);
+      expect(broken(proposal.songIds, songs), `${count} songs, seed ${seed}`).toEqual([]);
+    }
+    const options = { songs, count, includeNew: false, avoid: [], today };
+    expect(propose({ ...options, random: seeded(42) }).songIds).toEqual(
+      propose({ ...options, random: seeded(42) }).songIds,
+    );
+    expect(propose({ ...options, random: seeded(42) }).songIds).not.toEqual(
+      propose({ ...options, random: seeded(7) }).songIds,
+    );
+  }
+});
+
+test('a repertoire where no song has Début: the positions are dropped, and said', () => {
+  const songs = repertoire().map((one) => ({
+    ...one,
+    positions: one.positions.filter((position) => position !== 'START'),
+  }));
+  const proposal = propose({
+    songs,
+    count: 10,
+    includeNew: false,
+    avoid: [],
+    today,
+    random: seeded(5),
+  });
+  expect(proposal.songIds).toHaveLength(10);
+  expect(proposal.dropped).toEqual(['positions', 'tiring', 'tricky']);
+});
+
+test('a tiring song with Fin may close the set; without Fin it stays in the first half', () => {
+  const tiringEnd = song({ positions: ['END'], tiringSectionIds: [1] });
+  const tiringMiddle = song({
+    positions: ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF'],
+    tiringSectionIds: [1],
+  });
+  const songs = [...repertoire(), tiringEnd, tiringMiddle];
+  let tiringEndPlayed = 0;
+  for (let seed = 1; seed <= 60; seed++) {
     const proposal = propose({
       songs,
-      count: 8,
+      count: 10,
       includeNew: false,
       avoid: [],
       today,
       random: seeded(seed),
     });
+    expect(proposal.dropped).toEqual([]);
     expect(broken(proposal.songIds, songs), `seed ${seed}`).toEqual([]);
-    const last = songs.find((one) => one.id === proposal.songIds.at(-1));
-    expect(
-      last?.setCategory === 'ENCORE' || last?.otherCategories.includes('ENCORE'),
-      `seed ${seed}`,
-    ).toBe(true);
+    const at = proposal.songIds.indexOf(tiringEnd.id);
+    if (at >= 0) {
+      tiringEndPlayed++;
+      expect(at).toBeGreaterThanOrEqual(7);
+    }
+    const middleAt = proposal.songIds.indexOf(tiringMiddle.id);
+    if (middleAt >= 0) expect(middleAt).toBeLessThan(5);
   }
+  expect(tiringEndPlayed).toBeGreaterThan(0);
+});
+
+test('two songs tricky for the same section never follow each other; for two sections they may', () => {
+  const songs = Array.from({ length: 12 }, (_, index) =>
+    song({
+      positions: ['START', 'FIRST_HALF', 'MIDDLE', 'SECOND_HALF', 'END'],
+      trickySectionIds: index < 6 ? [index % 2 === 0 ? 1 : 2] : [],
+    }),
+  );
+  for (let seed = 1; seed <= 40; seed++) {
+    const proposal = propose({
+      songs,
+      count: 12,
+      includeNew: false,
+      avoid: [],
+      today,
+      random: seeded(seed),
+    });
+    expect(proposal.dropped).toEqual([]);
+    expect(broken(proposal.songIds, songs), `seed ${seed}`).toEqual([]);
+  }
+});
+
+test('the mood weighs the draw: Chill near the start, Teuf near the end, never a rule', () => {
+  // Every song can stand anywhere: only the mood can tell them apart.
+  const anywhere: SetPosition[] = ['START', 'FIRST_HALF', 'MIDDLE', 'SECOND_HALF', 'END'];
+  const songs = Array.from({ length: 30 }, (_, index) =>
+    song({ positions: anywhere, mood: index < 10 ? 'CHILL' : index < 20 ? 'PARTY' : 'MEDIUM' }),
+  );
+  const moodAt = { start: { CHILL: 0, PARTY: 0 }, end: { CHILL: 0, PARTY: 0 } };
+  for (let seed = 1; seed <= 200; seed++) {
+    const ids = propose({
+      songs,
+      count: 10,
+      includeNew: false,
+      avoid: [],
+      today,
+      random: seeded(seed),
+    }).songIds;
+    const mood = (id: number | undefined) => songs.find((one) => one.id === id)?.mood;
+    for (const id of ids.slice(0, 3)) {
+      const one = mood(id);
+      if (one === 'CHILL' || one === 'PARTY') moodAt.start[one]++;
+    }
+    for (const id of ids.slice(-3)) {
+      const one = mood(id);
+      if (one === 'CHILL' || one === 'PARTY') moodAt.end[one]++;
+    }
+  }
+  expect(moodAt.start.CHILL).toBeGreaterThan(moodAt.start.PARTY * 1.5);
+  expect(moodAt.end.PARTY).toBeGreaterThan(moodAt.end.CHILL * 1.5);
+  // A preference only: a Teuf song still opens a set now and then.
+  expect(moodAt.start.PARTY).toBeGreaterThan(0);
 });
 
 test('the songs a setlist cannot hold, and the new ones unless asked, are left out', () => {
   const songs = [
     ...repertoire(),
-    song({ status: 'PROPOSED', setCategory: 'OPENER' }),
-    song({ status: 'ABANDONED', setCategory: 'OPENER' }),
-    song({ setCategory: 'OPENER', inRepertoireOn: '2026-09-01' }),
+    song({ status: 'PROPOSED' }),
+    song({ status: 'ABANDONED' }),
+    song({ inRepertoireOn: '2026-09-01' }),
   ];
   const left = songs.slice(-3).map((one) => one.id);
   for (let seed = 1; seed <= 50; seed++) {
@@ -137,9 +271,9 @@ test('the songs a setlist cannot hold, and the new ones unless asked, are left o
   }
   // Asked for, the new song can come; the others never.
   const withNew = Array.from(
-    { length: 50 },
+    { length: 80 },
     (_, seed) =>
-      propose({ songs, count: 14, includeNew: true, avoid: [], today, random: seeded(seed) })
+      propose({ songs, count: 30, includeNew: true, avoid: [], today, random: seeded(seed) })
         .songIds,
   ).flat();
   expect(withNew).toContain(songs.at(-1)?.id);
@@ -154,28 +288,31 @@ test('a song is new for 2 months after it entered the repertoire; without a day,
 });
 
 test('the songs of the other setlists of the gig are avoided as long as there are enough', () => {
-  const songs = repertoire();
-  const avoid = songs.slice(5, 9).map((one) => one.id);
-  const proposal = propose({
-    songs,
-    count: 10,
-    includeNew: false,
-    avoid,
-    today,
-    random: seeded(3),
-  });
-  expect(proposal.songIds.some((id) => avoid.includes(id))).toBe(false);
-  // Twelve asked: the avoided ones come back to fill, only as many as are missing.
+  const songs = repertoire(24);
+  const avoid = songs.slice(3, 9).map((one) => one.id);
   for (let seed = 1; seed <= 30; seed++) {
-    const full = propose({
+    const proposal = propose({
       songs,
-      count: 12,
+      count: 10,
       includeNew: false,
       avoid,
       today,
       random: seeded(seed),
     });
-    expect(full.songIds).toHaveLength(12);
+    expect(
+      proposal.songIds.some((id) => avoid.includes(id)),
+      `seed ${seed}`,
+    ).toBe(false);
+    // Twenty asked: the avoided ones come back to fill, only as many as are missing.
+    const full = propose({
+      songs,
+      count: 20,
+      includeNew: false,
+      avoid,
+      today,
+      random: seeded(seed),
+    });
+    expect(full.songIds).toHaveLength(20);
     expect(
       full.songIds.filter((id) => avoid.includes(id)),
       `seed ${seed}`,
@@ -184,96 +321,26 @@ test('the songs of the other setlists of the gig are avoided as long as there ar
 });
 
 test('a song of another setlist of the gig does not come back to keep a rule', () => {
-  // The only song that can open is in another setlist of the gig.
-  const opener = song({ setCategory: 'OPENER' });
-  const songs = [
-    opener,
-    song({ setCategory: 'KNOWN' }),
-    song({ setCategory: 'CHILL' }),
-    song({ setCategory: 'STANDARD' }),
-    song({ setCategory: 'PARTY' }),
+  // The only songs that can open are in another setlist of the gig.
+  const openers = [
+    song({ positions: ['START'] }),
+    song({ positions: ['START'] }),
+    song({ positions: ['START'] }),
   ];
-  const proposal = propose({
-    songs,
-    count: 4,
-    includeNew: false,
-    avoid: [opener.id],
-    today,
-    random: seeded(5),
-  });
-  expect(proposal.songIds).not.toContain(opener.id);
-  expect(proposal.dropped[0]).toBe('opener');
+  const songs = [
+    ...openers,
+    ...Array.from({ length: 8 }, () =>
+      song({ positions: ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF', 'END'] }),
+    ),
+  ];
+  const avoid = openers.map((one) => one.id);
+  const proposal = propose({ songs, count: 8, includeNew: false, avoid, today, random: seeded(5) });
+  expect(proposal.songIds.some((id) => avoid.includes(id))).toBe(false);
+  expect(proposal.dropped[0]).toBe('positions');
 });
 
-test('when the encore cannot close, a party song does, before any rule is dropped', () => {
-  // The encore and the only song that can stand before it are both choreographies.
-  const songs = [
-    song({ setCategory: 'OPENER' }),
-    song({ setCategory: 'CHOREOGRAPHY' }),
-    song({ setCategory: 'ENCORE', otherCategories: ['CHOREOGRAPHY'] }),
-    song({ setCategory: 'PARTY' }),
-  ];
-  const proposal = propose({
-    songs,
-    count: 3,
-    includeNew: false,
-    avoid: [],
-    today,
-    random: seeded(9),
-  });
-  expect(proposal.dropped).toEqual([]);
-  expect(broken(proposal.songIds, songs)).toEqual([]);
-});
-
-test('a small repertoire drops the last rules first, and says which; too few songs say so', () => {
-  // Two choreographies, two tricky for the same section, no other choice:
-  // "neighbours" and "alternate" cannot hold, the first rules still do.
-  const songs = [
-    song({ setCategory: 'OPENER' }),
-    song({ setCategory: 'CHOREOGRAPHY', trickySectionIds: [1] }),
-    song({ setCategory: 'CHOREOGRAPHY', trickySectionIds: [1] }),
-    song({ setCategory: 'PARTY' }),
-  ];
-  const proposal = propose({
-    songs,
-    count: 4,
-    includeNew: false,
-    avoid: [],
-    today,
-    random: seeded(1),
-  });
-  expect(proposal.dropped).toEqual(['neighbours', 'alternate']);
-  expect(
-    broken(proposal.songIds, songs).filter((rule) => !proposal.dropped.includes(rule)),
-  ).toEqual([]);
-  expect(proposal.songIds[0]).toBe(songs[0]?.id);
-  expect(proposal.songIds.at(-1)).toBe(songs[3]?.id);
-
-  // Without any opener: everything but the first rule could be kept, but
-  // rules are dropped from the end, so all of them go.
-  const noOpener = [
-    song({ setCategory: 'KNOWN' }),
-    song({ setCategory: 'PARTY' }),
-    song({ setCategory: 'CHILL' }),
-  ];
-  const forced = propose({
-    songs: noOpener,
-    count: 3,
-    includeNew: false,
-    avoid: [],
-    today,
-    random: seeded(1),
-  });
-  expect(forced.dropped).toEqual([
-    'opener',
-    'closer',
-    'halves',
-    'tiring',
-    'neighbours',
-    'alternate',
-  ]);
-  expect(forced.songIds).toHaveLength(3);
-
+test('too few songs: all of them, and the proposal says it is short', () => {
+  const songs = repertoire(4);
   const short = propose({
     songs,
     count: 10,
@@ -294,7 +361,6 @@ test('a small repertoire drops the last rules first, and says which; too few son
 });
 
 test('the length of a setlist: its songs and the time between two, rounded to the minute', () => {
-  // 6 songs of 3:30 make 21:00, plus 5 × 0:30: 23:30, about 24 min (model/gigs.md).
   expect(lengthOf([210, 210, 210, 210, 210, 210], 30)).toEqual({ minutes: 24, withoutLength: 0 });
   expect(lengthOf([232, null, 180, null], 30)).toEqual({ minutes: 8, withoutLength: 2 });
   expect(lengthOf([], 30)).toEqual({ minutes: 0, withoutLength: 0 });

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Access;
 
+use BrassBand\Members\PersonalData;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
@@ -36,6 +37,7 @@ final class CheckPasswordLinkAction
         private readonly PasswordLinks $links,
         private readonly PhotoStore $photos,
         private readonly Sections $sections,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -56,6 +58,7 @@ final class CheckPasswordLinkAction
         if ($member === false) {
             throw new ApiError(404, 'invalidPasswordLink');
         }
+        $member = $this->personal->opened($member);
         $photoPath = $member['photoPath'];
         unset($member['photoPath']);
         $member['instrumentId'] = (int) $member['instrumentId'];

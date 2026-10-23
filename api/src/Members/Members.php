@@ -22,8 +22,10 @@ final class Members
     private const COLUMNS = 'id, nickname, firstName, lastName, email, mobilePhone, streetAddress,
         postalCode, city, countryCode, addressInstructions, instrumentId, status, photoPath';
 
-    public function __construct(private readonly Connection $database)
-    {
+    public function __construct(
+        private readonly Connection $database,
+        private readonly PersonalData $personal,
+    ) {
     }
 
     /**
@@ -81,7 +83,7 @@ final class Members
         return [
             'id' => (int) $member['id'],
             'status' => (string) $member['status'],
-            'email' => (string) $member['email'],
+            'email' => (string) $this->personal->opened(['email' => $member['email']])['email'],
             'photoPath' => is_string($member['photoPath']) ? $member['photoPath'] : null,
             'roles' => $this->roles($memberId),
         ];
@@ -145,6 +147,7 @@ final class Members
      */
     private function view(CurrentMember $viewer, array $member): array
     {
+        $member = $this->personal->opened($member);
         $id = (int) $member['id'];
         $member['photoUrl'] = PhotoStore::url($id, $member['photoPath']);
         unset($member['photoPath']);

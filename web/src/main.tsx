@@ -6,6 +6,7 @@ import { AppearanceOf } from './AppearanceOf.tsx';
 import { followDevice } from './appearance.ts';
 import { BandIdentity } from './band.ts';
 import i18n from './i18n.ts';
+import { listenForInstallPrompt } from './installGuide.ts';
 import { router } from './router.tsx';
 import './styles/fonts.css';
 import './styles/tokens.css';
@@ -18,6 +19,8 @@ import { readAboutTheApp } from './about.ts';
 document.documentElement.lang = i18n.language;
 document.title = i18n.t('app.name');
 followDevice();
+// The install window of Android can be offered before the guide is on the screen.
+listenForInstallPrompt();
 
 // Keeps what the API answered, and asks again when the app comes back to the
 // foreground: this is how screens stay fresh without real time.

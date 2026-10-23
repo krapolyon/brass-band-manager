@@ -15,6 +15,7 @@ import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { useDeviceTextSize } from '../../deviceAccessibility.ts';
 import i18n, { languageName } from '../../i18n.ts';
+import { INSTALL_GUIDE, installPlatform } from '../../installGuide.ts';
 import { instrumentsOf, useMembers, useSections } from '../../members.ts';
 import { forgetAsked, useNotificationSettings, usePush } from '../../push.ts';
 import { useMe, useSetMe } from '../../session.ts';
@@ -161,6 +162,16 @@ export function SettingsScreen() {
               opensPanel
               chevron
             />
+            {/* While the app is not installed on this phone or tablet. */}
+            {installPlatform() !== null && (
+              <NavRow
+                icon="Smartphone"
+                label={t('settings.install.title')}
+                detail={t('settings.install.detail')}
+                to={INSTALL_GUIDE}
+                state={{ back: '/settings' }}
+              />
+            )}
           </div>
         </Sheet>
 

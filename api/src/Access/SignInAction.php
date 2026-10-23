@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Access;
 
+use BrassBand\Members\PersonalData;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
@@ -25,6 +26,7 @@ final class SignInAction
         private readonly Sessions $sessions,
         private readonly SessionCookie $cookie,
         private readonly Profile $profile,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -67,18 +69,23 @@ final class SignInAction
         // moment the count of wrong passwords is read until it is written
         // back. Without this, tries sent at the same instant would all be
         // judged before any of them is counted.
-        return $this->database->transactional(function () use ($email, $input): ?int {
+        // Found by the hash of the email, which is encrypted (PersonalData).
+        // Asked before the transaction: a look at the columns of the table
+        // inside it would fix what it reads before the row is held.
+        [$where, $values] = $this->personal->whereEmail($email);
+
+        return $this->database->transactional(function () use ($email, $input, $where, $values): ?int {
             $member = $this->database->fetchAssociative(
-                'SELECT id, email, passwordHash,
+                "SELECT id, email, passwordHash,
                         signInLockedUntil IS NOT NULL AND signInLockedUntil > NOW() AS isLocked
                  FROM member
-                 WHERE email = ? AND status IN (?, ?)
-                 FOR UPDATE',
-                [$email, ...AccessRules::SIGN_IN_STATUSES],
+                 WHERE {$where} AND status IN (?, ?)
+                 FOR UPDATE",
+                [...$values, ...AccessRules::SIGN_IN_STATUSES],
             );
 
-            // The database compares without regard to accents; an email is exact.
-            if ($member === false || $member['email'] !== $email || $member['passwordHash'] === null) {
+            // The database compares a clear email without regard to accents; an email is exact.
+            if ($member === false || $this->personal->opened($member)['email'] !== $email || $member['passwordHash'] === null) {
                 Passwords::spendTime($input->password);
 
                 return null;

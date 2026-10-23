@@ -95,7 +95,10 @@ export function addSong(name: string, status = 'IN_REPERTOIRE'): number {
   return Number(
     sql(`
       INSERT INTO song (name, originalTitle, originalArtist, status) VALUES ('${name}', 'Titre de ${name}', 'Artiste', '${status}');
-      SELECT LAST_INSERT_ID();
+      SET @song = LAST_INSERT_ID();
+      -- The positions of a new song, as the app gives them.
+      INSERT INTO songPosition (songId, position) VALUES (@song, 'FIRST_HALF'), (@song, 'MIDDLE'), (@song, 'SECOND_HALF');
+      SELECT @song;
     `),
   );
 }

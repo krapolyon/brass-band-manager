@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Access;
 
+use BrassBand\Members\PersonalData;
 use BrassBand\Http\ApiError;
 use BrassBand\Members\PhotoStore;
 use Doctrine\DBAL\Connection;
@@ -24,8 +25,10 @@ final class Profile
         'hasExtendedTimeouts',
     ];
 
-    public function __construct(private readonly Connection $database)
-    {
+    public function __construct(
+        private readonly Connection $database,
+        private readonly PersonalData $personal,
+    ) {
     }
 
     /**
@@ -47,6 +50,7 @@ final class Profile
             throw new ApiError(401, 'notSignedIn');
         }
 
+        $profile = $this->personal->opened($profile);
         foreach (self::BOOLEANS as $field) {
             $profile[$field] = (bool) $profile[$field];
         }

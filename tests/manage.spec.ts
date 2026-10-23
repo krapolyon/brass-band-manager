@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import { memberColumns } from './support/personal.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 
 // Managing members: the list (a table on a desktop), the record of a member
@@ -155,9 +156,7 @@ test.describe('an invitation', () => {
     await expect(panel).toContainText('On ne te le montrera plus');
     const link = await panel.getByLabel('Lien d’invitation').inputValue();
     expect(link).toMatch(/^http:\/\/localhost:8081\/invitation#[0-9a-f]{64}$/);
-    expect(sql("SELECT status, mobilePhone FROM member WHERE nickname = 'Riton'")).toBe(
-      'INVITED\t+33612345678',
-    );
+    expect(memberColumns('Riton', 'status, mobilePhone')).toBe('INVITED\t+33612345678');
 
     // The link opens the invitation of Riton, on another device.
     const other = await browser.newPage();
@@ -209,7 +208,7 @@ test.describe('the record of a member', () => {
     await page.getByRole('button', { name: 'Enregistrer' }).click();
 
     await expect(page).toHaveURL('/members/manage');
-    expect(sql("SELECT firstName FROM member WHERE nickname = 'Zaza'")).toBe('Isabelle');
+    expect(memberColumns('Zaza', 'firstName')).toBe('Isabelle');
     expect(sql(`SELECT role FROM memberRole WHERE memberId = ${memberId('Zaza')}`)).toBe(
       'GIG_MANAGER',
     );

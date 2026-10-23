@@ -38,7 +38,7 @@ final class CreateMemberAction
         try {
             [$memberId, $token] = $this->database->transactional(function () use ($values, $me): array {
                 $this->database->insert('member', [
-                    ...$values,
+                    ...$this->record->stored($values),
                     'status' => 'INVITED',
                     'language' => $this->database->fetchOne('SELECT defaultLanguage FROM band WHERE id = 1'),
                     'updatedByMemberId' => $me->id,

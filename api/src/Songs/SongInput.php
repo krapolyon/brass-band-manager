@@ -14,6 +14,7 @@ final class SongInput
         public readonly string $originalTitle,
         public readonly string $originalArtist,
         public readonly SongStatus $status,
+        public readonly ?string $copyright = null,
         public readonly ?int $bpm = null,
         public readonly ?string $versionOn = null,
         public readonly ?string $versionNote = null,
@@ -23,10 +24,9 @@ final class SongInput
         // m:ss is read by the front: the API receives seconds.
         public readonly ?int $durationSeconds = null,
         public readonly ?string $inRepertoireOn = null,
-        public readonly SetCategory $setCategory = SetCategory::STANDARD,
-        public readonly bool $isNeverFirst = false,
-        /** @var list<SetCategory> */
-        public readonly array $otherCategories = [],
+        public readonly SongMood $mood = SongMood::MEDIUM,
+        /** @var list<SetPosition>|null Null: those of a new song */
+        public readonly ?array $positions = null,
         /** @var list<int> */
         public readonly array $tiringSectionIds = [],
         /** @var list<int> */

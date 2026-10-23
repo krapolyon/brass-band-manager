@@ -16,6 +16,8 @@ type Props = {
   tone?: 'default' | 'danger';
   /** Opens a screen: the row is a link, with a chevron at its end. */
   to?: string;
+  /** With `to`: what the screen it opens is told, such as where to go back. */
+  state?: unknown;
   /** Acts in place: the row is a button. */
   onClick?: () => void;
   /** An address outside the app (a phone number, an email): the row is a link. */
@@ -40,6 +42,7 @@ export function NavRow({
   detail,
   tone = 'default',
   to,
+  state,
   onClick,
   href,
   trailing,
@@ -62,7 +65,7 @@ export function NavRow({
 
   if (to) {
     return (
-      <Link className="NavRow" data-tone={tone} to={to}>
+      <Link className="NavRow" data-tone={tone} to={to} state={state}>
         {content}
       </Link>
     );

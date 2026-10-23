@@ -19,6 +19,11 @@ return [
     // At least 16 characters, like a real one.
     'installKey' => 'local-install-key',
 
+    // The key that encrypts the names, email, phone and address of members.
+    // Made by "npm run setup" in api/encryptionKey.local, which is never
+    // committed: unlike the rest of this file, it is not public.
+    'encryptionKey' => is_file(__DIR__ . '/encryptionKey.local') ? trim((string) file_get_contents(__DIR__ . '/encryptionKey.local')) : '',
+
     // The test server (port 8081) says its own address.
     'appUrl' => getenv('BRASS_BAND_APP_URL') ?: 'http://localhost:8080',
 

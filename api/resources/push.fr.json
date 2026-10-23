@@ -13,7 +13,7 @@
   "days": "dim.,lun.,mar.,mer.,jeu.,ven.,sam.",
   "months": "janv.,févr.,mars,avr.,mai,juin,juil.,août,sept.,oct.,nov.,déc.",
   "gigs.push.playable.title": "{band} – Plan jouable",
-  "gigs.push.playable.body": "{name} – {date} : chaque pupitre a un oui",
+  "gigs.push.playable.body": "{name} – {date} : chaque pupitre a quelqu’un",
   "gigs.push.confirmed.title": "{band} – Plan validé",
   "gigs.push.confirmed.body": "{name} – {date} – RDV {time}",
   "gigs.push.confirmed.bodyNoTime": "{name} – {date}",

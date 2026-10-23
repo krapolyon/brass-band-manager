@@ -17,7 +17,8 @@ import {
   setDeviceTextSize,
   useAccessibilityBeforeSignIn,
 } from '../../deviceAccessibility.ts';
-import { HOME, type Me, useSetMe } from '../../session.ts';
+import { afterSignIn } from '../../installGuide.ts';
+import { type Me, useSetMe } from '../../session.ts';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { MemberRecordFields, type PhotoDraft } from '../members/MemberRecordFields.tsx';
 import { draftOf, type MemberRecord, recordOf, useRecordErrors } from '../members/record.ts';
@@ -107,7 +108,7 @@ export function OnboardingScreen({ token, invitation }: Props) {
     onSuccess: (me) => {
       setDeviceTextSize(options.textSizePercent);
       setMe(me);
-      navigate(HOME, { replace: true });
+      navigate(afterSignIn(), { replace: true });
     },
     onError: (error) => {
       // A record refused at the last moment (a nickname taken meanwhile) is fixed at step 1.

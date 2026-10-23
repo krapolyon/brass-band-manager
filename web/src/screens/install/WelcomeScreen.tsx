@@ -67,7 +67,7 @@ export function WelcomeScreen() {
   // database gets them here): not a matter of key.
   const databaseError =
     check.error instanceof ApiError &&
-    (check.error.error === 'migrationFailed' || check.error.error === 'migrationsRunning')
+    ['migrationFailed', 'migrationsRunning', 'encryptionKeyMissing'].includes(check.error.error)
       ? check.error.error
       : null;
   const isKeyWrong = check.isError && !isUnreachable && !databaseError;
@@ -104,7 +104,9 @@ export function WelcomeScreen() {
           <Message kind="danger">
             {databaseError === 'migrationFailed'
               ? t('install.welcome.databaseFailed')
-              : t('band.migrations.running')}
+              : databaseError === 'encryptionKeyMissing'
+                ? t('band.migrations.encryptionKeyMissing')
+                : t('band.migrations.running')}
           </Message>
         )}
         <Sheet>

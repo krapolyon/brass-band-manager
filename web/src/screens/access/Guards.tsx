@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { useBand } from '../../band.ts';
-import { HOME, useMe } from '../../session.ts';
+import { afterSignIn, INSTALL_GUIDE } from '../../installGuide.ts';
+import { useMe } from '../../session.ts';
 import { AskNotifications } from '../settings/AskNotifications.tsx';
 import { PlayerProvider } from '../songs/Player.tsx';
 
@@ -26,6 +27,7 @@ function Waiting({ isError }: { isError: boolean }) {
 export function MembersOnly() {
   const me = useMe();
   const band = useBand();
+  const { pathname } = useLocation();
 
   if (me.isPending || band.isPending) return <Waiting isError={false} />;
   if (band.data === null) return <Navigate to="/install" replace />;
@@ -37,21 +39,24 @@ export function MembersOnly() {
   return (
     <PlayerProvider>
       <Outlet />
-      {/* Asked once on a device that was never asked. */}
-      <AskNotifications />
+      {/* Asked once on a device that was never asked; not over the install
+          guide, which comes first on a phone. */}
+      {pathname !== INSTALL_GUIDE && <AskNotifications />}
     </PlayerProvider>
   );
 }
 
 // Around the screens shown before sign-in: a member already signed in on this
-// device has nothing to do there.
+// device has nothing to do there. This is also where signing in leads on, as
+// soon as the session is known: home, or the install guide the first time on
+// a phone.
 export function VisitorsOnly() {
   const me = useMe();
   const band = useBand();
 
   if (me.isPending || band.isPending) return <Waiting isError={false} />;
   if (band.data === null) return <Navigate to="/install" replace />;
-  if (me.data) return <Navigate to={HOME} replace />;
+  if (me.data) return <Navigate to={afterSignIn()} replace />;
 
   return <Outlet />;
 }

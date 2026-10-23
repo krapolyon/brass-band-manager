@@ -1,7 +1,8 @@
 import { expect, type Page, type PlaywrightWorkerArgs, test } from '@playwright/test';
 import { chooseAccessibility } from './support/accessibility.ts';
-import { emptyDatabase, sql } from './support/database.ts';
+import { emptyDatabase } from './support/database.ts';
 import { png } from './support/images.ts';
+import { memberColumns } from './support/personal.ts';
 import { addMember, admin, deviceOf, install, memberId } from './support/scenario.ts';
 import { emptyStorage, storedFiles } from './support/storage.ts';
 
@@ -34,8 +35,8 @@ const title = (page: Page) => page.getByRole('heading', { level: 1 });
 const next = (page: Page) => page.getByRole('button', { name: 'Continuer' });
 const enter = (page: Page) => page.getByRole('button', { name: 'Entrer dans l’app' });
 const password = (page: Page) => page.getByLabel('Mot de passe', { exact: true });
-const kiki = (columns: string) =>
-  sql(`SELECT ${columns} FROM member WHERE id = ${memberId('Kiki')}`);
+// The personal fields read in clear, as the app reads them (they are encrypted).
+const kiki = (columns: string) => memberColumns('Kiki', columns);
 
 test('an invited member checks their details, chooses a password and is in', async ({ page }) => {
   await page.goto(link);

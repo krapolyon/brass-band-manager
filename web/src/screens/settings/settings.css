@@ -43,7 +43,7 @@
   flex: 1;
 }
 
-/* Notifications: the sheet that asks on a new device, and the help of an iPhone. */
+/* Notifications: the sheet that asks on a new device. */
 .settings-ask {
   display: flex;
   flex-direction: column;
@@ -51,8 +51,7 @@
   gap: var(--spaceMd);
 }
 
-.settings-ask p,
-.settings-help {
+.settings-ask p {
   margin: 0;
 }
 
@@ -128,4 +127,12 @@
 /* The steps of Google Agenda keep their line breaks. */
 .settings-steps {
   white-space: pre-line;
+}
+
+/* The install guide: the link of the app, when the browser refused to copy it. */
+.settings-link {
+  margin: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  user-select: all;
 }

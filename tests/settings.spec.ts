@@ -3,6 +3,7 @@ import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { fakePush } from './support/fakePush.ts';
 import { png } from './support/images.ts';
+import { memberColumns } from './support/personal.ts';
 import {
   addMember,
   admin,
@@ -41,8 +42,8 @@ async function signIn(page: Page, email = 'zaza@example.org', password = memberP
   await page.goto('/settings');
 }
 
-const zaza = (columns: string) =>
-  sql(`SELECT ${columns} FROM member WHERE id = ${memberId('Zaza')}`);
+// The personal fields read in clear, as the app reads them (they are encrypted).
+const zaza = (columns: string) => memberColumns('Zaza', columns);
 const root = (page: Page) => page.locator('html');
 const save = (page: Page) => page.getByRole('button', { name: 'Enregistrer' });
 

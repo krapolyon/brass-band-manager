@@ -3,6 +3,23 @@
 What changes in the app, version after version. This file is written by
 `npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.
 
+## 0.3.1 — 2026-10-23
+
+### Added
+
+- After sign-in, a phone offers once to put the app on its home screen, with the steps for that phone. It stays in the settings, under “Install the app”, while the app is not installed.
+
+### Changed
+
+- The names, email addresses, phone numbers and addresses of members are encrypted in the database.
+- An “if needed” answer now counts for whether a gig can be played, and the gig names who it counts on.
+- A song has a mood and the places of a set it can be played at, instead of its categories, and a copyright field. The setlist generator follows them.
+- A band without Discord no longer sees it in the form of a song.
+
+### Fixed
+
+- The browser tab shows the icon of the band.
+
 ## 0.3.0 — 2026-10-18
 
 ### Added

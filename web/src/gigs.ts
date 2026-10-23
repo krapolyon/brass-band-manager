@@ -27,12 +27,13 @@ export type GigSlotSummary = {
   position: number;
   costumeId: number | null;
   ownAnswer: AttendanceAnswer | null;
+  /** Every section has someone who answered yes or if needed (model/gigs.md, "Playable", #37). */
   isPlayable: boolean;
-  /** Playable if the members who answered "if needed" came. */
-  isPlayableIfNeeded: boolean;
-  /** The sections that have no yes. */
+  /** The sections with nobody who answered yes or if needed. */
   missingSectionIds: number[];
-  /** The section of the member is the last one without a yes. */
+  /** Who the slot counts on without a yes in their section: those who answered if needed. */
+  playableThanksTo: { memberId: number; nickname: string; sectionId: number }[];
+  /** The section of the member is the last one without anyone. */
   ownYesMakesPlayable: boolean;
 };
 

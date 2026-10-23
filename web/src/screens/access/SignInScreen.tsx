@@ -9,7 +9,8 @@ import { Button } from '../../components/Button.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { TextField } from '../../components/TextField.tsx';
-import { HOME, type Me, useSetMe } from '../../session.ts';
+import { afterSignIn } from '../../installGuide.ts';
+import { type Me, useSetMe } from '../../session.ts';
 import { FlowLayout } from '../FlowLayout.tsx';
 import { AccessibilityButton } from './AccessibilityButton.tsx';
 import { PasswordField } from './PasswordField.tsx';
@@ -29,7 +30,7 @@ export function SignInScreen() {
     mutationFn: () => api<Me>('/api/session', { method: 'POST', body: { email, password } }),
     onSuccess: (me) => {
       setMe(me);
-      navigate(HOME, { replace: true });
+      navigate(afterSignIn(), { replace: true });
     },
   });
   const isRefused = signIn.error instanceof ApiError && signIn.error.status === 401;
