@@ -53,7 +53,7 @@ final class UpdateMemberAction
                     Members::mustCover($me, $target);
                 }
 
-                $this->database->update('member', [...$values, 'updatedByMemberId' => $me->id], ['id' => $target['id']]);
+                $this->database->update('member', [...$this->record->stored($values), 'updatedByMemberId' => $me->id], ['id' => $target['id']]);
             });
         } catch (UniqueConstraintViolationException) {
             // Taken between the check and the save: the check now says which field.

@@ -201,7 +201,8 @@ final class Gigs
         return $view;
     }
 
-    // True when one slot of the gig has a yes in every section.
+    // True when one slot of the gig has a yes or an "if needed" in every
+    // section (model/gigs.md, "Playable", issue #37).
     public function isPlayable(int $gigId): bool
     {
         foreach ($this->missingSections([$gigId]) as $slot) {
@@ -255,14 +256,16 @@ final class Gigs
     }
 
     /**
-     * For each slot of these gigs: the sections of the band that have no yes,
-     * and those that have neither a yes nor an "if needed".
+     * For each slot of these gigs: the sections of the band that have
+     * nobody, neither a yes nor an "if needed" (model/gigs.md, "Playable",
+     * issue #37), and the members thanks to whom the slot is covered: those
+     * who answered "if needed" in a section that has no yes.
      *
      * Only the sections that have a current member count, and only the
      * answers of current members: an empty section blocks nothing.
      *
      * @param list<int> $gigIds
-     * @return array<int, array{gigId: int, missing: list<int>, missingIfNeeded: list<int>}> By slot id
+     * @return array<int, array{gigId: int, missing: list<int>, thanksTo: list<array{memberId: int, nickname: string, sectionId: int}>}> By slot id
      */
     private function missingSections(array $gigIds): array
     {
@@ -272,37 +275,48 @@ final class Gigs
              WHERE m.status IN ({$current}) ORDER BY i.sectionId",
         ));
         $rows = $this->database->fetchAllAssociative(
-            "SELECT s.id AS slotId, s.gigId, a.answer, i.sectionId
+            "SELECT s.id AS slotId, s.gigId, a.answer, i.sectionId, m.id AS memberId, m.nickname
              FROM gigSlot s
              LEFT JOIN (gigSlotAttendance a
                  JOIN member m ON m.id = a.memberId AND m.status IN ({$current})
                  JOIN instrument i ON i.id = m.instrumentId
              ) ON a.gigSlotId = s.id AND a.answer IN ('YES', 'IF_NEEDED')
-             WHERE s.gigId IN (?)",
+             WHERE s.gigId IN (?)
+             ORDER BY m.nickname",
             [$gigIds],
             [ArrayParameterType::INTEGER],
         );
 
         $yes = [];
+        $answered = [];
         $ifNeeded = [];
         $gigOf = [];
         foreach ($rows as $row) {
             $slotId = (int) $row['slotId'];
             $gigOf[$slotId] = (int) $row['gigId'];
-            if ($row['answer'] !== null) {
-                $ifNeeded[$slotId][] = (int) $row['sectionId'];
-                if ($row['answer'] === AttendanceAnswer::YES->value) {
-                    $yes[$slotId][] = (int) $row['sectionId'];
-                }
+            if ($row['answer'] === null) {
+                continue;
+            }
+            $sectionId = (int) $row['sectionId'];
+            $answered[$slotId][] = $sectionId;
+            if ($row['answer'] === AttendanceAnswer::YES->value) {
+                $yes[$slotId][] = $sectionId;
+            } else {
+                $ifNeeded[$slotId][] = ['memberId' => (int) $row['memberId'], 'nickname' => (string) $row['nickname'], 'sectionId' => $sectionId];
             }
         }
 
         $slots = [];
         foreach ($gigOf as $slotId => $gigId) {
+            $withYes = $yes[$slotId] ?? [];
             $slots[$slotId] = [
                 'gigId' => $gigId,
-                'missing' => array_values(array_diff($sections, $yes[$slotId] ?? [])),
-                'missingIfNeeded' => array_values(array_diff($sections, $ifNeeded[$slotId] ?? [])),
+                'missing' => array_values(array_diff($sections, $answered[$slotId] ?? [])),
+                // Only the sections that count, and that have no yes.
+                'thanksTo' => array_values(array_filter(
+                    $ifNeeded[$slotId] ?? [],
+                    fn (array $member) => in_array($member['sectionId'], $sections, true) && !in_array($member['sectionId'], $withYes, true),
+                )),
             ];
         }
 
@@ -371,11 +385,13 @@ final class Gigs
                 'costumeId' => $row['costumeId'] === null ? null : (int) $row['costumeId'],
                 'ownAnswer' => $row['ownAnswer'],
                 'isPlayable' => $without === [],
-                // Playable if the members who answered "if needed" came.
-                'isPlayableIfNeeded' => ($missing[$slotId]['missingIfNeeded'] ?? []) === [],
+                // The sections with nobody who answered yes or if needed.
                 'missingSectionIds' => $without,
-                // The section of the member is the last one without a yes.
-                'ownYesMakesPlayable' => $row['ownAnswer'] !== AttendanceAnswer::YES->value && $without === [$ownSection],
+                // Who the slot counts on without a yes in their section: the
+                // screen names them, so that they can be told they are needed.
+                'playableThanksTo' => $missing[$slotId]['thanksTo'] ?? [],
+                // The section of the member is the last one without anyone.
+                'ownYesMakesPlayable' => !in_array($row['ownAnswer'], [AttendanceAnswer::YES->value, AttendanceAnswer::IF_NEEDED->value], true) && $without === [$ownSection],
             ];
             if ($withAnswers) {
                 $slot['note'] = $row['note'];

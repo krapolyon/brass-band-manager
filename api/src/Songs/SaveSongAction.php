@@ -104,6 +104,7 @@ final class SaveSongAction
         $errors->text('name', $input->name, 80);
         $errors->text('originalTitle', $input->originalTitle, 150);
         $errors->text('originalArtist', $input->originalArtist, 150);
+        $copyright = $errors->optionalText('copyright', $input->copyright, 200);
         if ($input->bpm !== null && ($input->bpm < 20 || $input->bpm > 400)) {
             $errors->add('bpm', 'invalid');
         }
@@ -130,11 +131,9 @@ final class SaveSongAction
             $errors->add('durationSeconds', 'invalid');
         }
         $inRepertoireOn = self::day($errors, 'inRepertoireOn', $input->inRepertoireOn);
-        foreach ($input->otherCategories as $category) {
-            // Another category is never Standard, nor the main one.
-            if ($category === SetCategory::STANDARD || $category === $input->setCategory) {
-                $errors->add('otherCategories', 'invalid');
-            }
+        // At least one place of a set (model/songs.md, "At least one position").
+        if (self::positionsOf($input) === []) {
+            $errors->add('positions', 'required');
         }
         $sectionIds = array_map('intval', $this->database->fetchFirstColumn('SELECT id FROM section'));
         foreach (['tiringSectionIds' => $input->tiringSectionIds, 'trickySectionIds' => $input->trickySectionIds] as $field => $ids) {
@@ -164,6 +163,7 @@ final class SaveSongAction
             'name' => $name,
             'originalTitle' => Text::clean($input->originalTitle),
             'originalArtist' => Text::clean($input->originalArtist),
+            'copyright' => $copyright,
             'bpm' => $input->bpm,
             'status' => $input->status->value,
             'versionOn' => $versionOn,
@@ -172,8 +172,7 @@ final class SaveSongAction
             'discordChannelId' => $discordChannelId,
             'durationSeconds' => $input->durationSeconds,
             'inRepertoireOn' => $inRepertoireOn,
-            'setCategory' => $input->setCategory->value,
-            'isNeverFirst' => (int) $input->isNeverFirst,
+            'mood' => $input->mood->value,
         ];
     }
 
@@ -192,11 +191,24 @@ final class SaveSongAction
         return $value;
     }
 
-    // The other categories and the sections of a song, replaced whole.
+    /**
+     * The positions sent, each once; those of a new song when none were sent.
+     *
+     * @return list<string>
+     */
+    private static function positionsOf(SongInput $input): array
+    {
+        return array_values(array_unique(array_map(
+            fn (SetPosition $position) => $position->value,
+            $input->positions ?? SetPosition::ofNewSong(),
+        )));
+    }
+
+    // The positions and the sections of a song, replaced whole.
     private function saveAttributes(int $songId, SongInput $input, int $memberId): void
     {
         $lists = [
-            'songOtherCategory' => ['category', array_unique(array_map(fn (SetCategory $category) => $category->value, $input->otherCategories))],
+            'songPosition' => ['position', self::positionsOf($input)],
             'songTiringSection' => ['sectionId', array_unique($input->tiringSectionIds)],
             'songTrickySection' => ['sectionId', array_unique($input->trickySectionIds)],
         ];

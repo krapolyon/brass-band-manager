@@ -13,14 +13,16 @@
     <!-- The colour of the ground, set again by appearance.ts with the scheme. -->
     <meta name="theme-color" content="#0a0f1a" />
     <link rel="manifest" href="/api/manifest" />
-    <link rel="icon" href="/appIcons/icon-192.png" />
-    <link rel="apple-touch-icon" href="/appIcons/apple-touch-icon.png" />
+    <!-- The icon of the band, else its logo, else the neutral icon (#48): the
+         server decides, so that the tab has it before the app has loaded. -->
+    <link rel="icon" href="/api/band/icon/192" type="image/png" />
+    <link rel="apple-touch-icon" href="/api/band/icon/180" />
     <!-- Replaced at startup by the translated name. -->
     <title>Brass band</title>
     <!-- Sets the scheme of the device before anything is drawn. -->
     <script src="/appearance.js"></script>
-    <script type="module" crossorigin src="/assets/index-D7G4Kjzy.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-rtkPwROr.css">
+    <script type="module" crossorigin src="/assets/index-ynbJErYe.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C_qh00Ms.css">
   </head>
   <body>
     <div id="root"></div>

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace BrassBand\Migrations;
 
+use BrassBand\Http\ApiError;
+use BrassBand\Members\PersonalData;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 use PDO;
@@ -18,6 +20,12 @@ use PDOException;
 // A script that has run is recorded in the schemaMigration table and is never
 // run again. This is why a migration is never edited once it has run: write a
 // new one instead.
+//
+// After the scripts, every run encrypts the records of members still in clear
+// (0.3.1, PersonalData::sealExisting(): the SQL of a migration cannot use the
+// key). A run is refused while config.php has no encryption key: nothing would
+// be readable after it; and with another key than the one of the records
+// already encrypted.
 final class Migrations
 {
     // One run at a time, whoever asks: the name of the lock held in MySQL.
@@ -26,6 +34,7 @@ final class Migrations
     public function __construct(
         private readonly Connection $database,
         private readonly string $folder,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -54,13 +63,22 @@ final class Migrations
      * fails. MySQL does not undo table changes: what ran before the error
      * stays, and the database must be repaired by hand before trying again.
      *
-     * @return array{applied: list<string>, failed: array{name: string, message: string}|null, busy: bool}
-     *   "busy" when another run holds the lock: nothing was done.
+     * @return array{applied: list<string>, failed: array{name: string, message: string}|null, busy: bool, encrypted: int}
+     *   "busy" when another run holds the lock: nothing was done. "encrypted":
+     *   how many records of members were encrypted after the scripts.
      */
     public function run(): array
     {
+        if (!$this->personal->hasKey()) {
+            throw new ApiError(409, 'encryptionKeyMissing');
+        }
+        if (!$this->personal->isKeyOfExisting()) {
+            // Another key than the one of the members already encrypted: the
+            // beta one pasted into production, or a new one made after a loss.
+            throw new ApiError(409, 'encryptionKeyWrong');
+        }
         if ((int) $this->database->fetchOne('SELECT GET_LOCK(?, 0)', [self::LOCK]) !== 1) {
-            return ['applied' => [], 'failed' => null, 'busy' => true];
+            return ['applied' => [], 'failed' => null, 'busy' => true, 'encrypted' => 0];
         }
 
         // A run is not cut short: a script stopped halfway is neither applied
@@ -70,7 +88,12 @@ final class Migrations
         set_time_limit(0);
 
         try {
-            return [...$this->apply(), 'busy' => false];
+            $result = $this->apply();
+            // The columns of 0.3.1 may have just been added.
+            $this->personal->forgetSchema();
+            $encrypted = $result['failed'] === null ? $this->personal->sealExisting() : 0;
+
+            return [...$result, 'busy' => false, 'encrypted' => $encrypted];
         } finally {
             $this->database->fetchOne('SELECT RELEASE_LOCK(?)', [self::LOCK]);
         }

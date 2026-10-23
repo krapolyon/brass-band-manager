@@ -9,6 +9,7 @@ declare(strict_types=1);
 // by the install or by the admin: see BrassBand\Migrations\Migrations.
 
 use BrassBand\Database;
+use BrassBand\Members\PersonalData;
 use BrassBand\Migrations\Migrations;
 
 // Never from a browser: it is not an address of the app.
@@ -19,7 +20,18 @@ if (PHP_SAPI !== 'cli') {
 
 $config = require __DIR__ . '/../api/bootstrap.php';
 
-$migrations = new Migrations(Database::connect($config['database']), $config['migrationsFolder']);
+$database = Database::connect($config['database']);
+$personal = PersonalData::from($config, $database);
+if (!$personal->hasKey()) {
+    // Without it, nothing of the members would be readable after the run.
+    echo "config.php has no encryption key (encryptionKey). Make one with \"npm run encryption:key\".\n";
+    exit(1);
+}
+if (!$personal->isKeyOfExisting()) {
+    echo "The encryption key of config.php is not the one that encrypted the members. Nothing was done.\n";
+    exit(1);
+}
+$migrations = new Migrations($database, $config['migrationsFolder'], $personal);
 $result = $migrations->run();
 
 if ($result['busy']) {
@@ -38,3 +50,6 @@ if ($result['failed'] !== null) {
 
 $count = count($result['applied']);
 echo $count === 0 ? "Nothing to apply.\n" : "{$count} migration(s) applied.\n";
+if ($result['encrypted'] > 0) {
+    echo "{$result['encrypted']} member record(s) encrypted.\n";
+}

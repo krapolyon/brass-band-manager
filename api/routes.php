@@ -93,6 +93,7 @@ use BrassBand\Members\DeletePasswordLinkAction;
 use BrassBand\Members\ListMembersAction;
 use BrassBand\Members\MemberRecord;
 use BrassBand\Members\Members;
+use BrassBand\Members\PersonalData;
 use BrassBand\Members\PhotoStore;
 use BrassBand\Members\SetRolesAction;
 use BrassBand\Members\ShowMemberAction;
@@ -142,23 +143,25 @@ use Slim\Routing\RouteCollectorProxy;
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
+    // The names, email, phone and address of members, encrypted in the database.
+    $personal = PersonalData::from($config, $database);
     // Secure unless the configuration explicitly says otherwise.
     $cookie = new SessionCookie($config['session']['secureCookie'] ?? true);
-    $profile = new Profile($database);
+    $profile = new Profile($database, $personal);
     $installKey = new InstallKey($config['installKey'] ?? '');
     // The files members upload, in a folder the web server does not serve
     // (bootstrap.php says where): a file leaves it only through an action.
     $files = new Files($config['storageFolder']);
-    $migrations = new Migrations($database, $config['migrationsFolder']);
+    $migrations = new Migrations($database, $config['migrationsFolder'], $personal);
     $currentPassword = new CurrentPassword($database, $sessions, new SignInFailures($database));
     $logos = new LogoStore($database, $files);
     $mailer = new Mailer($config);
-    $push = PushSetup::from($config, $database);
+    $push = PushSetup::from($config, $database, $personal);
     $bands = new Bands($database, $logos, $mailer);
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
-    $members = new Members($database);
-    $record = new MemberRecord($database);
+    $members = new Members($database, $personal);
+    $record = new MemberRecord($database, $personal);
     $sections = new Sections($database);
     $songFiles = new SongFiles($database, $files);
     $songs = new Songs($database, $songFiles);
@@ -182,11 +185,11 @@ return function (App $app, Connection $database, array $config): void {
     $app->get('/api/manifest', new ManifestAction($database, $logos));
     $app->get('/api/install', new InstallStatusAction($database));
     $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey, $migrations));
-    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations));
-    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile));
+    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations, $personal));
+    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal));
     // Whoever holds a password link is not signed in yet.
-    $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer));
-    $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections));
+    $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer, $personal));
+    $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections, $personal));
     $app->post('/api/passwordLink/validate', new ValidateInvitationAction($links, $record));
     $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile, $record, $photos));
     // A calendar app has no session: the token of the address is the key

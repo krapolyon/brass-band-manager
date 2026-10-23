@@ -24,7 +24,7 @@ final class Songs
     // table is never sent by accident.
     private const COLUMNS = 's.id, s.name, s.originalTitle, s.originalArtist, s.bpm, s.status, s.versionOn,
         s.versionNote, s.clipUrl, s.clipThumbnailPath, s.discordChannelId,
-        s.durationSeconds, s.inRepertoireOn, s.setCategory, s.isNeverFirst,
+        s.durationSeconds, s.inRepertoireOn, s.mood, s.copyright,
         s.coverPath, s.museScorePath, s.midiPath, s.musicXmlPath, s.audioPath, s.createdAt';
 
     // The levels of the band on each song: the average of the current
@@ -173,21 +173,20 @@ final class Songs
     }
 
     /**
-     * The other categories and the sections of songs, by song: what the
-     * setlist generator reads, with the main category (model/songs.md,
-     * "Setlist attributes").
+     * The positions and the sections of songs, by song: what the setlist
+     * generator reads, with the mood (model/songs.md, "Setlist attributes").
      *
      * @param list<int> $songIds
-     * @return array<int, array{otherCategories: list<string>, tiringSectionIds: list<int>, trickySectionIds: list<int>}>
+     * @return array<int, array{positions: list<string>, tiringSectionIds: list<int>, trickySectionIds: list<int>}>
      */
     private function attributes(array $songIds): array
     {
         if ($songIds === []) {
             return [];
         }
-        // In the order of the enum for the categories, of the band for the sections.
+        // In the order of a set for the positions, of the band for the sections.
         $lists = [
-            'otherCategories' => 'SELECT songId, category AS value FROM songOtherCategory WHERE songId IN (?) ORDER BY songId, category',
+            'positions' => 'SELECT songId, position AS value FROM songPosition WHERE songId IN (?) ORDER BY songId, position',
             'tiringSectionIds' => 'SELECT t.songId, t.sectionId AS value FROM songTiringSection t JOIN section c ON c.id = t.sectionId WHERE t.songId IN (?) ORDER BY t.songId, c.position, c.name',
             'trickySectionIds' => 'SELECT t.songId, t.sectionId AS value FROM songTrickySection t JOIN section c ON c.id = t.sectionId WHERE t.songId IN (?) ORDER BY t.songId, c.position, c.name',
         ];
@@ -200,7 +199,7 @@ final class Songs
         $attributes = [];
         foreach ($songIds as $songId) {
             $attributes[$songId] = [
-                'otherCategories' => array_map('strval', $found['otherCategories'][$songId] ?? []),
+                'positions' => array_map('strval', $found['positions'][$songId] ?? []),
                 'tiringSectionIds' => array_map('intval', $found['tiringSectionIds'][$songId] ?? []),
                 'trickySectionIds' => array_map('intval', $found['trickySectionIds'][$songId] ?? []),
             ];
@@ -211,7 +210,7 @@ final class Songs
 
     /**
      * @param array<string, mixed> $song
-     * @param array{otherCategories: list<string>, tiringSectionIds: list<int>, trickySectionIds: list<int>}|null $attributes
+     * @param array{positions: list<string>, tiringSectionIds: list<int>, trickySectionIds: list<int>}|null $attributes
      * @return array<string, mixed>
      */
     private function summary(array $song, ?array $attributes): array
@@ -230,9 +229,10 @@ final class Songs
             // What the setlist editor and its generator read.
             'durationSeconds' => $song['durationSeconds'] === null ? null : (int) $song['durationSeconds'],
             'inRepertoireOn' => $song['inRepertoireOn'],
-            'setCategory' => $song['setCategory'],
-            'isNeverFirst' => (bool) $song['isNeverFirst'],
-            ...($attributes ?? ['otherCategories' => [], 'tiringSectionIds' => [], 'trickySectionIds' => []]),
+            'mood' => $song['mood'],
+            ...($attributes ?? ['positions' => [], 'tiringSectionIds' => [], 'trickySectionIds' => []]),
+            // The authors and composers, for whoever declares the songs played.
+            'copyright' => $song['copyright'],
             // The home screen shows the songs of the repertoire created last.
             'createdAt' => str_replace(' ', 'T', (string) $song['createdAt']) . 'Z',
             'coverUrl' => $this->files->view("{$address}/cover", $song['coverPath'])['url'] ?? null,

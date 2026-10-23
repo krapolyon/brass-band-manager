@@ -82,7 +82,7 @@ final class UsePasswordLinkAction
                 if ($link['status'] !== 'INVITED' && $input->completesAnAccount()) {
                     throw new ApiError(409, 'notInvited');
                 }
-                $record = $input->member === null ? [] : $this->record->check($input->member, $link['memberId']);
+                $record = $input->member === null ? [] : $this->record->stored($this->record->check($input->member, $link['memberId']));
 
                 $this->database->update(
                     'member',
