@@ -84,7 +84,12 @@ export type Song = SongSummary & {
   /** In the order of the sections and instruments of the band. */
   parts: (SongFile & { instrumentId: number })[];
   /** The levels of the signed-in member, seen by them only. */
-  ownLevels: { masteryLevel: number | null; enjoymentLevel: number | null };
+  ownLevels: {
+    masteryLevel: number | null;
+    enjoymentLevel: number | null;
+    /** The day the member last set or confirmed them (YYYY-MM-DD); null: never rated. */
+    ratedOn: string | null;
+  };
   /** The Discord channel of the song, for every member (since 0.3.0). */
   discordChannelId: string | null;
   /** The link that opens it in Discord; null without a channel or while the band has no server. */

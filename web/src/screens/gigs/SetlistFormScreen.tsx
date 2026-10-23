@@ -6,7 +6,8 @@ import { keepAboveKeyboard } from '../../aboveKeyboard.ts';
 import { ApiError, api } from '../../api.ts';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
-import { Icon } from '../../components/Icon.tsx';
+import { FilterChip } from '../../components/FilterChip.tsx';
+import { Icon, type IconName } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
@@ -21,13 +22,20 @@ import { TextArea } from '../../components/TextArea.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
 import { type Gig, useGig } from '../../gigs.ts';
 import { useMe } from '../../session.ts';
-import { type SongSummary, useSongs } from '../../songs.ts';
+import { type SongMood, type SongSummary, songMoods, useSongs } from '../../songs.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { useLeaveGuard } from '../LeaveGuard.tsx';
 import { recogniseAny, type Spoken } from './dictation.ts';
 import { candidatesOf, isNew, lengthOf, type Proposal, propose, type Rule } from './generator.ts';
 import { useDictation } from './useDictation.ts';
 import './gigs.css';
+
+// The icon of the filter of each mood (Figma, Gigs, section 22).
+const MOOD_ICONS: Record<SongMood, IconName> = {
+  CHILL: 'Parasol',
+  MEDIUM: 'Music',
+  PARTY: 'PartyPopper',
+};
 
 /** A song of the setlist being written. The key follows it when it moves; a song can come twice. */
 type Line = { key: string; songId: number; name: string };
@@ -81,6 +89,9 @@ export function SetlistFormScreen() {
   const [said, setSaid] = useState('');
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState('');
+  // The filters of the list (issue #52): off each time it opens.
+  const [isUnplayedOnly, setUnplayedOnly] = useState(false);
+  const [moods, setMoods] = useState<SongMood[]>([]);
   const [asks, setAsks] = useState<'delete' | null>(null);
   const [failure, setFailure] = useState<'failed' | 'tooLong' | null>(null);
   const [isSaving, setSaving] = useState(false);
@@ -266,14 +277,24 @@ export function SetlistFormScreen() {
       dropped.map((rule) => t(`gigs.setlist.form.propose.rules.${rule}`)),
     );
   const inThis = (songId: number) => draft.lines.filter((line) => line.songId === songId).length;
-  // The list of every song, from A to Z, narrowed by its search.
+  // The list of every song, from A to Z, narrowed by its search and its
+  // filters (model/gigs.md, "Filters of the list"): "Pas joués" keeps the
+  // songs in no setlist of this gig (no dot), and adds up with the moods; the
+  // moods add up between them (Chill or Teuf). In the browser, on the list
+  // already loaded.
   const searched = plain(search);
+  const isFiltered = isUnplayedOnly || moods.length > 0;
   const listed = playable
     .filter(
       (song) =>
-        searched === '' || `${plain(song.name)} ${plain(song.originalTitle)}`.includes(searched),
+        (searched === '' ||
+          `${plain(song.name)} ${plain(song.originalTitle)}`.includes(searched)) &&
+        (!isUnplayedOnly || playedElsewhere(song.id) + inThis(song.id) === 0) &&
+        (moods.length === 0 || moods.includes(song.mood)),
     )
     .sort((a, b) => a.name.localeCompare(b.name));
+  const toggleMood = (mood: SongMood, isOn: boolean) =>
+    setMoods((current) => (isOn ? [...current, mood] : current.filter((one) => one !== mood)));
   // Saves a phrase heard for the song the member chose or corrected. A comfort:
   // when it fails, the setlist is written all the same.
   const learn = (songId: number, phrase: string) => {
@@ -660,6 +681,8 @@ export function SetlistFormScreen() {
                 aria-haspopup="dialog"
                 onClick={() => {
                   setSearch('');
+                  setUnplayedOnly(false);
+                  setMoods([]);
                   setPickerOpen(true);
                 }}
               />
@@ -755,11 +778,29 @@ export function SetlistFormScreen() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
+          <fieldset className="gigs-pickerFilters">
+            <legend className="visuallyHidden">{t('gigs.setlist.form.list.filters')}</legend>
+            <FilterChip pressed={isUnplayedOnly} onChange={setUnplayedOnly} icon="Play">
+              {t('gigs.setlist.form.list.unplayed')}
+            </FilterChip>
+            {songMoods.map((mood) => (
+              <FilterChip
+                key={mood}
+                pressed={moods.includes(mood)}
+                onChange={(isOn) => toggleMood(mood, isOn)}
+                icon={MOOD_ICONS[mood]}
+              >
+                {t(`songs.mood.${mood}`)}
+              </FilterChip>
+            ))}
+          </fieldset>
           {listed.length === 0 ? (
             <p className="gigs-muted textBody" role="status">
-              {searched === ''
-                ? t('gigs.setlist.form.list.empty')
-                : t('gigs.setlist.form.list.nothing', { search: search.trim() })}
+              {searched !== ''
+                ? t('gigs.setlist.form.list.nothing', { search: search.trim() })
+                : isFiltered
+                  ? t('gigs.setlist.form.list.nothingFiltered')
+                  : t('gigs.setlist.form.list.empty')}
             </p>
           ) : (
             <ul className="gigs-pickerSongs" aria-label={t('gigs.setlist.form.list.title')}>

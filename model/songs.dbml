@@ -1,5 +1,5 @@
 // Domain: Songs
-// v1.10 — 2026-10-24 — validated, for 0.3.2: memberSong.ratedOn, the day a member last set or confirmed their levels, to ask again after a year (issue #44); the mood MEDIUM is labelled Normal
+// v1.10 — 2026-10-24 — validated, for 0.3.2: memberSong.ratedOn, the day a member last set or confirmed their levels, to ask again after a year (issue #44); the mood MEDIUM is labelled Normal; migration 016
 // v1.9 — 2026-10-23 — validated, for 0.3.1 (issue #47): the mood of a song (mood) and the places a set can give it (songPosition) replace its categories (setCategory, songOtherCategory) and isNeverFirst; the copyright of a song (copyright)
 // v1.8 — 2026-10-18 — no change to the tables (0.3.0): a part hidden in the MuseScore file is left out of the MIDI file and the MusicXML the browser produces (issue #35) (dictionary)
 // v1.7 — 2026-10-18 — validated (0.3.0): the length of a song (durationSeconds) and the day it entered the repertoire (inRepertoireOn); what the setlist generator reads, taken from the repertoire file of the band (issue #25): a main category and other ones, never first, tiring and tricky for some sections; the Discord channel is shown to every member as a link (issue #33)

@@ -120,7 +120,7 @@ export function InstallGuideScreen() {
         {tile}
         <Sheet title={t('installGuide.iosSafari.title')}>
           <NumberedSteps>
-            <NumberedStep number={1} icon="More">
+            <NumberedStep number={1} icon="Upload">
               {t('installGuide.iosSafari.share')}
             </NumberedStep>
             <NumberedStep number={2} icon="Plus">
@@ -130,7 +130,6 @@ export function InstallGuideScreen() {
               {t('installGuide.iosSafari.open')}
             </NumberedStep>
           </NumberedSteps>
-          <p className="settings-muted textCaption">{t('installGuide.iosSafari.older')}</p>
         </Sheet>
       </FlowLayout>
     );

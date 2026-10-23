@@ -263,6 +263,9 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
               />
             ))}
 
+          {isNotRated(data.ownLevels) && (
+            <Message onPress={() => toLevels(data.id)}>{t('songs.song.notRated')}</Message>
+          )}
           <div className="songs-cards">
             <Sheet title={t('songs.song.about')}>
               {(data.versionOn || data.versionNote) && (
@@ -713,7 +716,10 @@ function DiscordCard({ song, url }: { song: Song; url: string }) {
 }
 
 // Figma: Songs / Song — "Toi et ce morceau". The two levels of the member,
-// seen by them only, each with the average of the band under it.
+// seen by them only, each with the average of the band under it. Not rated
+// yet, or rated more than a year ago, the card is outlined (section 19,
+// issue #44); in the second case it asks whether the member still agrees, and
+// "Toujours d'accord" sends the same levels again, which dates them today.
 function Levels({ song, onSaved }: { song: Song; onSaved: (song: Song) => void }) {
   const { t, i18n } = useTranslation();
   const [levels, setLevels] = useState(song.ownLevels);
@@ -722,8 +728,11 @@ function Levels({ song, onSaved }: { song: Song; onSaved: (song: Song) => void }
   // The choice shows in the same instant as the press, then is saved, and
   // put back if the server refuses.
   const save = useMutation({
-    mutationFn: (next: Song['ownLevels']) =>
-      api<Song>(`/api/songs/${song.id}/levels`, { method: 'PUT', body: next }),
+    mutationFn: ({ masteryLevel, enjoymentLevel }: Song['ownLevels']) =>
+      api<Song>(`/api/songs/${song.id}/levels`, {
+        method: 'PUT',
+        body: { masteryLevel, enjoymentLevel },
+      }),
     onSuccess: onSaved,
     onError: () => setLevels(song.ownLevels),
   });
@@ -740,10 +749,16 @@ function Levels({ song, onSaved }: { song: Song; onSaved: (song: Song) => void }
         })}
       </span>
     );
+  const isOld = !isNotRated(levels) && isRatedLongAgo(levels.ratedOn);
 
   return (
-    <Sheet title={t('songs.song.levels')}>
+    <Sheet
+      title={t('songs.song.levels')}
+      id={levelsId(song.id)}
+      outlined={isNotRated(levels) || isOld}
+    >
       {save.isError && <Message kind="danger">{t('songs.song.levelsError')}</Message>}
+      {isOld && <p className="songs-askAgain textBody">{t('songs.song.ratedLongAgo')}</p>}
       <LevelScale
         label={t('songs.song.mastery')}
         name={`mastery-${song.id}`}
@@ -764,7 +779,47 @@ function Levels({ song, onSaved }: { song: Song; onSaved: (song: Song) => void }
       >
         {ofBand(song.enjoyment)}
       </LevelScale>
+      {isOld && (
+        <div className="songs-stillAgree">
+          <Button
+            kind="secondary"
+            size="small"
+            disabled={save.isPending}
+            onClick={() => save.mutate(levels)}
+          >
+            {t('songs.song.stillAgree')}
+          </Button>
+        </div>
+      )}
       <p className="songs-muted textCaption songs-phoneOnly">{t('songs.song.levelsPrivate')}</p>
     </Sheet>
   );
+}
+
+const levelsId = (songId: number) => `levels-${songId}`;
+
+/** Both levels empty: the member has said nothing of this song yet. */
+function isNotRated(levels: Song['ownLevels']): boolean {
+  return levels.masteryLevel === null && levels.enjoymentLevel === null;
+}
+
+/** Rated more than 12 months ago, counted in days of the device. */
+function isRatedLongAgo(ratedOn: string | null): boolean {
+  if (ratedOn === null) return false;
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  const yearAgo = `${now.getFullYear() - 1}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return ratedOn < yearAgo;
+}
+
+// The Message at the top sends to the card: it scrolls there and takes the
+// focus, so that a screen reader goes on from the card.
+function toLevels(songId: number): void {
+  const card = document.getElementById(levelsId(songId));
+  if (!card) return;
+  const isReduced =
+    document.documentElement.dataset.motion === 'reduced' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  card.scrollIntoView({ behavior: isReduced ? 'auto' : 'smooth', block: 'start' });
+  card.focus({ preventScroll: true });
 }

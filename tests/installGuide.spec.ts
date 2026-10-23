@@ -58,8 +58,9 @@ test('the guide of the device shows after sign-in, and "Plus tard" closes it for
     await expect(page.getByRole('heading', { name: 'Sur ton iPhone' })).toBeVisible();
     // Each step after its number, which the list itself says.
     await expect(steps.getByRole('listitem')).toHaveText([
-      '1Touche ⋯ à droite de la barre d’adresse, puis Partager.',
-      '2Choisis « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.',
+      // The steps of Safari as the owner sees them (0.3.2, issue #57).
+      '1Touche l’adresse de l’app, puis « Partager ».',
+      '2Touche [+] « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.',
       '3Touche « Ajouter », puis ouvre l’app depuis sa nouvelle icône.',
     ]);
   } else {

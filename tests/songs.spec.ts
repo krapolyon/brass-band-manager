@@ -430,6 +430,66 @@ test.describe('a song', () => {
     ).toBe('0');
   });
 
+  test('a song not rated yet says so at the top and outlines the card; the message sends to it (#44)', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    const card = page.getByRole('region', { name: 'Toi et ce morceau' });
+    const nudge = page.getByRole('button', { name: /Tu n’as pas encore noté/ });
+
+    await expect(nudge).toBeVisible();
+    await expect(card).toHaveAttribute('data-outlined', 'true');
+    await nudge.click();
+    await expect(card).toBeFocused();
+    await expect(card).toBeInViewport();
+
+    // One level is enough: the message and the outline go.
+    await card
+      .getByRole('radiogroup', { name: 'Kif' })
+      .getByRole('radio', { name: '5' })
+      .check({ force: true });
+    await expect(nudge).toHaveCount(0);
+    await expect(card).not.toHaveAttribute('data-outlined');
+  });
+
+  test('a rating more than a year old is asked again; "Toujours d’accord" confirms it (#44)', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    const zaza = sql('SELECT id FROM member WHERE nickname = "Zaza"');
+    sql(
+      `INSERT INTO memberSong (memberId, songId, masteryLevel, enjoymentLevel, ratedOn) VALUES (${zaza}, ${seven}, 4, 5, DATE_SUB(UTC_DATE(), INTERVAL 13 MONTH))`,
+    );
+    await page.goto(`/songs/${seven}`);
+    const card = page.getByRole('region', { name: 'Toi et ce morceau' });
+
+    // Rated: no message at the top, but the card asks again.
+    await expect(page.getByRole('button', { name: /Tu n’as pas encore noté/ })).toHaveCount(0);
+    await expect(card).toHaveAttribute('data-outlined', 'true');
+    await expect(
+      card.getByText('Ta note a plus d’un an. Toujours d’accord ? Change-la, ou confirme-la.'),
+    ).toBeVisible();
+
+    await card.getByRole('button', { name: 'Toujours d’accord' }).click();
+    await expect(card.getByRole('button', { name: 'Toujours d’accord' })).toHaveCount(0);
+    await expect(card).not.toHaveAttribute('data-outlined');
+    // Nothing else changed.
+    expect(
+      sql(
+        `SELECT masteryLevel, enjoymentLevel, ratedOn = UTC_DATE() FROM memberSong WHERE memberId = ${zaza}`,
+      ),
+    ).toBe('4\t5\t1');
+
+    // A rating of eleven months is not asked again.
+    sql(`UPDATE memberSong SET ratedOn = DATE_SUB(UTC_DATE(), INTERVAL 11 MONTH)`);
+    await page.reload();
+    await expect(
+      card.getByRole('radiogroup', { name: 'Kif' }).getByRole('radio', { name: '5' }),
+    ).toBeChecked();
+    await expect(card).not.toHaveAttribute('data-outlined');
+  });
+
   test('more actions: a member downloads; only who manages songs is offered to edit or change the status', async ({
     page,
   }) => {
@@ -1100,7 +1160,7 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await page.goto(`/songs/${sql("SELECT id FROM song WHERE name = 'Crazy'")}`);
     const crazy = page.locator('.songs-facts').or(page.getByRole('region', { name: 'À propos' }));
     await expect(crazy).toContainText(
-      /Ambiance\s*Médium\s*Positions\s*1re moitié, milieu, 2e moitié/,
+      /Ambiance\s*Normal\s*Positions\s*1re moitié, milieu, 2e moitié/,
     );
     await expect(page.getByText('Durée', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Droits d’auteur', { exact: true })).toHaveCount(0);

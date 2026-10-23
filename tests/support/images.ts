@@ -12,15 +12,18 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([length, body, sum]);
 }
 
-/** A PNG of one flat grey: a square of the side given, or a rectangle of that width. */
-export function png(side: number, height = side): Buffer {
+/**
+ * A PNG of one flat grey: a square of the side given, or a rectangle of that
+ * width. The shade (0 black to 255 white) tells two images apart.
+ */
+export function png(side: number, height = side, shade = 128): Buffer {
   const header = Buffer.alloc(13);
   header.writeUInt32BE(side, 0);
   header.writeUInt32BE(height, 4);
   header[8] = 8; // bits per channel
   header[9] = 0; // greyscale
   // One byte of filter then the pixels, for each line.
-  const lines = Buffer.alloc(height * (side + 1), 128);
+  const lines = Buffer.alloc(height * (side + 1), shade);
   for (let line = 0; line < height; line++) lines[line * (side + 1)] = 0;
 
   return Buffer.concat([
@@ -36,11 +39,11 @@ export const svg = Buffer.from(
 );
 
 /** What the front sends for a logo: the file and its three icons, in base64. */
-export function logoInput(image: Buffer = svg) {
+export function logoInput(image: Buffer = svg, shade = 128) {
   return {
     image: image.toString('base64'),
-    icon180: png(180).toString('base64'),
-    icon192: png(192).toString('base64'),
-    icon512: png(512).toString('base64'),
+    icon180: png(180, 180, shade).toString('base64'),
+    icon192: png(192, 192, shade).toString('base64'),
+    icon512: png(512, 512, shade).toString('base64'),
   };
 }

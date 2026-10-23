@@ -953,13 +953,23 @@ test.describe('the levels of a member on a song', () => {
     const songId = addSong('Crazy');
     const zaza = await deviceOf(playwright, email('Zaza'));
 
+    // The day of the band's clock (UTC on the test server).
+    const today = sql('SELECT UTC_DATE()');
     const first = await zaza.put(`/api/songs/${songId}/levels`, { data: { masteryLevel: 4 } });
-    expect((await first.json()).ownLevels).toEqual({ masteryLevel: 4, enjoymentLevel: null });
+    expect((await first.json()).ownLevels).toEqual({
+      masteryLevel: 4,
+      enjoymentLevel: null,
+      ratedOn: today,
+    });
 
     const both = await zaza.put(`/api/songs/${songId}/levels`, {
       data: { masteryLevel: 2, enjoymentLevel: 5 },
     });
-    expect((await both.json()).ownLevels).toEqual({ masteryLevel: 2, enjoymentLevel: 5 });
+    expect((await both.json()).ownLevels).toEqual({
+      masteryLevel: 2,
+      enjoymentLevel: 5,
+      ratedOn: today,
+    });
     expect(sql('SELECT memberId, masteryLevel, enjoymentLevel FROM memberSong')).toBe(
       `${memberId('Zaza')}\t2\t5`,
     );
@@ -975,7 +985,11 @@ test.describe('the levels of a member on a song', () => {
 
     // Nothing said: nothing kept.
     const emptied = await zaza.put(`/api/songs/${songId}/levels`, { data: {} });
-    expect((await emptied.json()).ownLevels).toEqual({ masteryLevel: null, enjoymentLevel: null });
+    expect((await emptied.json()).ownLevels).toEqual({
+      masteryLevel: null,
+      enjoymentLevel: null,
+      ratedOn: null,
+    });
     expect(sql('SELECT COUNT(*) FROM memberSong')).toBe('0');
 
     expect((await zaza.put('/api/songs/999/levels', { data: { masteryLevel: 1 } })).status()).toBe(
@@ -1000,7 +1014,7 @@ test.describe('the levels of a member on a song', () => {
     const song = await (await request.get(`/api/songs/${songId}`)).json();
     expect(song.mastery).toEqual({ average: 3.3, count: 3 });
     expect(song.enjoyment).toEqual({ average: 2.5, count: 2 });
-    expect(song.ownLevels).toEqual({ masteryLevel: null, enjoymentLevel: null });
+    expect(song.ownLevels).toEqual({ masteryLevel: null, enjoymentLevel: null, ratedOn: null });
 
     const [listed] = await (await request.get('/api/songs')).json();
     expect(listed).toMatchObject({
@@ -1010,6 +1024,74 @@ test.describe('the levels of a member on a song', () => {
 
     // No role shows more: nothing in an answer names a member.
     expect(JSON.stringify([song, listed])).not.toMatch(/memberId|nickname|levels":\[/);
+    // Nor when the others rated: the day of a rating is the member's own too.
+    expect(JSON.stringify([song, listed])).not.toContain('ratedOn":"');
+  });
+
+  test("a rating is dated: changing or confirming it dates it today, and it is never anyone else's (#44)", async ({
+    playwright,
+    request,
+  }) => {
+    const songId = addSong('Crazy');
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const today = sql('SELECT UTC_DATE()');
+    await zaza.put(`/api/songs/${songId}/levels`, { data: { masteryLevel: 4, enjoymentLevel: 5 } });
+    // Rated more than a year ago.
+    sql(`UPDATE memberSong SET ratedOn = '2025-03-14'`);
+    const old = await (await zaza.get(`/api/songs/${songId}`)).json();
+    expect(old.ownLevels).toEqual({ masteryLevel: 4, enjoymentLevel: 5, ratedOn: '2025-03-14' });
+
+    // "Toujours d'accord": the same levels sent again date them today, and
+    // nothing else changes; the average keeps every answer.
+    const confirmed = await zaza.put(`/api/songs/${songId}/levels`, {
+      data: { masteryLevel: 4, enjoymentLevel: 5 },
+    });
+    expect((await confirmed.json()).ownLevels).toEqual({
+      masteryLevel: 4,
+      enjoymentLevel: 5,
+      ratedOn: today,
+    });
+    expect((await confirmed.json()).mastery).toEqual({ average: 4, count: 1 });
+
+    // Changing one level dates them too.
+    sql(`UPDATE memberSong SET ratedOn = '2025-03-14'`);
+    const changed = await zaza.put(`/api/songs/${songId}/levels`, {
+      data: { masteryLevel: 3, enjoymentLevel: 5 },
+    });
+    expect((await changed.json()).ownLevels.ratedOn).toBe(today);
+
+    // Nobody sends a day: the server dates, and refuses a field it does not know.
+    const typed = await zaza.put(`/api/songs/${songId}/levels`, {
+      data: { masteryLevel: 3, ratedOn: '2020-01-01' },
+    });
+    expect(typed.status()).toBe(422);
+
+    // An admin sees the averages, never the day of another member.
+    await request.post('/api/session', { data: { email: admin.email, password: admin.password } });
+    const seen = await (await request.get(`/api/songs/${songId}`)).json();
+    expect(seen.ownLevels).toEqual({ masteryLevel: null, enjoymentLevel: null, ratedOn: null });
+    // A visitor neither reads nor dates anything.
+    const visitor = await playwright.request.newContext({ baseURL: 'http://localhost:8081' });
+    expect((await visitor.get(`/api/songs/${songId}`)).status()).toBe(401);
+    expect(
+      (await visitor.put(`/api/songs/${songId}/levels`, { data: { masteryLevel: 1 } })).status(),
+    ).toBe(401);
+    await visitor.dispose();
+  });
+
+  test('a day of rating goes with a level: the database refuses one without the other (#44)', async ({
+    playwright,
+  }) => {
+    const songId = addSong('Crazy');
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    await zaza.put(`/api/songs/${songId}/levels`, { data: { masteryLevel: 4 } });
+
+    expect(() => sql('UPDATE memberSong SET ratedOn = NULL')).toThrow();
+    expect(() =>
+      sql(
+        `INSERT INTO memberSong (memberId, songId, ratedOn) VALUES (${memberId('Sisi')}, ${songId}, '2026-01-01')`,
+      ),
+    ).toThrow();
   });
 
   test('the levels of a member who leaves are erased, and no longer count', async ({

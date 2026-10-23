@@ -333,6 +333,75 @@ test.describe('writing a setlist', () => {
     ).toBe('4');
   });
 
+  test('the list filters the songs not played in this gig and by mood, all off when it opens (#52)', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = confirmed();
+    const [rasputin, toxic, valerie, getLucky, heyYa] = [
+      addSong('Rasputin'),
+      addSong('Toxic'),
+      addSong('Valerie'),
+      addSong('Get Lucky'),
+      addSong('Hey Ya'),
+    ];
+    sql(`UPDATE song SET mood = 'CHILL' WHERE id IN (${rasputin}, ${valerie})`);
+    sql(`UPDATE song SET mood = 'PARTY' WHERE id IN (${toxic}, ${heyYa})`);
+    // Get Lucky keeps the mood a song has by default: Normal (MEDIUM).
+    expect(sql(`SELECT mood FROM song WHERE id = ${getLucky}`)).toBe('MEDIUM');
+    // Rasputin is in the setlist n° 1 of the gig.
+    addSetlist(gigId, slotId, [rasputin]);
+    await asMember(page, 'Sissi');
+    await page.goto(`/gigs/${gigId}/setlists/new`);
+
+    const open = page.getByRole('button', { name: 'Tous les morceaux' });
+    await open.click();
+    const picker = page.getByRole('dialog', { name: 'Tous les morceaux' });
+    const songs = picker.getByRole('listitem');
+    const filter = (name: string) => picker.getByRole('button', { name, exact: true });
+    const all = ['Get Lucky', 'Hey Ya', 'Rasputin', 'Toxic', 'Valerie'];
+
+    // Off when the list opens.
+    for (const name of ['Pas joués', 'Chill', 'Normal', 'Teuf']) {
+      await expect(filter(name)).toHaveAttribute('aria-pressed', 'false');
+    }
+    await expect(songs).toHaveText(all);
+
+    // "Pas joués": no dot, so not Rasputin.
+    await filter('Pas joués').click();
+    await expect(filter('Pas joués')).toHaveAttribute('aria-pressed', 'true');
+    await expect(songs).toHaveText(['Get Lucky', 'Hey Ya', 'Toxic', 'Valerie']);
+    // It adds up with a mood…
+    await filter('Chill').click();
+    await expect(songs).toHaveText(['Valerie']);
+    // …and the moods add up between them: Chill or Teuf.
+    await filter('Teuf').click();
+    await expect(songs).toHaveText(['Hey Ya', 'Toxic', 'Valerie']);
+    await filter('Pas joués').click();
+    await expect(songs).toHaveText(['Hey Ya', 'Rasputin', 'Toxic', 'Valerie']);
+
+    // A song added to this setlist is played: "Pas joués" no longer lists it.
+    await songs.filter({ hasText: 'Toxic' }).getByRole('button').click();
+    await filter('Pas joués').click();
+    await expect(songs).toHaveText(['Hey Ya', 'Valerie']);
+
+    // Nothing left: the list says so.
+    await filter('Chill').click();
+    await filter('Teuf').click();
+    await filter('Normal').click();
+    await songs.filter({ hasText: 'Get Lucky' }).getByRole('button').click();
+    await expect(songs).toHaveCount(0);
+    await expect(
+      picker.getByText('Aucun morceau avec ces filtres. Retire-en un pour en voir plus.'),
+    ).toBeVisible();
+
+    // Closed and opened again: the filters are off.
+    await picker.getByRole('button', { name: 'Fermer' }).click();
+    await open.click();
+    await expect(filter('Pas joués')).toHaveAttribute('aria-pressed', 'false');
+    await expect(filter('Normal')).toHaveAttribute('aria-pressed', 'false');
+    await expect(songs).toHaveText(all);
+  });
+
   test('leaving with changes asks first; deleting asks first and keeps the numbers of the others', async ({
     page,
   }) => {

@@ -1132,6 +1132,9 @@
       "average_other": "Fanfare : {{average}} sur 5 · {{count}} réponses",
       "levelsPrivate": "Personne ne voit tes notes : la fanfare ne voit que la moyenne.",
       "levelsError": "Ta note n’est pas partie. Réessaie dans un instant.",
+      "notRated": "Tu n’as pas encore noté ta maîtrise et ton kif sur ce morceau. Pense à le faire, un peu plus bas.",
+      "ratedLongAgo": "Ta note a plus d’un an. Toujours d’accord ? Change-la, ou confirme-la.",
+      "stillAgree": "Toujours d’accord",
       "parts": "Partitions",
       "partShown": "Affichée",
       "partMissing": "Pas de partition pour ce morceau",
@@ -1365,7 +1368,7 @@
     },
     "mood": {
       "CHILL": "Chill",
-      "MEDIUM": "Médium",
+      "MEDIUM": "Normal",
       "PARTY": "Teuf"
     },
     "position": {
@@ -1456,7 +1459,10 @@
           "addAgain_one": "Ajouter encore {{name}}, déjà dans cette setlist",
           "addAgain_other": "Ajouter encore {{name}}, déjà dans cette setlist, joué {{count}} fois sur ce plan",
           "nothing": "Aucun morceau ne s’appelle « {{search}} ». La liste ne contient que les morceaux au répertoire et les temporaires.",
-          "empty": "La liste ne contient que les morceaux au répertoire et les temporaires."
+          "empty": "La liste ne contient que les morceaux au répertoire et les temporaires.",
+          "filters": "Filtres",
+          "unplayed": "Pas joués",
+          "nothingFiltered": "Aucun morceau avec ces filtres. Retire-en un pour en voir plus."
         },
         "removeSong": "Retirer {{name}}",
         "length_one": "{{count}} morceau · ≈ {{minutes}} min",
@@ -1889,10 +1895,9 @@
     },
     "iosSafari": {
       "title": "Sur ton iPhone",
-      "share": "Touche ⋯ à droite de la barre d’adresse, puis Partager.",
-      "choose": "Choisis « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.",
-      "open": "Touche « Ajouter », puis ouvre l’app depuis sa nouvelle icône.",
-      "older": "Sur un iPhone plus ancien, le bouton Partager est directement dans la barre de Safari."
+      "share": "Touche l’adresse de l’app, puis « Partager ».",
+      "choose": "Touche [+] « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.",
+      "open": "Touche « Ajouter », puis ouvre l’app depuis sa nouvelle icône."
     },
     "iosOther": {
       "warning": "Sur iPhone, l’app s’installe depuis Safari, pas depuis ce navigateur.",

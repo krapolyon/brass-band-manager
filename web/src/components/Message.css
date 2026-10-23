@@ -7,9 +7,24 @@
   color: var(--text);
 }
 
-.Message p {
+.Message p,
+.Message-text {
   flex: 1;
   min-width: 0;
+}
+
+/* A message that sends to a place: a button that looks like the others. */
+button.Message {
+  width: 100%;
+  border: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+button.Message:focus-visible {
+  outline: var(--focusWidth) solid var(--accentText);
+  outline-offset: 2px;
 }
 
 .Message[data-kind="neutral"] {

@@ -7,8 +7,8 @@ import './Icon.css';
 //
 // The drawings are in iconPaths.ts. They come from Iconsax (https://iconsax.io,
 // by Vuesax): the Linear set for Outline, the Bold set for Filled. Close,
-// Accessibility, Contrast, Biceps, Check and DragHandle were drawn for this app in the
-// same style.
+// Accessibility, Contrast, Biceps, Check, DragHandle, Parasol and PartyPopper were
+// drawn for this app in the same style.
 //
 // Licence notice. The Iconsax free licence allows these icons to be used
 // integrated in the source code of a product, as here, provided this notice
