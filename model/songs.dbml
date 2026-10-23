@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.10 — 2026-10-24 — validated, for 0.3.2: memberSong.ratedOn, the day a member last set or confirmed their levels, to ask again after a year (issue #44); the mood MEDIUM is labelled Normal
 // v1.9 — 2026-10-23 — validated, for 0.3.1 (issue #47): the mood of a song (mood) and the places a set can give it (songPosition) replace its categories (setCategory, songOtherCategory) and isNeverFirst; the copyright of a song (copyright)
 // v1.8 — 2026-10-18 — no change to the tables (0.3.0): a part hidden in the MuseScore file is left out of the MIDI file and the MusicXML the browser produces (issue #35) (dictionary)
 // v1.7 — 2026-10-18 — validated (0.3.0): the length of a song (durationSeconds) and the day it entered the repertoire (inRepertoireOn); what the setlist generator reads, taken from the repertoire file of the band (issue #25): a main category and other ones, never first, tiring and tricky for some sections; the Discord channel is shown to every member as a link (issue #33)
@@ -34,11 +35,11 @@ Enum songStatus {
 }
 
 // What the setlist generator reads (issues #25 and #47). The French labels
-// are those of the band: Chill, Médium, Teuf; Début, 1re moitié, Milieu,
+// are those of the band: Chill, Normal, Teuf; Début, 1re moitié, Milieu,
 // 2e moitié, Fin.
 Enum songMood {
   CHILL [note: 'Quiet. The generator places these towards the start of a set']
-  MEDIUM [note: 'Neither quiet nor a party song ("médium")']
+  MEDIUM [note: 'Neither quiet nor a party song ("normal" in the French locale, decided on 2026-10-24)']
   PARTY [note: 'Gets the crowd going ("teuf"). The generator places these towards the end of a set']
 }
 
@@ -148,6 +149,7 @@ Table memberSong {
   songId integer [not null, ref: > song.id]
   masteryLevel integer [note: '🔒 Personal data — purpose: knowing which songs the band masters least, to decide which ones leave the repertoire. How well the member plays the song, from 1 to 5. Empty: not said.']
   enjoymentLevel integer [note: '🔒 Personal data — purpose: knowing which songs the band enjoys least, to decide which ones leave the repertoire. How much the member likes playing the song, from 1 to 5 (the "kif" in the French locale). Empty: not said.']
+  ratedOn date [note: '🔒 Personal data — purpose: asking the member again when their levels are more than a year old. The day the member last set, changed or confirmed a level. Empty: never rated.']
   Note: 'What a member says of a song: how well they play it and how much they like playing it. No row, or two empty levels, means the member has said nothing. Seen by the member only; the others see the average of the band. Deleted when the member leaves.'
 
   indexes {

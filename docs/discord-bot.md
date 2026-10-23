@@ -1,10 +1,10 @@
 # The Discord bot of a band
 
-From 0.3.0 the app can show, on the sheet of a song, the messages of its Discord channel that tag the section of the member (`@saxophoniste`). It reads them through a bot that belongs to the band. The bot only reads: it never writes, and it is never "connected". The app calls the Discord API when a member opens a song, so the bot shows as offline in the member list of the server. That is expected on a host without a long-running process.
+The app shows the messages of a Discord channel that are meant for it: they tag the app, that is the bot of the band (`@App Les Krapos`). From 0.3.2, a gig shows the messages of its channel that tag the app, and a song those that tag the app and the section of the member (`@App Les Krapos @saxophoniste`). The tag of the app is not shown in the app. It reads them through a bot that belongs to the band. The bot only reads: it never writes, and it is never "connected". The app calls the Discord API when a member opens a song, so the bot shows as offline in the member list of the server. That is expected on a host without a long-running process.
 
-Without a bot, the app still opens the channels of songs and gigs from their sheet. Only the messages of the sections need it.
+Without a bot, the app still opens the channels of songs and gigs from their sheet. Only the messages need it.
 
-The model is in `model/band.md` ("Discord"), `model/members.md` (`section.discordRoleId`) and `model/songs.md` ("Display").
+The model is in `model/band.md` ("Discord"), `model/members.md` (`section.discordRoleId`), `model/songs.md` ("Display") and `model/gigs.md` ("Discord on a gig").
 
 ## Create the bot (once per band)
 
@@ -39,6 +39,8 @@ As an admin: Band settings, then **Discord**.
 3. Choose the Discord role of each section among the roles of the server.
 
 Then, in the form of each song and each gig, paste the link of its channel.
+
+Tell the band how to use it: in the channel of a gig, tag the app for a message to show on the gig; in the channel of a song, tag the app and the section. The name of the app on Discord is the name of the bot, shown on the Discord screen of the settings.
 
 ## To check on beta
 
