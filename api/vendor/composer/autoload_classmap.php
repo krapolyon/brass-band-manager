@@ -75,6 +75,7 @@ return array(
     'BrassBand\\Gigs\\DeleteGigAction' => $baseDir . '/src/Gigs/DeleteGigAction.php',
     'BrassBand\\Gigs\\DeleteSetlistAction' => $baseDir . '/src/Gigs/DeleteSetlistAction.php',
     'BrassBand\\Gigs\\DeleteSlotAction' => $baseDir . '/src/Gigs/DeleteSlotAction.php',
+    'BrassBand\\Gigs\\GigDiscordMessagesAction' => $baseDir . '/src/Gigs/GigDiscordMessagesAction.php',
     'BrassBand\\Gigs\\GigInput' => $baseDir . '/src/Gigs/GigInput.php',
     'BrassBand\\Gigs\\GigPush' => $baseDir . '/src/Gigs/GigPush.php',
     'BrassBand\\Gigs\\GigStatus' => $baseDir . '/src/Gigs/GigStatus.php',

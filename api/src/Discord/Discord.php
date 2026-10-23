@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace BrassBand\Discord;
 
 // What the app asks Discord, through the bot of the band: whether it reaches
-// the server, the roles of the server, the last messages of a channel. Rules:
-// model/band.md ("Discord") and model/songs.md ("Display"); how to create the
-// bot: docs/discord-bot.md.
+// the server, who the app is there (the bot and its role), the roles of the
+// server, the last messages of a channel that tag the app. Rules:
+// model/band.md ("Discord"), model/songs.md ("Display"), model/gigs.md
+// ("Discord on a gig"); how to create the bot: docs/discord-bot.md.
 //
 // The bot only reads, through the REST API: it never connects to the gateway,
 // which a host without a long-running process could not keep open. Its token
@@ -111,6 +112,97 @@ final class Discord
      */
     public function roles(string $serverId, bool $fresh = false): ?array
     {
+        $all = $this->serverRoles($serverId, $fresh);
+        if ($all === null) {
+            return null;
+        }
+        $roles = array_values(array_filter(
+            $all,
+            fn (array $role) => $role['id'] !== $serverId && !$role['managed'],
+        ));
+        // The highest role first, as Discord lists them.
+        usort($roles, fn (array $one, array $other) => $other['position'] <=> $one['position']);
+
+        return array_map(fn (array $role) => ['id' => $role['id'], 'name' => $role['name']], $roles);
+    }
+
+    /**
+     * Who the app is on Discord (issue #45): the bot itself (GET /users/@me),
+     * its name, and the role Discord gave it when it joined the server (the
+     * role it manages, tagged with the id of the bot), or null. A member tags
+     * the app by either. Nothing is typed in the settings: Discord says it.
+     *
+     * @return array{userId: string, name: string, roleId: string|null}|null Null when Discord does not say
+     */
+    public function app(string $serverId, bool $fresh = false): ?array
+    {
+        $answer = $this->hasBot() ? $this->ask('/users/@me', $fresh) : null;
+        if ($answer === null || $answer['status'] !== 200 || !is_array($answer['body']) || !is_string($answer['body']['id'] ?? null)) {
+            return null;
+        }
+        $userId = $answer['body']['id'];
+        $roleId = null;
+        foreach ($this->serverRoles($serverId, $fresh) ?? [] as $role) {
+            if ($role['botId'] === $userId) {
+                $roleId = $role['id'];
+                break;
+            }
+        }
+
+        return ['userId' => $userId, 'name' => self::nameOf($answer['body']), 'roleId' => $roleId];
+    }
+
+    /**
+     * The messages of a channel that are meant for the app, as a sheet shows
+     * them, all of them, the latest first (issue #45): those that tag the app
+     * (the bot or its role) and, when a role is given, that role too (the
+     * section of the member, on a song). The tag of the app is taken out of
+     * the text. Null when nothing is known: Discord does not say who the app
+     * is, or does not give the roles or the messages.
+     *
+     * @return list<array{id: string, author: string, postedAt: string, text: string, url: string}>|null
+     */
+    public function messagesForApp(string $serverId, string $channelId, ?string $roleId = null): ?array
+    {
+        $app = $this->app($serverId);
+        $roles = $app === null ? null : $this->serverRoles($serverId);
+        $messages = $roles === null ? null : $this->messages($channelId);
+        if ($app === null || $roles === null || $messages === null) {
+            return null;
+        }
+        $roleNames = [];
+        foreach ($roles as $role) {
+            $roleNames[$role['id']] = $role['name'];
+        }
+
+        $shown = [];
+        foreach ($messages as $message) {
+            $tagsApp = array_key_exists($app['userId'], $message['mentions'])
+                || ($app['roleId'] !== null && in_array($app['roleId'], $message['mentionRoles'], true));
+            if (!$tagsApp || ($roleId !== null && !in_array($roleId, $message['mentionRoles'], true))) {
+                continue;
+            }
+            $shown[] = [
+                'id' => $message['id'],
+                // The name the author shows on Discord: shown, never stored.
+                'author' => $message['author'],
+                'postedAt' => $message['postedAt'],
+                'text' => self::readable(self::withoutApp($message['content'], $app), $roleNames, $message['mentions']),
+                'url' => DiscordLinks::messageUrl($serverId, $channelId, $message['id']),
+            ];
+        }
+
+        return $shown;
+    }
+
+    /**
+     * Every role of a server, as Discord gives it: @everyone and the roles it
+     * manages included, with the bot a managed role belongs to.
+     *
+     * @return list<array{id: string, name: string, position: int, managed: bool, botId: string|null}>|null Null when Discord does not answer
+     */
+    private function serverRoles(string $serverId, bool $fresh = false): ?array
+    {
         $answer = $this->hasBot() ? $this->ask("/guilds/{$serverId}/roles", $fresh) : null;
         if ($answer === null || $answer['status'] !== 200 || !is_array($answer['body'])) {
             return null;
@@ -120,24 +212,42 @@ final class Discord
             if (!is_array($role) || !is_string($role['id'] ?? null) || !is_string($role['name'] ?? null)) {
                 continue;
             }
-            if ($role['id'] === $serverId || ($role['managed'] ?? false) === true) {
-                continue;
-            }
-            $roles[] = ['id' => $role['id'], 'name' => $role['name'], 'position' => (int) ($role['position'] ?? 0)];
+            $tags = is_array($role['tags'] ?? null) ? $role['tags'] : [];
+            $roles[] = [
+                'id' => $role['id'],
+                'name' => $role['name'],
+                'position' => (int) ($role['position'] ?? 0),
+                'managed' => ($role['managed'] ?? false) === true,
+                'botId' => is_string($tags['bot_id'] ?? null) ? $tags['bot_id'] : null,
+            ];
         }
-        // The highest role first, as Discord lists them.
-        usort($roles, fn (array $one, array $other) => $other['position'] <=> $one['position']);
 
-        return array_map(fn (array $role) => ['id' => $role['id'], 'name' => $role['name']], $roles);
+        return $roles;
     }
 
     /**
-     * The last messages of a channel, the latest first, each with what the
-     * sheet of a song shows. Null when Discord does not answer.
+     * The text of a message without the tag of the app, which says nothing to
+     * a member who reads it in the app.
+     *
+     * @param array{userId: string, roleId: string|null} $app
+     */
+    private static function withoutApp(string $content, array $app): string
+    {
+        $content = preg_replace('/[ \t]*<@!?' . preg_quote($app['userId'], '/') . '>/', '', $content) ?? $content;
+        if ($app['roleId'] !== null) {
+            $content = preg_replace('/[ \t]*<@&' . preg_quote($app['roleId'], '/') . '>/', '', $content) ?? $content;
+        }
+
+        return $content;
+    }
+
+    /**
+     * The last messages of a channel, the latest first, as Discord wrote
+     * them. Null when Discord does not answer.
      *
      * @return list<array{id: string, author: string, postedAt: string, content: string, mentionRoles: list<string>, mentions: array<string, string>}>|null
      */
-    public function messages(string $channelId): ?array
+    private function messages(string $channelId): ?array
     {
         $answer = $this->hasBot() ? $this->ask("/channels/{$channelId}/messages?limit=" . self::MESSAGE_COUNT) : null;
         if ($answer === null || $answer['status'] !== 200 || !is_array($answer['body'])) {
@@ -182,7 +292,7 @@ final class Discord
      * @param array<string, string> $roleNames Id => name
      * @param array<string, string> $members Id => name
      */
-    public static function readable(string $content, array $roleNames, array $members): string
+    private static function readable(string $content, array $roleNames, array $members): string
     {
         $content = preg_replace_callback('/<@&([0-9]+)>/', fn (array $found) => '@' . ($roleNames[$found[1]] ?? '…'), $content) ?? $content;
         $content = preg_replace_callback('/<@!?([0-9]+)>/', fn (array $found) => '@' . ($members[$found[1]] ?? '…'), $content) ?? $content;

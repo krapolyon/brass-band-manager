@@ -17,6 +17,10 @@ use Psr\Http\Message\ServerRequestInterface;
 //
 // The address names no member on purpose: each member sets their own levels
 // and nobody else does, an admin included.
+//
+// Setting, changing or confirming the levels ("Toujours d'accord", the same
+// levels sent again) sets ratedOn to the day of the band's clock: the sheet
+// asks again once it is more than a year old (issue #44).
 final class SetLevelsAction
 {
     public function __construct(
@@ -47,10 +51,11 @@ final class SetLevelsAction
             // Nothing said: nothing kept.
             $this->database->delete('memberSong', $own);
         } else {
+            $today = (new \DateTimeImmutable('now', new \DateTimeZone(date_default_timezone_get())))->format('Y-m-d');
             $this->database->executeStatement(
-                'INSERT INTO memberSong (memberId, songId, masteryLevel, enjoymentLevel, updatedByMemberId) VALUES (?, ?, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE masteryLevel = VALUES(masteryLevel), enjoymentLevel = VALUES(enjoymentLevel), updatedByMemberId = VALUES(updatedByMemberId)',
-                [$me->id, $songId, $input->masteryLevel, $input->enjoymentLevel, $me->id],
+                'INSERT INTO memberSong (memberId, songId, masteryLevel, enjoymentLevel, ratedOn, updatedByMemberId) VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE masteryLevel = VALUES(masteryLevel), enjoymentLevel = VALUES(enjoymentLevel), ratedOn = VALUES(ratedOn), updatedByMemberId = VALUES(updatedByMemberId)',
+                [$me->id, $songId, $input->masteryLevel, $input->enjoymentLevel, $today, $me->id],
             );
         }
 

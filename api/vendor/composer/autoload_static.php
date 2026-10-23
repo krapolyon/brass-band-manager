@@ -274,6 +274,7 @@ class ComposerStaticInitc86d8b474eefbd90f89d0ea2201f11ea
         'BrassBand\\Gigs\\DeleteGigAction' => __DIR__ . '/../..' . '/src/Gigs/DeleteGigAction.php',
         'BrassBand\\Gigs\\DeleteSetlistAction' => __DIR__ . '/../..' . '/src/Gigs/DeleteSetlistAction.php',
         'BrassBand\\Gigs\\DeleteSlotAction' => __DIR__ . '/../..' . '/src/Gigs/DeleteSlotAction.php',
+        'BrassBand\\Gigs\\GigDiscordMessagesAction' => __DIR__ . '/../..' . '/src/Gigs/GigDiscordMessagesAction.php',
         'BrassBand\\Gigs\\GigInput' => __DIR__ . '/../..' . '/src/Gigs/GigInput.php',
         'BrassBand\\Gigs\\GigPush' => __DIR__ . '/../..' . '/src/Gigs/GigPush.php',
         'BrassBand\\Gigs\\GigStatus' => __DIR__ . '/../..' . '/src/Gigs/GigStatus.php',
