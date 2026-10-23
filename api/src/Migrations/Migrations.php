@@ -24,7 +24,8 @@ use PDOException;
 // After the scripts, every run encrypts the records of members still in clear
 // (0.3.1, PersonalData::sealExisting(): the SQL of a migration cannot use the
 // key). A run is refused while config.php has no encryption key: nothing would
-// be readable after it.
+// be readable after it; and with another key than the one of the records
+// already encrypted.
 final class Migrations
 {
     // One run at a time, whoever asks: the name of the lock held in MySQL.
@@ -70,6 +71,11 @@ final class Migrations
     {
         if (!$this->personal->hasKey()) {
             throw new ApiError(409, 'encryptionKeyMissing');
+        }
+        if (!$this->personal->isKeyOfExisting()) {
+            // Another key than the one of the members already encrypted: the
+            // beta one pasted into production, or a new one made after a loss.
+            throw new ApiError(409, 'encryptionKeyWrong');
         }
         if ((int) $this->database->fetchOne('SELECT GET_LOCK(?, 0)', [self::LOCK]) !== 1) {
             return ['applied' => [], 'failed' => null, 'busy' => true, 'encrypted' => 0];

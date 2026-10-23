@@ -113,7 +113,9 @@ test.describe('the list of songs', () => {
     const proposed = page.getByRole('button', { name: 'Proposés' });
     await expect(proposed).toHaveAttribute('aria-pressed', 'false');
     await proposed.click();
-    expect(await names(page)).toEqual(['Crazy', 'Le Bal masqué', 'Seven Nation', 'Toxic']);
+    await expect
+      .poll(() => names(page))
+      .toEqual(['Crazy', 'Le Bal masqué', 'Seven Nation', 'Toxic']);
     await page.getByRole('button', { name: 'Abandonnés' }).click();
     await expect(rows(page)).toHaveCount(5);
     await expect(rows(page).filter({ hasText: 'Rasputin' })).toContainText('Abandonné');
@@ -126,17 +128,18 @@ test.describe('the list of songs', () => {
     await page.goto('/songs');
     const search = page.getByLabel('Chercher un morceau');
 
+    // The list follows the search after a render: waited for, not read at once.
     await search.fill('white stripes');
-    expect(await names(page)).toEqual(['Seven Nation']);
+    await expect.poll(() => names(page)).toEqual(['Seven Nation']);
     await search.fill('ARMY');
-    expect(await names(page)).toEqual(['Seven Nation']);
+    await expect.poll(() => names(page)).toEqual(['Seven Nation']);
 
     // A proposed song is not found until its filter is on: the screen says so.
     await search.fill('bal masque');
     await expect(page.getByRole('heading', { name: 'Aucun morceau à ce nom' })).toBeVisible();
     await expect(page.getByText('active le filtre')).toBeVisible();
     await page.getByRole('button', { name: 'Proposés' }).click();
-    expect(await names(page)).toEqual(['Le Bal masqué']);
+    await expect.poll(() => names(page)).toEqual(['Le Bal masqué']);
   });
 
   test('rows or grid: the button shows the other view, and the choice stays on the device', async ({

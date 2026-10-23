@@ -31,7 +31,8 @@ export function InstallGuideScreen() {
   const band = useBand().data;
   const canPrompt = useInstallPrompt();
   const [platform] = useState(installPlatform);
-  const [wasCopied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<'copied' | 'refused' | null>(null);
+  const wasCopied = copy === 'copied';
 
   // Seen once is offered: the app never shows it again by itself.
   useEffect(rememberOffered, []);
@@ -147,9 +148,10 @@ export function InstallGuideScreen() {
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(appLink);
-                setCopied(true);
+                setCopy('copied');
               } catch {
-                // The browser refused: the address bar holds the same link.
+                // The browser refused: the link is shown, to copy by hand.
+                setCopy('refused');
               }
             }}
           >
@@ -169,6 +171,8 @@ export function InstallGuideScreen() {
           <NumberedStep number={2}>{t('installGuide.iosOther.paste')}</NumberedStep>
           <NumberedStep number={3}>{t('installGuide.iosOther.follow')}</NumberedStep>
         </NumberedSteps>
+        {/* The browser refused to copy: the link itself, to select by hand. */}
+        {copy === 'refused' && <p className="settings-link textBody">{appLink}</p>}
       </Sheet>
       <p role="status" className="visuallyHidden">
         {wasCopied ? t('installGuide.iosOther.copied') : ''}

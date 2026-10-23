@@ -27,6 +27,10 @@ if (!$personal->hasKey()) {
     echo "config.php has no encryption key (encryptionKey). Make one with \"npm run encryption:key\".\n";
     exit(1);
 }
+if (!$personal->isKeyOfExisting()) {
+    echo "The encryption key of config.php is not the one that encrypted the members. Nothing was done.\n";
+    exit(1);
+}
 $migrations = new Migrations($database, $config['migrationsFolder'], $personal);
 $result = $migrations->run();
 

@@ -158,6 +158,19 @@ test.describe('on an iPhone, in another browser than Safari', () => {
       'http://localhost:8081/',
     );
   });
+
+  test('when the browser refuses to copy, shows the link to copy by hand', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: () => Promise.reject(new Error('refused')) },
+      });
+    });
+    await signIn(page);
+
+    await page.getByRole('button', { name: 'Copier le lien' }).click();
+    await expect(page.getByText('http://localhost:8081/', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Copier le lien' })).toBeVisible();
+  });
 });
 
 test.describe('on a computer', () => {

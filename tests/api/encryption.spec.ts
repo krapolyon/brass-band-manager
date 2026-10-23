@@ -161,15 +161,19 @@ test('the database update encrypts the rows written before 0.3.1, and can be run
 }) => {
   addMember({ nickname: 'Zaza' });
   sql(
-    "UPDATE member SET mobilePhone = '+33612345678', city = 'Villeurbanne', countryCode = 'FR' WHERE nickname = 'Zaza'",
+    // Instructions that happen to start like an encrypted value: still text in clear.
+    "UPDATE member SET mobilePhone = '+33612345678', city = 'Villeurbanne', countryCode = 'FR', addressInstructions = 'v1: sonner deux fois' WHERE nickname = 'Zaza'",
   );
   expect(stored('Zaza')).toMatchObject({
     email: 'zaza@example.org',
     emailHash: 'NULL',
     city: 'Villeurbanne',
   });
-  // Before the update, a row in clear signs in as it did.
+  // Before the update, a row in clear signs in and reads as it did.
   const zaza = await deviceOf(playwright, 'zaza@example.org');
+  expect(await (await zaza.get('/api/me')).json()).toMatchObject({
+    addressInstructions: 'v1: sonner deux fois',
+  });
 
   await signIn(request, admin.email, admin.password);
   const run = await request.post('/api/migrations', { data: { password: admin.password } });
@@ -187,6 +191,7 @@ test('the database update encrypts the rows written before 0.3.1, and can be run
     mobilePhone: '+33612345678',
     city: 'Villeurbanne',
     countryCode: 'FR',
+    addressInstructions: 'v1: sonner deux fois',
   });
   // And signs in again, now through the hash of the email.
   await deviceOf(playwright, 'zaza@example.org');
@@ -231,8 +236,14 @@ test('without its key, nothing is encrypted nor read, and the database update is
     run: 'encryptionKeyMissing',
     read: 'encryptionKeyMissing',
   });
-  // Another key opens nothing: an error, never a wrong value.
-  expect(lines[2]).toMatchObject({ hasKey: true, read: 'encryptionKeyWrong' });
+  // Another key opens nothing: an error, never a wrong value. And the update
+  // refuses it, rather than encrypt the rows left in clear with it.
+  expect(lines[2]).toEqual({
+    hasKey: true,
+    run: 'encryptionKeyWrong',
+    read: 'encryptionKeyWrong',
+  });
+  expect(stored('Momo')).toMatchObject({ email: 'momo@example.org', emailHash: 'NULL' });
 });
 
 test('no name, email or address of a member reaches the log of the server', async ({

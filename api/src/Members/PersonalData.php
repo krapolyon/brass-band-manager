@@ -185,6 +185,30 @@ final class PersonalData
      * database update that follows migration 015. Safe to run again: a row
      * already encrypted is left alone. Returns how many rows it encrypted.
      */
+    /**
+     * Whether the key of config.php is the one that encrypted the records
+     * already encrypted (true when none is). Checked before a run of the
+     * migrations: encrypting the rest with another key would leave a database
+     * that no key reads whole.
+     */
+    public function isKeyOfExisting(): bool
+    {
+        if (!$this->isMigrated()) {
+            return true;
+        }
+        $email = $this->database->fetchOne('SELECT email FROM member WHERE emailHash IS NOT NULL ORDER BY id LIMIT 1');
+        if ($email === false) {
+            return true;
+        }
+        try {
+            $this->open('email', $email);
+        } catch (ApiError) {
+            return false;
+        }
+
+        return true;
+    }
+
     public function sealExisting(): int
     {
         if (!$this->isMigrated()) {
@@ -239,9 +263,12 @@ final class PersonalData
         }
         $bytes = base64_decode(substr($value, strlen(self::PREFIX)), true);
         $size = SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES;
-        $clear = is_string($bytes) && strlen($bytes) > $size
-            ? sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(substr($bytes, $size), $field, substr($bytes, 0, $size), $this->encryptionKey ?? throw self::noKey())
-            : false;
+        if (!is_string($bytes) || strlen($bytes) < $size + SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES) {
+            // Not something seal() wrote: a value of before 0.3.1 that happens
+            // to start like one ("v1: ring twice"), still in clear.
+            return $value;
+        }
+        $clear = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt(substr($bytes, $size), $field, substr($bytes, 0, $size), $this->encryptionKey ?? throw self::noKey());
         if ($clear === false) {
             // Another key than the one that encrypted it, or a value damaged:
             // nothing is shown rather than something wrong. Nothing is logged.

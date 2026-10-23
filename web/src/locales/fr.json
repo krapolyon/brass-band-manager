@@ -882,7 +882,8 @@
         "applying": "Mise à jour en cours…",
         "cancel": "Annuler"
       },
-      "encryptionKeyMissing": "Il manque la clé de chiffrement dans config.php : génère-la sur ton ordinateur avec « npm run encryption:key », colle la ligne dans config.php, puis recommence. Garde-en une copie à part : sans elle, les fiches des membres sont perdues."
+      "encryptionKeyMissing": "Il manque la clé de chiffrement dans config.php : génère-la sur ton ordinateur avec « npm run encryption:key », colle la ligne dans config.php, puis recommence. Garde-en une copie à part : sans elle, les fiches des membres sont perdues.",
+      "encryptionKeyWrong": "La clé de chiffrement de config.php n’est pas celle qui a chiffré les fiches des membres : rien n’a été fait. Remets la clé gardée à part pour cette instance, puis recommence."
     },
     "discordSettings": {
       "title": "Discord",
