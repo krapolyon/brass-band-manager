@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import { useBand } from '../../band.ts';
 import { Button } from '../../components/Button.tsx';
 import { ChannelChoice, type Channels } from '../../components/ChannelChoice.tsx';
 import { Message } from '../../components/Message.tsx';
-import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { SwitchRow } from '../../components/SwitchRow.tsx';
+import { INSTALL_GUIDE } from '../../installGuide.ts';
 import {
   channelOf,
   channelsOf,
@@ -48,7 +49,7 @@ export function NotificationsScreen() {
   const { enable, disable } = usePushSwitch();
   const [isBusy, setBusy] = useState(false);
   const [failure, setFailure] = useState<'failed' | 'refused' | null>(null);
-  const [isHelpOpen, setHelpOpen] = useState(false);
+  const navigate = useNavigate();
   // Read at each render: the member may have changed the settings of the device meanwhile.
   const support = pushSupport();
 
@@ -127,7 +128,11 @@ export function NotificationsScreen() {
       {support === 'needsInstall' ? (
         <>
           <Message kind="warning">{t('settings.notifications.needsInstall')}</Message>
-          <Button kind="secondary" icon="Smartphone" onClick={() => setHelpOpen(true)}>
+          <Button
+            kind="secondary"
+            icon="Smartphone"
+            onClick={() => navigate(INSTALL_GUIDE, { state: { back: '/settings/notifications' } })}
+          >
             {t('settings.notifications.install')}
           </Button>
         </>
@@ -148,14 +153,6 @@ export function NotificationsScreen() {
           <div className="settings-channels">{songSettings.map(row)}</div>
         </Sheet>
       </div>
-
-      <Panel
-        open={isHelpOpen}
-        onClose={() => setHelpOpen(false)}
-        title={t('settings.notifications.install')}
-      >
-        <p className="settings-help textBody">{t('settings.notifications.installSteps')}</p>
-      </Panel>
     </AppLayout>
   );
 }

@@ -445,7 +445,6 @@
       "thisDevice": "Sur cet appareil",
       "needsInstall": "Sur iPhone, les notifs n’arrivent que si l’app est sur ton écran d’accueil. Ajoute-la, rouvre-la depuis là, puis active les rappels.",
       "install": "Ajouter l’app à l’écran d’accueil",
-      "installSteps": "Dans Safari, touche le bouton Partager, puis « Sur l’écran d’accueil ». Rouvre ensuite l’app depuis son icône.",
       "denied": "Les notifications sont bloquées pour l’app sur cet appareil. Autorise-les dans les réglages du téléphone, puis reviens ici.",
       "unavailable": "Les notifications ne sont pas disponibles ici.",
       "failed": "Le réglage n’a pas changé. Réessaie dans un instant.",
@@ -584,6 +583,10 @@
         "changed": "Amélioré",
         "fixed": "Corrigé"
       }
+    },
+    "install": {
+      "title": "Installer l’app",
+      "detail": "Sur l’écran d’accueil de ce téléphone"
     }
   },
   "manage": {
@@ -1865,6 +1868,39 @@
       "placeholder": "https://discord.com/channels/…",
       "invalid": "Ce lien n’est pas celui d’un salon Discord. Dans Discord : « Copier le lien du salon », puis colle-le ici.",
       "otherServer": "Ce salon est sur un autre serveur Discord que celui de la fanfare."
+    }
+  },
+  "installGuide": {
+    "title": "Installe l’app",
+    "lead": {
+      "android": "Elle s’ouvre en plein écran, d’un tap sur son icône, comme une vraie app.",
+      "apple": "Elle s’ouvre en plein écran, d’un tap sur son icône. Et sur iPhone, c’est la seule façon de recevoir les notifs."
+    },
+    "preview": "Elle sera sur ton écran d’accueil, comme ça.",
+    "confirm": "Ton téléphone te demande ensuite de confirmer.",
+    "install": "Installer l’app",
+    "later": "Plus tard",
+    "android": {
+      "title": "Sur ton téléphone",
+      "menu": "Touche le menu ⋮ en haut à droite du navigateur.",
+      "choose": "Choisis « Installer l’application » ou « Ajouter à l’écran d’accueil ».",
+      "open": "Confirme, puis ouvre l’app depuis sa nouvelle icône."
+    },
+    "iosSafari": {
+      "title": "Sur ton iPhone",
+      "share": "Touche ⋯ à droite de la barre d’adresse, puis Partager.",
+      "choose": "Choisis « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.",
+      "open": "Touche « Ajouter », puis ouvre l’app depuis sa nouvelle icône.",
+      "older": "Sur un iPhone plus ancien, le bouton Partager est directement dans la barre de Safari."
+    },
+    "iosOther": {
+      "warning": "Sur iPhone, l’app s’installe depuis Safari, pas depuis ce navigateur.",
+      "title": "Depuis Safari",
+      "copy": "Copie le lien de l’app avec le bouton ci-dessous.",
+      "paste": "Ouvre Safari et colle-le dans la barre d’adresse.",
+      "follow": "Suis les étapes qui s’affichent alors.",
+      "copyLink": "Copier le lien",
+      "copied": "Lien copié"
     }
   }
 }

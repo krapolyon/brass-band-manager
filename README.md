@@ -26,13 +26,22 @@ This installs everything, starts a local stack in Docker (Apache with PHP, and M
 
 Deployment is described in `docs/architecture.md`, "Deployment". One thing is worth knowing from the start. When the app is first opened it asks for an **install key**: a text of your choice, 16 characters at least, that you write beforehand in `config.php` on the server, next to the database password. It is what stops a stranger from installing your instance, and becoming its admin, before you do. It is used once.
 
-Before the install (or, for an instance installed earlier, before the database update of version 0.3.1), write an **encryption key** in `config.php`. It encrypts the names, email addresses, phone numbers and addresses of the members in the database. Make it on your computer, from this folder:
+Each instance also needs an **encryption key**. It encrypts the names, email addresses, phone numbers and addresses of the members in the database. Write it in `config.php` before the install, or, for an instance installed earlier, before the database update of version 0.3.1: that update encrypts the members already there, and refuses to run without a key.
 
-```sh
-npm run encryption:key
-```
+1. **Make it on your computer**, from this folder:
 
-It prints one line, `'encryptionKey' => '…',`: paste it into `config.php` on the server, beside the install key. Use a new key for each instance (beta and production). Then **keep a copy of that line in a password manager**, apart from the backups of the database: without it, nobody can read the members again, the band included. It protects a copy of the database that leaks; it does not protect against someone who can read the files of the server. Never commit it, never send it by email, and never change it once the app holds members.
+   ```sh
+   npm run encryption:key
+   ```
+
+   It prints one line, such as `'encryptionKey' => 'q3J…=',` (44 characters between the quotes). A new key at each run: make one for beta and another for production.
+2. **Paste that line into `config.php` on the server**, in the data folder beside the deployed folder (`<folder>-data/config.php`), next to the install key, in place of the line `'encryptionKey' => '',` if there is one. Save it, and upload it again with your FTP client.
+3. **Keep a copy of the line in a password manager**, one entry per instance (for instance "Brass band — beta — encryption key"), apart from the backups of the database. A backup of the database without its key cannot be read by anyone, the band included.
+4. **Then** run the install, or the database update (Band settings, "Mise à jour de la base").
+
+Never change the key, or remove it, once the app holds members: the app could no longer read them, and their screens would answer an error (`encryptionKeyWrong` on the server) instead of something wrong. If `config.php` is lost, write it again with the copy of step 3. Never commit the key, never send it by email, never paste it into a chat or an issue.
+
+What it protects: a copy of the database that leaks (a backup, an export). What it does not protect against: someone who can read the files of the server, since the key is written there.
 
 The app keeps the files it is given (the logo of the band, later the songs) in a `storage` folder next to `api`. It has to be writable by PHP, kept out of what the web server serves, and backed up with the database.
 

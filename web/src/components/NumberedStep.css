@@ -1,0 +1,48 @@
+.NumberedSteps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceMd);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.NumberedStep {
+  display: flex;
+  gap: var(--spaceSm);
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+/* 28 px, like an icon; a minimum, so that a larger number stays inside. */
+.NumberedStep-number {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  border-radius: var(--radiusFull);
+  background: var(--accent);
+  color: var(--onAccent);
+}
+
+.NumberedStep-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+
+/* The button to look for: 44 px, the size of a control. */
+.NumberedStep-button {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radiusSm);
+  background: var(--control);
+  color: var(--text);
+}

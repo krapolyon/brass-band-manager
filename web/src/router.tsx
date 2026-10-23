@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router';
+import { INSTALL_GUIDE } from './installGuide.ts';
 import { ForgotPasswordScreen } from './screens/access/ForgotPasswordScreen.tsx';
 import { MembersOnly, VisitorsOnly } from './screens/access/Guards.tsx';
 import { PasswordLinkScreen } from './screens/access/PasswordLinkScreen.tsx';
@@ -32,6 +33,7 @@ import { AboutScreen } from './screens/settings/AboutScreen.tsx';
 import { AccessibilityScreen } from './screens/settings/AccessibilityScreen.tsx';
 import { AppearanceScreen } from './screens/settings/AppearanceScreen.tsx';
 import { CalendarScreen } from './screens/settings/CalendarScreen.tsx';
+import { InstallGuideScreen } from './screens/settings/InstallGuideScreen.tsx';
 import { NotificationsScreen } from './screens/settings/NotificationsScreen.tsx';
 import { PasswordScreen } from './screens/settings/PasswordScreen.tsx';
 import { ProfileScreen } from './screens/settings/ProfileScreen.tsx';
@@ -81,6 +83,7 @@ export const router = createBrowserRouter([
       { path: '/settings/notifications', element: <NotificationsScreen /> },
       { path: '/settings/calendar', element: <CalendarScreen /> },
       { path: '/settings/about', element: <AboutScreen /> },
+      { path: INSTALL_GUIDE, element: <InstallGuideScreen /> },
     ],
   },
   {

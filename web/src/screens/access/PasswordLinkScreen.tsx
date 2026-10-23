@@ -8,7 +8,8 @@ import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
-import { HOME, type Me, useSetMe } from '../../session.ts';
+import { afterSignIn } from '../../installGuide.ts';
+import { type Me, useSetMe } from '../../session.ts';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { AccessibilityButton } from './AccessibilityButton.tsx';
 import { type Invitation, OnboardingScreen } from './OnboardingScreen.tsx';
@@ -68,7 +69,7 @@ export function PasswordLinkScreen() {
     onSuccess: (me) => {
       setMe(me);
       // The address of the link leaves the history with the link itself.
-      navigate(HOME, { replace: true });
+      navigate(afterSignIn(), { replace: true });
     },
   });
 
