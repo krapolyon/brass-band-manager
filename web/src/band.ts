@@ -69,6 +69,8 @@ export type DiscordSettings = {
   /** none: no server, no bot, or not asked; refused: Discord said no; unreachable: no answer. */
   bot: 'none' | 'connected' | 'refused' | 'unreachable';
   serverName: string | null;
+  /** The name of the app on Discord, the name of the bot (#45); null when Discord does not say. */
+  botName: string | null;
   /** The roles a section can be tagged with; null when the bot could not read them. */
   roles: { id: string; name: string }[] | null;
   sections: { id: number; name: string; icon: string | null; discordRoleId: string | null }[];

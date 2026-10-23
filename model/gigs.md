@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.10 — 2026-10-24 · Validated by the owner, for 0.3.2 · No change to the tables · A gig shows the messages of its Discord channel that tag the app (issue #45); the song picker of a setlist filters "Pas joués" and the moods (issue #52)
 > v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · No change to the tables · The setlist generator places songs by their possible positions and draws Chill songs near the start, Teuf near the end (issue #47, Songs v1.9)
 > v1.8 — 2026-10-18 · Validated by the owner, for 0.3.1 · No change to the tables · An answer "if needed" counts for the playability of a slot, without being a yes (issue #37): the gig can be confirmed by the app thanks to it, and the screen names who is counted that way
 > v1.7 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · The Discord channel of a gig is typed in its form and shown to every member as a link (issue #33); the length of a setlist and the setlist generator (issue #25)
@@ -37,7 +38,7 @@ A concert the band is asked to play, from the first contact to the day itself. I
 | `city` | City | Ville | No | Lyon | Up to 30 characters | Can be filled without the street |
 | `latitude`, `longitude` | GPS coordinates | Coordonnées GPS | No | 45.767300, 4.834400 | 6 decimals | Both or neither. Typed or pasted as one text, "45.7673, 4.8344". Latitude from -90 to 90, longitude from -180 to 180 |
 | `notes` | Information | Infos diverses | No | Parking behind the town hall, meal provided | A few lines | Free text |
-| `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per gig. Typed as the link of the channel or its identifier, as for a song. Shown as a row that opens the channel in Discord |
+| `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per gig. Typed as the link of the channel or its identifier, as for a song. Shown as a card at the end of the gig: the messages of the channel that tag the app, then a button that opens the channel in Discord (see "Discord on a gig") |
 | `remindedAt` | Last reminder | Dernière relance | — | 2026-11-20 18:00 | — | Never typed: set when a reminder is sent |
 | `proposedAt` | Proposed | Proposé | — | 2026-10-12 21:14 | — | Never typed: set once, the first time the gig reaches `PROPOSED`, `ACCEPTED` or `CONFIRMED`. Empty for a gig that has only been a draft |
 
@@ -208,6 +209,8 @@ The notification names the song being played and the two after it: “3/6 · Pro
 - The setlists of a gig are shown from `CONFIRMED` on (in progress and past included): before, the band does not know it plays. A member who taps a song of a setlist opens the song, in the mode they used last.
 - **Played dots** (decided on 2026-10-16, issue #20). While a setlist is written, each song shows how many times it is in the other setlists of the same gig, all slots and days together: one plain dot per time, three at most. A song never counts itself. In the list of all songs (below) the count takes every setlist of the gig, this one included. Computed from the setlists each time, never stored.
 - **Adding from a list** (issue #20). Besides typing and dictating, a button beside the microphone opens every song a setlist can hold (`IN_REPERTOIRE`, `TEMPORARY`), in alphabetical order, with a search field. A song already in this setlist shows a tick. A tap appends the song at the end of the setlist and the list stays open; a second tap appends it again (a song can come twice). The list closes with its cross or by dragging it down.
+- **Filters of the list** (issue #52, decided on 2026-10-24). Under the search field: "Pas joués" (the songs in no setlist of this gig: no dot) and the three moods, Chill, Normal and Teuf. All off when the list opens. "Pas joués" adds up with the moods; the moods add up between them (Chill or Teuf). Nothing is stored.
+- **Discord on a gig** (issue #45, decided on 2026-10-24). A gig that has a channel shows, at the end of its sheet, the messages of its channel that tag the app (the bot of the band, or the role Discord gives it), all of them, the latest first, to every member who sees the gig; the tag of the app is taken out of the text shown. It reads the channel as a song does (Songs domain, "Display"): the last 100 messages, kept 10 minutes on the server, never in the database. Without a bot or when nothing tags the app, the sentence and the button only.
 - **Moving and removing a song** (issue #20). The handle moves a song. A song is removed by sliding its row to the left, which reveals "Retirer", or by sliding it further. Without a pointer: the row takes the focus, Delete removes it, and Alt with the up or down arrow moves it. The menu of a song, with Monter and Descendre, is gone.
 - A live setlist can still be edited; its position stays the same number, and who manages setlists corrects it by scrolling if needed.
 - **Length of a setlist** (issue #25). The lengths of its songs (read from their MIDI file), plus the time between two songs of the band (`band.setlistGapSeconds`, 30 s by default) between each of them: 6 songs of 3:30 make 21:00 + 5 × 0:30 = 23:30. Shown rounded to the minute ("≈ 24 min"). Songs without a length are left out of the sum, and the screen says how many ("2 morceaux sans durée"). Computed, never stored.
@@ -216,7 +219,7 @@ The notification names the song being played and the two after it: “3/6 · Pro
   - a tiring song stays in the first half, except among the last three when it has Fin: Fin wins;
   - two songs tricky for the same section never follow each other.
   
-  Among the songs a place allows, the draw favours the mood: the nearer the start, the more likely a Chill song; the nearer the end, the more likely a Teuf song; Médium anywhere. It is a preference, never a rule that blocks a proposal.
+  Among the songs a place allows, the draw favours the mood: the nearer the start, the more likely a Chill song; the nearer the end, the more likely a Teuf song; Normal anywhere. It is a preference, never a rule that blocks a proposal.
   
   When the rules cannot all be kept (a small repertoire), the app keeps the order of this list, drops the last rules first, and says it. The proposal replaces the songs of the setlist in the editor; nothing is saved until "Enregistrer la setlist", and "Une autre" draws again. The songs are then moved, removed and added by hand as usual. Draws are random: nothing about them is stored.
 - Later, not modelled: how often each song is played, counted from the setlists of past gigs.

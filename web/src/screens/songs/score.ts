@@ -101,6 +101,79 @@ export async function unzipped(
   throw new Error('This archive holds no score');
 }
 
+// ---- Key signatures written by MuseScore 4 ----
+
+/**
+ * The text of a MuseScore file with its key signatures written the way the
+ * engine of the app reads them (issue #41). MuseScore 4 writes the key of a
+ * staff as the concert key (<concertKey>) and works out the key each
+ * transposing instrument reads; the engine knows only the older form, the key
+ * as the staff shows it (<accidental>), and without it draws every staff in
+ * C, the sharps and flats moved onto the notes. Each key is therefore written
+ * again for its staff: the concert key moved by the transposition of the
+ * instrument of the part, which is what MuseScore shows with "concert pitch"
+ * off. A key the file already writes the older way, a custom or an atonal key
+ * are left as they are. Not followed: an instrument changed in the middle of a
+staff (the first one counts for the whole staff). Plain text: a worker has
+no DOMParser.
+ */
+export function withWrittenKeys(mscx: string): string {
+  // Each part holds its staves, in order, and says how its instrument
+  // transposes. The staves of the music are then numbered from 1 in that
+  // order (MuseScore 4 no longer numbers them in the parts).
+  const transposition = new Map<string, { diatonic: number; chromatic: number }>();
+  const partsEnd = mscx.lastIndexOf('</Part>');
+  if (partsEnd < 0) return mscx;
+  let staffNumber = 0;
+  for (const part of mscx.slice(0, partsEnd + 7).matchAll(/<Part[ >][\s\S]*?<\/Part>/g)) {
+    const text = part[0];
+    const interval = {
+      diatonic: Number(/<transposeDiatonic>(-?\d+)</.exec(text)?.[1] ?? 0),
+      chromatic: Number(/<transposeChromatic>(-?\d+)</.exec(text)?.[1] ?? 0),
+    };
+    for (const _staff of text.matchAll(/<Staff(?=[ >])/g)) {
+      staffNumber += 1;
+      transposition.set(String(staffNumber), interval);
+    }
+  }
+
+  // The music follows the parts: one <Staff id="…"> after the other.
+  const music = mscx
+    .slice(partsEnd)
+    .replace(/<Staff id="(\d+)">[\s\S]*?<\/Staff>/g, (staff, id: string) => {
+      const interval = transposition.get(id) ?? { diatonic: 0, chromatic: 0 };
+      return staff.replace(/<KeySig>[\s\S]*?<\/KeySig>/g, (key) => {
+        const concert = /<concertKey>(-?\d+)<\/concertKey>/.exec(key)?.[1];
+        if (concert === undefined || /<(accidental|custom)>/.test(key)) return key;
+        // MuseScore may say the key it shows (<actualKey>): it is kept when it
+        // is the same key, so that its choice between sharps and flats (five
+        // flats rather than seven sharps) stays. A file saved in concert
+        // pitch shows the concert key there: then it is not the same key.
+        const computed = writtenKey(Number(concert), interval);
+        const actual = Number(/<actualKey>(-?\d+)<\/actualKey>/.exec(key)?.[1] ?? Number.NaN);
+        const written = (actual - computed) % 12 === 0 ? actual : computed;
+        return key
+          .replace(/\s*<actualKey>-?\d+<\/actualKey>/, '')
+          .replace(/<concertKey>-?\d+<\/concertKey>/, `<accidental>${written}</accidental>`);
+      });
+    });
+  return mscx.slice(0, partsEnd) + music;
+}
+
+/**
+ * The key a transposing instrument reads, in sharps (positive) or flats
+ * (negative), from the concert key. An instrument sounds its interval away
+ * from what it reads: an interval of so many steps and semitones moves a key
+ * by 7 × semitones − 12 × steps fifths (a major second, 1 and 2: two sharps
+ * more). Kept within seven sharps or seven flats, as MuseScore does.
+ */
+export function writtenKey(concert: number, interval: { diatonic: number; chromatic: number }) {
+  let written = concert - (7 * interval.chromatic - 12 * interval.diatonic);
+  while (written > 7) written -= 12;
+  while (written < -7) written += 12;
+  return written;
+}
+
 /** The MusicXML document of a file, compressed or not. */
 export async function readScore(file: ArrayBuffer): Promise<Document> {
   let bytes: Uint8Array = new Uint8Array(file);

@@ -6,7 +6,7 @@
   gap: var(--spaceXxs);
   /* A minimum: the label wraps when the text grows. */
   min-height: var(--controlHeight);
-  padding: var(--spaceXxs) var(--spaceXs);
+  padding: var(--spaceXxs) var(--spaceLg);
   border-radius: var(--radiusFull);
   background: var(--control);
   color: var(--text);

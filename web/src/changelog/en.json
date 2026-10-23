@@ -1,5 +1,39 @@
 [
   {
+    "version": "0.3.2",
+    "date": "2026-10-24",
+    "changes": [
+      {
+        "kind": "added",
+        "text": "In the list of songs of a setlist, the songs not played yet in the gig can be filtered, and by mood."
+      },
+      {
+        "kind": "added",
+        "text": "A gig shows the messages of its Discord channel that tag the app."
+      },
+      {
+        "kind": "changed",
+        "text": "A song shows the Discord messages that tag both the app and the section of the signed-in member; the tag of the app is taken out of the message."
+      },
+      {
+        "kind": "changed",
+        "text": "A song you have not rated yet says so, and a rating more than a year old asks whether you still agree."
+      },
+      {
+        "kind": "changed",
+        "text": "The steps to install the app on an iPhone follow Safari as it is today."
+      },
+      {
+        "kind": "changed",
+        "text": "The mood “Medium” is now called “Normal”."
+      },
+      {
+        "kind": "fixed",
+        "text": "The Live mode draws the key signature of scores saved with MuseScore 4."
+      }
+    ]
+  },
+  {
     "version": "0.3.1",
     "date": "2026-10-23",
     "changes": [

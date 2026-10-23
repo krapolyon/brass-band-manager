@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
 import {
+  app,
+  botUser,
   channel,
   discordAnswers,
   discordMessages,
@@ -11,15 +13,20 @@ import {
   otherServer,
   roles,
   server,
+  tagApp,
+  tagAppRole,
 } from '../support/discord.ts';
+import { addGig } from '../support/gigs.ts';
 import { addMember, admin, deviceOf, install } from '../support/scenario.ts';
 import { addSong } from '../support/songFiles.ts';
 
-// Discord (0.3.0, issue #33): the server of the band, the bot that reads, the
-// role of each section, the messages of the channel of a song that tag the
-// section of the member. Rules: model/band.md ("Discord"), model/members.md
-// (section.discordRoleId), model/songs.md ("Display"). The test server reads
-// a made-up Discord from files (tests/support/discord.ts).
+// Discord (0.3.0, issue #33; 0.3.2, issue #45): the server of the band, the
+// bot that reads, the role of each section, the messages of the channel of a
+// gig that tag the app, and those of a song that tag the app and the section
+// of the member. Rules: model/band.md ("Discord"), model/members.md
+// (section.discordRoleId), model/songs.md ("Display"), model/gigs.md
+// ("Discord on a gig"). The test server reads a made-up Discord from files
+// (tests/support/discord.ts).
 
 // The band: Jibé the admin (Sax Ténor, section Saxophone), Zaza (Trompette),
 // Momo who manages members, Sisi who manages songs.
@@ -52,6 +59,7 @@ test.describe('the settings of the band', () => {
       hasBot: true,
       bot: 'none',
       serverName: null,
+      botName: null,
       roles: null,
       sections: [
         { id: sectionId('Trompette'), name: 'Trompette', icon: 'trumpet', discordRoleId: null },
@@ -75,7 +83,9 @@ test.describe('the settings of the band', () => {
       serverId: server,
       bot: 'connected',
       serverName: 'Les Cuivres',
-      // Neither @everyone nor the role Discord made for the bot; the highest first.
+      // The name the members tag the app by, read from Discord (#45).
+      botName: 'App Les Cuivres',
+      // Neither @everyone nor the roles Discord made for bots; the highest first.
       roles: [
         { id: roles.saxophones, name: 'saxophoniste' },
         { id: roles.trumpets, name: 'trompettiste' },
@@ -218,22 +228,25 @@ test.describe('the messages of the channel of a song', () => {
         id: '9005',
         author: 'Fanfan',
         day: '2026-10-01',
-        content: `<@&${roles.saxophones}> mesures 36-37, à la fin du thème 1 :custom: <a:fire:123>`,
+        content: `${tagApp} <@&${roles.saxophones}> mesures 36-37, à la fin du thème 1 :custom: <a:fire:123>`,
         roles: [roles.saxophones],
+        users: [botUser],
       },
       {
         id: '9004',
         author: 'Lulu',
         day: '2026-09-28',
-        content: `<@&${roles.trumpets}> on reprend le pont`,
-        roles: [roles.trumpets],
+        // The app tagged by its role.
+        content: `${tagAppRole} <@&${roles.trumpets}> on reprend le pont`,
+        roles: [app.roleId, roles.trumpets],
       },
       {
         id: '9003',
         author: 'Zaza',
         day: '2026-09-12',
-        content: `<@&${roles.saxophones}> <@&${roles.trumpets}> révisez la lettre C`,
+        content: `<@&${roles.saxophones}> <@&${roles.trumpets}> ${tagApp} révisez la lettre C`,
         roles: [roles.saxophones, roles.trumpets],
+        users: [botUser],
       },
       {
         id: '9002',
@@ -246,21 +259,32 @@ test.describe('the messages of the channel of a song', () => {
         id: '9001',
         author: 'Gégé',
         day: '2026-08-20',
-        content: `<@&${roles.saxophones}> nouvelle partition`,
+        // The section without the app: a message between members.
+        content: `<@&${roles.saxophones}> on se retrouve avant ?`,
         roles: [roles.saxophones],
       },
       {
         id: '9000',
         author: 'Nono',
         day: '2026-08-02',
-        content: `<@&${roles.saxophones}> la plus ancienne`,
+        content: `<@!${app.userId}> <@&${roles.saxophones}> la plus ancienne`,
         roles: [roles.saxophones],
+        users: [botUser],
+      },
+      {
+        id: '8999',
+        author: 'Momo',
+        day: '2026-07-30',
+        // The app without a section: for a gig, not for a song.
+        content: `${tagApp} rendez-vous à 18 h`,
+        roles: [],
+        users: [botUser],
       },
     ]);
     return songId;
   }
 
-  test('a member sees the three latest messages that tag their section, the latest first, each with its link', async ({
+  test('a member sees every message that tags the app and their section, the latest first, without the tag of the app, each with its link (#45)', async ({
     playwright,
   }) => {
     const songId = aSongWithItsChannel();
@@ -285,15 +309,20 @@ test.describe('the messages of the channel of a song', () => {
           author: 'Zaza',
           text: '@saxophoniste @trompettiste révisez la lettre C',
         }),
-        expect.objectContaining({ id: '9001', author: 'Gégé' }),
+        // No limit of three: every one of them (#45). The app tagged as
+        // <@!id> is taken out too.
+        expect.objectContaining({ id: '9000', text: '@saxophoniste la plus ancienne' }),
       ],
     });
+    expect(JSON.stringify(answer)).not.toContain('App Les Cuivres');
 
     // Zaza plays the trumpet: the messages of her section.
     const zaza = await deviceOf(playwright, email('Zaza'));
     const hers = await (await zaza.get(`/api/songs/${songId}/discord`)).json();
     expect(hers.roleName).toBe('trompettiste');
     expect(hers.messages.map((message: { id: string }) => message.id)).toEqual(['9004', '9003']);
+    // Tagged by its role, the app is taken out of the text as well.
+    expect(hers.messages[0].text).toBe('@trompettiste on reprend le pont');
   });
 
   test('what Discord answered is kept a while, never in the database', async ({ playwright }) => {
@@ -307,8 +336,9 @@ test.describe('the messages of the channel of a song', () => {
         id: '9100',
         author: 'Fifi',
         day: '2026-10-10',
-        content: `<@&${roles.saxophones}> nouveau`,
+        content: `${tagApp} <@&${roles.saxophones}> nouveau`,
         roles: [roles.saxophones],
+        users: [botUser],
       },
     ]);
     expect((await (await jibe.get(`/api/songs/${songId}/discord`)).json()).messages[0].id).toBe(
@@ -342,6 +372,11 @@ test.describe('the messages of the channel of a song', () => {
     // The roles unknown while the messages come: the messages are not shown
     // under a sentence that says there is nothing.
     discordAnswers(`/guilds/${server}/roles`, { retry_after: 2.5 }, 429);
+    expect(await nothing()).toEqual({ roleName: null, messages: [] });
+    discordServer();
+
+    // Discord does not say who the app is: nothing tags it that can be known.
+    discordAnswers('/users/@me', { message: '401: Unauthorized' }, 401);
     expect(await nothing()).toEqual({ roleName: null, messages: [] });
     discordServer();
 
@@ -384,8 +419,9 @@ test.describe('the messages of the channel of a song', () => {
         id: '9200',
         author: 'Fifi',
         day: '2026-10-12',
-        content: `<@&${roles.saxophones}> tout de suite`,
+        content: `${tagApp} <@&${roles.saxophones}> tout de suite`,
         roles: [roles.saxophones],
+        users: [botUser],
       },
     ]);
     expect((await (await jibe.get(`/api/songs/${songId}/discord`)).json()).messages[0].id).toBe(
@@ -399,6 +435,147 @@ test.describe('the messages of the channel of a song', () => {
     expect((await request.get(`/api/songs/${songId}/discord`)).status()).toBe(401);
     const zaza = await deviceOf(playwright, email('Zaza'));
     expect((await zaza.get('/api/songs/9999/discord')).status()).toBe(404);
+  });
+});
+
+test.describe('the messages of the channel of a gig (#45)', () => {
+  // A gig with a channel, and the channel holding messages that tag the
+  // app, by the bot or by its role, and others that do not.
+  function aGigWithItsChannel(status: 'PROPOSED' | 'DRAFT' = 'PROPOSED'): number {
+    discordServer();
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const { gigId } = addGig('Vide-grenier', { status });
+    sql(`UPDATE gig SET discordChannelId = '${channel}' WHERE id = ${gigId}`);
+    discordMessages(channel, [
+      {
+        id: '9205',
+        author: 'Zaza',
+        day: '2026-10-12',
+        content: `${tagApp} Rendez-vous 18 h 30 devant la salle, on charge le camion à 19 h.`,
+        roles: [],
+        users: [botUser],
+      },
+      {
+        id: '9204',
+        author: 'Kiki',
+        day: '2026-10-11',
+        content: 'Qui a les clés du local ?',
+        roles: [],
+      },
+      {
+        id: '9203',
+        author: 'Riton',
+        day: '2026-10-10',
+        content: `Le parking côté quai est fermé ce jour-là ${tagAppRole}, garez-vous rue Saint-Jean.`,
+        roles: [app.roleId],
+      },
+      {
+        id: '9202',
+        author: 'Lulu',
+        day: '2026-10-09',
+        // A section tagged with the app: a gig shows it too.
+        content: `${tagApp} <@&${roles.trumpets}> prenez vos sourdines`,
+        roles: [roles.trumpets],
+        users: [botUser],
+      },
+      {
+        id: '9201',
+        author: 'Fifi',
+        day: '2026-10-08',
+        // Another member tagged, not the app.
+        content: '<@42> tu viens ?',
+        roles: [],
+        users: [{ id: '42', name: 'Gégé' }],
+      },
+    ]);
+    return gigId;
+  }
+
+  test('every member who sees the gig reads every message that tags the app, the latest first, without its tag', async ({
+    playwright,
+  }) => {
+    const gigId = aGigWithItsChannel();
+    const zaza = await deviceOf(playwright, email('Zaza'));
+
+    const answer = await (await zaza.get(`/api/gigs/${gigId}/discord`)).json();
+
+    expect(answer).toEqual({
+      messages: [
+        {
+          id: '9205',
+          author: 'Zaza',
+          postedAt: '2026-10-12T18:30:00.000000+00:00',
+          text: 'Rendez-vous 18 h 30 devant la salle, on charge le camion à 19 h.',
+          url: `https://discord.com/channels/${server}/${channel}/9205`,
+        },
+        expect.objectContaining({
+          id: '9203',
+          author: 'Riton',
+          text: 'Le parking côté quai est fermé ce jour-là, garez-vous rue Saint-Jean.',
+        }),
+        expect.objectContaining({ id: '9202', text: '@trompettiste prenez vos sourdines' }),
+      ],
+    });
+    // Any member who sees the gig: who manages members or gigs, too.
+    for (const who of [email('Momo'), email('Sisi')]) {
+      const member = await deviceOf(playwright, who);
+      const theirs = await (await member.get(`/api/gigs/${gigId}/discord`)).json();
+      expect(
+        theirs.messages.map((message: { id: string }) => message.id),
+        who,
+      ).toEqual(['9205', '9203', '9202']);
+    }
+  });
+
+  test('a draft is not found by who cannot edit it; a visitor is refused; an unknown gig is not found', async ({
+    playwright,
+    request,
+  }) => {
+    const gigId = aGigWithItsChannel('DRAFT');
+    expect((await request.get(`/api/gigs/${gigId}/discord`)).status()).toBe(401);
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    expect((await zaza.get(`/api/gigs/${gigId}/discord`)).status()).toBe(404);
+    expect((await zaza.get('/api/gigs/9999/discord')).status()).toBe(404);
+    // Who manages gigs sees the draft, and its messages.
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    expect((await (await sisi.get(`/api/gigs/${gigId}/discord`)).json()).messages).toHaveLength(3);
+  });
+
+  test('no channel, no server, no bot known, a channel the bot cannot see: no message, never an error', async ({
+    playwright,
+  }) => {
+    const gigId = aGigWithItsChannel();
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const nothing = async () => {
+      forgetDiscordCache();
+      const response = await zaza.get(`/api/gigs/${gigId}/discord`);
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+
+    discordAnswers('/users/@me', { message: '401: Unauthorized' }, 401);
+    expect(await nothing()).toEqual({ messages: [] });
+    discordServer();
+    discordAnswers(`/channels/${channel}/messages`, { message: 'Missing Access' }, 403);
+    expect(await nothing()).toEqual({ messages: [] });
+    sql('UPDATE gig SET discordChannelId = NULL');
+    expect(await nothing()).toEqual({ messages: [] });
+    sql(`UPDATE gig SET discordChannelId = '${channel}'`);
+    sql('UPDATE band SET discordServerId = NULL');
+    expect(await nothing()).toEqual({ messages: [] });
+  });
+
+  test('a bot without a role of its own is still tagged by its name', async ({ playwright }) => {
+    const gigId = aGigWithItsChannel();
+    discordAnswers(`/guilds/${server}/roles`, [
+      { id: server, name: '@everyone', position: 0 },
+      { id: roles.trumpets, name: 'trompettiste', position: 2 },
+    ]);
+    const zaza = await deviceOf(playwright, email('Zaza'));
+
+    const answer = await (await zaza.get(`/api/gigs/${gigId}/discord`)).json();
+
+    expect(answer.messages.map((message: { id: string }) => message.id)).toEqual(['9205', '9202']);
   });
 });
 

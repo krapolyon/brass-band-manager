@@ -889,7 +889,7 @@
       "title": "Discord",
       "detailSet": "Serveur relié : les salons s’ouvrent depuis les morceaux et les plans",
       "detailUnset": "Pas encore relié : colle le lien d’un salon du serveur",
-      "lead": "Les salons des morceaux et des plans s’ouvrent depuis l’app, et chacun voit les messages qui taguent son pupitre.",
+      "lead": "Les salons des morceaux et des plans s’ouvrent depuis l’app. Les messages qui taguent l’app s’y affichent : sur un plan pour tous, sur un morceau pour le pupitre tagué avec.",
       "server": "Serveur",
       "link": "Lien du salon du serveur",
       "linkHint": "Dans Discord, appui long ou clic droit sur un salon : « Copier le lien du salon ».",
@@ -898,6 +898,7 @@
       "bot": "Bot de la fanfare",
       "botConnected": "Le bot est connecté au serveur {{server}}.",
       "botConnectedNoName": "Le bot est connecté au serveur.",
+      "botName": "Sur Discord, l’app s’appelle @{{name}}. Tague-la dans le salon d’un plan pour que le message s’y affiche ; dans le salon d’un morceau, tague-la avec le pupitre concerné. Le tag de l’app n’est pas recopié.",
       "botNone": "Pas encore de bot : les salons s’ouvrent, mais personne ne voit les messages qui taguent son pupitre.",
       "botHelp": "Celui qui héberge l’app crée le bot dans Discord, l’invite sur le serveur et met son jeton dans la configuration du serveur. Les rôles des pupitres se choisissent ensuite ici.",
       "botRefused": "Le bot ne joint pas le serveur : vérifie qu’il y est invité et que son jeton est le bon. Les salons s’ouvrent quand même.",
@@ -1132,6 +1133,9 @@
       "average_other": "Fanfare : {{average}} sur 5 · {{count}} réponses",
       "levelsPrivate": "Personne ne voit tes notes : la fanfare ne voit que la moyenne.",
       "levelsError": "Ta note n’est pas partie. Réessaie dans un instant.",
+      "notRated": "Tu n’as pas encore noté ta maîtrise et ton kif sur ce morceau. Pense à le faire, un peu plus bas.",
+      "ratedLongAgo": "Ta note a plus d’un an. Toujours d’accord ? Change-la, ou confirme-la.",
+      "stillAgree": "Toujours d’accord",
       "parts": "Partitions",
       "partShown": "Affichée",
       "partMissing": "Pas de partition pour ce morceau",
@@ -1164,8 +1168,8 @@
       "tiringFor": "Fatigant pour",
       "trickyFor": "Ça tricote pour",
       "discord": {
-        "tagged": "Les messages du salon Discord qui taguent {{role}}.",
-        "nothingTagged": "Personne n’a encore tagué {{role}} dans le salon de ce morceau.",
+        "tagged": "Les messages du salon Discord qui taguent l’app et {{role}}.",
+        "nothingTagged": "Personne n’a encore tagué l’app et {{role}} dans le salon de ce morceau.",
         "nothingToShow": "Rien à afficher, consulte le salon Discord"
       },
       "mood": "Ambiance",
@@ -1365,7 +1369,7 @@
     },
     "mood": {
       "CHILL": "Chill",
-      "MEDIUM": "Médium",
+      "MEDIUM": "Normal",
       "PARTY": "Teuf"
     },
     "position": {
@@ -1456,7 +1460,10 @@
           "addAgain_one": "Ajouter encore {{name}}, déjà dans cette setlist",
           "addAgain_other": "Ajouter encore {{name}}, déjà dans cette setlist, joué {{count}} fois sur ce plan",
           "nothing": "Aucun morceau ne s’appelle « {{search}} ». La liste ne contient que les morceaux au répertoire et les temporaires.",
-          "empty": "La liste ne contient que les morceaux au répertoire et les temporaires."
+          "empty": "La liste ne contient que les morceaux au répertoire et les temporaires.",
+          "filters": "Filtres",
+          "unplayed": "Pas joués",
+          "nothingFiltered": "Aucun morceau avec ces filtres. Retire-en un pour en voir plus."
         },
         "removeSong": "Retirer {{name}}",
         "length_one": "{{count}} morceau · ≈ {{minutes}} min",
@@ -1637,7 +1644,8 @@
       "delete": "Supprimer le plan",
       "deleteDetail": "Seulement un brouillon sans réponse",
       "manage": "Gérer le plan",
-      "discordText": "Ce que la fanfare se dit sur ce plan est dans son salon Discord."
+      "discordText": "Ce que la fanfare se dit sur ce plan est dans son salon Discord.",
+      "discordTagged": "Les messages du salon Discord qui taguent l’app."
     },
     "whoComes": {
       "pending_one": "1 n’a pas répondu",
@@ -1889,10 +1897,9 @@
     },
     "iosSafari": {
       "title": "Sur ton iPhone",
-      "share": "Touche ⋯ à droite de la barre d’adresse, puis Partager.",
-      "choose": "Choisis « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.",
-      "open": "Touche « Ajouter », puis ouvre l’app depuis sa nouvelle icône.",
-      "older": "Sur un iPhone plus ancien, le bouton Partager est directement dans la barre de Safari."
+      "share": "Touche l’adresse de l’app, puis « Partager ».",
+      "choose": "Touche [+] « Sur l’écran d’accueil ». Laisse « Ouvrir comme app web » activé.",
+      "open": "Touche « Ajouter », puis ouvre l’app depuis sa nouvelle icône."
     },
     "iosOther": {
       "warning": "Sur iPhone, l’app s’installe depuis Safari, pas depuis ce navigateur.",

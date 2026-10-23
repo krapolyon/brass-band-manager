@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from './api.ts';
 import type { AttendanceAnswer } from './components/AttendanceChoices.tsx';
 import type { Section } from './members.ts';
+import type { DiscordMessage } from './songs.ts';
 
 // The gigs of the band, as the API answers them (api/src/Gigs/Gigs.php), and
 // what the screens read from them. Rules: model/gigs.md.
@@ -128,6 +129,18 @@ export function useGigs(everything: boolean) {
   return useQuery({
     queryKey: ['gigs', everything ? 'all' : 'coming'],
     queryFn: () => api<GigSummary[]>(everything ? '/api/gigs?all' : '/api/gigs'),
+  });
+}
+
+/** The messages of the channel of a gig that tag the app (#45), read when its sheet opens. Never an error. */
+export function useGigDiscord(gigId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['gig', gigId, 'discord'],
+    queryFn: () => api<{ messages: DiscordMessage[] }>(`/api/gigs/${gigId}/discord`),
+    enabled,
+    // The server keeps what Discord said 10 minutes: asking more often brings nothing.
+    staleTime: 60_000,
+    retry: false,
   });
 }
 

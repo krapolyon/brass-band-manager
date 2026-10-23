@@ -28,6 +28,23 @@ const repeatOf = (measure) =>
 // empty (issue #35).
 const hasHiddenPart = process.argv[2] === 'hiddenPart';
 
+// "keySignature" as the first argument: a trumpet in B flat that reads two
+// sharps (C major in concert), a tuba in three flats, the file written as
+// MuseScore 4 writes its keys: the concert key, <concertKey> (issue #41).
+const hasKeys = process.argv[2] === 'keySignature';
+const keyOf = (id) => (!hasKeys ? 0 : id === 'P1' ? 2 : id === 'P2' ? -3 : 0);
+const transposeOf = (id) =>
+  hasKeys && id === 'P1'
+    ? '<transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose>'
+    : '';
+const withConcertKeys = (mscx) =>
+  Buffer.from(
+    Buffer.from(mscx)
+      .toString('utf8')
+      .replace('<accidental>2</accidental>', '<concertKey>0</concertKey>')
+      .replace('<accidental>-3</accidental>', '<concertKey>-3</concertKey>'),
+  );
+
 // "lastEid" as the first argument: the file as MuseScore 4.4 writes it, with
 // a line the engine does not know, which makes it open an empty score.
 const withLastEid = (mscx) =>
@@ -65,7 +82,7 @@ const part = (id, octave) =>
       (measure) =>
         `<measure number="${measure + 1}">${repeatOf(measure)[0]}${
           measure === 0
-            ? '<attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes><direction><sound tempo="120"/></direction>'
+            ? `<attributes><divisions>1</divisions><key><fifths>${keyOf(id)}</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef>${transposeOf(id)}</attributes><direction><sound tempo="120"/></direction>`
             : measure === 2 && id === 'P1'
               ? '<direction placement="above"><direction-type><rehearsal>Refrain</rehearsal></direction-type></direction>'
               : ''
@@ -116,5 +133,7 @@ const file =
     ? zipOf('score.mscx', withLastEid(await score.saveMsc('mscx')))
     : hasHiddenPart
       ? zipOf('score.mscx', withHiddenThirdPart(await score.saveMsc('mscx')))
-      : await score.saveMsc('mscz');
+      : hasKeys
+        ? zipOf('score.mscx', withConcertKeys(await score.saveMsc('mscx')))
+        : await score.saveMsc('mscz');
 process.stdout.write(Buffer.from(file).toString('base64'), () => process.exit(0));

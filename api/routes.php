@@ -42,6 +42,7 @@ use BrassBand\Gigs\Costumes;
 use BrassBand\Gigs\DeleteCostumeAction;
 use BrassBand\Gigs\DeleteGigAction;
 use BrassBand\Gigs\DeleteSlotAction;
+use BrassBand\Gigs\GigDiscordMessagesAction;
 use BrassBand\Gigs\GigPush;
 use BrassBand\Gigs\Gigs;
 use BrassBand\Gigs\ListCostumesAction;
@@ -255,7 +256,7 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/songs', new ListSongsAction($songs));
         $group->get('/api/songs/archive', new DownloadArchiveAction($database, $songs, $songFiles));
         $group->get('/api/songs/{id:[0-9]+}', new ShowSongAction($songs));
-        // The messages of its Discord channel that tag the section of the member.
+        // The messages of its Discord channel that tag the app and the section of the member.
         $group->get('/api/songs/{id:[0-9]+}/discord', new DiscordMessagesAction($database, $songs, $discord));
         foreach (['cover', 'clipThumbnail', 'audio', 'midi', 'musicXml', 'museScore'] as $kind) {
             $group->get("/api/songs/{id:[0-9]+}/{$kind}", new ShowSongFileAction($database, $songs, $songFiles, $kind));
@@ -270,6 +271,8 @@ return function (App $app, Connection $database, array $config): void {
         // action hides from who cannot edit them, and answers for themself.
         $group->get('/api/gigs', new ListGigsAction($gigs));
         $group->get('/api/gigs/{id:[0-9]+}', new ShowGigAction($gigs));
+        // The messages of its Discord channel that tag the app.
+        $group->get('/api/gigs/{id:[0-9]+}/discord', new GigDiscordMessagesAction($database, $gigs, $discord));
         // One's own answer for a slot: the address names no member.
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answer', new AnswerAction($database, $gigs, $gigPush, forAnother: false));
         $group->get('/api/setlists/{id:[0-9]+}', new ShowSetlistAction($gigs, $setlists));

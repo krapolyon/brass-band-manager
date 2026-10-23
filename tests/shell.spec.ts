@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { emptyDatabase } from './support/database.ts';
-import { logoInput } from './support/images.ts';
+import { logoInput, png, svg } from './support/images.ts';
 import { install } from './support/scenario.ts';
 
 type Manifest = {
@@ -46,6 +46,40 @@ test.describe('on an installed app', () => {
     const drawn = await request.get('/api/band/icon/192');
     expect(drawn.headers()['content-type']).toBe('image/png');
     expect(await drawn.body()).not.toEqual(await neutral.body());
+  });
+
+  test('with a logo and an icon of the app, the tab shows the icon of the app, not the icons of the logo (#56)', async ({
+    page,
+    request,
+  }) => {
+    // Two images told apart by their grey: the logo's icons, the app's icons.
+    const logoIcon = png(192, 192, 40);
+    const appIcon = png(192, 192, 220);
+    await request.put('/api/band/logo', { data: logoInput(svg, 40) });
+    await request.put('/api/band/appIcon', { data: logoInput(png(512, 512, 220), 220) });
+
+    // The address that index.html names, read before any script runs.
+    expect(await (await request.get('/api/band/icon/192')).body()).toEqual(appIcon);
+    expect(await (await request.get('/api/band/icon/180')).body()).toEqual(png(180, 180, 220));
+
+    // Once the app has loaded, the addresses it writes in the page give the
+    // icon of the app too, in the tab and for an iPhone.
+    await page.goto('/sign-in');
+    await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
+    const band = await (await request.get('/api/band')).json();
+    await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', band.icons['192']);
+    for (const [rel, side] of [
+      ['icon', 192],
+      ['apple-touch-icon', 180],
+    ] as const) {
+      const href = await page.locator(`link[rel="${rel}"]`).getAttribute('href');
+      const served = await (await request.get(href ?? '')).body();
+      expect(served, rel).toEqual(png(side, side, 220));
+      expect(served, rel).not.toEqual(side === 192 ? logoIcon : png(180, 180, 40));
+    }
+    // The installed app takes it as well.
+    const manifest: Manifest = await (await request.get('/api/manifest')).json();
+    expect(await (await request.get(manifest.icons[0]?.src ?? '')).body()).toEqual(appIcon);
   });
 
   test('the app says so when the server does not answer', async ({ page }) => {

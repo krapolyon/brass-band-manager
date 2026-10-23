@@ -7,14 +7,26 @@ type Props = {
    *  happened and what to do next. */
   kind?: 'neutral' | 'success' | 'warning' | 'danger';
   children: ReactNode;
+  /** A nudge that sends to the place it speaks of (a card further down): the
+   *  whole message is then a button. */
+  onPress?: () => void;
 };
 
 // Figma: Message. One or two sentences inside a screen. The icon repeats the
 // kind, so that colour is never the only signal. A warning or a danger is
 // announced by screen readers when it appears, at once; a success too, when
 // they have finished speaking.
-export function Message({ kind = 'neutral', children }: Props) {
+export function Message({ kind = 'neutral', children, onPress }: Props) {
   const icon = kind === 'neutral' ? 'Info' : kind === 'success' ? 'Check' : 'Alert';
+
+  if (onPress) {
+    return (
+      <button type="button" className="Message textBody" data-kind={kind} onClick={onPress}>
+        <Icon name={icon} size={20} />
+        <span className="Message-text">{children}</span>
+      </button>
+    );
+  }
 
   return (
     <div

@@ -1,5 +1,6 @@
 # Business dictionary — Songs domain
 
+> v1.10 — 2026-10-24 · Validated by the owner, for 0.3.2 · Model: `songs.dbml` v1.10 · Migration: `016_memberSongRatedOn.sql` · A song the member has not rated stands out on its sheet, and levels older than a year are asked again (`memberSong.ratedOn`, issue #44); the Discord card of a song shows the messages that tag both the app and the section, without the tag of the app, all of them (issue #45); the mood Médium is labelled Normal
 > v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · Model: `songs.dbml` v1.9 · The mood of a song and the places a set can give it replace its categories, "can also be" and "never first" (issue #47); the copyright of a song (issues #47 and #46); the form of a song shows nothing of Discord for a band without it (issue #49)
 > v1.8 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · A part hidden in the MuseScore file is shown neither by the MIDI player nor by the Live mode (issue #35)
 > v1.7 — 2026-10-18 · Validated by the owner (0.3.0) · Model: `songs.dbml` v1.7 · No migration yet · What the setlist generator reads, taken from the repertoire file the band used until now (issue #25): the length of a song, the day it entered the repertoire, its categories, never first, tiring and tricky for some sections; the Discord channel shown to every member as a link (issue #33); a MIDI track without notes is not shown (issue #35); the loop of the MIDI player over several rehearsal marks that follow each other
@@ -34,7 +35,7 @@ A piece the band plays, is learning or considers learning. Every song is a cover
 | `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per song. Typed as the link of the channel ("Copier le lien du salon" in Discord) or as its identifier; the app keeps the identifier, and refuses a link of another server than the band's |
 | `durationSeconds` | Length | Durée | No | 3:52 | 4 to 5 | Typed as m:ss, from 0:10 to 20:00. See "Setlist attributes" |
 | `inRepertoireOn` | In the repertoire since | Au répertoire depuis | No | 2015-01-01 | — | Never in the future. See "Setlist attributes" |
-| `mood` | Mood | Ambiance | Yes | PARTY | — | One of Chill, Médium, Teuf. Médium by default. See "Setlist attributes" |
+| `mood` | Mood | Ambiance | Yes | PARTY | — | One of Chill, Normal, Teuf. Normal by default. See "Setlist attributes" |
 | `songPosition` | Possible positions | Positions possibles | Yes | SECOND_HALF, END | — | One to five of Début, 1re moitié, Milieu, 2e moitié, Fin. A new song gets 1re moitié, Milieu and 2e moitié. See "Setlist attributes" |
 | `songTiringSection` | Tiring for | Fatigant pour | No | Trompette | — | Zero to several sections |
 | `songTrickySection` | Tricky for | Ça tricote pour | No | Saxophone | — | Zero to several sections |
@@ -119,7 +120,7 @@ Changed on 2026-10-23 (issue #47): the categories, "can also be" and "never firs
 | Mood (`mood`) | Label (fr) | For the generator |
 |---|---|---|
 | `CHILL` | Chill | Drawn more often near the start of a set |
-| `MEDIUM` | Médium | Drawn anywhere |
+| `MEDIUM` | Normal | Drawn anywhere |
 | `PARTY` | Teuf | Drawn more often near the end of a set |
 
 | Position (`songPosition`) | Label (fr) | The places of a set it covers |
@@ -172,7 +173,7 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 - The internal name is the name shown in every representation. The original title and the original artist appear on the sheet of the song.
 - Missing cover art: the placeholder of `Song/Tile` (the music icon on a plain square).
 - Missing tempo, version, clip, length or file: the line is not shown.
-- **Discord** (issue #33, decided on 2026-10-18). A song that has a channel shows, at the end of its sheet, a card "Discussion": the messages of its channel that tag the section of the member, then a button that opens the channel in Discord. The app reads the last 100 messages of the channel through the bot of the band (Band domain, "Discord") when a member opens the song, keeps those that mention the Discord role of the section of the member (`section.discordRoleId`), and shows the three latest, the latest first: who wrote it (their name on Discord), the day, and the text over four lines at most. A tap on a message opens it in Discord. What Discord answers is kept 10 minutes on the server, never in the database: the messages belong to Discord. Without a bot, without a role for the section, or when nothing tags it, the card holds the button only; when Discord does not answer, the button too, with no error shown.
+- **Discord** (issue #33, decided on 2026-10-18). A song that has a channel shows, at the end of its sheet, a card "Discussion": the messages of its channel that tag the app and the section of the member, then a button that opens the channel in Discord. The app reads the last 100 messages of the channel through the bot of the band (Band domain, "Discord") when a member opens the song, keeps those that mention both the app (the bot of the band, or the role Discord gives it) and the Discord role of the section of the member (`section.discordRoleId`), and shows all of them, the latest first (changed on 2026-10-24, issue #45: a message is meant for the app only when it tags it; there is no limit). The tag of the app is taken out of the text shown. Each message shows who wrote it (their name on Discord), the day, and the text over four lines at most. A tap on a message opens it in Discord. What Discord answers is kept 10 minutes on the server, never in the database: the messages belong to Discord. Without a bot, without a role for the section, or when nothing tags it, the card holds the button only; when Discord does not answer, the button too, with no error shown.
 - **The setlist attributes** are shown on the sheet of the song, in "À propos" (changed in v1.9): the year it entered the repertoire, the length as m:ss, the mood ("Ambiance"), the positions in the order of a set ("Positions": "2e moitié, fin"), tiring and tricky with their sections, then the copyright ("Droits d'auteur") last. A line without a value is not shown.
 - **A band without Discord** (`band.discordServerId` empty, issue #49, decided on 2026-10-23): the form of a song shows nothing of Discord. Its card is titled "Clip" and holds the clip only; with Discord it is "Clip et Discord". A band that does not use Discord never sees it. The sheet of a song shows no Discord card.
 - **A MIDI track without any note** (an instrument kept in the MuseScore file with an empty staff) is not shown by the MIDI player nor by the Live mode (issue #35).
@@ -265,6 +266,7 @@ What a member says of a song: how well they play it (mastery) and how much they 
 |---|---|---|---|---|---|---|
 | `masteryLevel` | Mastery | Maîtrise | No | 4 | 1 digit | A whole number from 1 to 5. Empty: not said |
 | `enjoymentLevel` | Enjoyment | Kif | No | 5 | 1 digit | A whole number from 1 to 5. Empty: not said |
+| `ratedOn` | Rated on | Noté le | No | 2026-03-14 | — | Never typed. Set to the day the member sets or changes a level, or confirms them ("Toujours d'accord"). Emptied with the two levels |
 
 ### Rules
 - **Each member sets their own levels, and nobody else does**, an admin included.
@@ -272,6 +274,8 @@ What a member says of a song: how well they play it (mastery) and how much they 
 - **A level is about the song as the member plays it today.** It is kept when the member changes instrument or when the arrangement changes: the member updates it.
 - **The band sees averages, never a person.** For each song and each of the two levels: the average of the current members who answered, and how many answered. No screen and no answer of the API gives the level of a named member to anyone else.
 - **Erased when the member leaves.** The purpose ends with the membership.
+- **Not rated yet** (issue #44, decided on 2026-10-24). On the sheet of a song the member has not rated (both levels empty), a Neutral Message at the top says so and sends to the card "Toi et ce morceau", which is outlined with the accent.
+- **Asked again after a year.** When `ratedOn` is more than 12 months old, the card is outlined and asks "Toujours d'accord ?"; the member changes a level, or confirms with "Toujours d'accord". Both set `ratedOn` to today. Nothing else changes: the average of the band keeps every answer.
 
 ### Access rights
 | Who | View | Set |
@@ -280,7 +284,7 @@ What a member says of a song: how well they play it (mastery) and how much they 
 | `SONG_MANAGER`, `ADMIN` | The same: no role shows the level of a named member | Their own |
 
 ### Personal data
-- `masteryLevel`, `enjoymentLevel`: what a member thinks of their own playing and of a song. Purpose: knowing which songs the band masters and enjoys least, to decide which ones leave the repertoire. Given by the member, optional, seen by the member only, shown to the others as an average, erased when the member leaves, never in an export, never written to a log.
+- `masteryLevel`, `enjoymentLevel`, `ratedOn`: what a member thinks of their own playing and of a song, and since when. Purpose: knowing which songs the band masters and enjoys least, to decide which ones leave the repertoire. Given by the member, optional, seen by the member only, shown to the others as an average, erased when the member leaves, never in an export, never written to a log.
 - Known limit: with very few answers, an average tells a level. With one answer it is the level of whoever answered, whom nothing names.
 
 ## 4. What the dictation learned (`songSpokenName`)

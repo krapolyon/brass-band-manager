@@ -38,9 +38,12 @@ const builtScores = new Map<string, Buffer>();
  * A MuseScore file the MuseScore engine can read: two staves, "Trompette" and
  * "Tuba", four measures, a rehearsal mark on the third. Built on demand
  * (makeScore.mjs), never kept. With "repeat", the first two measures are
- * played twice; with "lastEid", the file is written as MuseScore 4.4 does.
+ * played twice; with "lastEid", the file is written as MuseScore 4.4 does;
+ * with "keySignature", the trumpet is in two sharps and the tuba in three flats.
  */
-export function readableScore(variant: '' | 'repeat' | 'lastEid' | 'hiddenPart' = ''): Buffer {
+export function readableScore(
+  variant: '' | 'repeat' | 'lastEid' | 'hiddenPart' | 'keySignature' = '',
+): Buffer {
   let built = builtScores.get(variant);
   if (!built) {
     built = Buffer.from(

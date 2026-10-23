@@ -330,6 +330,15 @@
   color: var(--accentText);
 }
 
+/* "Ta note a plus d'un an…" (issue #44): what to do in the outlined card. */
+.songs-askAgain {
+  color: var(--accentText);
+}
+
+.songs-stillAgree {
+  display: flex;
+}
+
 .songs-version p {
   margin: 0;
 }

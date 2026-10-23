@@ -92,7 +92,7 @@ final class Songs
             [$songId],
         );
         $levels = $this->database->fetchAssociative(
-            'SELECT masteryLevel, enjoymentLevel FROM memberSong WHERE memberId = ? AND songId = ?',
+            'SELECT masteryLevel, enjoymentLevel, ratedOn FROM memberSong WHERE memberId = ? AND songId = ?',
             [$viewer->id, $songId],
         );
         $address = "/api/songs/{$songId}";
@@ -130,6 +130,9 @@ final class Songs
             'ownLevels' => [
                 'masteryLevel' => self::level($levels === false ? null : $levels['masteryLevel']),
                 'enjoymentLevel' => self::level($levels === false ? null : $levels['enjoymentLevel']),
+                // The day they were last set or confirmed (Y-m-d), null when
+                // never: the sheet asks again after a year.
+                'ratedOn' => $levels === false || !is_string($levels['ratedOn']) ? null : $levels['ratedOn'],
             ],
         ];
         return $view;

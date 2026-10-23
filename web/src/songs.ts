@@ -84,7 +84,12 @@ export type Song = SongSummary & {
   /** In the order of the sections and instruments of the band. */
   parts: (SongFile & { instrumentId: number })[];
   /** The levels of the signed-in member, seen by them only. */
-  ownLevels: { masteryLevel: number | null; enjoymentLevel: number | null };
+  ownLevels: {
+    masteryLevel: number | null;
+    enjoymentLevel: number | null;
+    /** The day the member last set or confirmed them (YYYY-MM-DD); null: never rated. */
+    ratedOn: string | null;
+  };
   /** The Discord channel of the song, for every member (since 0.3.0). */
   discordChannelId: string | null;
   /** The link that opens it in Discord; null without a channel or while the band has no server. */
@@ -92,11 +97,20 @@ export type Song = SongSummary & {
 };
 
 /** What GET /api/songs/{id}/discord answers: the messages that tag the section of the member. */
+/** A message of a Discord channel meant for the app, its tag taken out of the text. */
+export type DiscordMessage = {
+  id: string;
+  author: string;
+  postedAt: string;
+  text: string;
+  url: string;
+};
+
 export type SongDiscord = {
   /** The Discord role of the section of the member; null when the section has none or the bot cannot read it. */
   roleName: string | null;
-  /** The three latest, the latest first. */
-  messages: { id: string; author: string; postedAt: string; text: string; url: string }[];
+  /** Every message that tags the app and the section, the latest first (#45). */
+  messages: DiscordMessage[];
 };
 
 /** The messages of the channel of a song, read when its sheet opens. Never an error: nothing to show is none. */

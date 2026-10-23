@@ -13,20 +13,18 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // GET /api/songs/{id}/discord: the messages of the channel of a song that tag
-// the section of the member who asks, the three latest, the latest first
-// (model/songs.md, "Display"). For every signed-in member.
+// both the app and the section of the member who asks, all of them, the
+// latest first, without the tag of the app (model/songs.md, "Display", issue
+// #45). For every signed-in member.
 //
 // The last 100 messages of the channel are read through the bot of the band
 // and kept 10 minutes on the server (Discord). Without a bot, without a role
-// for the section, without a channel, or when Discord does not give the roles
-// or the messages, nothing is known: no role is named and no message given,
-// and the screen shows the button alone, without saying that nobody tagged
-// the section. Nothing is ever an error.
+// for the section, without a channel, or when Discord does not say who the
+// app is or does not give the roles or the messages, nothing is known: no
+// role is named and no message given, and the screen shows the button alone,
+// without saying that nobody tagged the section. Nothing is ever an error.
 final class DiscordMessagesAction
 {
-    // What the sheet of a song shows (model/songs.md, "Display").
-    public const SHOWN = 3;
-
     public function __construct(
         private readonly Connection $database,
         private readonly Songs $songs,
@@ -61,35 +59,15 @@ final class DiscordMessagesAction
             return $nothing;
         }
 
-        $roleNames = [];
-        foreach ($this->discord->roles($serverId) ?? [] as $role) {
-            $roleNames[$role['id']] = $role['name'];
-        }
         // A role the server no longer has tags nobody.
-        $roleName = $roleNames[$roleId] ?? null;
-        $messages = $roleName === null ? null : $this->discord->messages($channelId);
-        if ($roleName === null || $messages === null) {
-            return $nothing;
-        }
-
-        $shown = [];
-        foreach ($messages as $message) {
-            if (!in_array($roleId, $message['mentionRoles'], true)) {
-                continue;
-            }
-            $shown[] = [
-                'id' => $message['id'],
-                // The name the author shows on Discord: shown, never stored.
-                'author' => $message['author'],
-                'postedAt' => $message['postedAt'],
-                'text' => Discord::readable($message['content'], $roleNames, $message['mentions']),
-                'url' => DiscordLinks::messageUrl($serverId, $channelId, $message['id']),
-            ];
-            if (count($shown) === self::SHOWN) {
-                break;
+        $roleName = null;
+        foreach ($this->discord->roles($serverId) ?? [] as $role) {
+            if ($role['id'] === $roleId) {
+                $roleName = $role['name'];
             }
         }
+        $messages = $roleName === null ? null : $this->discord->messagesForApp($serverId, $channelId, $roleId);
 
-        return ['roleName' => $roleName, 'messages' => $shown];
+        return $roleName === null || $messages === null ? $nothing : ['roleName' => $roleName, 'messages' => $messages];
     }
 }

@@ -120,7 +120,7 @@ const clashes = (one: CandidateSong, other: CandidateSong | undefined) =>
 
 /**
  * How likely a song is drawn at a place (gigs.md, entry 4): Chill near the
- * start, Teuf near the end, Médium anywhere. A preference only: a song of
+ * start, Teuf near the end, Normal (MEDIUM) anywhere. A preference only: a song of
  * any mood can be drawn anywhere.
  */
 function weightOf(song: CandidateSong, place: number, count: number): number {

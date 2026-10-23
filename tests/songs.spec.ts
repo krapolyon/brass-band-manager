@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
+  botUser,
   channel,
   discordAnswers,
   discordMessages,
@@ -9,6 +10,7 @@ import {
   emptyDiscord,
   roles,
   server,
+  tagApp,
 } from './support/discord.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from './support/scenario.ts';
 import {
@@ -430,6 +432,66 @@ test.describe('a song', () => {
     ).toBe('0');
   });
 
+  test('a song not rated yet says so at the top and outlines the card; the message sends to it (#44)', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    const card = page.getByRole('region', { name: 'Toi et ce morceau' });
+    const nudge = page.getByRole('button', { name: /Tu n’as pas encore noté/ });
+
+    await expect(nudge).toBeVisible();
+    await expect(card).toHaveAttribute('data-outlined', 'true');
+    await nudge.click();
+    await expect(card).toBeFocused();
+    await expect(card).toBeInViewport();
+
+    // One level is enough: the message and the outline go.
+    await card
+      .getByRole('radiogroup', { name: 'Kif' })
+      .getByRole('radio', { name: '5' })
+      .check({ force: true });
+    await expect(nudge).toHaveCount(0);
+    await expect(card).not.toHaveAttribute('data-outlined');
+  });
+
+  test('a rating more than a year old is asked again; "Toujours d’accord" confirms it (#44)', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    const zaza = sql('SELECT id FROM member WHERE nickname = "Zaza"');
+    sql(
+      `INSERT INTO memberSong (memberId, songId, masteryLevel, enjoymentLevel, ratedOn) VALUES (${zaza}, ${seven}, 4, 5, DATE_SUB(UTC_DATE(), INTERVAL 13 MONTH))`,
+    );
+    await page.goto(`/songs/${seven}`);
+    const card = page.getByRole('region', { name: 'Toi et ce morceau' });
+
+    // Rated: no message at the top, but the card asks again.
+    await expect(page.getByRole('button', { name: /Tu n’as pas encore noté/ })).toHaveCount(0);
+    await expect(card).toHaveAttribute('data-outlined', 'true');
+    await expect(
+      card.getByText('Ta note a plus d’un an. Toujours d’accord ? Change-la, ou confirme-la.'),
+    ).toBeVisible();
+
+    await card.getByRole('button', { name: 'Toujours d’accord' }).click();
+    await expect(card.getByRole('button', { name: 'Toujours d’accord' })).toHaveCount(0);
+    await expect(card).not.toHaveAttribute('data-outlined');
+    // Nothing else changed.
+    expect(
+      sql(
+        `SELECT masteryLevel, enjoymentLevel, ratedOn = UTC_DATE() FROM memberSong WHERE memberId = ${zaza}`,
+      ),
+    ).toBe('4\t5\t1');
+
+    // A rating of eleven months is not asked again.
+    sql(`UPDATE memberSong SET ratedOn = DATE_SUB(UTC_DATE(), INTERVAL 11 MONTH)`);
+    await page.reload();
+    await expect(
+      card.getByRole('radiogroup', { name: 'Kif' }).getByRole('radio', { name: '5' }),
+    ).toBeChecked();
+    await expect(card).not.toHaveAttribute('data-outlined');
+  });
+
   test('more actions: a member downloads; only who manages songs is offered to edit or change the status', async ({
     page,
   }) => {
@@ -757,7 +819,10 @@ test.describe('the MIDI player', () => {
 test.describe('the Live mode', () => {
   // A song imported with a MuseScore file the app can read: "Trompette" and
   // "Tuba", four measures of four beats at 120, a mark "Refrain" on the third.
-  async function withScore(page: Page, variant: '' | 'repeat' | 'hiddenPart' = '') {
+  async function withScore(
+    page: Page,
+    variant: '' | 'repeat' | 'hiddenPart' | 'keySignature' = '',
+  ) {
     await asMember(page, 'Sisi');
     await page.goto('/songs/new');
     await page.locator('input[type=file]').setInputFiles([
@@ -799,6 +864,52 @@ test.describe('the Live mode', () => {
     await page.goto(`/songs/${crazy}`);
     await openLive(page);
     await expect(page.getByRole('button', { name: 'Ajouter le fichier MuseScore' })).toBeVisible();
+  });
+
+  test('draws the sharps and the flats of a key written by MuseScore 4, as each instrument reads it, on every line (#41)', async ({
+    page,
+  }) => {
+    await withScore(page, 'keySignature');
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const sheet = page.locator('.songs-liveSheet');
+    // Every sign of the key is drawn from a glyph the drawing holds itself.
+    const signs = async () =>
+      sheet.evaluate((element) => {
+        const drawn = [...element.querySelectorAll('g.keySig g.keyAccid use')];
+        const ids = drawn.map((use) =>
+          (use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').slice(1),
+        );
+        return {
+          lines: element.querySelectorAll('g.system').length,
+          perLine: drawn.length / Math.max(1, element.querySelectorAll('g.system').length),
+          glyphs: [...new Set(ids.map((id) => id.split('-')[0]))],
+          isEveryGlyphThere: ids.every((id) => element.querySelector(`[id="${id}"]`) !== null),
+          isShown: [...element.querySelectorAll('g.keySig')].every(
+            (key) => (key as SVGGraphicsElement).getBBox().width > 0,
+          ),
+        };
+      });
+
+    // The trumpet in B flat: C major in concert, so it reads two sharps
+    // (SMuFL E262), on every line.
+    await expect.poll(async () => (await signs()).perLine).toBe(2);
+    expect(await signs()).toMatchObject({
+      glyphs: ['E262'],
+      isEveryGlyphThere: true,
+      isShown: true,
+    });
+
+    // The tuba, a known spelling of the Souba: three flats (E260).
+    await page.getByRole('button', { name: 'Changer de partition : Trompette' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Souba' }).click();
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await expect.poll(async () => (await signs()).perLine).toBe(3);
+    expect(await signs()).toMatchObject({ glyphs: ['E260'], isEveryGlyphThere: true });
   });
 
   test('shows the part of the member’s instrument, starts where asked, follows the tempo and comes back at the end', async ({
@@ -1100,13 +1211,13 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await page.goto(`/songs/${sql("SELECT id FROM song WHERE name = 'Crazy'")}`);
     const crazy = page.locator('.songs-facts').or(page.getByRole('region', { name: 'À propos' }));
     await expect(crazy).toContainText(
-      /Ambiance\s*Médium\s*Positions\s*1re moitié, milieu, 2e moitié/,
+      /Ambiance\s*Normal\s*Positions\s*1re moitié, milieu, 2e moitié/,
     );
     await expect(page.getByText('Durée', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Droits d’auteur', { exact: true })).toHaveCount(0);
   });
 
-  test('the Discord card shows the messages that tag the section of the member, then opens the channel', async ({
+  test('the Discord card shows the messages that tag the app and the section of the member, without the tag of the app, then opens the channel (#45)', async ({
     page,
   }) => {
     withChannel();
@@ -1115,15 +1226,25 @@ test.describe('Discord and the setlists (0.3.0)', () => {
         id: '9003',
         author: 'Fanfan',
         day: '2026-10-01',
-        content: `<@&${roles.trumpets}> mesures 36-37`,
+        content: `${tagApp} <@&${roles.trumpets}> mesures 36-37`,
+        roles: [roles.trumpets],
+        users: [botUser],
+      },
+      {
+        id: '9002b',
+        author: 'Lulu',
+        day: '2026-09-30',
+        // The section without the app: between members, not for the app.
+        content: `<@&${roles.trumpets}> on boit un coup après ?`,
         roles: [roles.trumpets],
       },
       {
         id: '9002',
         author: 'Gégé',
         day: '2026-09-28',
-        content: `<@&${roles.saxophones}> pour les saxos`,
+        content: `${tagApp} <@&${roles.saxophones}> pour les saxos`,
         roles: [roles.saxophones],
+        users: [botUser],
       },
     ]);
     await asMember(page, 'Zaza');
@@ -1131,9 +1252,13 @@ test.describe('Discord and the setlists (0.3.0)', () => {
 
     const card = page.locator('.DiscordChannelCard');
     await expect(card.getByRole('heading', { name: 'Discussion' })).toBeVisible();
-    await expect(card).toContainText('Les messages du salon Discord qui taguent @trompettiste.');
+    await expect(card).toContainText(
+      'Les messages du salon Discord qui taguent l’app et @trompettiste.',
+    );
     const message = card.getByRole('link', { name: /Fanfan/ });
     await expect(message).toContainText('@trompettiste mesures 36-37');
+    await expect(message).not.toContainText('App Les Cuivres');
+    await expect(card).not.toContainText('on boit un coup');
     await expect(message).toHaveAttribute(
       'href',
       `https://discord.com/channels/${server}/${channel}/9003`,
@@ -1154,7 +1279,7 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await page.goto(`/songs/${seven}`);
     const card = page.locator('.DiscordChannelCard');
     await expect(card).toContainText(
-      'Personne n’a encore tagué @trompettiste dans le salon de ce morceau.',
+      'Personne n’a encore tagué l’app et @trompettiste dans le salon de ce morceau.',
     );
     await expect(card.getByRole('link', { name: 'Ouvrir dans Discord' })).toBeVisible();
 
