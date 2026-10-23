@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · No change to the tables · The setlist generator places songs by their possible positions and draws Chill songs near the start, Teuf near the end (issue #47, Songs v1.9)
 > v1.8 — 2026-10-18 · Validated by the owner, for 0.3.1 · No change to the tables · An answer "if needed" counts for the playability of a slot, without being a yes (issue #37): the gig can be confirmed by the app thanks to it, and the screen names who is counted that way
 > v1.7 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · The Discord channel of a gig is typed in its form and shown to every member as a link (issue #33); the length of a setlist and the setlist generator (issue #25)
 > v1.6 — 2026-10-16 · No change to the tables · Milestone 0.2.0, with Members v1.21 (migration `013_notificationsAndCalendar.sql`): a gig that becomes playable or confirmed is notified, the live setlist follows the setting of each member and spares the device that moved it (issue #23); the setlist editor counts how often a song is played in the gig, adds songs from a list, and removes a song by a swipe (issue #20); the calendar feed of a member (issue #21)
@@ -211,12 +212,11 @@ The notification names the song being played and the two after it: “3/6 · Pro
 - A live setlist can still be edited; its position stays the same number, and who manages setlists corrects it by scrolling if needed.
 - **Length of a setlist** (issue #25). The lengths of its songs (read from their MIDI file), plus the time between two songs of the band (`band.setlistGapSeconds`, 30 s by default) between each of them: 6 songs of 3:30 make 21:00 + 5 × 0:30 = 23:30. Shown rounded to the minute ("≈ 24 min"). Songs without a length are left out of the sum, and the screen says how many ("2 morceaux sans durée"). Computed, never stored.
 - **Proposing a setlist** (issue #25, the generator the band used until now, `JCrache/krapo`). In the editor of a setlist, who manages setlists asks the app to propose its songs. Two choices: how many songs (10 by default, 3 to 30), and whether to include the new songs (off by default; a song is new for 2 months after it entered the repertoire, Songs domain, "Setlist attributes"). The app picks among the songs a setlist can hold (`IN_REPERTOIRE`, `TEMPORARY`), and avoids those already in the other setlists of the gig as long as there are enough. Each proposal follows these rules:
-  - the first song is an opener (main or other category), never a song that is never first;
-  - the last is a party song, an encore if one fits;
-  - a song whose main category is opener stays in the first half, party in the second half, encore at the end only;
-  - a tiring song stays in the first half;
-  - two choreographies never follow each other, nor two songs tricky for the same section;
-  - the categories alternate as much as they can.
+  - each song goes only where one of its possible positions allows (changed on 2026-10-23, issue #47; Songs domain, "Setlist attributes"): the first three places take only songs that have Début, the last three only songs that have Fin;
+  - a tiring song stays in the first half, except among the last three when it has Fin: Fin wins;
+  - two songs tricky for the same section never follow each other.
+  
+  Among the songs a place allows, the draw favours the mood: the nearer the start, the more likely a Chill song; the nearer the end, the more likely a Teuf song; Médium anywhere. It is a preference, never a rule that blocks a proposal.
   
   When the rules cannot all be kept (a small repertoire), the app keeps the order of this list, drops the last rules first, and says it. The proposal replaces the songs of the setlist in the editor; nothing is saved until "Enregistrer la setlist", and "Une autre" draws again. The songs are then moved, removed and added by hand as usual. Draws are random: nothing about them is stored.
 - Later, not modelled: how often each song is played, counted from the setlists of past gigs.

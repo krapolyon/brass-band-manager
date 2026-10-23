@@ -1,5 +1,6 @@
 // Overview model: every object of the app at a coarse grain.
 // Key fields only. Each domain is detailed later in its own file.
+// v0.9 — 2026-10-23 — aligned with 0.3.1 (Songs v1.9): the mood of a song replaces its category
 // v0.8 — 2026-10-18 — aligned with 0.3.0 (Band v1.7, Members v1.22, Songs v1.7, Gigs v1.7), validated: icon of the app, time between two songs, Discord role of a section, length and setlist attributes of a song
 // v0.7 — 2026-10-13 — aligned with Gigs v1.0, validated: dates and place on the gig, five statuses, slots without dates, no stops, costumes, setlists tied to a gig and no longer a later feature, reminders of the band, push subscription tied to a session
 // v0.6 — 2026-10-12 — aligned with Songs v1.0, validated: five statuses, one field per file instead of songFile, Discord channel, aliases moved to songs, levels of a member on a song
@@ -134,7 +135,7 @@ Table song {
   clipUrl varchar [note: 'YouTube video of the original, played inside the app']
   discordChannelId varchar [note: 'Discord channel where the band discusses this song']
   durationSeconds integer [note: 'Length, read from the MIDI file']
-  setCategory varchar [note: 'Main category for the setlist generator; the others, never first, tiring and tricky sections are detailed in songs.dbml']
+  mood varchar [note: 'Mood for the setlist generator (Chill, Médium, Teuf); the possible positions, tiring and tricky sections are detailed in songs.dbml']
   Note: 'A piece the band plays, is learning or considers learning. Detailed in songs.dbml: version, and its files (cover art, MuseScore, MIDI, recording), one field per file.'
 }
 

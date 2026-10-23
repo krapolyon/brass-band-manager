@@ -1,5 +1,6 @@
 # Business dictionary — Songs domain
 
+> v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · Model: `songs.dbml` v1.9 · The mood of a song and the places a set can give it replace its categories, "can also be" and "never first" (issue #47); the copyright of a song (issues #47 and #46); the form of a song shows nothing of Discord for a band without it (issue #49)
 > v1.8 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · A part hidden in the MuseScore file is shown neither by the MIDI player nor by the Live mode (issue #35)
 > v1.7 — 2026-10-18 · Validated by the owner (0.3.0) · Model: `songs.dbml` v1.7 · No migration yet · What the setlist generator reads, taken from the repertoire file the band used until now (issue #25): the length of a song, the day it entered the repertoire, its categories, never first, tiring and tricky for some sections; the Discord channel shown to every member as a link (issue #33); a MIDI track without notes is not shown (issue #35); the loop of the MIDI player over several rehearsal marks that follow each other
 > v1.6 — 2026-10-16 · No change to the tables · Milestone 0.2.0, with Members v1.21 (migration `013_notificationsAndCalendar.sql`): the notifications of a new song, a new MuseScore file and a new part (issue #23); the outline of a recording measures its loudness, and an outline of an older kind is computed again (issue #29); the Live mode driven by the MIDI player (issue #10)
@@ -23,6 +24,7 @@ A piece the band plays, is learning or considers learning. Every song is a cover
 | `name` | Internal name | Nom interne | Yes | Crazy · Seven Nation | 3 to 30 | The name the band gives to the song, shown everywhere. Unique, compared without regard to case or accents. Never translated |
 | `originalTitle` | Original title | Titre original | Yes | Crazy in Love · Seven Nation Army | 3 to 60 | Never translated |
 | `originalArtist` | Original artist | Interprète original | Yes | Beyoncé feat. Jay-Z · The White Stripes | 3 to 50 | Free text: one field, even for several artists. Never translated |
+| `copyright` | Copyright | Droits d'auteur | No | Jack White · Beyoncé Knowles, Shawn Carter, Rich Harrison, Eugene Record | 10 to 200 | Authors and composers, as the collecting society knows them (the Sacem in France). Free text, never translated. Used by the Sacem credits (issue #46, 0.3.2) |
 | `bpm` | Tempo (bpm) | Tempo (bpm) | No | 104 | 2 to 3 digits | A whole number from 20 to 400. Filled only when the band plays at another tempo than the one of the MuseScore file. Empty: the tempo of the file |
 | `status` | Status | Statut | Yes | IN_REPERTOIRE | — | See life cycle |
 | `versionOn` | Last update | Dernière mise à jour | No | 2026-09-14 | — | The day the arrangement last changed. Typed by hand, never in the future |
@@ -32,9 +34,8 @@ A piece the band plays, is learning or considers learning. Every song is a cover
 | `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per song. Typed as the link of the channel ("Copier le lien du salon" in Discord) or as its identifier; the app keeps the identifier, and refuses a link of another server than the band's |
 | `durationSeconds` | Length | Durée | No | 3:52 | 4 to 5 | Typed as m:ss, from 0:10 to 20:00. See "Setlist attributes" |
 | `inRepertoireOn` | In the repertoire since | Au répertoire depuis | No | 2015-01-01 | — | Never in the future. See "Setlist attributes" |
-| `setCategory` | Category | Catégorie | Yes | PARTY | — | Standard by default. See "Setlist attributes" |
-| `isNeverFirst` | Never first | Jamais en premier | Yes | false | — | |
-| `songOtherCategory` | Can also be | Peut aussi servir de | No | ENCORE | — | Zero to several categories, never Standard nor the main one |
+| `mood` | Mood | Ambiance | Yes | PARTY | — | One of Chill, Médium, Teuf. Médium by default. See "Setlist attributes" |
+| `songPosition` | Possible positions | Positions possibles | Yes | SECOND_HALF, END | — | One to five of Début, 1re moitié, Milieu, 2e moitié, Fin. A new song gets 1re moitié, Milieu and 2e moitié. See "Setlist attributes" |
 | `songTiringSection` | Tiring for | Fatigant pour | No | Trompette | — | Zero to several sections |
 | `songTrickySection` | Tricky for | Ça tricote pour | No | Saxophone | — | Zero to several sections |
 | `coverPath` | Cover art | Jaquette | No | — | — | An image file: JPEG, PNG or WebP, square. See "Files" |
@@ -113,19 +114,25 @@ A NoteWorthy file (`.nwc`), which the earlier app kept, is no longer one of them
 ### Setlist attributes
 Taken on 2026-10-18 from the repertoire file the band kept for its setlist generator (`repertoire.yml`, issue #25), without what the band no longer wants: the songs that need two basses, the titles for the Sacem, the full title (the original title and artist already say it).
 
-| Category (`setCategory`) | Label (fr) | As main category | As another category |
-|---|---|---|---|
-| `OPENER` | Début | In the first half of a set only | Can be the first song |
-| `PARTY` | Teuf | In the second half only | Can be the last song |
-| `KNOWN` | Connu | Anywhere | — |
-| `CHOREOGRAPHY` | Chorée | Anywhere; two never follow each other | Same rule |
-| `CHILL` | Chill | Anywhere | — |
-| `ENCORE` | Rappel | Last only | Preferred as the last song |
-| `STANDARD` | Standard | Anywhere | Not offered |
+Changed on 2026-10-23 (issue #47): the categories, "can also be" and "never first" are replaced by a mood and possible positions. No song had them filled: nothing is carried over.
 
-- **One main category, others besides.** The main category decides where the generator may place the song; another category only says it can serve as such, for instance a party song that can close as an encore. The rules of the generator are in the Gigs domain, entry 4.
-- **Never first** (`isNeverFirst`): the band has to be warmed up.
-- **Tiring** for some sections (`songTiringSection`): the song is never placed in the second half of a set. The sections say for whom, for information.
+| Mood (`mood`) | Label (fr) | For the generator |
+|---|---|---|
+| `CHILL` | Chill | Drawn more often near the start of a set |
+| `MEDIUM` | Médium | Drawn anywhere |
+| `PARTY` | Teuf | Drawn more often near the end of a set |
+
+| Position (`songPosition`) | Label (fr) | The places of a set it covers |
+|---|---|---|
+| `START` | Début | The first three songs |
+| `FIRST_HALF` | 1re moitié | The first half, after the first three songs |
+| `MIDDLE` | Milieu | The middle 30 % of the set |
+| `SECOND_HALF` | 2e moitié | The second half, before the last three songs |
+| `END` | Fin | The last three songs |
+
+- **A song is placed only where one of its positions allows.** The first three places take only the songs that have Début, the last three only those that have Fin; in a set of five songs or fewer, a place that is among both takes either. The other places belong to their half, and to the middle when they fall in the middle 30 % of the set: a song that has one of these goes there. A place is counted at its centre: place *p* of *n* is at (*p* − ½) / *n*; the first half is below ½, the second from ½, the middle from 0.35 to 0.65.
+- **At least one position.** A song without any cannot be saved. "Never first" is gone: a song without Début is never among the first three.
+- **Tiring** for some sections (`songTiringSection`): the song is never placed in the second half of a set, except among the last three songs when it has Fin: Fin wins (decided on 2026-10-23). The sections say for whom, for information.
 - **Tricky** for some sections (`songTrickySection`, "ça tricote"): two songs tricky for the same section never follow each other (decided on 2026-10-18; the file of the band said any two tricky songs, but a hard song for the saxophones then one for the trumpets tires nobody twice).
 - **Length** (`durationSeconds`). When a MIDI file is sent, or produced from the MuseScore file, its length is proposed, repeats played, at the tempo of the band when `bpm` is filled (the length of the file times its tempo divided by `bpm`, both counted on the beat of the time signature). Never the length of the recording: it can hold applause and talk (decided on 2026-10-18). Whoever manages songs corrects it; a length typed by hand is not replaced by a file sent afterwards. Gives the length of a setlist (Gigs domain).
 - **In the repertoire since** (`inRepertoireOn`). Set to the day the status first becomes `IN_REPERTOIRE`; corrected by hand, for the songs of before the app (the import kit sets the 1st of January of the year of the file). The sheet of the song shows the year. **A song is new** for 2 months after this day (decided on 2026-10-18): the generator leaves it out unless asked. It replaces the tag "nouveau" of the file of the band, which had to be removed by hand.
@@ -166,7 +173,8 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 - Missing cover art: the placeholder of `Song/Tile` (the music icon on a plain square).
 - Missing tempo, version, clip, length or file: the line is not shown.
 - **Discord** (issue #33, decided on 2026-10-18). A song that has a channel shows, at the end of its sheet, a card "Discussion": the messages of its channel that tag the section of the member, then a button that opens the channel in Discord. The app reads the last 100 messages of the channel through the bot of the band (Band domain, "Discord") when a member opens the song, keeps those that mention the Discord role of the section of the member (`section.discordRoleId`), and shows the three latest, the latest first: who wrote it (their name on Discord), the day, and the text over four lines at most. A tap on a message opens it in Discord. What Discord answers is kept 10 minutes on the server, never in the database: the messages belong to Discord. Without a bot, without a role for the section, or when nothing tags it, the card holds the button only; when Discord does not answer, the button too, with no error shown.
-- **The categories** are shown on the sheet of the song, in "À propos": the main one first, the others after, then never first, tiring and tricky with their sections. The length as m:ss, the year it entered the repertoire.
+- **The setlist attributes** are shown on the sheet of the song, in "À propos" (changed in v1.9): the year it entered the repertoire, the length as m:ss, the mood ("Ambiance"), the positions in the order of a set ("Positions": "2e moitié, fin"), tiring and tricky with their sections, then the copyright ("Droits d'auteur") last. A line without a value is not shown.
+- **A band without Discord** (`band.discordServerId` empty, issue #49, decided on 2026-10-23): the form of a song shows nothing of Discord. Its card is titled "Clip" and holds the clip only; with Discord it is "Clip et Discord". A band that does not use Discord never sees it. The sheet of a song shows no Discord card.
 - **A MIDI track without any note** (an instrument kept in the MuseScore file with an empty staff) is not shown by the MIDI player nor by the Live mode (issue #35).
 - **A part hidden in the MuseScore file** (the instrument unticked in MuseScore, its staff invisible) is not shown either, even when it holds notes (decided on 2026-10-18, issue #35: a hidden cornet with a few leftover chords showed as an almost empty track). The browser that reads a MuseScore file leaves it out of the MIDI file and of the MusicXML it produces. A song sent before 0.3.0 keeps its files until its MuseScore file is sent again.
 - Representations in the design library (Figma, checked on 2026-10-13): `Song/Tile` (the cover, everywhere), `Song/Row` (the list; `Selected` beside the song on a desktop), `Song/Card` (the grid), `Song/Header` (Large over the cover on a phone, Compact on larger screens), `Song/Mention` (the mini-player), `Song/Latest` (the latest songs of the repertoire, pinned on the home screen: a slot of three `Song/Row` without their status), `Song/TableHeader` and `Song/TableRow` (the table of those who manage songs), `SongFile/Row` (a file placed by the import), `Song/PickerRow` (a song in the list that adds songs to a setlist, with its `PlayedDots`: Gigs domain). Missing: none needed yet.
@@ -313,6 +321,8 @@ A phrase the dictation of a setlist heard for a song, besides its name, kept so 
 - The dictation itself: Gigs domain, the form of a setlist (Figma, page `Gigs`, section 11).
 
 ## 5. Open questions
+
+Decided by the owner on 2026-10-23 (v1.9): a mood and possible positions replace the categories; at least one position, the three of the middle for a new song; Fin wins over tiring; Chill drawn near the start, Teuf near the end; one copyright field, shared with the Sacem credits; the form of a song shows nothing of Discord when the band has none.
 
 Decided by the owner on 2026-10-18 (v1.7): Discord shows the messages that tag the section of the member, then the link; a song is new for 2 months; tricky for the same section; the length read from the MIDI file; a MIDI track without notes is hidden; the loop can span several rehearsal marks that follow each other.
 

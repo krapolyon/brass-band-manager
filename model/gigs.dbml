@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.9 — 2026-10-23 — validated, for 0.3.1, no change to the tables: the setlist generator places songs by their possible positions and favours Chill near the start, Teuf near the end (issue #47) (dictionary)
 // v1.8 — 2026-10-18 — validated, for 0.3.1, no change to the tables: an answer IF_NEEDED counts for the playability of a slot, without being a yes (issue #37) (dictionary)
 // v1.7 — 2026-10-18 — validated (0.3.0), no change to the tables: the Discord channel of a gig is shown to every member as a link and typed in the form (issue #33); the length of a setlist and the setlist generator (issue #25) (dictionary)
 // v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications when a gig becomes playable or confirmed, the live setlist follows the setting of each member (issue #23); the setlist editor shows how often a song is played in the gig and adds songs from a list (issue #20); the calendar feed of a member (issue #21) (dictionary)

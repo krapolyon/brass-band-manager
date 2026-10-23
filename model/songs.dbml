@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.9 — 2026-10-23 — validated, for 0.3.1 (issue #47): the mood of a song (mood) and the places a set can give it (songPosition) replace its categories (setCategory, songOtherCategory) and isNeverFirst; the copyright of a song (copyright)
 // v1.8 — 2026-10-18 — no change to the tables (0.3.0): a part hidden in the MuseScore file is left out of the MIDI file and the MusicXML the browser produces (issue #35) (dictionary)
 // v1.7 — 2026-10-18 — validated (0.3.0): the length of a song (durationSeconds) and the day it entered the repertoire (inRepertoireOn); what the setlist generator reads, taken from the repertoire file of the band (issue #25): a main category and other ones, never first, tiring and tricky for some sections; the Discord channel is shown to every member as a link (issue #33)
 // v1.6 — 2026-10-16 — no change to the tables (0.2.0): notifications of a new song, a new MuseScore file and a new part (issue #23); the outline of a recording measures loudness and is versioned (issue #29); the Live mode can be driven by the MIDI player (issue #10) (dictionary)
@@ -32,17 +33,21 @@ Enum songStatus {
   ABANDONED [note: 'No longer played, or given up before it was ready. Kept for history.']
 }
 
-// What the setlist generator reads (issue #25). The French labels are
-// those the band already used: Début, Teuf, Connu, Chorée, Chill,
-// Rappel, Standard.
-Enum setCategory {
-  OPENER [note: 'Good to start a set. As main category: placed in the first half only']
-  PARTY [note: 'Energetic, gets the crowd going ("teuf"). As main category: placed in the second half only']
-  KNOWN [note: 'Known by the audience']
-  CHOREOGRAPHY [note: 'Has a choreography ("chorée"). Two never follow each other']
-  CHILL [note: 'Quieter']
-  ENCORE [note: 'Played as an encore ("rappel"). As main category: placed last only']
-  STANDARD [note: 'Neither of the above: placed anywhere']
+// What the setlist generator reads (issues #25 and #47). The French labels
+// are those of the band: Chill, Médium, Teuf; Début, 1re moitié, Milieu,
+// 2e moitié, Fin.
+Enum songMood {
+  CHILL [note: 'Quiet. The generator places these towards the start of a set']
+  MEDIUM [note: 'Neither quiet nor a party song ("médium")']
+  PARTY [note: 'Gets the crowd going ("teuf"). The generator places these towards the end of a set']
+}
+
+Enum setPosition {
+  START [note: 'One of the first three songs of a set ("début"). Only a song with START is placed there']
+  FIRST_HALF [note: 'The first half of a set, after the first three songs']
+  MIDDLE [note: 'The middle 30 % of a set']
+  SECOND_HALF [note: 'The second half of a set, before the last three songs']
+  END [note: 'One of the last three songs of a set ("fin"). Only a song with END is placed there']
 }
 
 Table song {
@@ -59,8 +64,8 @@ Table song {
   discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this song: digits only. Empty for a band without Discord. Read by the app from the link of the channel, pasted by whoever manages songs. Every member sees it as a link that opens the channel in Discord.']
   durationSeconds integer [note: 'How long the band plays the song, in seconds, from 10 to 1200, shown as m:ss. Read from the MIDI file when one is sent, never from the recording (it can hold applause); then typed or corrected by whoever manages songs. Empty: not known. Gives the length of a setlist.']
   inRepertoireOn date [note: 'Day the song entered the repertoire. Set by the app the first time the status becomes IN_REPERTOIRE, corrected by hand. A song is new for the setlist generator for 2 months after it.']
-  setCategory setCategory [not null, default: 'STANDARD', note: 'Main category of the song for the setlist generator. Decides where the generator may place it (see the enum).']
-  isNeverFirst boolean [not null, default: false, note: 'Never placed first in a set: the band has to be warmed up ("pas en premier").']
+  mood songMood [not null, default: 'MEDIUM', note: 'The mood of the song, one value, for the setlist generator ("ambiance").']
+  copyright varchar [note: 'Authors and composers of the song, as the collecting society of the country of the band knows them (the Sacem in France), up to 200 characters. Free text, never translated. Empty: not known.']
   coverPath varchar [note: 'File of the cover art of the original song (JPEG, PNG or WebP, square), relative to the storage folder of the app. Empty when the song has none.']
   museScorePath varchar [note: 'MuseScore file of the arrangement (.mscz), relative to the storage folder of the app. The source of the score.']
   midiPath varchar [note: 'MIDI file of the arrangement, relative to the storage folder of the app. Produced from the MuseScore file by the browser that sends it, its tracks named after the staves; or exported by hand.']
@@ -69,21 +74,21 @@ Table song {
   Note: 'A piece the band plays, is learning or considers learning. Every song is a cover: it has an original title, an original artist and the cover art of the original.'
 }
 
-// What a song brings to a set, besides its main category
-Table songOtherCategory {
+// Where the setlist generator may place a song
+Table songPosition {
   songId integer [not null, ref: > song.id]
-  category setCategory [not null, note: 'Any category but STANDARD and the main category of the song']
-  Note: 'A category a song can also serve as, for instance a party song that can close as an encore. Places the song nowhere by itself: the generator looks for it where that category is wanted (first song, last song).'
+  position setPosition [not null]
+  Note: 'A place of a set where the song can be played ("positions possibles"). A song has at least one; a new song gets FIRST_HALF, MIDDLE and SECOND_HALF. The generator places it only in one of its places.'
 
   indexes {
-    (songId, category) [pk]
+    (songId, position) [pk]
   }
 }
 
 Table songTiringSection {
   songId integer [not null, ref: > song.id]
   sectionId integer [not null, ref: > section.id]
-  Note: 'A section for which the song is tiring ("fatigant"). A song with at least one is never placed in the second half of a set.'
+  Note: 'A section for which the song is tiring ("fatigant"). A song with at least one is never placed in the second half of a set, except among the last three songs when it has the position END: END wins.'
 
   indexes {
     (songId, sectionId) [pk]
@@ -175,7 +180,7 @@ Table section {
 
 TableGroup songs {
   song
-  songOtherCategory
+  songPosition
   songTiringSection
   songTrickySection
   songPart
