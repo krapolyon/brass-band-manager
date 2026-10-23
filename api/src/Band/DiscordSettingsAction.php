@@ -20,7 +20,8 @@ use Psr\Http\Message\ServerRequestInterface;
 //
 // The answer says whether the bot reaches the server, asked of Discord each
 // time (GET /guilds/{id}), and lists the roles of the server a section can be
-// tagged with (GET /guilds/{id}/roles). The token of the bot is never part of
+// tagged with (GET /guilds/{id}/roles), and the name of the app on Discord,
+// the name of the bot (GET /users/@me). The token of the bot is never part of
 // it: only whether there is one. With ?withoutBot, Discord is not asked: the
 // summary of the band settings only needs to know whether a server is set.
 final class DiscordSettingsAction
@@ -100,7 +101,10 @@ final class DiscordSettingsAction
         $serverId = $this->database->fetchOne('SELECT discordServerId FROM band WHERE id = 1');
         $serverId = is_string($serverId) && $serverId !== '' ? $serverId : null;
         $server = $serverId === null || !$askDiscord ? ['status' => 'none', 'serverName' => null] : $this->discord->server($serverId);
-        $roles = $serverId !== null && $server['status'] === 'connected' ? $this->discord->roles($serverId, fresh: true) : null;
+        $isConnected = $serverId !== null && $server['status'] === 'connected';
+        $roles = $isConnected ? $this->discord->roles($serverId, fresh: true) : null;
+        // The name the members tag the app by, read from Discord (issue #45).
+        $app = $isConnected ? $this->discord->app($serverId) : null;
 
         return [
             'serverId' => $serverId,
@@ -110,6 +114,7 @@ final class DiscordSettingsAction
             // (a bot not invited, a wrong token); unreachable: no answer.
             'bot' => $server['status'],
             'serverName' => $server['serverName'],
+            'botName' => $app['name'] ?? null,
             'roles' => $roles,
             'sections' => array_map(fn (array $section) => [
                 'id' => (int) $section['id'],

@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
+  botUser,
   channel,
   discordAnswers,
   discordMessages,
@@ -9,6 +10,7 @@ import {
   emptyDiscord,
   roles,
   server,
+  tagApp,
 } from './support/discord.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from './support/scenario.ts';
 import {
@@ -1166,7 +1168,7 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await expect(page.getByText('Droits d’auteur', { exact: true })).toHaveCount(0);
   });
 
-  test('the Discord card shows the messages that tag the section of the member, then opens the channel', async ({
+  test('the Discord card shows the messages that tag the app and the section of the member, without the tag of the app, then opens the channel (#45)', async ({
     page,
   }) => {
     withChannel();
@@ -1175,15 +1177,25 @@ test.describe('Discord and the setlists (0.3.0)', () => {
         id: '9003',
         author: 'Fanfan',
         day: '2026-10-01',
-        content: `<@&${roles.trumpets}> mesures 36-37`,
+        content: `${tagApp} <@&${roles.trumpets}> mesures 36-37`,
+        roles: [roles.trumpets],
+        users: [botUser],
+      },
+      {
+        id: '9002b',
+        author: 'Lulu',
+        day: '2026-09-30',
+        // The section without the app: between members, not for the app.
+        content: `<@&${roles.trumpets}> on boit un coup après ?`,
         roles: [roles.trumpets],
       },
       {
         id: '9002',
         author: 'Gégé',
         day: '2026-09-28',
-        content: `<@&${roles.saxophones}> pour les saxos`,
+        content: `${tagApp} <@&${roles.saxophones}> pour les saxos`,
         roles: [roles.saxophones],
+        users: [botUser],
       },
     ]);
     await asMember(page, 'Zaza');
@@ -1191,9 +1203,13 @@ test.describe('Discord and the setlists (0.3.0)', () => {
 
     const card = page.locator('.DiscordChannelCard');
     await expect(card.getByRole('heading', { name: 'Discussion' })).toBeVisible();
-    await expect(card).toContainText('Les messages du salon Discord qui taguent @trompettiste.');
+    await expect(card).toContainText(
+      'Les messages du salon Discord qui taguent l’app et @trompettiste.',
+    );
     const message = card.getByRole('link', { name: /Fanfan/ });
     await expect(message).toContainText('@trompettiste mesures 36-37');
+    await expect(message).not.toContainText('App Les Cuivres');
+    await expect(card).not.toContainText('on boit un coup');
     await expect(message).toHaveAttribute(
       'href',
       `https://discord.com/channels/${server}/${channel}/9003`,
@@ -1214,7 +1230,7 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await page.goto(`/songs/${seven}`);
     const card = page.locator('.DiscordChannelCard');
     await expect(card).toContainText(
-      'Personne n’a encore tagué @trompettiste dans le salon de ce morceau.',
+      'Personne n’a encore tagué l’app et @trompettiste dans le salon de ce morceau.',
     );
     await expect(card.getByRole('link', { name: 'Ouvrir dans Discord' })).toBeVisible();
 

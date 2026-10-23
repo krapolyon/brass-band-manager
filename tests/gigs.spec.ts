@@ -1,6 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import {
+  app,
+  botUser,
+  channel,
+  discordMessages,
+  discordServer,
+  emptyDiscord,
+  server,
+  tagApp,
+  tagAppRole,
+} from './support/discord.ts';
 import { addCostume, addGig, answerOf, day, organise, plays } from './support/gigs.ts';
 import { png } from './support/images.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
@@ -1308,9 +1319,6 @@ test.describe('what must not go wrong', () => {
 });
 
 test.describe('Discord (0.3.0, #33)', () => {
-  const server = '1000312294715883560';
-  const channel = '1000359811281600622';
-
   test('every member who sees the gig sees the card of its channel; no channel, no card', async ({
     page,
   }) => {
@@ -1333,6 +1341,56 @@ test.describe('Discord (0.3.0, #33)', () => {
     await page.goto(`/gigs/${other.gigId}`);
     await expect(page.getByRole('heading', { level: 1, name: 'Fête de la soupe' })).toBeVisible();
     await expect(card).toHaveCount(0);
+  });
+
+  test('the card shows every message of the channel that tags the app, the latest first, without the tag (#45)', async ({
+    page,
+  }) => {
+    emptyDiscord();
+    discordServer();
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    const { gigId } = addGig('Anniversaire de Margaux', { startsOn: day(10) });
+    sql(`UPDATE gig SET discordChannelId = '${channel}' WHERE id = ${gigId}`);
+    discordMessages(channel, [
+      {
+        id: '9205',
+        author: 'Zaza',
+        day: '2026-09-12',
+        content: `${tagApp} Rendez-vous 18 h 30 devant la salle.`,
+        roles: [],
+        users: [botUser],
+      },
+      {
+        id: '9204',
+        author: 'Kiki',
+        day: '2026-09-11',
+        content: 'Qui a les clés du local ?',
+        roles: [],
+      },
+      {
+        id: '9203',
+        author: 'Riton',
+        day: '2026-09-10',
+        content: `${tagAppRole} Le parking côté quai est fermé.`,
+        roles: [app.roleId],
+      },
+    ]);
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+
+    const card = page.locator('.DiscordChannelCard');
+    await expect(card).toContainText('Les messages du salon Discord qui taguent l’app.');
+    const messages = card.locator('.DiscordMessageCard');
+    await expect(messages).toHaveCount(2);
+    await expect(messages.nth(0)).toContainText('Rendez-vous 18 h 30 devant la salle.');
+    await expect(messages.nth(1)).toContainText('Le parking côté quai est fermé.');
+    await expect(card).not.toContainText('App Les Cuivres');
+    await expect(card).not.toContainText('Qui a les clés');
+    await expect(messages.nth(0)).toHaveAttribute(
+      'href',
+      `https://discord.com/channels/${server}/${channel}/9205`,
+    );
+    emptyDiscord();
   });
 
   test('the link of the channel is typed in the form, and a link of another server is said under it', async ({

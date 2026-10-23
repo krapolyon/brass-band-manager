@@ -7,6 +7,7 @@ import { type AttendanceAnswer, AttendanceChoices } from '../../components/Atten
 import { Button } from '../../components/Button.tsx';
 import { Chip } from '../../components/Chip.tsx';
 import { DiscordChannelCard } from '../../components/DiscordChannelCard.tsx';
+import { DiscordMessageCard } from '../../components/DiscordMessageCard.tsx';
 import { GigHeader } from '../../components/GigHeader.tsx';
 import { GigInfos } from '../../components/GigInfos.tsx';
 import { GigMeeting } from '../../components/GigMeeting.tsx';
@@ -28,10 +29,12 @@ import {
   sectionNames,
   showsPlayable,
   useGig,
+  useGigDiscord,
 } from '../../gigs.ts';
 import { instrumentsOf, useMembers, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { useIsTablet } from '../songs/device.ts';
+import { day } from '../songs/format.ts';
 import { type Attendance, attendanceOf } from './attendance.ts';
 import { AnswerChip, MomentChip, StatusChip } from './chips.tsx';
 import { addressText, inSentence, playableText, timeText, whenText, whereText } from './format.ts';
@@ -493,16 +496,11 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
     );
   };
 
-  // Figma: Gigs / Gig — the Discord link (section 19, 0.3.0, issue #33):
-  // after the infos, for every member who sees the gig; no messages for a
-  // gig, the sentence and the button only. No card without a channel.
+  // Figma: Gigs / Gig — the Discord card (section 19, 0.3.0, issue #33;
+  // section 22, 0.3.2, issue #45): after the infos, for every member who sees
+  // the gig. No card without a channel.
   const discordCard = gig.discordUrl && (
-    <DiscordChannelCard
-      title={t('discord.title')}
-      text={t('gigs.gig.discordText')}
-      url={gig.discordUrl}
-      headingLevel={cardLevel}
-    />
+    <GigDiscord gigId={gig.id} url={gig.discordUrl} headingLevel={cardLevel} />
   );
   const gigInfos = (
     <GigInfos
@@ -934,5 +932,42 @@ function WhoComesContent({
         );
       })}
     </>
+  );
+}
+
+// The messages of the channel of the gig that tag the app, every one of them,
+// the latest first (model/gigs.md, "Discord on a gig"). Until they come, when
+// none does, or when Discord does not answer: the sentence and the button
+// only, with no error.
+function GigDiscord({
+  gigId,
+  url,
+  headingLevel,
+}: {
+  gigId: number;
+  url: string;
+  headingLevel: 2 | 3;
+}) {
+  const { t, i18n } = useTranslation();
+  const messages = useGigDiscord(gigId, true).data?.messages ?? [];
+
+  return (
+    <DiscordChannelCard
+      title={t('discord.title')}
+      text={t(messages.length > 0 ? 'gigs.gig.discordTagged' : 'gigs.gig.discordText')}
+      url={url}
+      headingLevel={headingLevel}
+    >
+      {messages.length > 0 &&
+        messages.map((message) => (
+          <DiscordMessageCard
+            key={message.id}
+            author={message.author}
+            day={day(message.postedAt.slice(0, 10), i18n.language, 'short')}
+            text={message.text}
+            url={message.url}
+          />
+        ))}
+    </DiscordChannelCard>
   );
 }

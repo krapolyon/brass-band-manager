@@ -889,7 +889,7 @@
       "title": "Discord",
       "detailSet": "Serveur relié : les salons s’ouvrent depuis les morceaux et les plans",
       "detailUnset": "Pas encore relié : colle le lien d’un salon du serveur",
-      "lead": "Les salons des morceaux et des plans s’ouvrent depuis l’app, et chacun voit les messages qui taguent son pupitre.",
+      "lead": "Les salons des morceaux et des plans s’ouvrent depuis l’app. Les messages qui taguent l’app s’y affichent : sur un plan pour tous, sur un morceau pour le pupitre tagué avec.",
       "server": "Serveur",
       "link": "Lien du salon du serveur",
       "linkHint": "Dans Discord, appui long ou clic droit sur un salon : « Copier le lien du salon ».",
@@ -898,6 +898,7 @@
       "bot": "Bot de la fanfare",
       "botConnected": "Le bot est connecté au serveur {{server}}.",
       "botConnectedNoName": "Le bot est connecté au serveur.",
+      "botName": "Sur Discord, l’app s’appelle @{{name}}. Tague-la dans le salon d’un plan pour que le message s’y affiche ; dans le salon d’un morceau, tague-la avec le pupitre concerné. Le tag de l’app n’est pas recopié.",
       "botNone": "Pas encore de bot : les salons s’ouvrent, mais personne ne voit les messages qui taguent son pupitre.",
       "botHelp": "Celui qui héberge l’app crée le bot dans Discord, l’invite sur le serveur et met son jeton dans la configuration du serveur. Les rôles des pupitres se choisissent ensuite ici.",
       "botRefused": "Le bot ne joint pas le serveur : vérifie qu’il y est invité et que son jeton est le bon. Les salons s’ouvrent quand même.",
@@ -1167,8 +1168,8 @@
       "tiringFor": "Fatigant pour",
       "trickyFor": "Ça tricote pour",
       "discord": {
-        "tagged": "Les messages du salon Discord qui taguent {{role}}.",
-        "nothingTagged": "Personne n’a encore tagué {{role}} dans le salon de ce morceau.",
+        "tagged": "Les messages du salon Discord qui taguent l’app et {{role}}.",
+        "nothingTagged": "Personne n’a encore tagué l’app et {{role}} dans le salon de ce morceau.",
         "nothingToShow": "Rien à afficher, consulte le salon Discord"
       },
       "mood": "Ambiance",
@@ -1643,7 +1644,8 @@
       "delete": "Supprimer le plan",
       "deleteDetail": "Seulement un brouillon sans réponse",
       "manage": "Gérer le plan",
-      "discordText": "Ce que la fanfare se dit sur ce plan est dans son salon Discord."
+      "discordText": "Ce que la fanfare se dit sur ce plan est dans son salon Discord.",
+      "discordTagged": "Les messages du salon Discord qui taguent l’app."
     },
     "whoComes": {
       "pending_one": "1 n’a pas répondu",

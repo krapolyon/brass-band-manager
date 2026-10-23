@@ -22,6 +22,11 @@ export const roles = {
   trumpets: '1100458311290118205',
   board: '1100458311290118206',
 };
+/** The app on Discord: the bot of the band, and the role Discord gave it. */
+export const app = { userId: '1200458311290118300', roleId: '1100458311290118299' };
+/** How a member tags the app: by the bot, or by its role. */
+export const tagApp = `<@${app.userId}>`;
+export const tagAppRole = `<@&${app.roleId}>`;
 
 /** Forgets every answer, and what the server kept of the earlier ones. */
 export function emptyDiscord(): void {
@@ -46,19 +51,48 @@ export function discordAnswers(path: string, body: unknown, status = 200): void 
   );
 }
 
-/** The server of the band, as the bot sees it, with its roles. */
+/** The server of the band, as the bot sees it, with its roles, and the bot itself. */
 export function discordServer(name = 'Les Cuivres'): void {
   discordAnswers(`/guilds/${server}`, { id: server, name });
+  discordAnswers('/users/@me', {
+    id: app.userId,
+    username: 'App Les Cuivres',
+    global_name: null,
+    bot: true,
+  });
   discordAnswers(`/guilds/${server}/roles`, [
     { id: server, name: '@everyone', position: 0 },
     { id: roles.board, name: 'bureau', position: 1 },
     { id: roles.trumpets, name: 'trompettiste', position: 2 },
     { id: roles.saxophones, name: 'saxophoniste', position: 3 },
-    { id: '1100458311290118299', name: 'App Les Cuivres', position: 4, managed: true },
+    // The role Discord made for the bot when it joined.
+    {
+      id: app.roleId,
+      name: 'App Les Cuivres',
+      position: 4,
+      managed: true,
+      tags: { bot_id: app.userId },
+    },
+    // The role of another bot of the server.
+    {
+      id: '1100458311290118298',
+      name: 'Un autre bot',
+      position: 5,
+      managed: true,
+      tags: { bot_id: '1200458311290118999' },
+    },
   ]);
 }
 
-type Message = { id: string; author: string; day: string; content: string; roles: string[] };
+type Message = {
+  id: string;
+  author: string;
+  day: string;
+  content: string;
+  roles: string[];
+  /** The members tagged, the bot of the band among them: id and name. */
+  users?: { id: string; name: string }[];
+};
 
 /** The last messages of a channel, as Discord gives them: the latest first. */
 export function discordMessages(channelId: string, messages: Message[]): void {
@@ -70,7 +104,14 @@ export function discordMessages(channelId: string, messages: Message[]): void {
       content: message.content,
       author: { id: '42', username: message.author.toLowerCase(), global_name: message.author },
       mention_roles: message.roles,
-      mentions: [],
+      mentions: (message.users ?? []).map((user) => ({
+        id: user.id,
+        username: user.name.toLowerCase(),
+        global_name: user.name,
+      })),
     })),
   );
 }
+
+/** The bot of the band, as a member tagged in a message. */
+export const botUser = { id: app.userId, name: 'App Les Cuivres' };

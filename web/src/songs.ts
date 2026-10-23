@@ -97,11 +97,20 @@ export type Song = SongSummary & {
 };
 
 /** What GET /api/songs/{id}/discord answers: the messages that tag the section of the member. */
+/** A message of a Discord channel meant for the app, its tag taken out of the text. */
+export type DiscordMessage = {
+  id: string;
+  author: string;
+  postedAt: string;
+  text: string;
+  url: string;
+};
+
 export type SongDiscord = {
   /** The Discord role of the section of the member; null when the section has none or the bot cannot read it. */
   roleName: string | null;
-  /** The three latest, the latest first. */
-  messages: { id: string; author: string; postedAt: string; text: string; url: string }[];
+  /** Every message that tags the app and the section, the latest first (#45). */
+  messages: DiscordMessage[];
 };
 
 /** The messages of the channel of a song, read when its sheet opens. Never an error: nothing to show is none. */

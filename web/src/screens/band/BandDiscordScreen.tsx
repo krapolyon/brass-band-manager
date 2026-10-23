@@ -135,6 +135,12 @@ function DiscordForm({ settings }: { settings: DiscordSettings }) {
                   : t('band.discordSettings.botConnectedNoName')}
               </Message>
             )}
+            {/* How the band tags the app, by the name Discord gives it (#45). */}
+            {settings.hasBot && settings.bot === 'connected' && settings.botName && (
+              <p className="settings-note textCaption">
+                {t('band.discordSettings.botName', { name: settings.botName })}
+              </p>
+            )}
             {settings.hasBot && settings.bot === 'refused' && (
               <Message kind="warning">{t('band.discordSettings.botRefused')}</Message>
             )}

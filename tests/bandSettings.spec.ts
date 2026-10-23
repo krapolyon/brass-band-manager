@@ -180,6 +180,10 @@ test.describe('Discord (0.3.0, #33)', () => {
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByText('Lien reconnu : le serveur est enregistré.')).toBeVisible();
     await expect(page.getByText('Le bot est connecté au serveur Les Cuivres.')).toBeVisible();
+    // The name of the app on Discord, read from Discord, never typed (#45).
+    await expect(
+      page.getByText(/^Sur Discord, l’app s’appelle @App Les Cuivres\. Tague-la/),
+    ).toBeVisible();
     expect(sql('SELECT discordServerId FROM band')).toBe(server);
 
     // The role of a section is chosen in a sheet, among the roles of the server.
