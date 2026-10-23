@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Access;
 
+use BrassBand\Members\PersonalData;
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
@@ -32,6 +33,7 @@ final class ForgotPasswordAction
         private readonly Connection $database,
         private readonly PasswordLinks $links,
         private readonly Mailer $mailer,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -48,7 +50,10 @@ final class ForgotPasswordAction
         // What is not an email address belongs to nobody: it is not looked up.
         $errors = new FieldErrors();
         $errors->email('email', $email);
-        $link = $errors->isEmpty() ? $this->database->transactional(fn () => $this->createLink($email)) : null;
+        // Asked before the transaction: a look at the columns of the table
+        // inside it would fix what it reads before the row is held.
+        $where = $errors->isEmpty() ? $this->personal->whereEmail($email) : null;
+        $link = $where !== null ? $this->database->transactional(fn () => $this->createLink($email, $where)) : null;
         if ($link !== null) {
             $mailer = $this->mailer;
             $links = $this->links;
@@ -81,16 +86,20 @@ final class ForgotPasswordAction
      * Creates the link of the current member who has this address, unless an
      * email was sent to them in the last minutes.
      *
+     * @param array{0: string, 1: list<string>} $byEmail What finds the member (PersonalData::whereEmail)
      * @return array{memberId: int, email: string, token: string, language: string, band: string}|null Null: no email is to be sent
      */
-    private function createLink(string $email): ?array
+    private function createLink(string $email, array $byEmail): ?array
     {
         // The row of the member is held, so that two requests at the same
         // instant send one email.
+        // Found by the hash of the email, which is encrypted (PersonalData).
+        [$where, $values] = $byEmail;
         $member = $this->database->fetchAssociative(
-            'SELECT id, email, language FROM member WHERE email = ? AND status IN (?, ?) FOR UPDATE',
-            [$email, ...AccessRules::SIGN_IN_STATUSES],
+            "SELECT id, email, language FROM member WHERE {$where} AND status IN (?, ?) FOR UPDATE",
+            [...$values, ...AccessRules::SIGN_IN_STATUSES],
         );
+        $member = $member === false ? false : $this->personal->opened($member);
         // The database compares addresses without regard to accents: "é" is
         // "e" for it. Here the address must be the stored one, character for
         // character, or a look-alike address would receive the link of a member.

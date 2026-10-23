@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { dayOf, type Gig, type GigSummary, isOver } from '../../gigs.ts';
+import { dayOf, type Gig, type GigSlotSummary, type GigSummary, isOver } from '../../gigs.ts';
 
 // How a gig is written on the screens: its dates through Intl, in the
 // language of the member, and its time and place as the design writes them.
@@ -126,4 +126,20 @@ export function shortPlace(gig: Pick<GigSummary, 'placeName' | 'postalCode' | 'c
 /** A list of sections inside a sentence. A section is named as it is, never in the plural: "Percu et Souba". */
 export function inSentence(names: string[], language: string): string {
   return new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }).format(names);
+}
+
+/**
+ * A playable slot in a few words: "Jouable", or, when a section is covered
+ * only by members who answered if needed, "Jouable, grâce à Riton (si
+ * besoin)" (model/gigs.md, "Playable thanks to if needed", #37).
+ */
+export function playableText(
+  t: TFunction,
+  slot: Pick<GigSlotSummary, 'playableThanksTo'>,
+  language: string,
+): string {
+  const names = slot.playableThanksTo.map(({ nickname }) => nickname);
+  return names.length === 0
+    ? t('gigs.playable.yes')
+    : t('gigs.playable.thanksTo', { count: names.length, names: inSentence(names, language) });
 }

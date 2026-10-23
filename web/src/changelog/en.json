@@ -1,5 +1,31 @@
 [
   {
+    "version": "0.3.1",
+    "date": "2026-10-23",
+    "changes": [
+      {
+        "kind": "changed",
+        "text": "The names, email addresses, phone numbers and addresses of members are encrypted in the database."
+      },
+      {
+        "kind": "changed",
+        "text": "An “if needed” answer now counts for whether a gig can be played, and the gig names who it counts on."
+      },
+      {
+        "kind": "changed",
+        "text": "A song has a mood and the places of a set it can be played at, instead of its categories, and a copyright field. The setlist generator follows them."
+      },
+      {
+        "kind": "changed",
+        "text": "A band without Discord no longer sees it in the form of a song."
+      },
+      {
+        "kind": "fixed",
+        "text": "The browser tab shows the icon of the band."
+      }
+    ]
+  },
+  {
     "version": "0.3.0",
     "date": "2026-10-18",
     "changes": [

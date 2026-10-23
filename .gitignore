@@ -34,6 +34,8 @@ playwright-report/
 
 # Server configuration: holds the database password on the host
 api/config.php
+# The encryption key of the local stack (npm run setup)
+api/encryptionKey.local
 
 # Files uploaded by members (logo, later songs): never committed
 /storage/

@@ -104,7 +104,9 @@ export function BandMigrationsScreen() {
     run.isError && !passwordError
       ? refused?.error === 'migrationsRunning'
         ? t('band.migrations.running')
-        : t('errors.unreachable')
+        : refused?.error === 'encryptionKeyMissing'
+          ? t('band.migrations.encryptionKeyMissing')
+          : t('errors.unreachable')
       : null;
 
   const close = () => {

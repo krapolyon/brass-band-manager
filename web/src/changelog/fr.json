@@ -1,4 +1,11 @@
 {
+  "0.3.1": {
+    "The names, email addresses, phone numbers and addresses of members are encrypted in the database.": "Les noms, adresses e-mail, numéros de téléphone et adresses des membres sont chiffrés dans la base de données.",
+    "An “if needed” answer now counts for whether a gig can be played, and the gig names who it counts on.": "Une réponse « si besoin » compte désormais pour savoir si un plan est jouable, et le plan dit sur qui il compte.",
+    "A song has a mood and the places of a set it can be played at, instead of its categories, and a copyright field. The setlist generator follows them.": "Un morceau a une ambiance et les places d’un set où il peut être joué, à la place de ses catégories, et un champ pour les droits d’auteur. Le générateur de setlist les suit.",
+    "A band without Discord no longer sees it in the form of a song.": "Une fanfare sans Discord ne le voit plus dans la fiche d’un morceau.",
+    "The browser tab shows the icon of the band.": "L’onglet du navigateur affiche l’icône de la fanfare."
+  },
   "0.3.0": {
     "Discord: the songs and gigs open their channel, and the sheet of a song shows the latest messages that tag your section.": "Discord : les morceaux et les plans ouvrent leur salon, et la fiche d’un morceau montre les derniers messages qui taguent ton pupitre.",
     "Choose how each notification reaches you: by notification, by email, or both.": "Choisis comment chaque notification t’arrive : par notification, par e-mail, ou les deux.",

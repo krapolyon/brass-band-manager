@@ -98,7 +98,7 @@ export function addSong(
 ): number {
   return Number(
     sql(
-      `INSERT INTO song (name, originalTitle, originalArtist, status) VALUES (${text(name)}, ${text(name)}, 'Exemple', '${status}'); SELECT LAST_INSERT_ID();`,
+      `INSERT INTO song (name, originalTitle, originalArtist, status) VALUES (${text(name)}, ${text(name)}, 'Exemple', '${status}'); SET @song = LAST_INSERT_ID(); INSERT INTO songPosition (songId, position) VALUES (@song, 'FIRST_HALF'), (@song, 'MIDDLE'), (@song, 'SECOND_HALF'); SELECT @song;`,
     ),
   );
 }

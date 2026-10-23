@@ -26,6 +26,14 @@ This installs everything, starts a local stack in Docker (Apache with PHP, and M
 
 Deployment is described in `docs/architecture.md`, "Deployment". One thing is worth knowing from the start. When the app is first opened it asks for an **install key**: a text of your choice, 16 characters at least, that you write beforehand in `config.php` on the server, next to the database password. It is what stops a stranger from installing your instance, and becoming its admin, before you do. It is used once.
 
+Before the install (or, for an instance installed earlier, before the database update of version 0.3.1), write an **encryption key** in `config.php`. It encrypts the names, email addresses, phone numbers and addresses of the members in the database. Make it on your computer, from this folder:
+
+```sh
+npm run encryption:key
+```
+
+It prints one line, `'encryptionKey' => '…',`: paste it into `config.php` on the server, beside the install key. Use a new key for each instance (beta and production). Then **keep a copy of that line in a password manager**, apart from the backups of the database: without it, nobody can read the members again, the band included. It protects a copy of the database that leaks; it does not protect against someone who can read the files of the server. Never commit it, never send it by email, and never change it once the app holds members.
+
 The app keeps the files it is given (the logo of the band, later the songs) in a `storage` folder next to `api`. It has to be writable by PHP, kept out of what the web server serves, and backed up with the database.
 
 ## Songs: what the app reads in a MuseScore file

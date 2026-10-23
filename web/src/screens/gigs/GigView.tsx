@@ -34,7 +34,7 @@ import { useMe } from '../../session.ts';
 import { useIsTablet } from '../songs/device.ts';
 import { type Attendance, attendanceOf } from './attendance.ts';
 import { AnswerChip, MomentChip, StatusChip } from './chips.tsx';
-import { addressText, inSentence, timeText, whenText, whereText } from './format.ts';
+import { addressText, inSentence, playableText, timeText, whenText, whereText } from './format.ts';
 import { GigSetlists } from './GigSetlists.tsx';
 import { ManagePanel } from './ManagePanel.tsx';
 
@@ -385,12 +385,6 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       {gig.slots.map((slot) => {
         const name = slot.name ?? t('gigs.gig.onlySlot');
         const slotMissing = sectionNames(sections, slot.missingSectionIds);
-        // "Jouable si Riton vient (si besoin)": who would fill the sections without a yes.
-        const ifNeeded = attendance(slot)
-          .sections.filter(({ section }) => slot.missingSectionIds.includes(section.id))
-          .flatMap(({ attendees }) => attendees)
-          .filter((one) => one.answer === 'IF_NEEDED')
-          .map((one) => one.nickname);
         return (
           <GigSlotCard
             key={slot.id}
@@ -401,13 +395,8 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
             playable={slot.isPlayable ? 'yes' : 'missing'}
             playableText={
               slot.isPlayable
-                ? t('gigs.playable.yes')
-                : slot.isPlayableIfNeeded
-                  ? t('gigs.playable.ifNeeded', {
-                      count: ifNeeded.length,
-                      names: inSentence(ifNeeded, language),
-                    })
-                  : t('gigs.playable.missing', { sections: slotMissing.join(', ') })
+                ? playableText(t, slot, language)
+                : t('gigs.playable.missing', { sections: slotMissing.join(', ') })
             }
             whoComes={
               <Button
@@ -860,16 +849,22 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
 }
 
 // Whether a slot is playable, in a sentence: what GigSlot/WhoComes says first.
+// Playable thanks to an "if needed", it names them: whoever organises the gig
+// tells them they are needed (model/gigs.md, "Playable thanks to if needed").
 function PlayableMessage({ slot, names }: { slot: GigSlot; names: string[] }) {
   const { t, i18n } = useTranslation();
-  if (slot.isPlayable) return <Message kind="success">{t('gigs.whoComes.playable')}</Message>;
-
-  const sections = inSentence(names, i18n.language);
+  if (slot.isPlayable) {
+    return (
+      <Message kind="success">
+        {slot.playableThanksTo.length > 0
+          ? playableText(t, slot, i18n.language)
+          : t('gigs.whoComes.playable')}
+      </Message>
+    );
+  }
   return (
     <Message kind="warning">
-      {t(slot.isPlayableIfNeeded ? 'gigs.whoComes.playableIfNeeded' : 'gigs.whoComes.notPlayable', {
-        sections,
-      })}
+      {t('gigs.whoComes.notPlayable', { sections: inSentence(names, i18n.language) })}
     </Message>
   );
 }

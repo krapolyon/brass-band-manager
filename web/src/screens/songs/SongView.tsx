@@ -643,11 +643,13 @@ function SetlistFacts({ song, sections }: { song: Song; sections: Section[] }) {
     new Intl.ListFormat(i18n.language, { type: 'conjunction' }).format(
       sections.filter((section) => ids.includes(section.id)).map((section) => section.name),
     );
-  const categories = [
-    ...(song.setCategory === 'STANDARD' ? [] : [song.setCategory]),
-    ...song.otherCategories,
-  ].map((category) => t(`songs.setCategory.${category}`));
-  if (song.isNeverFirst) categories.push(t('songs.song.neverFirst'));
+  // "2e moitié, fin": the positions in the order of a set, one sentence.
+  const positions = song.positions
+    .map((position, index) => {
+      const label = t(`songs.position.${position}`);
+      return index === 0 ? label : label.toLocaleLowerCase(i18n.language);
+    })
+    .join(', ');
   const facts: [string, string][] = [
     ...(song.inRepertoireOn
       ? [[t('songs.song.inRepertoireSince'), song.inRepertoireOn.slice(0, 4)] as [string, string]]
@@ -655,15 +657,16 @@ function SetlistFacts({ song, sections }: { song: Song; sections: Section[] }) {
     ...(song.durationSeconds
       ? [[t('songs.song.duration'), clock(song.durationSeconds)] as [string, string]]
       : []),
-    ...(categories.length > 0
-      ? [[t('songs.song.forSetlists'), categories.join(', ')] as [string, string]]
-      : []),
+    [t('songs.song.mood'), t(`songs.mood.${song.mood}`)],
+    ...(positions ? [[t('songs.song.positions'), positions] as [string, string]] : []),
     ...(song.tiringSectionIds.length > 0
       ? [[t('songs.song.tiringFor'), names(song.tiringSectionIds)] as [string, string]]
       : []),
     ...(song.trickySectionIds.length > 0
       ? [[t('songs.song.trickyFor'), names(song.trickySectionIds)] as [string, string]]
       : []),
+    // Last of the sheet (Figma, Songs, section 15).
+    ...(song.copyright ? [[t('songs.song.copyright'), song.copyright] as [string, string]] : []),
   ];
 
   return facts.map(([label, value]) => (

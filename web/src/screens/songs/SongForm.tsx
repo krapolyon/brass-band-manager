@@ -6,15 +6,17 @@ import { ChoiceGroup } from '../../components/ChoiceGroup.tsx';
 import { FilterChip } from '../../components/FilterChip.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
-import { SwitchRow } from '../../components/SwitchRow.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
 import { useSections } from '../../members.ts';
 import {
-  type SetCategory,
+  newSongPositions,
+  type SetPosition,
   type Song,
+  type SongMood,
   type SongRecord,
   type SongStatus,
-  setCategories,
+  setPositions,
+  songMoods,
   songStatuses,
 } from '../../songs.ts';
 import { duration } from './format.ts';
@@ -25,6 +27,7 @@ export type SongDraft = {
   name: string;
   originalTitle: string;
   originalArtist: string;
+  copyright: string;
   bpm: string;
   status: SongStatus;
   versionOn: string;
@@ -36,9 +39,8 @@ export type SongDraft = {
   /** The length was typed by hand: a MIDI file dropped afterwards does not replace it. */
   isDurationTyped: boolean;
   inRepertoireOn: string;
-  setCategory: SetCategory;
-  isNeverFirst: boolean;
-  otherCategories: SetCategory[];
+  mood: SongMood;
+  positions: SetPosition[];
   tiringSectionIds: number[];
   trickySectionIds: number[];
 };
@@ -56,6 +58,7 @@ export function draftOf(song?: Song): SongDraft {
     name: song?.name ?? '',
     originalTitle: song?.originalTitle ?? '',
     originalArtist: song?.originalArtist ?? '',
+    copyright: song?.copyright ?? '',
     bpm: song?.bpm?.toString() ?? '',
     status: song?.status ?? 'PROPOSED',
     versionOn: song?.versionOn ?? '',
@@ -66,9 +69,8 @@ export function draftOf(song?: Song): SongDraft {
     // A length already saved is not replaced by a file either.
     isDurationTyped: (song?.durationSeconds ?? null) !== null,
     inRepertoireOn: song?.inRepertoireOn ?? '',
-    setCategory: song?.setCategory ?? 'STANDARD',
-    isNeverFirst: song?.isNeverFirst ?? false,
-    otherCategories: song?.otherCategories ?? [],
+    mood: song?.mood ?? 'MEDIUM',
+    positions: song?.positions ?? newSongPositions,
     tiringSectionIds: song?.tiringSectionIds ?? [],
     trickySectionIds: song?.trickySectionIds ?? [],
   };
@@ -81,6 +83,7 @@ export function recordOf(draft: SongDraft): SongRecord {
     name: draft.name,
     originalTitle: draft.originalTitle,
     originalArtist: draft.originalArtist,
+    copyright: orNull(draft.copyright),
     status: draft.status,
     // Not a whole number: sent as it is, and refused by the API with the others.
     bpm: orNull(draft.bpm) === null ? null : Number(draft.bpm),
@@ -91,10 +94,8 @@ export function recordOf(draft: SongDraft): SongRecord {
     // Not a length: sent as it is, and refused by the API with the others.
     durationSeconds: secondsOf(draft.duration),
     inRepertoireOn: orNull(draft.inRepertoireOn),
-    setCategory: draft.setCategory,
-    isNeverFirst: draft.isNeverFirst,
-    // The main category is never one of the others.
-    otherCategories: draft.otherCategories.filter((category) => category !== draft.setCategory),
+    mood: draft.mood,
+    positions: draft.positions,
     tiringSectionIds: draft.tiringSectionIds,
     trickySectionIds: draft.trickySectionIds,
   };
@@ -143,7 +144,7 @@ function toggled<T>(list: T[], value: T, on: boolean, all: readonly T[]): T[] {
 // what the setlist generator reads.
 export function SongFormFields({ draft, onChange, errors, isNew, files, afterSong }: Props) {
   const { t } = useTranslation();
-  const categoryGroup = useId();
+  const moodGroup = useId();
   const hasDiscord = useBand().data?.hasDiscord ?? false;
   const sections = useSections().data ?? [];
   const sectionIds = sections.map((section) => section.id);
@@ -157,6 +158,7 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
   const message = (field: keyof SongErrors): string | undefined => {
     const problem = errors[field];
     if (!problem) return undefined;
+    if (field === 'positions') return t('songs.form.error.positions');
     if (problem === 'required') return t('songs.form.error.required');
     if (problem === 'tooLong') return t('songs.form.error.tooLong');
     if (field === 'name' && problem === 'duplicate') return t('songs.form.error.nameDuplicate');
@@ -205,6 +207,13 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
           {...typed('originalArtist')}
         />
         <TextField
+          label={t('songs.form.copyright')}
+          hint={t('songs.form.copyrightHint')}
+          error={message('copyright')}
+          maxLength={200}
+          {...typed('copyright')}
+        />
+        <TextField
           label={t('songs.form.bpm')}
           hint={t('songs.form.bpmHint')}
           error={message('bpm')}
@@ -251,55 +260,43 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
             onChange({ ...draft, duration: event.target.value, isDurationTyped: true })
           }
         />
-        <ChoiceGroup
-          label={t('songs.form.setlists.category')}
-          hint={t('songs.form.setlists.categoryHint')}
-        >
+        <ChoiceGroup label={t('songs.form.setlists.mood')} hint={t('songs.form.setlists.moodHint')}>
           <div className="songs-choices" role="radiogroup">
-            {setCategories.map((category) => (
+            {songMoods.map((mood) => (
               <ChoiceButton
-                key={category}
+                key={mood}
                 size="small"
-                name={categoryGroup}
-                checked={draft.setCategory === category}
-                onChange={() => onChange({ ...draft, setCategory: category })}
+                name={moodGroup}
+                checked={draft.mood === mood}
+                onChange={() => onChange({ ...draft, mood })}
               >
-                {t(`songs.setCategory.${category}`)}
+                {t(`songs.mood.${mood}`)}
               </ChoiceButton>
             ))}
           </div>
         </ChoiceGroup>
-        <ChoiceGroup label={t('songs.form.setlists.otherCategories')}>
-          {setCategories
-            .filter((category) => category !== 'STANDARD' && category !== draft.setCategory)
-            .map((category) => (
-              <ChoiceButton
-                key={category}
-                size="small"
-                multiple
-                checked={draft.otherCategories.includes(category)}
-                onChange={(event) =>
-                  onChange({
-                    ...draft,
-                    otherCategories: toggled(
-                      draft.otherCategories,
-                      category,
-                      event.target.checked,
-                      setCategories,
-                    ),
-                  })
-                }
-              >
-                {t(`songs.setCategory.${category}`)}
-              </ChoiceButton>
-            ))}
+        <ChoiceGroup
+          label={t('songs.form.setlists.positions')}
+          hint={t('songs.form.setlists.positionsHint')}
+          error={message('positions')}
+        >
+          {setPositions.map((position) => (
+            <ChoiceButton
+              key={position}
+              size="small"
+              multiple
+              checked={draft.positions.includes(position)}
+              onChange={(event) =>
+                onChange({
+                  ...draft,
+                  positions: toggled(draft.positions, position, event.target.checked, setPositions),
+                })
+              }
+            >
+              {t(`songs.position.${position}`)}
+            </ChoiceButton>
+          ))}
         </ChoiceGroup>
-        <SwitchRow
-          label={t('songs.form.setlists.neverFirst')}
-          description={t('songs.form.setlists.neverFirstHint')}
-          checked={draft.isNeverFirst}
-          onChange={(isNeverFirst) => onChange({ ...draft, isNeverFirst })}
-        />
         {(['tiringSectionIds', 'trickySectionIds'] as const).map((field) => (
           <ChoiceGroup
             key={field}
@@ -333,7 +330,9 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
         />
       </Sheet>
       {files}
-      <Sheet title={t('songs.form.clipAndDiscord')}>
+      {/* Without a Discord server, nothing of Discord: the card is "Clip"
+          (model/songs.md v1.9, "Display"; Figma, Songs, section 18, #49). */}
+      <Sheet title={t(hasDiscord ? 'songs.form.clipAndDiscord' : 'songs.form.clip')}>
         <TextField
           type="url"
           label={t('songs.form.clipUrl')}
@@ -343,7 +342,7 @@ export function SongFormFields({ draft, onChange, errors, isNew, files, afterSon
           {...typed('clipUrl')}
         />
         {/* Without a server, no channel can be typed (model/songs.md, "Instance settings"). */}
-        {(hasDiscord || draft.discordChannelId !== '') && (
+        {hasDiscord && (
           <TextField
             label={t('songs.form.discord')}
             placeholder={t('discord.link.placeholder')}

@@ -146,7 +146,9 @@ test.describe('accessibility before sign-in', () => {
     // The account of Jibé has no option on.
     await expect(root(page)).not.toHaveAttribute('data-contrast', 'more');
     // Nothing of the device was sent to the account.
-    expect(sql(`SELECT hasHighContrast FROM member WHERE email = '${admin.email}'`)).toBe('0');
+    expect(sql(`SELECT hasHighContrast FROM member WHERE nickname = '${admin.nickname}'`)).toBe(
+      '0',
+    );
   });
 
   test('the button is on every screen shown before sign-in', async ({ page }) => {

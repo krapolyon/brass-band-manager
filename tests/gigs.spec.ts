@@ -186,13 +186,33 @@ test.describe('a gig', () => {
     await expect(page.getByText('2 oui sur 5')).toBeVisible();
     expect(statusOf(gigId)).toBe('ACCEPTED');
 
-    // Jibé's yes is the last one missing: the app confirms the gig and says so.
+    // Jibé's yes was the last one missing; Riton then says he comes only if
+    // needed. That still counts for his section (#37): the app confirms the
+    // gig and says so.
     answerOf('Jibé', slotId, 'YES');
     await choices.getByRole('radio', { name: 'Si besoin', exact: true }).click();
-    await choices.getByRole('radio', { name: 'Oui', exact: true }).click();
     await expect(page.getByText('il passe en « Validé »')).toBeVisible();
     await expect(page.getByText('Validé', { exact: true })).toBeVisible();
     expect(statusOf(gigId)).toBe('CONFIRMED');
+  });
+
+  test('playable thanks to an if needed: the screen names who it counts on; nobody in a section is said (#37)', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = addGig('Vide-grenier', { status: 'PROPOSED', startsOn: day(12) });
+    answerOf('Jibé', slotId, 'YES');
+    answerOf('Lulu', slotId, 'YES');
+    // Riton is the only one of the Souba: he would rather not, but he can.
+    answerOf('Riton', slotId, 'IF_NEEDED');
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByText('Jouable, grâce à Riton (si besoin)').first()).toBeVisible();
+    await expect(page.getByText('même en comptant', { exact: false })).toHaveCount(0);
+
+    // A maybe does not count: the Souba has nobody.
+    answerOf('Riton', slotId, 'MAYBE');
+    await page.reload();
+    await expect(page.getByText('Pas encore jouable : personne en Souba.')).toBeVisible();
   });
 
   test('a gig of several days: an answer per slot, and yes everywhere at once', async ({

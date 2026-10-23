@@ -4,7 +4,7 @@ import { GigCard } from '../../components/GigCard.tsx';
 import { type GigSummary, momentOf, nearestSlot, sectionNames, showsPlayable } from '../../gigs.ts';
 import type { Section } from '../../members.ts';
 import { OwnAnswerChip, StatusChip } from './chips.tsx';
-import { dateBlock, meetingText, shortPlace } from './format.ts';
+import { dateBlock, meetingText, playableText as playableTextOf, shortPlace } from './format.ts';
 
 type Props = {
   gig: GigSummary;
@@ -51,7 +51,9 @@ export function ListedGig({ gig, sections, language, selected = false, home }: P
     if (playableSlots > 0) {
       playable = 'playable';
       playableText =
-        count > 1 ? t('gigs.playable.onSlots', { count: playableSlots }) : t('gigs.playable.yes');
+        count > 1
+          ? t('gigs.playable.onSlots', { count: playableSlots })
+          : playableTextOf(t, gig.slots[0] ?? { playableThanksTo: [] }, language);
     } else {
       playable = 'missing';
       const missing = sectionNames(sections, nearestSlot(gig.slots)?.missingSectionIds ?? []);

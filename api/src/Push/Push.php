@@ -9,6 +9,7 @@ use BrassBand\Http\ApiError;
 use BrassBand\Mail\AllowedRecipients;
 use BrassBand\Mail\Emails;
 use BrassBand\Mail\Mailer;
+use BrassBand\Members\PersonalData;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
@@ -55,6 +56,7 @@ final class Push
         private readonly ?string $publicKey,
         private readonly ?PushTransport $transport,
         private readonly AllowedRecipients $recipients,
+        private readonly PersonalData $personal,
         private readonly ?Mailer $mailer = null,
     ) {
     }
@@ -162,7 +164,7 @@ final class Push
             $isReminderWithoutDevice = $setting === NotificationSetting::GIG_REMINDER && $chosen === NotificationChannel::PUSH && !$hasDevice;
             if ($canEmail && ($chosen->hasEmail() || $isReminderWithoutDevice)) {
                 // The email says why it came: chosen, or for want of a device.
-                $byEmail[] = [...$member, 'email' => (string) $member['email'], 'isChosen' => $chosen->hasEmail()];
+                $byEmail[] = [...$member, 'email' => $this->emailOf($member), 'isChosen' => $chosen->hasEmail()];
             }
         }
 
@@ -204,7 +206,7 @@ final class Push
         $putAside = 0;
         foreach ($devices as $device) {
             // An instance that only writes to some members notifies nobody else.
-            if (!$this->recipients->allows((string) $device['email'])) {
+            if (!$this->recipients->allows($this->emailOf($device))) {
                 $putAside++;
                 continue;
             }
@@ -285,5 +287,15 @@ final class Push
                 }
             }
         });
+    }
+
+    /**
+     * The email of a row of member, in clear: encrypted in the database.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function emailOf(array $row): string
+    {
+        return (string) $this->personal->opened(['email' => $row['email']])['email'];
     }
 }

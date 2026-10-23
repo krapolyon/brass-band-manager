@@ -25,7 +25,14 @@ test('a band without a logo has none to show, and the app keeps its neutral icon
     icons: null,
   });
   expect((await request.get('/api/band/logo')).status()).toBe(404);
-  expect((await request.get('/api/band/icon/192')).status()).toBe(404);
+  // The icon of the tab leads to the neutral icon of the app (#48).
+  const icon = await request.get('/api/band/icon/192', { maxRedirects: 0 });
+  expect(icon.status()).toBe(302);
+  expect(icon.headers().location).toBe('/appIcons/icon-192.png');
+  expect(icon.headers()['cache-control']).toBe('no-cache');
+  expect((await request.get('/api/band/icon/180', { maxRedirects: 0 })).headers().location).toBe(
+    '/appIcons/apple-touch-icon.png',
+  );
 
   const manifest = await request.get('/api/manifest');
   expect(manifest.headers()['content-type']).toContain('application/manifest+json');

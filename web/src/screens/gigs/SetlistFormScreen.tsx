@@ -90,9 +90,9 @@ export function SetlistFormScreen() {
   const [isProposing, setProposing] = useState(false);
   const [proposedCount, setProposedCount] = useState(10);
   const [includesNew, setIncludesNew] = useState(false);
-  const [proposal, setProposal] = useState<
-    (Proposal & { first: string; last: string; isEncore: boolean }) | null
-  >(null);
+  const [proposal, setProposal] = useState<(Proposal & { first: string; last: string }) | null>(
+    null,
+  );
 
   // The dictation: what it knows of the songs, what it last heard, and the
   // choice it waits for.
@@ -246,14 +246,11 @@ export function SetlistFormScreen() {
       const song = byId.get(songId);
       return song ? [{ key: newKey(), songId, name: song.name }] : [];
     });
-    const last = byId.get(drawn.songIds.at(-1) ?? 0);
     setDraft({ ...draft, lines });
     setProposal({
       ...drawn,
       first: lines[0]?.name ?? '',
       last: lines.at(-1)?.name ?? '',
-      isEncore:
-        last?.setCategory === 'ENCORE' || (last?.otherCategories.includes('ENCORE') ?? false),
     });
     setProposing(false);
     setSaid(t('gigs.setlist.form.propose.done', { count: lines.length }));
@@ -520,15 +517,10 @@ export function SetlistFormScreen() {
           <>
             <Message>
               {[
-                t(
-                  proposal.isEncore
-                    ? 'gigs.setlist.form.propose.madeEncore'
-                    : 'gigs.setlist.form.propose.made',
-                  {
-                    first: proposal.first,
-                    last: proposal.last,
-                  },
-                ),
+                t('gigs.setlist.form.propose.made', {
+                  first: proposal.first,
+                  last: proposal.last,
+                }),
                 proposal.dropped.length > 0 &&
                   t('gigs.setlist.form.propose.dropped', { rules: ruleNames(proposal.dropped) }),
                 proposal.isShort &&

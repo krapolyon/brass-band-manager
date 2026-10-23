@@ -437,24 +437,25 @@ const phrases = () =>
     "SELECT CONCAT(s.name, '=', n.phrase) FROM songSpokenName n JOIN song s ON s.id = n.songId ORDER BY n.id",
   );
 
-test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
-  /** A song with what the generator reads. */
-  function songWith(name: string, category: string, seconds: number | null, changes = '') {
+test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47)', () => {
+  /** A song with what the generator reads: its positions, its length. */
+  function songWith(name: string, positions: string[], seconds: number | null, changes = '') {
     const songId = addSong(name);
     sql(
-      `UPDATE song SET setCategory = '${category}', durationSeconds = ${seconds ?? 'NULL'}${changes} WHERE id = ${songId}`,
+      `UPDATE song SET durationSeconds = ${seconds ?? 'NULL'}${changes} WHERE id = ${songId}; DELETE FROM songPosition WHERE songId = ${songId}; INSERT INTO songPosition (songId, position) VALUES ${positions.map((position) => `(${songId}, '${position}')`).join(', ')}`,
     );
     return songId;
   }
+  const middle = ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF'];
 
   test('the editor says how long the setlist lasts, with the time between two songs of the band', async ({
     page,
   }) => {
     const { gigId, slotId } = confirmed();
     const songs = [
-      songWith('Toxic', 'STANDARD', 210),
-      songWith('Valerie', 'STANDARD', 210),
-      songWith('Crazy', 'STANDARD', null),
+      songWith('Toxic', middle, 210),
+      songWith('Valerie', middle, 210),
+      songWith('Crazy', middle, null),
     ];
     const setlistId = addSetlist(gigId, slotId, songs);
     await asMember(page, 'Sissi');
@@ -468,20 +469,12 @@ test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
     page,
   }) => {
     const { gigId } = confirmed();
-    songWith('Bonfire', 'OPENER', 200);
-    songWith('Canned Heat', 'KNOWN', 230);
-    songWith('Valerie', 'CHILL', 220);
-    songWith('Crazy', 'CHOREOGRAPHY', 240);
-    songWith('Toxic', 'STANDARD', 200);
-    songWith('Biffy', 'ENCORE', 180);
-    songWith('Uptown Funk', 'PARTY', 270);
+    // Three songs to open, one for the middle, three to close.
+    for (const name of ['Bonfire', 'Canned Heat', 'Valerie']) songWith(name, ['START'], 220);
+    songWith('Crazy', ['MIDDLE'], 240);
+    for (const name of ['Toxic', 'Biffy', 'Uptown Funk']) songWith(name, ['END'], 200);
     // New in the repertoire: offered only when asked.
-    songWith(
-      'Freed',
-      'KNOWN',
-      250,
-      `, inRepertoireOn = '${new Date().toISOString().slice(0, 10)}'`,
-    );
+    songWith('Freed', middle, 250, `, inRepertoireOn = '${new Date().toISOString().slice(0, 10)}'`);
     await asMember(page, 'Sissi');
     await page.goto(`/gigs/${gigId}`);
     await page.getByRole('button', { name: 'Nouvelle setlist' }).click();
@@ -506,16 +499,25 @@ test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
     await expect(sheet.getByText('Au répertoire depuis moins de 2 mois : Freed.')).toBeVisible();
     await sheet.getByRole('button', { name: 'Proposer 7 morceaux' }).click();
 
-    // Bonfire opens, Biffy closes as an encore: the only ones that can.
+    // The songs with Début open, Crazy is in the middle, those with Fin close.
     const rows = page.locator('.SetlistSongRow');
     await expect(rows).toHaveCount(7);
-    await expect(rows.first()).toContainText('Bonfire');
-    await expect(rows.last()).toContainText('Biffy');
+    const names = (await rows.allTextContents()).map((text) =>
+      ['Bonfire', 'Canned Heat', 'Valerie', 'Crazy', 'Toxic', 'Biffy', 'Uptown Funk'].find((name) =>
+        text.includes(name),
+      ),
+    );
+    expect(names.slice(0, 3).sort()).toEqual(['Bonfire', 'Canned Heat', 'Valerie']);
+    expect(names[3]).toBe('Crazy');
+    expect(names.slice(4).sort()).toEqual(['Biffy', 'Toxic', 'Uptown Funk']);
     await expect(rows.filter({ hasText: 'Freed' })).toHaveCount(0);
     await expect(
-      page.getByText('Proposée par l’app : de Bonfire pour démarrer à Biffy en rappel.', {
-        exact: false,
-      }),
+      page.getByText(
+        `Proposée par l’app : de ${names[0]} pour démarrer à ${names[6]} pour finir.`,
+        {
+          exact: false,
+        },
+      ),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Une autre proposition' })).toBeVisible();
     expect(sql('SELECT COUNT(*) FROM setlist')).toBe('0');
@@ -529,10 +531,11 @@ test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
     page,
   }) => {
     const { gigId } = confirmed();
-    songWith('Bonfire', 'OPENER', 200);
-    songWith('Crazy', 'CHOREOGRAPHY', 240);
-    songWith('Single Ladies', 'CHOREOGRAPHY', 200);
-    songWith('Uptown Funk', 'PARTY', 270);
+    // Nothing can close: no song has Fin.
+    songWith('Bonfire', ['START'], 200);
+    songWith('Crazy', middle, 240);
+    songWith('Single Ladies', middle, 200);
+    songWith('Uptown Funk', middle, 270);
     await asMember(page, 'Sissi');
     await page.goto(`/gigs/${gigId}`);
     await page.getByRole('button', { name: 'Nouvelle setlist' }).click();
@@ -540,8 +543,9 @@ test.describe('the length of a setlist and the generator (0.3.0, #25)', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Proposer 10 morceaux' }).click();
 
     await expect(page.locator('.SetlistSongRow')).toHaveCount(4);
-    await expect(page.getByText('pour finir', { exact: false })).toBeVisible();
-    await expect(page.getByText('deux chorées', { exact: false })).toBeVisible();
+    await expect(
+      page.getByText('un morceau à une place que ses positions ne prévoient pas', { exact: false }),
+    ).toBeVisible();
     await expect(page.getByText('Le répertoire n’a que 4 morceaux à proposer.')).toBeVisible();
   });
 });

@@ -369,6 +369,7 @@ test.describe('editing a record', () => {
   }) => {
     const momo = await deviceOf(playwright, email('Momo'));
     const jibe = memberId('Jibé');
+    const hashBefore = sql(`SELECT emailHash FROM member WHERE id = ${jibe}`);
     const same = {
       nickname: admin.nickname,
       firstName: admin.firstName,
@@ -380,7 +381,8 @@ test.describe('editing a record', () => {
       data: { ...same, email: 'momo.bis@example.org' },
     });
     expect(taken.status()).toBe(403);
-    expect(sql(`SELECT email FROM member WHERE id = ${jibe}`)).toBe(admin.email);
+    // Encrypted: unchanged is told by its hash.
+    expect(sql(`SELECT emailHash FROM member WHERE id = ${jibe}`)).toBe(hashBefore);
 
     // The rest of the record, yes.
     const other = await momo.put(`/api/members/${jibe}`, {

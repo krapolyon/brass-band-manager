@@ -99,15 +99,15 @@ test.describe('who may do what', () => {
         'enjoyment',
         'fileSizes',
         'id',
+        'copyright',
         'inRepertoireOn',
-        'isNeverFirst',
         'mastery',
+        'mood',
         'name',
         'originalArtist',
         'originalTitle',
-        'otherCategories',
         'partCount',
-        'setCategory',
+        'positions',
         'status',
         'tiringSectionIds',
         'trickySectionIds',
@@ -365,10 +365,10 @@ test.describe('the Discord channel of a song (0.3.0)', () => {
   });
 });
 
-test.describe('what the setlist generator reads (0.3.0)', () => {
+test.describe('what the setlist generator reads (0.3.0, 0.3.1)', () => {
   const sectionId = (name: string) => Number(sql(`SELECT id FROM section WHERE name = '${name}'`));
 
-  test('who manages songs gives the length, the categories, never first, tiring and tricky; every member reads them', async ({
+  test('who manages songs gives the length, the mood, the positions, tiring, tricky and the copyright; every member reads them (#47)', async ({
     playwright,
   }) => {
     const sisi = await deviceOf(playwright, email('Sisi'));
@@ -376,9 +376,9 @@ test.describe('what the setlist generator reads (0.3.0)', () => {
       data: songRecord({
         durationSeconds: 232,
         inRepertoireOn: '2015-01-01',
-        setCategory: 'PARTY',
-        isNeverFirst: true,
-        otherCategories: ['ENCORE', 'KNOWN'],
+        mood: 'PARTY',
+        positions: ['END', 'SECOND_HALF', 'END'],
+        copyright: '  Jack White ',
         tiringSectionIds: [sectionId('Trompette')],
         trickySectionIds: [sectionId('Souba'), sectionId('Saxophone')],
       }),
@@ -388,64 +388,71 @@ test.describe('what the setlist generator reads (0.3.0)', () => {
     const attributes = {
       durationSeconds: 232,
       inRepertoireOn: '2015-01-01',
-      setCategory: 'PARTY',
-      isNeverFirst: true,
-      // In the order of the enum, and of the sections of the band.
-      otherCategories: ['KNOWN', 'ENCORE'],
+      mood: 'PARTY',
+      // Each once, in the order of a set; the sections in the order of the band.
+      positions: ['SECOND_HALF', 'END'],
+      copyright: 'Jack White',
       tiringSectionIds: [sectionId('Trompette')],
       trickySectionIds: [sectionId('Saxophone'), sectionId('Souba')],
     };
     expect(song).toMatchObject(attributes);
+    expect(song).not.toHaveProperty('setCategory');
+    expect(song).not.toHaveProperty('isNeverFirst');
+    expect(song).not.toHaveProperty('otherCategories');
 
     const zaza = await deviceOf(playwright, email('Zaza'));
     expect((await (await zaza.get('/api/songs')).json())[0]).toMatchObject(attributes);
+    expect(await (await zaza.get(`/api/songs/${song.id}`)).json()).toMatchObject(attributes);
 
-    // Sent whole: what is left out goes back to its default.
+    // Sent whole: what is left out goes back to what a new song gets.
     const edited = await sisi.put(`/api/songs/${song.id}`, { data: songRecord() });
     expect(await edited.json()).toMatchObject({
       durationSeconds: null,
       inRepertoireOn: null,
-      setCategory: 'STANDARD',
-      isNeverFirst: false,
-      otherCategories: [],
+      mood: 'MEDIUM',
+      positions: ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF'],
+      copyright: null,
       tiringSectionIds: [],
       trickySectionIds: [],
     });
-    expect(sql('SELECT COUNT(*) FROM songOtherCategory')).toBe('0');
   });
 
-  test('a length out of bounds, a day to come, Standard or the main category among the others, or an unknown section is refused', async ({
+  test('a length out of bounds, a day to come, no position, a copyright too long or an unknown section is refused', async ({
     playwright,
   }) => {
     const sisi = await deviceOf(playwright, email('Sisi'));
-    const faults: [Record<string, unknown>, string][] = [
-      [{ durationSeconds: 9 }, 'durationSeconds'],
-      [{ durationSeconds: 1201 }, 'durationSeconds'],
-      [{ inRepertoireOn: '2099-01-01' }, 'inRepertoireOn'],
-      [{ inRepertoireOn: '2026-02-30' }, 'inRepertoireOn'],
-      [{ otherCategories: ['STANDARD'] }, 'otherCategories'],
-      [{ setCategory: 'PARTY', otherCategories: ['PARTY'] }, 'otherCategories'],
-      [{ tiringSectionIds: [9999] }, 'tiringSectionIds'],
-      [{ trickySectionIds: [9999] }, 'trickySectionIds'],
+    const faults: [Record<string, unknown>, string, string][] = [
+      [{ durationSeconds: 9 }, 'durationSeconds', 'invalid'],
+      [{ durationSeconds: 1201 }, 'durationSeconds', 'invalid'],
+      [{ inRepertoireOn: '2099-01-01' }, 'inRepertoireOn', 'invalid'],
+      [{ inRepertoireOn: '2026-02-30' }, 'inRepertoireOn', 'invalid'],
+      [{ positions: [] }, 'positions', 'required'],
+      [{ copyright: 'x'.repeat(201) }, 'copyright', 'tooLong'],
+      [{ tiringSectionIds: [9999] }, 'tiringSectionIds', 'invalid'],
+      [{ trickySectionIds: [9999] }, 'trickySectionIds', 'invalid'],
     ];
-    for (const [changes, field] of faults) {
+    for (const [changes, field, problem] of faults) {
       const refused = await sisi.post('/api/songs', { data: songRecord(changes) });
-      expect(await refused.json(), JSON.stringify(changes)).toEqual({
+      expect(await refused.json(), JSON.stringify(changes).slice(0, 60)).toEqual({
         error: 'invalidInput',
-        fields: { [field]: 'invalid' },
+        fields: { [field]: problem },
       });
     }
-    // An unknown category is not even read.
-    expect(
-      (await sisi.post('/api/songs', { data: songRecord({ setCategory: 'TEUF' }) })).status(),
-    ).toBe(422);
+    // An unknown mood or position is not even read.
+    for (const changes of [{ mood: 'TEUF' }, { positions: ['ENCORE'] }]) {
+      expect((await sisi.post('/api/songs', { data: songRecord(changes) })).status()).toBe(422);
+    }
     // The database keeps the rules too.
     const songId = addSong('Crazy');
     expect(() =>
-      sql(`INSERT INTO songOtherCategory (songId, category) VALUES (${songId}, 'STANDARD')`),
+      sql(`INSERT INTO songPosition (songId, position) VALUES (${songId}, 'ENCORE')`),
     ).toThrow();
+    expect(() => sql(`UPDATE song SET mood = 'TEUF' WHERE id = ${songId}`)).toThrow();
     expect(() => sql(`UPDATE song SET durationSeconds = 5 WHERE id = ${songId}`)).toThrow();
     expect(sql('SELECT COUNT(*) FROM song')).toBe('1');
+    // Deleting the song deletes its positions.
+    sql(`DELETE FROM song WHERE id = ${songId}`);
+    expect(sql('SELECT COUNT(*) FROM songPosition')).toBe('0');
   });
 
   test('the day a song enters the repertoire is set by the app the first time, then kept', async ({
@@ -484,10 +491,13 @@ test.describe('what the setlist generator reads (0.3.0)', () => {
     const songId = addSong('Crazy');
     const zaza = await deviceOf(playwright, email('Zaza'));
     const refused = await zaza.put(`/api/songs/${songId}`, {
-      data: songRecord({ name: 'Crazy', setCategory: 'PARTY' }),
+      data: songRecord({ name: 'Crazy', mood: 'PARTY', positions: ['END'] }),
     });
     expect(refused.status()).toBe(403);
-    expect(sql('SELECT setCategory FROM song')).toBe('STANDARD');
+    expect(sql('SELECT mood FROM song')).toBe('MEDIUM');
+    expect(sql('SELECT GROUP_CONCAT(position ORDER BY position) FROM songPosition')).toBe(
+      'FIRST_HALF,MIDDLE,SECOND_HALF',
+    );
   });
 });
 

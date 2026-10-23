@@ -8,13 +8,27 @@ use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Text;
 use Doctrine\DBAL\Connection;
 
-// Checks the record of a member as it was sent, and gives it back as it will
-// be saved. Used when a member is created and when one is edited.
+// Checks the record of a member as it was sent, and gives it back in clear;
+// stored() gives what is written, the personal fields encrypted. Used when a
+// member is created and when one is edited.
 // Fields and their rules: model/members.md, "Fields".
 final class MemberRecord
 {
-    public function __construct(private readonly Connection $database)
+    public function __construct(
+        private readonly Connection $database,
+        private readonly PersonalData $personal,
+    ) {
+    }
+
+    /**
+     * The values of check() as they are written to member.
+     *
+     * @param array<string, int|string|null> $values
+     * @return array<string, mixed>
+     */
+    public function stored(array $values): array
     {
+        return $this->personal->sealed($values);
     }
 
     /**
@@ -72,13 +86,28 @@ final class MemberRecord
         if ($this->isTaken('nickname', $values['nickname'], $memberId)) {
             $errors->add('nickname', 'duplicate');
         }
-        if ($this->isTaken('email', $email, $memberId)) {
+        if ($this->isEmailTaken($email, $memberId)) {
             $errors->add('email', 'duplicate');
         }
 
         $errors->throwIfAny();
 
         return $values;
+    }
+
+    // Compared through its hash: the email is encrypted. Exact, letter by
+    // letter, as the mail server reads it (model/members.md, "Encryption").
+    private function isEmailTaken(string $email, ?int $memberId): bool
+    {
+        [$where, $values] = $this->personal->whereEmail($email);
+        $rows = $this->database->fetchAllAssociative("SELECT email FROM member WHERE {$where} AND id <> ?", [...$values, $memberId ?? 0]);
+        foreach ($rows as $row) {
+            if ($this->personal->opened($row)['email'] === $email) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isTaken(string $column, string $value, ?int $memberId): bool

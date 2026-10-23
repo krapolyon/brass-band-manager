@@ -1059,9 +1059,11 @@ test.describe('Discord and the setlists (0.3.0)', () => {
   // Trompette section tagged by a role of the server of the band.
   function withSetlistDetails() {
     sql(
-      `UPDATE song SET durationSeconds = 232, inRepertoireOn = '2015-01-01', setCategory = 'PARTY', isNeverFirst = TRUE WHERE id = ${seven}`,
+      `UPDATE song SET durationSeconds = 232, inRepertoireOn = '2015-01-01', mood = 'PARTY', copyright = 'Jack White' WHERE id = ${seven}`,
     );
-    sql(`INSERT INTO songOtherCategory (songId, category) VALUES (${seven}, 'ENCORE')`);
+    sql(
+      `DELETE FROM songPosition WHERE songId = ${seven}; INSERT INTO songPosition (songId, position) VALUES (${seven}, 'END'), (${seven}, 'SECOND_HALF')`,
+    );
     sql(
       `INSERT INTO songTiringSection (songId, sectionId) VALUES (${seven}, ${sectionId('Trompette')})`,
     );
@@ -1077,7 +1079,7 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     sql(`UPDATE song SET discordChannelId = '${channel}' WHERE id = ${seven}`);
   }
 
-  test('“À propos” says the length, the year, the categories and the sections', async ({
+  test('“À propos” says the length, the year, the mood, the positions, the sections and the copyright (#47)', async ({
     page,
   }) => {
     withSetlistDetails();
@@ -1087,13 +1089,18 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await expect(about.getByText('Au répertoire depuis')).toBeVisible();
     await expect(about).toContainText('2015');
     await expect(about).toContainText('3:52');
-    await expect(about).toContainText('Teuf, Rappel, jamais en premier');
-    await expect(about).toContainText('Fatigant pour');
-    await expect(about).toContainText('Ça tricote pour');
-    // Crazy has none of it: no such line.
+    // Figma, Songs, section 15: in this order, the copyright last.
+    await expect(about).toContainText(
+      /Durée\s*3:52\s*Ambiance\s*Teuf\s*Positions\s*2e moitié, fin\s*Fatigant pour\s*Trompette\s*Ça tricote pour\s*Saxophone\s*Droits d’auteur\s*Jack White/,
+    );
+    // Crazy has only what every song has: its mood and its positions.
     await page.goto(`/songs/${sql("SELECT id FROM song WHERE name = 'Crazy'")}`);
-    await expect(page.getByText('Pour les setlists')).toHaveCount(0);
+    const crazy = page.locator('.songs-facts').or(page.getByRole('region', { name: 'À propos' }));
+    await expect(crazy).toContainText(
+      /Ambiance\s*Médium\s*Positions\s*1re moitié, milieu, 2e moitié/,
+    );
     await expect(page.getByText('Durée', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Droits d’auteur', { exact: true })).toHaveCount(0);
   });
 
   test('the Discord card shows the messages that tag the section of the member, then opens the channel', async ({
@@ -1169,14 +1176,20 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await page.goto(`/songs/${seven}/edit`);
     await expect(page.getByRole('heading', { name: 'Pour les setlists' })).toBeVisible();
 
+    await page.getByLabel('Droits d’auteur').fill('Jack White');
     await page.getByLabel('Durée').fill('352');
-    const category = page.getByRole('group', { name: 'Catégorie' });
-    await category.getByRole('radio', { name: 'Teuf' }).check();
-    // The main category is not offered among the others.
-    const others = page.getByRole('group', { name: 'Peut aussi servir de' });
-    await expect(others.getByRole('checkbox', { name: 'Teuf' })).toHaveCount(0);
-    await others.getByRole('checkbox', { name: 'Rappel' }).check();
-    await page.getByRole('switch', { name: 'Jamais en premier' }).click();
+    await page
+      .getByRole('group', { name: 'Ambiance' })
+      .getByRole('radio', { name: 'Teuf' })
+      .check();
+    // A new song can go in the three middle zones; this one closes.
+    const positions = page.getByRole('group', { name: 'Positions possibles' });
+    for (const zone of ['1re moitié', 'Milieu', '2e moitié']) {
+      await expect(positions.getByRole('checkbox', { name: zone })).toBeChecked();
+    }
+    for (const zone of ['1re moitié', 'Milieu', '2e moitié']) {
+      await positions.getByRole('checkbox', { name: zone }).uncheck();
+    }
     await page
       .getByRole('group', { name: 'Fatigant pour' })
       .getByRole('button', { name: 'Trompette' })
@@ -1191,6 +1204,10 @@ test.describe('Discord and the setlists (0.3.0)', () => {
 
     await page.getByLabel('Durée').fill('3:52');
     await page.getByRole('button', { name: 'Enregistrer' }).first().click();
+    // No position left: said on the group.
+    await expect(positions.getByText('Coche au moins une position.')).toBeVisible();
+    await positions.getByRole('checkbox', { name: 'Fin' }).check();
+    await page.getByRole('button', { name: 'Enregistrer' }).first().click();
     await expect(
       page.getByText('Ce salon est sur un autre serveur Discord que celui de la fanfare.'),
     ).toBeVisible();
@@ -1201,20 +1218,33 @@ test.describe('Discord and the setlists (0.3.0)', () => {
     await expect(page).toHaveURL(`/songs/${seven}`);
     expect(
       sql(
-        `SELECT durationSeconds, setCategory, isNeverFirst, discordChannelId FROM song WHERE id = ${seven}`,
+        `SELECT durationSeconds, mood, copyright, discordChannelId FROM song WHERE id = ${seven}`,
       ),
-    ).toBe(`232\tPARTY\t1\t${channel}`);
-    expect(sql(`SELECT category FROM songOtherCategory WHERE songId = ${seven}`)).toBe('ENCORE');
+    ).toBe(`232\tPARTY\tJack White\t${channel}`);
+    expect(sql(`SELECT GROUP_CONCAT(position) FROM songPosition WHERE songId = ${seven}`)).toBe(
+      'END',
+    );
     expect(sql(`SELECT sectionId FROM songTiringSection WHERE songId = ${seven}`)).toBe(
       sectionId('Trompette'),
     );
   });
 
-  test('without a Discord server, the form has no field for a channel', async ({ page }) => {
+  test('without a Discord server, the card is “Clip” and says nothing of Discord; with one, “Clip et Discord” (#49)', async ({
+    page,
+  }) => {
     await asMember(page, 'Sisi');
     await page.goto(`/songs/${seven}/edit`);
     await expect(page.getByRole('heading', { name: 'Pour les setlists' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Clip', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Clip et Discord' })).toHaveCount(0);
+    await expect(page.getByLabel('Clip YouTube')).toBeVisible();
     await expect(page.getByLabel('Lien du salon Discord')).toHaveCount(0);
+    await expect(page.getByText('Discord')).toHaveCount(0);
+
+    sql(`UPDATE band SET discordServerId = '${server}'`);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Clip et Discord' })).toBeVisible();
+    await expect(page.getByLabel('Lien du salon Discord')).toBeVisible();
   });
 
   test('the import proposes the length read from the MIDI file the MuseScore file gives', async ({

@@ -27,6 +27,18 @@ return [
     // It is of no use once the app is installed.
     'installKey' => '',
 
+    // The key that encrypts the names, email, phone and address of members in
+    // the database. Make it on a computer with "npm run encryption:key" and
+    // paste the line it prints here, before the install or before the
+    // database update of 0.3.1. One key per instance, never changed.
+    //
+    // KEEP A COPY ELSEWHERE, apart from the backups of the database (a
+    // password manager): without it the members cannot be read, by anyone,
+    // ever. It protects a copy of the database that leaks (a backup, a dump);
+    // it does not protect against someone who can read the files of this
+    // server, since it is written here. Never commit it, never email it.
+    'encryptionKey' => '',
+
     // The public address of the app, as members type it, without a slash at
     // the end: 'https://app.example.org'. The links written in emails start
     // with it.

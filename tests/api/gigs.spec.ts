@@ -594,7 +594,7 @@ test.describe('the life cycle of a gig', () => {
 });
 
 test.describe('answers and playability', () => {
-  test('a slot is playable once every section that has a member has a yes', async ({
+  test('a slot is playable once every section that has a member has a yes or an if needed', async ({
     playwright,
   }) => {
     const { gigId, slotId } = addGig('Carnaval');
@@ -606,29 +606,46 @@ test.describe('answers and playability', () => {
     let gig = await (await zaza.get(`/api/gigs/${gigId}`)).json();
     expect(gig.slots[0]).toMatchObject({
       isPlayable: false,
-      isPlayableIfNeeded: false,
       missingSectionIds: [sections('Trompette'), sections('Saxophone')],
+      playableThanksTo: [],
       ownAnswer: null,
       ownYesMakesPlayable: false,
     });
+    expect(gig.slots[0]).not.toHaveProperty('isPlayableIfNeeded');
 
-    // "Maybe" and "if needed" are not a yes.
+    // "Maybe" does not count.
     answerOf('Jibé', slotId, 'YES');
-    answerOf('Lulu', slotId, 'MAYBE');
-    gig = await (await answer(zaza, gigId, slotId, 'IF_NEEDED')).json();
-    expect(gig).toMatchObject({ isPlayable: false });
+    gig = await (await answer(zaza, gigId, slotId, 'MAYBE')).json();
     expect(gig.slots[0]).toMatchObject({
       isPlayable: false,
-      // It would be, if Zaza came.
-      isPlayableIfNeeded: true,
       missingSectionIds: [sections('Trompette')],
-      ownAnswer: 'IF_NEEDED',
-      // Her section is the last one without a yes.
+      // Her section is the last one without anyone.
       ownYesMakesPlayable: true,
     });
 
-    gig = await (await answer(zaza, gigId, slotId, 'YES')).json();
+    // "If needed" is not a yes, but it covers the section (#37), and is named.
+    gig = await (await answer(zaza, gigId, slotId, 'IF_NEEDED')).json();
     expect(gig).toMatchObject({ isPlayable: true });
+    expect(gig.slots[0]).toMatchObject({
+      isPlayable: true,
+      missingSectionIds: [],
+      playableThanksTo: [
+        {
+          memberId: Number(sql("SELECT id FROM member WHERE nickname = 'Zaza'")),
+          nickname: 'Zaza',
+          sectionId: sections('Trompette'),
+        },
+      ],
+      ownAnswer: 'IF_NEEDED',
+      ownYesMakesPlayable: false,
+    });
+
+    // A yes in her section: nobody is counted on any more.
+    answerOf('Lulu', slotId, 'YES');
+    gig = await (await zaza.get(`/api/gigs/${gigId}`)).json();
+    expect(gig.slots[0]).toMatchObject({ isPlayable: true, playableThanksTo: [] });
+
+    gig = await (await answer(zaza, gigId, slotId, 'YES')).json();
     expect(gig.slots[0]).toMatchObject({
       isPlayable: true,
       missingSectionIds: [],
@@ -640,6 +657,16 @@ test.describe('answers and playability', () => {
       isPlayable: true,
       slots: [{ ownAnswer: 'YES', isPlayable: true }],
     });
+  });
+
+  test('an if needed of a member who left counts for nothing', async ({ playwright }) => {
+    const { gigId, slotId } = addGig('Carnaval');
+    answerOf('Jibé', slotId, 'YES');
+    answerOf('Zaza', slotId, 'IF_NEEDED');
+    sql("UPDATE member SET status = 'LEFT' WHERE nickname = 'Zaza'");
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const gig = await (await jibe.get(`/api/gigs/${gigId}`)).json();
+    expect(gig.slots[0]).toMatchObject({ isPlayable: false, playableThanksTo: [] });
   });
 
   test('a power member counts like an active one; a member who left does not', async ({

@@ -5,7 +5,8 @@
 // Uses Node only, so that it runs before any package is installed.
 
 import { execSync } from 'node:child_process';
-import { copyFileSync, existsSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const steps = [
   ['Checking Node', checkNode],
@@ -48,8 +49,21 @@ function checkDocker() {
 }
 
 function createConfig() {
+  // The encryption key of the local stack, made once, never committed: it
+  // encrypts the members of the local databases (api/config.local.php).
+  if (!existsSync('api/encryptionKey.local')) {
+    writeFileSync('api/encryptionKey.local', `${randomBytes(32).toString('base64')}\n`, {
+      mode: 0o600,
+    });
+    console.log('api/encryptionKey.local created');
+  }
   if (existsSync('api/config.php')) {
     console.log('api/config.php already exists: left as it is');
+    if (!readFileSync('api/config.php', 'utf8').includes('encryptionKey')) {
+      console.log(
+        '  It has no encryptionKey: copy api/config.local.php over it to get the one of the local stack.',
+      );
+    }
     return;
   }
   copyFileSync('api/config.local.php', 'api/config.php');

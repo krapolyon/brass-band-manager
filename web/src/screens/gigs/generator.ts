@@ -1,27 +1,23 @@
-// The setlist generator (model/gigs.md, entry 4, "Proposing a setlist";
-// model/songs.md, "Setlist attributes"; issue #25). It runs in the browser,
+// The setlist generator (model/gigs.md v1.9, entry 4, "Proposing a setlist";
+// model/songs.md v1.9, "Setlist attributes"; issues #25 and #47). It runs in the browser,
 // from the songs the editor already has: nothing is asked of the server and
 // nothing about a draw is stored.
 //
 // No import of React or of the app here: the tests run it as it is, with a
 // fixed random seed (tests/generator.spec.ts).
 
-export type SetCategory =
-  | 'OPENER'
-  | 'PARTY'
-  | 'KNOWN'
-  | 'CHOREOGRAPHY'
-  | 'CHILL'
-  | 'ENCORE'
-  | 'STANDARD';
+export type SongMood = 'CHILL' | 'MEDIUM' | 'PARTY';
+export type SetPosition = 'START' | 'FIRST_HALF' | 'MIDDLE' | 'SECOND_HALF' | 'END';
+
+/** The positions in the order of a set. */
+export const setPositions: SetPosition[] = ['START', 'FIRST_HALF', 'MIDDLE', 'SECOND_HALF', 'END'];
 
 /** What the generator reads of a song. */
 export type CandidateSong = {
   id: number;
   status: string;
-  setCategory: SetCategory;
-  otherCategories: SetCategory[];
-  isNeverFirst: boolean;
+  mood: SongMood;
+  positions: SetPosition[];
   tiringSectionIds: number[];
   trickySectionIds: number[];
   /** "2026-09-01"; null: not new. */
@@ -29,10 +25,11 @@ export type CandidateSong = {
 };
 
 /**
- * The rules, in the order of the model: when they cannot all be kept, the
- * last ones are dropped first.
+ * The rules, in the order of the model (gigs.md v1.9, entry 4): when they
+ * cannot all be kept, the last ones are dropped first. The mood is not one:
+ * it weighs the draw and never blocks it.
  */
-export const rules = ['opener', 'closer', 'halves', 'tiring', 'neighbours', 'alternate'] as const;
+export const rules = ['positions', 'tiring', 'tricky'] as const;
 export type Rule = (typeof rules)[number];
 
 export type Proposal = {
@@ -59,6 +56,8 @@ type Options = {
 const PLAYABLE = ['IN_REPERTOIRE', 'TEMPORARY'];
 // Many tries, then one rule fewer: a small repertoire is decided fast.
 const TRIES = 400;
+// How many places at each end only take Début, or Fin.
+const ENDS = 3;
 
 /** True when the song entered the repertoire less than 2 months before `today`. */
 export function isNew(song: Pick<CandidateSong, 'inRepertoireOn'>, today: string): boolean {
@@ -79,47 +78,67 @@ export function candidatesOf<Song extends CandidateSong>(
   );
 }
 
-const serves = (song: CandidateSong, category: SetCategory) =>
-  song.setCategory === category || song.otherCategories.includes(category);
+/**
+ * The positions a place of a set takes (model/songs.md, "Setlist
+ * attributes"). Place `place` (0 is the first) of `count` is counted at its
+ * centre: the first half is below 0.5, the middle from 0.35 to 0.65. The
+ * first three take Début only, the last three Fin only; in a set of five or
+ * fewer, a place among both takes either.
+ */
+export function positionsOf(place: number, count: number): SetPosition[] {
+  const isFirst = place < ENDS;
+  const isLast = place >= count - ENDS;
+  if (isFirst && isLast) return ['START', 'END'];
+  if (isFirst) return ['START'];
+  if (isLast) return ['END'];
+  const centre = (place + 0.5) / count;
+  return [
+    centre < 0.5 ? 'FIRST_HALF' : 'SECOND_HALF',
+    ...(centre >= 0.35 && centre <= 0.65 ? (['MIDDLE'] as const) : []),
+  ];
+}
 
-/** Whether a song may stand at a place, with the song before it, under the first `kept` rules. */
-function fits(
-  song: CandidateSong,
-  place: number,
-  count: number,
-  before: CandidateSong | undefined,
-  kept: number,
-) {
-  const isFirst = place === 0;
-  const isLast = place === count - 1;
-  const inFirstHalf = place < count / 2;
-  // 1. The first song is an opener, never one that is never first.
-  if (kept >= 1 && isFirst && (!serves(song, 'OPENER') || song.isNeverFirst)) return false;
-  // 2. The last is a party song or an encore (an encore is preferred when it is drawn).
-  if (kept >= 2 && isLast && !serves(song, 'PARTY') && !serves(song, 'ENCORE')) return false;
-  // 3. The main category places the song: opener in the first half, party in
-  //    the second, encore at the end only.
-  if (kept >= 3) {
-    if (song.setCategory === 'OPENER' && !inFirstHalf) return false;
-    if (song.setCategory === 'PARTY' && inFirstHalf && count > 1) return false;
-    if (song.setCategory === 'ENCORE' && !isLast) return false;
-  }
-  // 4. A tiring song stays in the first half.
-  if (kept >= 4 && song.tiringSectionIds.length > 0 && !inFirstHalf) return false;
-  if (!before) return true;
-  // 5. Two choreographies never follow each other, nor two songs tricky for the same section.
-  if (kept >= 5) {
-    if (serves(song, 'CHOREOGRAPHY') && serves(before, 'CHOREOGRAPHY')) return false;
-    if (song.trickySectionIds.some((section) => before.trickySectionIds.includes(section))) {
-      return false;
-    }
-  }
-  // 6. The categories alternate: two songs of the same main category do not
-  //    follow each other (Standard is no category).
-  if (kept >= 6 && song.setCategory !== 'STANDARD' && song.setCategory === before.setCategory) {
+/** Whether a song may stand at a place under the first `kept` rules; its neighbours are checked apart. */
+function fits(song: CandidateSong, place: number, count: number, kept: number) {
+  const taken = positionsOf(place, count);
+  // 1. Only where one of its positions allows.
+  if (kept >= 1 && !song.positions.some((position) => taken.includes(position))) return false;
+  // 2. A tiring song stays in the first half, except among the last three
+  //    when it has Fin: Fin wins.
+  const isSecondHalf = (place + 0.5) / count >= 0.5;
+  const isLastWithEnd = place >= count - ENDS && song.positions.includes('END');
+  if (kept >= 2 && song.tiringSectionIds.length > 0 && isSecondHalf && !isLastWithEnd) {
     return false;
   }
   return true;
+}
+
+// 3. Two songs tricky for the same section never follow each other.
+const clashes = (one: CandidateSong, other: CandidateSong | undefined) =>
+  other !== undefined &&
+  one.trickySectionIds.some((section) => other.trickySectionIds.includes(section));
+
+/**
+ * How likely a song is drawn at a place (gigs.md, entry 4): Chill near the
+ * start, Teuf near the end, Médium anywhere. A preference only: a song of
+ * any mood can be drawn anywhere.
+ */
+function weightOf(song: CandidateSong, place: number, count: number): number {
+  const centre = (place + 0.5) / count;
+  if (song.mood === 'CHILL') return 0.25 + 2 * (1 - centre);
+  if (song.mood === 'PARTY') return 0.25 + 2 * centre;
+  return 1;
+}
+
+/**
+ * The songs in a random order drawn with their weights at a place: a song
+ * twice as likely comes first twice as often (Efraimidis and Spirakis).
+ */
+function weighted(songs: CandidateSong[], place: number, count: number, random: () => number) {
+  return songs
+    .map((song) => ({ song, key: random() ** (1 / weightOf(song, place, count)) }))
+    .sort((a, b) => b.key - a.key)
+    .map(({ song }) => song);
 }
 
 function shuffled<T>(list: T[], random: () => number): T[] {
@@ -139,53 +158,38 @@ type Draw = {
   avoidedAllowed: number;
   count: number;
   kept: number;
-  /** The last song is an encore when one fits; otherwise any closer. */
-  encoreLast: boolean;
   random: () => number;
 };
 
 /**
- * One draw: the last song first, then the others from the start, the songs
- * not avoided tried before the avoided ones. Null when the draw ends in a
- * dead end.
+ * One draw. The last three places first, which the fewest songs can take,
+ * then the others from the start; at each place the songs not avoided are
+ * tried before the avoided ones. Null when the draw ends in a dead end.
  */
-function draw({ pool, avoided, avoidedAllowed, count, kept, encoreLast, random }: Draw) {
+function draw({ pool, avoided, avoidedAllowed, count, kept, random }: Draw) {
   const order: (CandidateSong | undefined)[] = Array.from({ length: count });
   const used = new Set<number>();
   let avoidedLeft = avoidedAllowed;
-  // Shuffled each time, the songs not avoided first.
-  const ordered = () => {
-    const mixed = shuffled(pool, random);
-    return [
+  const lasts = Array.from({ length: Math.min(ENDS, count) }, (_, index) => count - 1 - index);
+  const places = [...lasts, ...Array.from({ length: count }, (_, place) => place)].filter(
+    (place, index, all) => all.indexOf(place) === index,
+  );
+
+  for (const place of places) {
+    const mixed = weighted(pool, place, count, random);
+    const next = [
       ...mixed.filter((song) => !avoided.has(song.id)),
       ...mixed.filter((song) => avoided.has(song.id) && avoidedLeft > 0),
-    ];
-  };
-  const take = (place: number, song: CandidateSong) => {
-    order[place] = song;
-    used.add(song.id);
-    if (avoided.has(song.id)) avoidedLeft -= 1;
-  };
-
-  const last = count - 1;
-  const lasts = ordered().filter((song) => fits(song, last, count, undefined, kept));
-  const closer =
-    (encoreLast && kept >= 2 ? lasts.find((song) => serves(song, 'ENCORE')) : undefined) ??
-    lasts[0];
-  if (!closer) return null;
-  take(last, closer);
-
-  for (let place = 0; place < last; place++) {
-    const before = order[place - 1];
-    const next = ordered().find(
+    ].find(
       (song) =>
         !used.has(song.id) &&
-        fits(song, place, count, before, kept) &&
-        // The song before the last must also let the last follow it.
-        (place !== last - 1 || fits(closer, last, count, song, kept)),
+        fits(song, place, count, kept) &&
+        (kept < 3 || (!clashes(song, order[place - 1]) && !clashes(song, order[place + 1]))),
     );
     if (!next) return null;
-    take(place, next);
+    order[place] = next;
+    used.add(next.id);
+    if (avoided.has(next.id)) avoidedLeft -= 1;
   }
   return order as CandidateSong[];
 }
@@ -202,23 +206,16 @@ export function propose({ songs, count, includeNew, avoid, today, random }: Opti
   const size = Math.min(count, pool.length);
   if (size === 0) return { songIds: [], dropped: [], isShort: count > 0 };
   const missing = Math.max(0, size - (pool.length - avoided.size));
-  // At each number of rules: an encore last, then any closer.
-  const ways = [
-    { avoidedAllowed: missing, encoreLast: true },
-    { avoidedAllowed: missing, encoreLast: false },
-  ];
 
   for (let kept = rules.length; kept >= 0; kept--) {
-    for (const way of ways) {
-      for (let attempt = 0; attempt < TRIES / ways.length; attempt++) {
-        const order = draw({ pool, avoided, count: size, kept, random, ...way });
-        if (order) {
-          return {
-            songIds: order.map((song) => song.id),
-            dropped: rules.slice(kept),
-            isShort: size < count,
-          };
-        }
+    for (let attempt = 0; attempt < TRIES; attempt++) {
+      const order = draw({ pool, avoided, avoidedAllowed: missing, count: size, kept, random });
+      if (order) {
+        return {
+          songIds: order.map((song) => song.id),
+          dropped: rules.slice(kept),
+          isShort: size < count,
+        };
       }
     }
   }

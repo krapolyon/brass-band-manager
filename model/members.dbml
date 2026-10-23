@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.25 — 2026-10-18 — validated, for 0.3.1 (migration 015): the encryption in place, one column per field; emailHash empty only for a row not encrypted yet, required in the next release (dictionary, "Moving to encryption")
 // v1.23 — 2026-10-18 — validated, for 0.3.1 (not in the migration of 0.3.0): the names, email, phone and address of a member encrypted in the database, the email found through emailHash (issue #32)
 // v1.22 — 2026-10-18 — validated (0.3.0): section.discordRoleId, the role that tags a section on Discord (issue #33); the channel of each notification, push, email or both, and the reminders to answer by push or email (issue #27); no Discord account on a member
 // v1.21 — 2026-10-16 — migration 013 (0.2.0): textSizePercent dropped; the six notification settings of the account (notificationChannel, issue #23); calendarToken, the personal iCal address of a member (issue #21); pushSubscription serves the new notifications
@@ -86,8 +87,8 @@ Table member {
   nickname varchar [not null, unique, note: '🔒 Personal data — purpose: identification. The name shown everywhere in the app.']
   firstName varchar [not null, note: '🔒 Personal data — purpose: identification. Encrypted in the database (see the dictionary, "Encryption").']
   lastName varchar [not null, note: '🔒 Personal data — purpose: identification. Encrypted in the database (see the dictionary, "Encryption").']
-  email varchar [not null, unique, note: '🔒 Personal data — purpose: sign-in, and directory of the band. Stored in lowercase. Encrypted in the database (see the dictionary, "Encryption"). Never searched directly: sign-in finds the member by emailHash.']
-  emailHash varchar [not null, unique, note: 'HMAC-SHA256 of the email in lowercase, with a key of the server configuration. Lets sign-in, the forgotten password and the uniqueness of the email work on an encrypted email. Never sent to the front.']
+  email varchar [not null, note: '🔒 Personal data — purpose: sign-in, and directory of the band. Stored in lowercase. Unique, through emailHash: an encrypted value is never twice the same. Encrypted in the database (see the dictionary, "Encryption"). Never searched directly: sign-in finds the member by emailHash.']
+  emailHash varchar [not null, unique, note: 'HMAC-SHA256 of the email in lowercase, with a key of the server configuration. Lets sign-in, the forgotten password and the uniqueness of the email work on an encrypted email. Never sent to the front. Empty in 0.3.1 only for a row not encrypted yet (migration 015); required from the next release.']
   mobilePhone varchar [note: '🔒 Personal data — purpose: directory of the band. Stored in international format, for instance +33612345678. Encrypted in the database (see the dictionary, "Encryption").']
   streetAddress varchar [note: '🔒 Personal data — purpose: directory of the band. Number and street; can hold several lines. Encrypted in the database (see the dictionary, "Encryption").']
   postalCode varchar [note: '🔒 Personal data — purpose: directory of the band. Encrypted in the database (see the dictionary, "Encryption").']

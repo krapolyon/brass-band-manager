@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Install;
 
+use BrassBand\Members\PersonalData;
 use BrassBand\Access\Passwords;
 use BrassBand\Access\Profile;
 use BrassBand\Access\Role;
@@ -42,6 +43,7 @@ final class InstallAction
         private readonly InstallKey $installKey,
         private readonly LogoStore $logos,
         private readonly Migrations $migrations,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -192,9 +194,12 @@ final class InstallAction
         $admin = $input->admin;
         $this->database->insert('member', [
             'nickname' => Text::clean($admin->nickname),
-            'firstName' => Text::clean($admin->firstName),
-            'lastName' => Text::clean($admin->lastName),
-            'email' => mb_strtolower(trim($admin->email)),
+            // Encrypted, like every record of a member (PersonalData).
+            ...$this->personal->sealed([
+                'firstName' => Text::clean($admin->firstName),
+                'lastName' => Text::clean($admin->lastName),
+                'email' => mb_strtolower(trim($admin->email)),
+            ]),
             'instrumentId' => $adminInstrumentId,
             'passwordHash' => Passwords::hash($admin->password),
             'status' => 'ACTIVE',

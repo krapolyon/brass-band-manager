@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { emptyDatabase } from './support/database.ts';
+import { logoInput } from './support/images.ts';
 import { install } from './support/scenario.ts';
 
 type Manifest = {
@@ -23,6 +24,28 @@ test.describe('on an installed app', () => {
     await expect(page).toHaveURL('/sign-in');
     // The name of the band comes from the database.
     await expect(page.getByText('La Fanfare des Cuivres Déchaînés')).toBeVisible();
+  });
+
+  test('the tab shows the icon of the band, else its logo, else the neutral icon, before the app has loaded (#48)', async ({
+    request,
+  }) => {
+    // What the page names, read before any script runs (Safari keeps it).
+    const html = await (await request.get('/sign-in')).text();
+    expect(html).toContain('<link rel="icon" href="/api/band/icon/192" type="image/png" />');
+    expect(html).toContain('<link rel="apple-touch-icon" href="/api/band/icon/180" />');
+
+    // No logo: the address gives the neutral icon, a real image.
+    const neutral = await request.get('/api/band/icon/192');
+    expect(neutral.headers()['content-type']).toBe('image/png');
+    expect(await neutral.body()).toEqual(
+      await (await request.get('/appIcons/icon-192.png')).body(),
+    );
+
+    // A logo: the same address gives its icon.
+    await request.put('/api/band/logo', { data: logoInput() });
+    const drawn = await request.get('/api/band/icon/192');
+    expect(drawn.headers()['content-type']).toBe('image/png');
+    expect(await drawn.body()).not.toEqual(await neutral.body());
   });
 
   test('the app says so when the server does not answer', async ({ page }) => {

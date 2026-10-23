@@ -13,17 +13,15 @@ export const songStatuses = [
 ] as const;
 export type SongStatus = (typeof songStatuses)[number];
 
-/** What a song brings to a set, for the setlist generator (model/songs.md, "Setlist attributes"). */
-export const setCategories = [
-  'OPENER',
-  'PARTY',
-  'KNOWN',
-  'CHOREOGRAPHY',
-  'CHILL',
-  'ENCORE',
-  'STANDARD',
-] as const;
-export type SetCategory = (typeof setCategories)[number];
+/** The mood of a song, for the setlist generator (model/songs.md, "Setlist attributes"). */
+export const songMoods = ['CHILL', 'MEDIUM', 'PARTY'] as const;
+export type SongMood = (typeof songMoods)[number];
+
+/** The places of a set a song can be played at, in the order of a set. */
+export const setPositions = ['START', 'FIRST_HALF', 'MIDDLE', 'SECOND_HALF', 'END'] as const;
+export type SetPosition = (typeof setPositions)[number];
+/** What a new song gets. */
+export const newSongPositions: SetPosition[] = ['FIRST_HALF', 'MIDDLE', 'SECOND_HALF'];
 
 /** The average of the band on a song, and how many current members answered. */
 export type LevelAverage = { average: number | null; count: number };
@@ -57,10 +55,11 @@ export type SongSummary = {
   durationSeconds: number | null;
   /** The day it entered the repertoire, "2015-01-01"; null for the songs of before 0.3.0 not dated yet. */
   inRepertoireOn: string | null;
-  setCategory: SetCategory;
-  isNeverFirst: boolean;
-  /** Never STANDARD nor the main category; in the order of the enum. */
-  otherCategories: SetCategory[];
+  mood: SongMood;
+  /** One to five, in the order of a set. */
+  positions: SetPosition[];
+  /** The authors and composers, as the collecting society knows them; null when not known. */
+  copyright: string | null;
   /** Sections, in the order of the band. */
   tiringSectionIds: number[];
   trickySectionIds: number[];
@@ -126,9 +125,9 @@ export type SongRecord = {
   discordChannelId: string | null;
   durationSeconds: number | null;
   inRepertoireOn: string | null;
-  setCategory: SetCategory;
-  isNeverFirst: boolean;
-  otherCategories: SetCategory[];
+  copyright: string | null;
+  mood: SongMood;
+  positions: SetPosition[];
   tiringSectionIds: number[];
   trickySectionIds: number[];
 };

@@ -878,7 +878,8 @@
         "submit": "Appliquer",
         "applying": "Mise à jour en cours…",
         "cancel": "Annuler"
-      }
+      },
+      "encryptionKeyMissing": "Il manque la clé de chiffrement dans config.php : génère-la sur ton ordinateur avec « npm run encryption:key », colle la ligne dans config.php, puis recommence. Garde-en une copie à part : sans elle, les fiches des membres sont perdues."
     },
     "discordSettings": {
       "title": "Discord",
@@ -1156,15 +1157,16 @@
       "fullScreenTitle": "Partition en plein écran",
       "inRepertoireSince": "Au répertoire depuis",
       "duration": "Durée",
-      "forSetlists": "Pour les setlists",
-      "neverFirst": "jamais en premier",
       "tiringFor": "Fatigant pour",
       "trickyFor": "Ça tricote pour",
       "discord": {
         "tagged": "Les messages du salon Discord qui taguent {{role}}.",
         "nothingTagged": "Personne n’a encore tagué {{role}} dans le salon de ce morceau.",
         "nothingToShow": "Rien à afficher, consulte le salon Discord"
-      }
+      },
+      "mood": "Ambiance",
+      "positions": "Positions",
+      "copyright": "Droits d’auteur"
     },
     "delete": {
       "title": "Supprimer {{name}} ?",
@@ -1206,26 +1208,29 @@
         "discordDuplicate": "Ce salon est déjà celui d’un autre morceau.",
         "invalid": "Cette valeur n’est pas acceptée.",
         "duration": "Une durée en minutes et secondes, de 0:10 à 20:00, comme 3:52.",
-        "inRepertoireOn": "Cette date est dans le futur."
+        "inRepertoireOn": "Cette date est dans le futur.",
+        "positions": "Coche au moins une position."
       },
       "setlists": {
         "title": "Pour les setlists",
         "lead": "Ce que lit le générateur de setlists.",
         "duration": "Durée",
         "durationHint": "Lue dans le fichier MIDI. Corrige-la si besoin.",
-        "category": "Catégorie",
-        "categoryHint": "Elle décide où il se place : Début en première moitié, Teuf en seconde, Rappel à la fin.",
-        "otherCategories": "Peut aussi servir de",
-        "neverFirst": "Jamais en premier",
-        "neverFirstHint": "Il faut être chauffé.",
         "tiringSectionIds": "Fatigant pour",
-        "tiringSectionIdsHint": "Jamais en seconde moitié de set.",
+        "tiringSectionIdsHint": "Jamais en seconde moitié de set, sauf parmi les 3 derniers s’il a « Fin ».",
         "trickySectionIds": "Ça tricote pour",
         "trickySectionIdsHint": "Deux morceaux qui tricotent pour le même pupitre ne se suivent jamais.",
         "inRepertoireOn": "Au répertoire depuis",
         "inRepertoireOnHint": "Mise par l’app quand il passe au répertoire. Un morceau est nouveau pendant 2 mois.",
-        "inRepertoireOnClear": "Retirer la date d’entrée au répertoire"
-      }
+        "inRepertoireOnClear": "Retirer la date d’entrée au répertoire",
+        "mood": "Ambiance",
+        "moodHint": "Une seule. Le générateur place plutôt les Chill au début, les Teuf à la fin.",
+        "positions": "Positions possibles",
+        "positionsHint": "Où le générateur peut le placer. Début : les 3 premiers. Fin : les 3 derniers. Milieu : les 30 % du milieu."
+      },
+      "copyright": "Droits d’auteur",
+      "copyrightHint": "Les auteurs et compositeurs, tels que la Sacem les connaît.",
+      "clip": "Clip"
     },
     "edit": {
       "title": "Modifier le morceau",
@@ -1354,14 +1359,17 @@
       "noVersion": "—",
       "phoneOnlyDesktop": "Le tableau de gestion s’affiche sur un écran plus large. Sur téléphone, gère un morceau depuis sa fiche."
     },
-    "setCategory": {
-      "OPENER": "Début",
-      "PARTY": "Teuf",
-      "KNOWN": "Connu",
-      "CHOREOGRAPHY": "Chorée",
+    "mood": {
       "CHILL": "Chill",
-      "ENCORE": "Rappel",
-      "STANDARD": "Standard"
+      "MEDIUM": "Médium",
+      "PARTY": "Teuf"
+    },
+    "position": {
+      "START": "Début",
+      "FIRST_HALF": "1re moitié",
+      "MIDDLE": "Milieu",
+      "SECOND_HALF": "2e moitié",
+      "END": "Fin"
     }
   },
   "gigs": {
@@ -1465,19 +1473,15 @@
           "go_other": "Proposer {{count}} morceaux",
           "done_one": "{{count}} morceau proposé.",
           "done_other": "{{count}} morceaux proposés.",
-          "madeEncore": "Proposée par l’app : de {{first}} pour démarrer à {{last}} en rappel. Retouche-la à la main, ou tire-en une autre.",
           "made": "Proposée par l’app : de {{first}} pour démarrer à {{last}} pour finir. Retouche-la à la main, ou tire-en une autre.",
           "dropped": "Le répertoire ne permet pas de tout respecter : {{rules}}.",
           "short_one": "Le répertoire n’a que {{count}} morceau à proposer.",
           "short_other": "Le répertoire n’a que {{count}} morceaux à proposer.",
           "again": "Une autre proposition",
           "rules": {
-            "opener": "pas de morceau de début pour ouvrir",
-            "closer": "pas de Teuf ni de Rappel pour finir",
-            "halves": "un Début ou un Teuf hors de sa moitié",
+            "positions": "un morceau à une place que ses positions ne prévoient pas",
             "tiring": "un morceau fatigant en seconde moitié",
-            "neighbours": "deux chorées, ou deux morceaux qui tricotent pour le même pupitre, à la suite",
-            "alternate": "des catégories qui se répètent"
+            "tricky": "deux morceaux qui tricotent pour le même pupitre à la suite"
           }
         }
       },
@@ -1532,8 +1536,8 @@
       "onSlots_other": "Jouable sur {{count}} présences",
       "missing": "Manque : {{sections}}",
       "notYet": "Pas encore jouable",
-      "ifNeeded_one": "Jouable si {{names}} vient (si besoin)",
-      "ifNeeded_other": "Jouable si {{names}} viennent (si besoin)"
+      "thanksTo_one": "Jouable, grâce à {{names}} (si besoin)",
+      "thanksTo_other": "Jouable, grâce à {{names}} (si besoin)"
     },
     "list": {
       "title": "Plans",
@@ -1657,8 +1661,7 @@
         "no": "{{count}} non",
         "none": "{{count}} pas répondu"
       },
-      "notPlayable": "Pas encore jouable : personne en {{sections}}, même en comptant les « si besoin ».",
-      "playableIfNeeded": "Pas encore jouable : il manque {{sections}}, sauf si les « si besoin » viennent.",
+      "notPlayable": "Pas encore jouable : personne en {{sections}}.",
       "playable": "On est jouables !",
       "all": "Voir toutes les réponses",
       "detailSubtitle": "{{gig}}, {{date}}.",
