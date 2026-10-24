@@ -549,7 +549,7 @@ The app sends the link of a forgotten password ([ForgotPasswordAction](../api/sr
 
 ### Export, import and reprise
 
-`api/src/Transfer/`. Rules: [model/export-import.md](../model/export-import.md). 0.4.0, issue #43 (and #50 for the invitations). Every route asks for `TRANSFER_DATA`, which only `ADMIN` grants (export-import.md: "the admin only"; the table of `model/members.md` has no line for it yet).
+`api/src/Transfer/`. Rules: [model/export-import.md](../model/export-import.md). 0.4.0, issue #43 (and #50 for the invitations). Every route asks for `TRANSFER_DATA`, which only `ADMIN` grants (export-import.md: "the admin only"; Members, "Roles and permissions").
 
 | Address | What |
 |---|---|

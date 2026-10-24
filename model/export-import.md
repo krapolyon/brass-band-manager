@@ -1,5 +1,6 @@
 # Export and import of the data — format 1
 
+> v1.4 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · Written as built: a mobile number without `+` is refused; the files are written in their place and deleted if the load fails; the admin who imports must be able to sign in with the file; a load invites only the members it adds and cancels the link of a member whose roles change; the size of each file of the zip is checked before it is read; the browser of the admin produces the MIDI file and the MusicXML of the MuseScore files of a reprise
 > v1.3 — 2026-10-24 · Validated by the owner, for 0.4.0 · The reprise: loading members, songs, gigs, slots and answers from spreadsheets (issue #43); an import that adds members without a password sends their invitations (issue #50); `band.setlistTargetMinutes` travels with the settings
 > v1.2 — 2026-10-18 · Validated · The new fields of a song and of the band travel with them (0.3.0); the encrypted fields of a member travel in clear in the zip (0.3.1, Members v1.23)
 > v1.1 — 2026-10-13 · The phrases the dictation learned (`songSpokenName`, Songs v1.4) travel with the songs
@@ -19,8 +20,9 @@ It is not a backup of the hosting: sessions, devices and the state of a live set
 - **The admin only** (`ADMIN`), from Band settings. The password is asked again before an export and before an import: the file holds personal data.
 - **Export**: the admin ticks the parts to export; the server builds the zip and sends it as a download. Nothing is kept on the server afterwards.
 - **Import**: the admin gives a zip, from the browser, or by FTP into the folder `import/` of the hosting when the file is too large for the browser (about 250 MB at most for a band; the upload limit of the host is to be checked). The screen lists the zips found in `import/`. The server reads the file, shows what it holds and what it will change, and imports only once the admin confirms. The zip is deleted from `import/` afterwards, imported or not.
-- **The admin who imports must be an admin in the file** (same email, role `ADMIN`), or the import is refused before anything changes. After an import that holds members, every session ends, theirs included: they sign in again with the password of the file.
-- **All or nothing**: an import runs in one transaction. Files are first written to a temporary folder of `storage/`, moved into place only once the rows are saved, and removed if anything fails.
+- **The admin who imports must be an admin in the file** (same email, role `ADMIN`), able to sign in with it (a password, and the status `ACTIVE` or `POWER_MEMBER`), or the import is refused before anything changes. After an import that holds members, every session ends, theirs included: they sign in again with the password of the file.
+- **All or nothing**: an import runs in one transaction. Each file is written to a new folder of `storage/`, as an upload is, and deleted if anything fails; the files it replaces are deleted only once the rows are saved.
+- **The size of each file of the zip is checked before it is read**: 20 MB at most for a table or a `data.json`, the limit of its kind for a file of a song (Songs domain), 10 MB for any other. A larger file is a problem of the zip, never read.
 
 ## The parts
 
@@ -146,7 +148,7 @@ The lists that belong to a row (slots, answers, organisers, the songs of a setli
 
 ## Invitations after an import
 
-An import that adds members who have no password (invited, or arrived as invited) sends each their invitation by email, unless the admin turns off "Envoyer les invitations par e-mail" on the screen that confirms the import (on by default; off for a test installation). The switch is not shown on an instance without a mail server. The admin who imports is never invited (Members domain, "An invitation leaves by email", issue #50).
+An import that adds members who have no password (invited, or arrived as invited) sends each their invitation by email, unless the admin turns off "Envoyer les invitations par e-mail" on the screen that confirms the import (on by default; off for a test installation). The switch is not shown on an instance without a mail server. The admin who imports is never invited (Members domain, "An invitation leaves by email", issue #50). A member already in the installation is never invited again by an import: importing twice sends nothing. An import or a reprise that changes the roles of a member cancels their pending password link, as the app does (Members domain, "Roles").
 
 ## Reprise: loading a band from spreadsheets
 
@@ -208,7 +210,7 @@ A file that is not in the zip is simply not read: a reprise can hold members onl
 | `instrument` | `member.instrumentId` | Yes | An instrument of the band, or one of its known spellings |
 | `status` | `member.status` | No | `ACTIVE`, `POWER_MEMBER`, `LEFT`. A new member is `INVITED` whatever is written, unless `LEFT` (a former member, kept for the history of answers; decided on 2026-10-24); on an existing member who has a password, changes between the three |
 | `roles` | `memberRole.role` | No | `ADMIN`, `MEMBER_MANAGER`, `SONG_MANAGER`, `GIG_MANAGER`, `SETLIST_MANAGER`, separated by `|`. Empty on a new row: a plain member. The admin who loads keeps `ADMIN` whatever is written |
-| `mobilePhone` | `member.mobilePhone` | No | Read with the country of the band when it has no `+`, stored in international format |
+| `mobilePhone` | `member.mobilePhone` | No | Written with its country code (`+33 6 12 34 56 78`); a number without `+` is refused (owner, 2026-10-24: the server has no rules of the numbers of every country). Stored in international format |
 | `streetAddress` | `member.streetAddress` | No | Several lines in one quoted cell |
 | `postalCode` | `member.postalCode` | No | |
 | `city` | `member.city` | No | |
@@ -244,6 +246,8 @@ A file that is not in the zip is simply not read: a reprise can hold members onl
 **Files.** The folder `songs/<name>/` holds the files of the song, read by the same rules as the import of songs in the app: the cover, the MuseScore file, the MIDI file, the MusicXML, the recording, and one PDF per part, whose instrument is read from its file name with the known spellings. A file whose part cannot be read is an error of the reprise.
 
 **Re-importing a song** replaces each of its files by the one of the same kind given in its folder: the cover by the cover, the MuseScore file by the MuseScore file, the part of an instrument by the part of the same instrument, and so on. A file the folder does not give is kept: a reprise never deletes a file. The replaced files are deleted from the storage once the reprise is loaded, as when a file is replaced in the app; the MIDI file and the MusicXML produced from a new MuseScore file follow the rules of the app.
+
+**The MuseScore files of a reprise are read by the browser** (decided with the owner on 2026-10-24). MuseScore cannot run on the host. A song given a MuseScore file without its MIDI file and its MusicXML loses those of its earlier score, as in the app; right after the load, the import screen reads each such score in the browser of the admin, sends the MIDI file and the MusicXML it gives, and gives a song without a length the one of its MIDI file. A page closed halfway leaves the rest: every song that has a MuseScore file and neither of the two is offered again on the import screen ("Lire les partitions"). A score the app cannot read is named, and keeps its MuseScore file alone.
 
 ### gigs.csv — one row per gig, key `name` + `startsOn`
 

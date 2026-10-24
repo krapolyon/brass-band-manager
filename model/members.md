@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.28 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · The permission to export and import the data (admin only, `export-import.md`); the photo travels in an export, as the owner decided
 > v1.27 — 2026-10-24 · Validated by the owner, for 0.4.0 · Model: `members.dbml` v1.26 · The invitation leaves by email and can be sent again (issue #50); the dark scheme by default for a new member (owner); ten accent themes, a former key moved to its new name (issue #58, Band domain)
 > v1.26 — 2026-10-24 · Validated by the owner, for 0.3.2 · No change to the tables · The steps of the install guide on an iPhone, as the owner sees Safari (issue #57)
 > v1.25 — 2026-10-18 · Validated by the owner, for 0.3.1 · Model: `members.dbml` v1.25 · Migration: `015_encryptionAndSongMood.sql` · The encryption is done in place, one column per field ("Encryption", "Moving to encryption"), as decided with the owner while it was built
@@ -117,6 +118,7 @@ A role is a named set of **permissions**. The code never asks "is this member a 
 | Manage sections and instruments | `ADMIN` |
 | Manage band settings | `ADMIN` |
 | Run the migrations (update the database, `band.md`) | `ADMIN` |
+| Export, import and load the data from spreadsheets (`export-import.md`) | `ADMIN` |
 | Manage songs | `SONG_MANAGER`, `ADMIN` |
 | Manage gigs | `GIG_MANAGER`, `ADMIN`; and, for one gig, its organisers (`model/gigs.md`) |
 | Manage costumes | `ADMIN` |
@@ -151,7 +153,7 @@ Exporting the list of members asks for the password again.
 - `nickname`, `firstName`, `lastName`: identification. Seen by every signed-in member. The two names are encrypted in the database (see "Encryption"), the nickname is not.
 - `email`: sign-in and directory of the band, and the reminders and notifications a member chose to receive by email. Seen by every signed-in member. Encrypted, found through `emailHash`.
 - `mobilePhone`, `streetAddress`, `postalCode`, `city`, `countryCode`, `addressInstructions`: directory of the band, so that members can reach and visit each other. Given by the member, optional, seen by every signed-in member, erased when the member leaves. Encrypted.
-- `photoPath`: recognising each other in the band. Given by the member or by someone who manages members, optional, seen by signed-in members only, never public, never in an export, erased when the member leaves.
+- `photoPath`: recognising each other in the band. Given by the member or by someone who manages members, optional, seen by signed-in members only, never public, erased when the member leaves. It travels in an export, with the other data of the member, behind the password asked again (decided with the owner on 2026-10-24, `export-import.md`).
 - Preferences (language, appearance, theme, accessibility options, notification settings) are seen by the member only. Accessibility options can hint at a disability: they are never shown to anyone else, an admin included, and never appear in an export. The text size is not even known to the server: it stays on the device.
 - `calendarToken`: the personal calendar address of the member, so that a calendar app can subscribe to the gigs they come to. Created only when the member asks for it, seen by the member only, never in an export, erased when the member leaves. Whoever holds the address reads the gigs this member said they come to (name, dates, place), nothing else.
 - None of these fields is ever written to a log, and neither is the calendar address of a request.
