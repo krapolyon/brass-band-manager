@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.11 — 2026-10-24 — validated, for 0.4.0, no change to the tables: the setlist generator asks for a length, 45 minutes by default (band.setlistTargetMinutes), instead of a number of songs; the length of a setlist is shown above its songs (issue #60)
 // v1.10 — 2026-10-24 — validated, for 0.3.2, no change to the tables: a gig shows the Discord messages that tag the app (issue #45); the song picker of a setlist filters the songs not played in the gig yet and by mood (issue #52) (dictionary)
 // v1.9 — 2026-10-23 — validated, for 0.3.1, no change to the tables: the setlist generator places songs by their possible positions and favours Chill near the start, Teuf near the end (issue #47) (dictionary)
 // v1.8 — 2026-10-18 — validated, for 0.3.1, no change to the tables: an answer IF_NEEDED counts for the playability of a slot, without being a yes (issue #37) (dictionary)

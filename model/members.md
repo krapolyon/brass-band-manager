@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.27 — 2026-10-24 · Validated by the owner, for 0.4.0 · Model: `members.dbml` v1.26 · The invitation leaves by email and can be sent again (issue #50); the dark scheme by default for a new member (owner); ten accent themes, a former key moved to its new name (issue #58, Band domain)
 > v1.26 — 2026-10-24 · Validated by the owner, for 0.3.2 · No change to the tables · The steps of the install guide on an iPhone, as the owner sees Safari (issue #57)
 > v1.25 — 2026-10-18 · Validated by the owner, for 0.3.1 · Model: `members.dbml` v1.25 · Migration: `015_encryptionAndSongMood.sql` · The encryption is done in place, one column per field ("Encryption", "Moving to encryption"), as decided with the owner while it was built
 > v1.24 — 2026-10-18 · Validated, for 0.3.1 · No change to the tables · The install guide of the app on a phone, offered once per device (issue #36), entry 3 "Install guide"
@@ -37,8 +38,8 @@ A person who plays or has played in the band, and their account in the app: the 
 | `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. The password has 10 characters at least and no composition rule. Two technical limits: 72 bytes at most (what the hashing keeps), and no NUL character |
 | `status` | Status | Statut | Yes | ACTIVE | — | See life cycle |
 | `language` | Language | Langue | Yes | fr | 2 to 5 | Set from the band's default language at creation |
-| `colorScheme` | Appearance | Apparence | Yes | AUTO | — | Automatic (follows the device), light or dark |
-| `accentTheme` | Theme | Thème | No | copper | — | One of the accent themes of the design system. Empty: the default theme of the band |
+| `colorScheme` | Appearance | Apparence | Yes | DARK | — | Automatic (follows the device), light or dark. Dark for a new member (decided on 2026-10-24); a member who chose keeps their choice |
+| `accentTheme` | Theme | Thème | No | brass | — | One of the accent themes of the design system. Empty: the default theme of the band |
 | `hasHighContrast` | High contrast | Contraste élevé | Yes | false | — | Accessibility option |
 | `hasIncreasedSpacing` | Increased spacing | Espacement augmenté | Yes | false | — | Accessibility option |
 | `hasLegibleFont` | More legible font | Police plus lisible | Yes | false | — | Accessibility option |
@@ -297,7 +298,9 @@ A session is a device on which a member is signed in. A password link is a singl
 - The device holds a random token in a cookie that page code cannot read and that is sent over HTTPS only. The database holds only the SHA-256 of the token, so that a copy of the database does not let anyone sign in.
 - A session ends when it has not been used for 90 days, or one year after sign-in, whichever comes first.
 - A member can sign out the current device, or all their devices at once.
-- **A link created by a member manager is sent by him.** The app shows the link once, when it is created; the member manager copies it and sends it by the means of his choice. It is valid 7 days and once.
+- **An invitation leaves by email** (from 0.4.0, issue #50). With a mail server, the link created for an invited member is sent by the app to the email of their record, at once ("Envoyer l’invitation"); the app also shows the link once, so that the member manager can send it another way if the email does not arrive. Without a mail server, the member manager copies the link and sends it by the means of his choice. It is valid 7 days and once. The email is written in the language of the band, and holds the name of the band, the nickname of the member and the link, nothing else.
+- **Sending the invitation again.** On the record of an invited member, "Renvoyer l’invitation" creates a new link and sends it by email: the former link stops working. The rule "Nobody acts on the access of someone who may do more than them" applies, and no new email leaves within 5 minutes of the previous one (`emailedAt`).
+- **Invitations of an import.** An import or a reprise that adds members who have no password sends each their invitation by email, unless the admin turns off "Envoyer les invitations par e-mail" (on by default; meant to be off on a test installation). The admin who imports is never invited. See `export-import.md`. The host sends 100 emails per hour at most: a band of thirty members stays below it.
 - **A link asked from the sign-in screen is sent by the app**, by email, to the address of the member (rule "Forgotten password"). It is valid 1 hour and once. The email is written in the language of the member and holds the name of the band and the link, nothing else about the member. No new email is sent to the same member within 5 minutes of the previous one (`emailedAt`): a request made sooner changes nothing, and gets the same answer on screen.
 - **Sending email.** The address the app writes from and the access to the mail server are in the configuration of the server, never in the database. An instance without them has no forgotten password by email: the forgotten password screen then sends the member to those who manage members.
 - **The link carries its secret after a `#`.** That part of an address is never sent to a server: the secret does not end in the log of the host. The page reads it and sends it in the body of its requests.
@@ -354,8 +357,7 @@ Kept as they are, by default:
 Not built yet:
 
 - Exporting the list of members, which asks for the password again.
-- Sending the invitation link by email from the app; its validity will be settled then.
-- The email of a forgotten password is plain text for now.
+- The emails are plain text until 0.4.0, which draws them in HTML (issue #65, Figma page `Emails`).
 
 Noted for later domains:
 
