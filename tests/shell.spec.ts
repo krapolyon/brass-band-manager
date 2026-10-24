@@ -82,6 +82,28 @@ test.describe('on an installed app', () => {
     expect(await (await request.get(manifest.icons[0]?.src ?? '')).body()).toEqual(appIcon);
   });
 
+  test('/favicon.ico is the icon of the band, never the page of the app (#63)', async ({
+    request,
+  }) => {
+    // Without an icon or a logo: the neutral icon, an image.
+    const neutral = await request.get('/favicon.ico');
+    expect(neutral.status()).toBe(200);
+    expect(neutral.headers()['content-type']).toBe('image/png');
+    expect(await neutral.body()).toEqual(
+      await (await request.get('/appIcons/icon-192.png')).body(),
+    );
+
+    // With an icon of the app: that icon, as the tab shows it.
+    await request.put('/api/band/logo', { data: logoInput(svg, 40) });
+    await request.put('/api/band/appIcon', { data: logoInput(png(512, 512, 220), 220) });
+    const favicon = await request.get('/favicon.ico');
+    expect(favicon.headers()['content-type']).toBe('image/png');
+    expect(await favicon.body()).toEqual(png(192, 192, 220));
+    // Asked again each time, so that a new icon is seen.
+    const first = await request.get('/favicon.ico', { maxRedirects: 0 });
+    expect(first.status()).toBe(302);
+  });
+
   test('the app says so when the server does not answer', async ({ page }) => {
     await page.route('**/api/**', (route) => route.abort());
     await page.goto('/');
