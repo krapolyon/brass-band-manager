@@ -300,7 +300,8 @@
         "self": "C’est aussi ton identifiant pour te connecter.",
         "invited": "C’est aussi ton identifiant pour te connecter.",
         "other": "C’est son identifiant pour se connecter.",
-        "invite": "Ce sera son identifiant pour se connecter."
+        "invite": "Ce sera son identifiant pour se connecter.",
+        "inviteByEmail": "Son identifiant pour se connecter. L’invitation part à cette adresse."
       }
     },
     "mobilePhone": {
@@ -637,6 +638,7 @@
       "ACTIVE": "Joue régulièrement, reçoit les rappels pour les plans",
       "POWER_MEMBER": "Joue moins souvent, ne reçoit pas les rappels",
       "INVITED": "Le lien d’invitation marche jusqu’au {{date}}",
+      "INVITED_SENT": "Invitation envoyée le {{sent}}. Le lien marche jusqu’au {{date}}",
       "EXPIRED": "Le lien d’invitation ne marche plus : crée-en un nouveau",
       "LEFT": "Coordonnées, photo et rôles effacés à son départ",
       "expiredShort": "Expirée"
@@ -654,6 +656,8 @@
       "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
       "newLink": "Créer un nouveau lien",
       "newLinkDetail": "L’ancien ne marchera plus",
+      "resend": "Renvoyer l’invitation",
+      "resendDetail": "Un nouveau lien part à {{email}} ; l’ancien ne marchera plus",
       "cancelInvitation": "Annuler l’invitation",
       "cancelInvitationDetail": "Supprime cette fiche : rien d’autre n’en dépend",
       "bringBack": "Faire revenir {{nickname}}",
@@ -687,7 +691,8 @@
       "reserved": "Réservé aux admins : ce fanfaron a plus de droits que toi.",
       "notFound": "Cette fiche n’existe pas, ou plus.",
       "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
-      "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter."
+      "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter.",
+      "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer."
     },
     "leave": {
       "title": "Marquer {{nickname}} comme parti ?",
@@ -696,7 +701,8 @@
     "invite": {
       "open": "Inviter un fanfaron",
       "lead": "Remplis ce que tu sais. La personne vérifiera et complétera le reste en arrivant.",
-      "submit": "Créer l’invitation"
+      "submit": "Créer l’invitation",
+      "send": "Envoyer l’invitation"
     },
     "link": {
       "once": "On ne te le montrera plus : copie-le maintenant.",
@@ -707,6 +713,12 @@
         "title": "Invitation prête",
         "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours.",
         "label": "Lien d’invitation"
+      },
+      "sent": {
+        "title": "Invitation envoyée",
+        "text": "{{nickname}} la reçoit à {{email}}, avec un lien qui marche une fois, pendant 7 jours.",
+        "label": "Lien d’invitation",
+        "once": "Pas reçue ? Envoie-lui ce lien toi-même. On ne te le montrera plus."
       },
       "password": {
         "title": "Lien prêt",

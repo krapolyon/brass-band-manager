@@ -3,7 +3,14 @@
 
 const mailbox = 'http://localhost:8025/api/v1';
 
-export type Mail = { to: string; from: string; subject: string; text: string; messageId: string };
+export type Mail = {
+  to: string;
+  from: string;
+  subject: string;
+  text: string;
+  html: string;
+  messageId: string;
+};
 
 export async function emptyMailbox(): Promise<void> {
   await fetch(`${mailbox}/messages`, { method: 'DELETE' });
@@ -19,6 +26,7 @@ async function mails(): Promise<Mail[]> {
         from: `${mail.From.Name} <${mail.From.Address}>`,
         subject: mail.Subject,
         text: mail.Text,
+        html: mail.HTML,
         messageId: mail.MessageID,
       };
     }),

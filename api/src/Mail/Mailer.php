@@ -11,8 +11,8 @@ use PHPMailer\PHPMailer\PHPMailer;
 // sends nothing, and says so: the screens that depend on email adapt
 // (model/members.md, "Sending email").
 //
-// Emails are plain text. Nothing here writes to a log: an address is personal
-// data.
+// Emails are HTML with their plain text beside it (issue #65, EmailLayout).
+// Nothing here writes to a log: an address is personal data.
 final class Mailer
 {
     private readonly string $from;
@@ -70,9 +70,10 @@ final class Mailer
     }
 
     /**
+     * @param array{subject: string, html: string, text: string} $message What EmailLayout::render() writes
      * @throws \PHPMailer\PHPMailer\Exception When the mail server refuses or does not answer
      */
-    public function send(string $to, string $fromName, string $subject, string $text): void
+    public function send(string $to, string $fromName, array $message): void
     {
         // An instance that only writes to some addresses sends nothing to the others.
         if (!$this->recipients->allows($to)) {
@@ -103,9 +104,11 @@ final class Mailer
 
         $mail->setFrom($this->from, $fromName);
         $mail->addAddress($to);
-        $mail->Subject = $subject;
-        $mail->Body = $text;
-        $mail->isHTML(false);
+        $mail->Subject = $message['subject'];
+        // HTML, and the same words in plain text for the clients that show no HTML.
+        $mail->isHTML(true);
+        $mail->Body = $message['html'];
+        $mail->AltBody = $message['text'];
         $mail->send();
     }
 }

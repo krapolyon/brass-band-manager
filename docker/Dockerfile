@@ -9,7 +9,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends unzip libzip-dev \
     && rm -rf /var/lib/apt/lists/* \
     && docker-php-ext-install pdo_mysql zip \
-    && a2enmod rewrite \
+    && a2enmod rewrite headers \
     && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     # The storage folder belongs to the web server, as on the host. The
     # volumes mounted there (docker-compose.yml) take this owner.

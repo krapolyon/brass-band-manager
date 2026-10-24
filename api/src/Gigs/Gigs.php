@@ -229,6 +229,33 @@ final class Gigs
         return false;
     }
 
+    /**
+     * The names of the sections a gig still lacks, as the card of a gig says
+     * it ("Manque : Souba"): those of its first slot, in the order of the
+     * band. Empty when it is playable. For the email of a reminder (#65).
+     *
+     * @return list<string>
+     */
+    public function missingSectionNames(int $gigId): array
+    {
+        $first = null;
+        foreach ($this->missingSections([$gigId]) as $slot) {
+            if ($slot['missing'] === []) {
+                return [];
+            }
+            $first ??= $slot['missing'];
+        }
+        if ($first === null) {
+            return [];
+        }
+
+        return array_map(strval(...), $this->database->fetchFirstColumn(
+            'SELECT name FROM section WHERE id IN (?) ORDER BY position, name',
+            [$first],
+            [ArrayParameterType::INTEGER],
+        ));
+    }
+
     // The app confirms a gig by itself in one case: it is accepted, and
     // playable. Looked at, inside the transaction that changed something,
     // each time an answer is saved and when a gig becomes accepted. Nothing else changes a

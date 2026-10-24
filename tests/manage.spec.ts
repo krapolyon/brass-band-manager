@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
+import { emptyMailbox, receivedMails } from './support/mail.ts';
 import { memberColumns } from './support/personal.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 
@@ -149,12 +150,20 @@ test.describe('an invitation', () => {
     await page.getByRole('dialog').getByRole('button', { name: 'Souba' }).click();
     await page.getByLabel('Adresse email').fill('riton@example.org');
     await page.getByLabel('Téléphone mobile').fill('06 12 34 56 78');
-    await page.getByRole('button', { name: 'Créer l’invitation' }).click();
+    // With a mail server the invitation leaves by email (#50).
+    await expect(
+      page.getByText('L’invitation part à cette adresse.', { exact: false }),
+    ).toBeVisible();
+    await emptyMailbox();
+    await page.getByRole('button', { name: 'Envoyer l’invitation' }).click();
 
-    const panel = page.getByRole('dialog', { name: 'Invitation prête' });
-    await expect(panel).toContainText('Envoie ce lien à Riton par le moyen que tu veux.');
-    await expect(panel).toContainText('On ne te le montrera plus');
+    const panel = page.getByRole('dialog', { name: 'Invitation envoyée' });
+    await expect(panel).toContainText('Riton la reçoit à riton@example.org');
+    await expect(panel).toContainText('Pas reçue ? Envoie-lui ce lien toi-même.');
     const link = await panel.getByLabel('Lien d’invitation').inputValue();
+    const [mail] = await receivedMails(1);
+    expect(mail?.to).toBe('riton@example.org');
+    expect(mail?.text).toContain(link);
     expect(link).toMatch(/^http:\/\/localhost:8081\/invitation#[0-9a-f]{64}$/);
     expect(memberColumns('Riton', 'status, mobilePhone')).toBe('INVITED\t+33612345678');
 
@@ -174,7 +183,7 @@ test.describe('an invitation', () => {
     expect(await page.evaluate(() => JSON.stringify(history.state))).not.toMatch(/[0-9a-f]{64}/);
   });
 
-  test('says until when its link works, and can get a new one or be cancelled', async ({
+  test('says until when its link works, is sent again by email, or cancelled (#50)', async ({
     page,
   }) => {
     await signIn(page);
@@ -184,15 +193,55 @@ test.describe('an invitation', () => {
     await expect(page.getByText('Le lien d’invitation ne marche plus')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Enregistrer' })).toHaveCount(0);
 
+    await emptyMailbox();
+    await page.getByRole('button', { name: /Renvoyer l’invitation/ }).click();
+    await expect(
+      page.getByText(/Invitation envoyée le \d+ \S+\. Le lien marche jusqu’au \d+ \S+/),
+    ).toBeVisible();
+    expect((await receivedMails(1))[0]?.to).toBe('kiki@example.org');
+    // Not again within 5 minutes: the screen says so.
+    await page.getByRole('button', { name: /Renvoyer l’invitation/ }).click();
+    await expect(page.getByText('Une invitation vient de partir.', { exact: false })).toBeVisible();
+
+    await page.getByRole('button', { name: /Annuler l’invitation/ }).click();
+    await expect(page).toHaveURL('/members/manage');
+    expect(sql("SELECT COUNT(*) FROM member WHERE nickname = 'Kiki'")).toBe('0');
+  });
+});
+
+// An instance without a mail server: the link is copied by whoever invites,
+// as before 0.4.0 (Members, section 6).
+test.describe('an invitation without a mail server', () => {
+  test.use({ baseURL: 'http://localhost:8082' });
+
+  test('is created, and its link is shown once to be sent by hand', async ({ page }) => {
+    await openList(page);
+    await page.locator('.BottomBar').getByRole('button', { name: 'Inviter un fanfaron' }).click();
+    await page.getByLabel('Surnom').fill('Riton');
+    await page.getByLabel('Prénom').fill('Henri');
+    await page.getByLabel('Nom', { exact: true }).fill('Blanc');
+    await page.getByRole('button', { name: /^Instrument/ }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Souba' }).click();
+    await page.getByLabel('Adresse email').fill('riton@example.org');
+    await page.getByRole('button', { name: 'Créer l’invitation' }).click();
+
+    const panel = page.getByRole('dialog', { name: 'Invitation prête' });
+    await expect(panel).toContainText('Envoie ce lien à Riton par le moyen que tu veux.');
+    await expect(panel).toContainText('On ne te le montrera plus');
+    await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(
+      /^http:\/\/localhost:8082\/invitation#[0-9a-f]{64}$/,
+    );
+  });
+
+  test('an expired one gets a new link to copy', async ({ page }) => {
+    await signIn(page);
+    await record(page, 'Kiki');
+    await expect(page.getByRole('button', { name: /Renvoyer l’invitation/ })).toHaveCount(0);
     await page.getByRole('button', { name: /Créer un nouveau lien/ }).click();
     const panel = page.getByRole('dialog', { name: 'Invitation prête' });
     await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
     await panel.getByRole('button', { name: 'Fermer' }).click();
     await expect(page.getByText(/Le lien d’invitation marche jusqu’au \d+ \S+/)).toBeVisible();
-
-    await page.getByRole('button', { name: /Annuler l’invitation/ }).click();
-    await expect(page).toHaveURL('/members/manage');
-    expect(sql("SELECT COUNT(*) FROM member WHERE nickname = 'Kiki'")).toBe('0');
   });
 });
 
@@ -270,7 +319,8 @@ test.describe('the record of a member', () => {
     await record(page, 'Bouboule');
     await page.getByRole('button', { name: /Faire revenir Bouboule/ }).click();
 
-    const panel = page.getByRole('dialog', { name: 'Invitation prête' });
+    // Invited again by email (#50), with the link shown once too.
+    const panel = page.getByRole('dialog', { name: 'Invitation envoyée' });
     await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
     expect(status('Bouboule')).toBe('INVITED');
   });

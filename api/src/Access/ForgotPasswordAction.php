@@ -10,7 +10,8 @@ use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
-use BrassBand\Mail\Emails;
+use BrassBand\Mail\AccountEmails;
+use BrassBand\Mail\EmailBand;
 use BrassBand\Mail\Mailer;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
@@ -57,15 +58,13 @@ final class ForgotPasswordAction
         if ($link !== null) {
             $mailer = $this->mailer;
             $links = $this->links;
-            AfterResponse::add(static function () use ($mailer, $links, $link): void {
-                $text = Emails::text('passwordLink', $link['language'], [
-                    'band' => $link['band'],
-                    'link' => $mailer->url('/password#' . $link['token']),
-                ]);
+            $band = EmailBand::of($this->database, $mailer);
+            AfterResponse::add(static function () use ($mailer, $links, $link, $band): void {
+                $message = AccountEmails::passwordLink($band, $link['language'], $mailer->url('/password#' . $link['token']));
                 try {
                     // To the address of the member as the database holds it,
                     // never to the one that was typed.
-                    $mailer->send($link['email'], $link['band'], $text['subject'], $text['body']);
+                    $mailer->send($link['email'], $link['band'], $message);
                 } catch (\Throwable $failure) {
                     // The email did not leave: the link nobody received is
                     // removed, so that the member can ask again at once.

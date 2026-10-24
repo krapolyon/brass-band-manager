@@ -91,11 +91,13 @@ use BrassBand\Members\CreateMemberAction;
 use BrassBand\Members\CreatePasswordLinkAction;
 use BrassBand\Members\DeleteMemberAction;
 use BrassBand\Members\DeletePasswordLinkAction;
+use BrassBand\Members\Invitations;
 use BrassBand\Members\ListMembersAction;
 use BrassBand\Members\MemberRecord;
 use BrassBand\Members\Members;
 use BrassBand\Members\PersonalData;
 use BrassBand\Members\PhotoStore;
+use BrassBand\Members\SendInvitationAction;
 use BrassBand\Members\SetRolesAction;
 use BrassBand\Members\ShowMemberAction;
 use BrassBand\Members\ShowPhotoAction;
@@ -162,6 +164,7 @@ return function (App $app, Connection $database, array $config): void {
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
     $members = new Members($database, $personal);
+    $invitations = new Invitations($database, $mailer, $personal);
     $record = new MemberRecord($database, $personal);
     $sections = new Sections($database);
     $songFiles = new SongFiles($database, $files);
@@ -210,6 +213,7 @@ return function (App $app, Connection $database, array $config): void {
         $photos,
         $links,
         $members,
+        $invitations,
         $record,
         $sections,
         $songFiles,
@@ -307,15 +311,18 @@ return function (App $app, Connection $database, array $config): void {
         // 4. Permission
         // ---------------------------------------------------------------
         $manageMembers = new RequirePermission(Permission::MANAGE_MEMBERS);
-        $group->post('/api/members', new CreateMemberAction($database, $members, $record, $links))
+        $group->post('/api/members', new CreateMemberAction($database, $members, $record, $links, $invitations))
             ->add($manageMembers);
         $group->delete('/api/members/{id:[0-9]+}', new DeleteMemberAction($database, $members, $photos))
             ->add($manageMembers);
-        $group->put('/api/members/{id:[0-9]+}/status', new ChangeStatusAction($database, $members, $sessions, $links, $photos))
+        $group->put('/api/members/{id:[0-9]+}/status', new ChangeStatusAction($database, $members, $sessions, $links, $photos, $invitations))
             ->add($manageMembers);
         $group->post('/api/members/{id:[0-9]+}/passwordLink', new CreatePasswordLinkAction($database, $members, $links))
             ->add($manageMembers);
         $group->delete('/api/members/{id:[0-9]+}/passwordLink', new DeletePasswordLinkAction($members, $links))
+            ->add($manageMembers);
+        // "Renvoyer l'invitation": a new link, sent by email (#50).
+        $group->post('/api/members/{id:[0-9]+}/invitation', new SendInvitationAction($database, $members, $links, $invitations))
             ->add($manageMembers);
 
         $group->put('/api/members/{id:[0-9]+}/roles', new SetRolesAction($database, $members, $links))

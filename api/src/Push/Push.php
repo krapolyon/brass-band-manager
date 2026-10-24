@@ -7,7 +7,7 @@ namespace BrassBand\Push;
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\ApiError;
 use BrassBand\Mail\AllowedRecipients;
-use BrassBand\Mail\Emails;
+use BrassBand\Mail\EmailBand;
 use BrassBand\Mail\Mailer;
 use BrassBand\Members\PersonalData;
 use Doctrine\DBAL\ArrayParameterType;
@@ -27,8 +27,8 @@ use Doctrine\DBAL\ParameterType;
 // chose. The device that made the request can be left out of the push: it
 // does not ring for what it just did. An email is sent whatever the device.
 //
-// The email has the same text as the push, and a link that opens the gig or
-// the song (api/resources/emails.<language>.json, "notification"). Without a
+// The email tells the same news in HTML (NotificationEmails, issue #65), with
+// a button that opens the gig or the song. Without a
 // mail server, a choice saved with email is read as push. The reminders to
 // answer always reach the member: chosen by push only, they go by email when
 // no device of the member accepts notifications.
@@ -218,7 +218,8 @@ final class Push
                 'endpoint' => (string) $device['endpoint'],
                 'p256dhKey' => (string) $device['p256dhKey'],
                 'authKey' => (string) $device['authKey'],
-                'payload' => json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                // The part that describes the email stays on the server.
+                'payload' => json_encode(array_diff_key($payload, ['email' => true]), JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'options' => ['TTL' => $ttl, 'urgency' => 'high', ...($topic === null ? [] : ['topic' => $topic])],
             ];
         }
@@ -243,8 +244,10 @@ final class Push
     }
 
     /**
-     * One email per member, with the text of the push and a link to the gig
-     * or the song. They leave together, after the answer.
+     * One email per member, drawn by NotificationEmails from the notification
+     * (issue #65): the same news as the push, with the gig or the song as the
+     * app shows them and a button that opens them. They leave together,
+     * after the answer.
      *
      * @param list<array<string, mixed>> $members
      * @param callable(int, string): ?array<string, mixed> $write
@@ -255,31 +258,29 @@ final class Push
         if ($mailer === null) {
             return;
         }
-        $band = (string) $this->database->fetchOne('SELECT name FROM band WHERE id = 1');
-        $emails = [];
+        $band = EmailBand::of($this->database, $mailer);
+        $emails = new NotificationEmails($this->database, $mailer);
+        $messages = [];
         foreach ($members as $member) {
             $language = (string) $member['language'];
             $payload = $write((int) $member['id'], $language);
             if ($payload === null) {
                 continue;
             }
-            $path = is_string($payload['url'] ?? null) && str_starts_with($payload['url'], '/') ? $payload['url'] : '/';
-            $text = Emails::text($member['isChosen'] ? 'notification' : 'notificationWithoutDevice', $language, [
-                'title' => is_string($payload['title'] ?? null) ? $payload['title'] : '',
-                'body' => is_string($payload['body'] ?? null) ? $payload['body'] : '',
-                'link' => $mailer->url($path),
-                'settings' => $mailer->url('/settings/notifications'),
-            ]);
-            $emails[] = ['to' => (string) $member['email'], ...$text];
+            $messages[] = [
+                'to' => (string) $member['email'],
+                'message' => $emails->render($band, (int) $member['id'], $language, $payload, (bool) $member['isChosen']),
+            ];
         }
-        if ($emails === []) {
+        if ($messages === []) {
             return;
         }
 
-        AfterResponse::add(static function () use ($mailer, $band, $emails): void {
-            foreach ($emails as $email) {
+        $name = $band->name;
+        AfterResponse::add(static function () use ($mailer, $name, $messages): void {
+            foreach ($messages as $email) {
                 try {
-                    $mailer->send($email['to'], $band, $email['subject'], $email['body']);
+                    $mailer->send($email['to'], $name, $email['message']);
                 } catch (\Throwable $failure) {
                     // The others still leave. The log names the kind of
                     // failure, never the address.

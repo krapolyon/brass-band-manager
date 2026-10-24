@@ -69,6 +69,8 @@ final class Reminders
                 'tag' => 'gigReminder',
                 'renotify' => true,
                 'url' => count($mine) === 1 ? "/gigs/{$mine[0]}" : '/gigs',
+                // What the email shows: each gig as its card (NotificationEmails, #65).
+                'email' => ['kind' => 'gigReminder', 'gigIds' => $mine],
             ];
         }, Push::TTL_REMINDER, setting: NotificationSetting::GIG_REMINDER);
 

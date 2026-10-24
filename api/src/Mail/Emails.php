@@ -11,29 +11,50 @@ use BrassBand\Install\Languages;
 // translated by the front; an email is the one text the server writes.
 final class Emails
 {
+    /** @var array<string, array<mixed>> The files read, by language */
+    private static array $files = [];
+
     /**
-     * The subject and the body of an email, in a language, with its values filled in.
+     * A text of an email, in a language, with its values filled in. The key
+     * is a path in the file ("gig.status.ACCEPTED"). With a count, the key
+     * takes "_one" or "_other", as the translations of the front do.
      *
-     * @param array<string, string> $values What replaces each {name} of the text
-     * @return array{subject: string, body: string}
+     * @param array<string, string|int> $values What replaces each {name} of the text
      */
-    public static function text(string $email, string $language, array $values): array
+    public static function text(string $key, string $language, array $values = [], ?int $count = null): string
+    {
+        if ($count !== null) {
+            $key .= $count === 1 ? '_one' : '_other';
+            $values['count'] = $count;
+        }
+        $found = self::file($language);
+        foreach (explode('.', $key) as $part) {
+            $found = is_array($found) ? ($found[$part] ?? null) : null;
+        }
+        $text = is_string($found) ? $found : '';
+        foreach ($values as $name => $value) {
+            $text = str_replace('{' . $name . '}', (string) $value, $text);
+        }
+
+        return $text;
+    }
+
+    /** Whether the file of a language has a text at this key. */
+    public static function has(string $key, string $language): bool
+    {
+        return self::text($key, $language) !== '';
+    }
+
+    /** @return array<mixed> */
+    private static function file(string $language): array
     {
         // The file name is built from a value of Languages::AVAILABLE, never from what was sent.
         $language = Languages::isAvailable($language) ? $language : Languages::DEFAULT;
-        $file = __DIR__ . "/../../resources/emails.{$language}.json";
-        $texts = (array) json_decode((string) file_get_contents($file), true, flags: JSON_THROW_ON_ERROR);
-        $text = is_array($texts[$email] ?? null) ? $texts[$email] : [];
+        if (!isset(self::$files[$language])) {
+            $file = __DIR__ . "/../../resources/emails.{$language}.json";
+            self::$files[$language] = (array) json_decode((string) file_get_contents($file), true, flags: JSON_THROW_ON_ERROR);
+        }
 
-        $fill = static function (mixed $template) use ($values): string {
-            $filled = is_string($template) ? $template : '';
-            foreach ($values as $name => $value) {
-                $filled = str_replace('{' . $name . '}', $value, $filled);
-            }
-
-            return $filled;
-        };
-
-        return ['subject' => $fill($text['subject'] ?? ''), 'body' => $fill($text['body'] ?? '')];
+        return self::$files[$language];
     }
 }
