@@ -3,6 +3,25 @@
 What changes in the app, version after version. This file is written by
 `npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.
 
+## 0.4.0 — 2026-10-24
+
+### Added
+
+- The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings.
+- An invitation leaves by email, and can be sent again from the record of the invited member.
+- The setlist generator asks for a length, 45 minutes to start with, set by the admin.
+
+### Changed
+
+- Ten accent colours, four of them new; a colour chosen before moves to the one that replaces it.
+- The emails of the app are drawn in the colours of the band.
+- The length of a setlist is shown above its songs, and under its title when it is read.
+- A new member starts in the dark scheme.
+
+### Fixed
+
+- The browser tab shows the icon of the band in Safari too.
+
 ## 0.3.2 — 2026-10-24
 
 ### Added

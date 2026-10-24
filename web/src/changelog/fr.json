@@ -1,4 +1,14 @@
 {
+  "0.4.0": {
+    "The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings.": "L’admin peut exporter les données de la fanfare, importer un export, et charger une fanfare depuis des tableurs (fanfarons, morceaux, plans, réponses), dans les réglages de la fanfare.",
+    "An invitation leaves by email, and can be sent again from the record of the invited member.": "Une invitation part par e-mail, et peut être renvoyée depuis la fiche de la personne invitée.",
+    "The setlist generator asks for a length, 45 minutes to start with, set by the admin.": "Le générateur de setlist demande une durée, 45 minutes pour commencer, réglée par l’admin.",
+    "Ten accent colours, four of them new; a colour chosen before moves to the one that replaces it.": "Dix couleurs d’accent, dont quatre nouvelles ; une couleur choisie avant passe à celle qui la remplace.",
+    "The emails of the app are drawn in the colours of the band.": "Les e-mails de l’app sont mis en forme aux couleurs de la fanfare.",
+    "The length of a setlist is shown above its songs, and under its title when it is read.": "La durée d’une setlist s’affiche au-dessus de ses morceaux, et sous son titre quand on la consulte.",
+    "A new member starts in the dark scheme.": "Un nouveau membre démarre en mode sombre.",
+    "The browser tab shows the icon of the band in Safari too.": "L’onglet du navigateur affiche l’icône de la fanfare dans Safari aussi."
+  },
   "0.3.2": {
     "In the list of songs of a setlist, the songs not played yet in the gig can be filtered, and by mood.": "Dans la liste des morceaux d’une setlist, on peut filtrer les morceaux pas encore joués sur le plan, et par ambiance.",
     "A gig shows the messages of its Discord channel that tag the app.": "Un plan affiche les messages de son salon Discord qui taguent l’app.",
