@@ -21,7 +21,7 @@
    the device asks:
      data-scheme="dark" | "light"         always set; AUTO is resolved there
      data-contrast="more"                 the high contrast mode of the scheme
-     data-theme="copper" | "coral" | "mint" | "lilac"     absent: the first theme
+     data-theme="brass" | "tangerine" | … (web/src/themes.ts)   absent: the first theme
      data-text-size="120" … "200"         absent: 100 %
      data-typeface="legible"              absent: the two typefaces of the app
 
@@ -111,44 +111,154 @@
    theme that is not the one in use.
    --------------------------------------------------------------- */
 :root,
-[data-theme="copper"] {
-  --themeAccent: #f4ad2a;
+[data-theme="brass"] {
+  --themeAccent: #fabe1b;
   --themeOnAccent: #1b1300;
   --themeAccentTextLight: #8a5200;
   --themeGroundDark: #0a0f1a;
   --themeSheetDark: #131b2a;
   --themeGroundLight: #f5f1e8;
   --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: var(--blue600);
+  --themeHaloDeepDark: var(--violet600);
+  --themeHaloAccentLight: #f2d8a2;
+  --themeHaloCoolLight: #d3e2ff;
+  --themeHaloDeepLight: #e9e3ff;
 }
 
-[data-theme="coral"] {
-  --themeAccent: #ff6b5e;
-  --themeOnAccent: #2a0704;
-  --themeAccentTextLight: #b92d22;
-  --themeGroundDark: #110c12;
-  --themeSheetDark: #1c151e;
-  --themeGroundLight: #f8f0ee;
+[data-theme="tangerine"] {
+  --themeAccent: #f77146;
+  --themeOnAccent: #220400;
+  --themeAccentTextLight: #be400f;
+  --themeGroundDark: #160906;
+  --themeSheetDark: #251510;
+  --themeGroundLight: #fbf1ee;
   --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #974391;
+  --themeHaloDeepDark: #2a3c97;
+  --themeHaloAccentLight: #ffcebf;
+  --themeHaloCoolLight: #f5d6f1;
+  --themeHaloDeepLight: #dfe7ff;
 }
 
-[data-theme="mint"] {
-  --themeAccent: #5bd9ae;
-  --themeOnAccent: #052a1d;
-  --themeAccentTextLight: #0b6e51;
-  --themeGroundDark: #08110f;
-  --themeSheetDark: #111d1a;
-  --themeGroundLight: #eef5f1;
+[data-theme="raspberry"] {
+  --themeAccent: #f2376f;
+  --themeOnAccent: #23020a;
+  --themeAccentTextLight: #be395c;
+  --themeGroundDark: #16090b;
+  --themeSheetDark: #251417;
+  --themeGroundLight: #fbf0f2;
   --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #7750b1;
+  --themeHaloDeepDark: #004982;
+  --themeHaloAccentLight: #ffcbd2;
+  --themeHaloCoolLight: #e6dafe;
+  --themeHaloDeepLight: #d7eaff;
 }
 
-[data-theme="lilac"] {
-  --themeAccent: #b3a4ff;
-  --themeOnAccent: #150c40;
-  --themeAccentTextLight: #5540c4;
-  --themeGroundDark: #0d0b19;
-  --themeSheetDark: #171428;
-  --themeGroundLight: #f2f0fa;
+[data-theme="orchid"] {
+  --themeAccent: #be5bf5;
+  --themeOnAccent: #180622;
+  --themeAccentTextLight: #904cb7;
+  --themeGroundDark: #110a15;
+  --themeSheetDark: #1e1623;
+  --themeGroundLight: #f6f1fa;
   --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #3065be;
+  --themeHaloDeepDark: #7d1453;
+  --themeHaloAccentLight: #ebceff;
+  --themeHaloCoolLight: #d1e2ff;
+  --themeHaloDeepLight: #fedeec;
+}
+
+[data-theme="cornflower"] {
+  --themeAccent: #4286de;
+  --themeOnAccent: #000e28;
+  --themeAccentTextLight: #266bc0;
+  --themeGroundDark: #060e18;
+  --themeSheetDark: #101a27;
+  --themeGroundLight: #eef4fc;
+  --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #007781;
+  --themeHaloDeepDark: #502e8e;
+  --themeHaloAccentLight: #c4ddff;
+  --themeHaloCoolLight: #bbecf1;
+  --themeHaloDeepLight: #e9e3ff;
+}
+
+[data-theme="azure"] {
+  --themeAccent: #39c0f5;
+  --themeOnAccent: #00121b;
+  --themeAccentTextLight: #007398;
+  --themeGroundDark: #030f16;
+  --themeSheetDark: #0a1c24;
+  --themeGroundLight: #ecf5fa;
+  --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #3d63be;
+  --themeHaloDeepDark: #502e8e;
+  --themeHaloAccentLight: #b2e3fb;
+  --themeHaloCoolLight: #d3e2ff;
+  --themeHaloDeepLight: #e9e3ff;
+}
+
+[data-theme="lagoon"] {
+  --themeAccent: #0ddbc3;
+  --themeOnAccent: #001410;
+  --themeAccentTextLight: #00786b;
+  --themeGroundDark: #02110e;
+  --themeSheetDark: #081e1a;
+  --themeGroundLight: #ebf6f4;
+  --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #0070a6;
+  --themeHaloDeepDark: #3c3695;
+  --themeHaloAccentLight: #ace9dd;
+  --themeHaloCoolLight: #c5e6ff;
+  --themeHaloDeepLight: #e3e6ff;
+}
+
+[data-theme="emerald"] {
+  --themeAccent: #0bc957;
+  --themeOnAccent: #001504;
+  --themeAccentTextLight: #007b32;
+  --themeGroundDark: #061007;
+  --themeSheetDark: #101d12;
+  --themeGroundLight: #eef6ef;
+  --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #00787d;
+  --themeHaloDeepDark: #0b4196;
+  --themeHaloAccentLight: #b9e9c0;
+  --themeHaloCoolLight: #bbecee;
+  --themeHaloDeepLight: #dbe9ff;
+}
+
+[data-theme="lime"] {
+  --themeAccent: #d9f94e;
+  --themeOnAccent: #0d1200;
+  --themeAccentTextLight: #617200;
+  --themeGroundDark: #0c0f04;
+  --themeSheetDark: #181b0c;
+  --themeGroundLight: #f2f5ec;
+  --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #007c59;
+  --themeHaloDeepDark: #004982;
+  --themeHaloAccentLight: #d4e3ab;
+  --themeHaloCoolLight: #c3ecd9;
+  --themeHaloDeepLight: #d7eaff;
+}
+
+[data-theme="ivory"] {
+  --themeAccent: #f1e6cf;
+  --themeOnAccent: #0a1018;
+  --themeAccentTextLight: #776959;
+  --themeGroundDark: #080d17;
+  --themeSheetDark: #121a26;
+  --themeGroundLight: #f6f3ee;
+  --themeSheetLight: #ffffff;
+  --themeHaloCoolDark: #446b9c;
+  --themeHaloDeepDark: #483e74;
+  --themeHaloAccentLight: #e5d9c9;
+  --themeHaloCoolLight: #d4e3f6;
+  --themeHaloDeepLight: #e7e6f7;
 }
 
 /* ---------------------------------------------------------------
@@ -197,8 +307,8 @@
   --fadeFar: 0.25;
   --fadeFaint: 0.15;
   --haloAccent: var(--themeAccent);
-  --haloCool: var(--blue600);
-  --haloDeep: var(--violet600);
+  --haloCool: var(--themeHaloCoolDark);
+  --haloDeep: var(--themeHaloDeepDark);
   --scrim: var(--blackA60);
 }
 
@@ -235,9 +345,9 @@
   --fadeMid: 0.38;
   --fadeFar: 0.25;
   --fadeFaint: 0.15;
-  --haloAccent: var(--themeAccent);
-  --haloCool: var(--blue300);
-  --haloDeep: var(--violet300);
+  --haloAccent: var(--themeHaloAccentLight);
+  --haloCool: var(--themeHaloCoolLight);
+  --haloDeep: var(--themeHaloDeepLight);
   --scrim: var(--inkA40);
 }
 

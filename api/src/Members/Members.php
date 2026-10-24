@@ -156,12 +156,16 @@ final class Members
         // Whether a password link is waiting, and until when (in UTC): for who
         // manages members only. A link that has expired counts as none.
         if ($viewer->can(Permission::MANAGE_MEMBERS)) {
-            $expiresAt = $this->database->fetchOne(
-                "SELECT DATE_FORMAT(expiresAt, '%Y-%m-%dT%H:%i:%sZ') FROM memberPasswordLink WHERE memberId = ? AND expiresAt > NOW()",
+            $link = $this->database->fetchAssociative(
+                "SELECT DATE_FORMAT(expiresAt, '%Y-%m-%dT%H:%i:%sZ') AS expiresAt, DATE_FORMAT(emailedAt, '%Y-%m-%dT%H:%i:%sZ') AS emailedAt
+                 FROM memberPasswordLink WHERE memberId = ? AND expiresAt > NOW()",
                 [$id],
             );
-            $member['hasPendingPasswordLink'] = is_string($expiresAt);
-            $member['passwordLinkExpiresAt'] = is_string($expiresAt) ? $expiresAt : null;
+            $member['hasPendingPasswordLink'] = $link !== false;
+            $member['passwordLinkExpiresAt'] = $link === false ? null : (string) $link['expiresAt'];
+            // When the app sent it by email, for an invitation (#50): "Invitation
+            // envoyée le 24 octobre". Null when it was not sent by the app.
+            $member['passwordLinkEmailedAt'] = $link === false || $link['emailedAt'] === null ? null : (string) $link['emailedAt'];
         }
 
         return $member;

@@ -31,6 +31,8 @@ test.describe('writing a setlist', () => {
     const sissi = await deviceOf(playwright, email('Sissi'));
     const { gigId, slotId } = confirmed();
     const [toxic, valerie] = [addSong('Toxic'), addSong('Valerie', 'TEMPORARY')];
+    // The length of a song comes with it, for the card of the setlist (#60).
+    sql(`UPDATE song SET durationSeconds = 210 WHERE id = ${toxic}`);
 
     const created = await sissi.post(`/api/gigs/${gigId}/setlists`, {
       data: { description: '  Parade, 45 minutes ', songIds: [toxic, valerie, toxic] },
@@ -48,12 +50,15 @@ test.describe('writing a setlist', () => {
         liveStartedAt: null,
         livePosition: null,
         songs: [
-          { position: 1, songId: toxic, name: 'Toxic' },
-          { position: 2, songId: valerie, name: 'Valerie' },
-          { position: 3, songId: toxic, name: 'Toxic' },
+          { position: 1, songId: toxic, name: 'Toxic', durationSeconds: 210 },
+          { position: 2, songId: valerie, name: 'Valerie', durationSeconds: null },
+          { position: 3, songId: toxic, name: 'Toxic', durationSeconds: 210 },
         ],
       },
     ]);
+    // What the editor counts with: the time between two songs, and the length
+    // its generator proposes first (Band v1.12).
+    expect(gig).toMatchObject({ setlistGapSeconds: 30, setlistTargetMinutes: 45 });
 
     // Saved again: the songs are replaced, the number stays.
     const setlistId = gig.setlists[0].id;

@@ -33,14 +33,17 @@
   color: var(--textMuted);
 }
 
+/* The accent themes: a row of swatches 72 wide that wraps, four per line on a
+   phone (issue #58). */
 .settings-swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spaceXs);
+  gap: var(--spaceSm) var(--spaceXs);
 }
 
 .settings-swatches > * {
-  flex: 1;
+  flex: none;
+  width: 4.5rem;
 }
 
 /* Notifications: the sheet that asks on a new device. */

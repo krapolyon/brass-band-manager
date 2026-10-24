@@ -1,6 +1,6 @@
 {
   "name": "brass-band-manager",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -21,7 +21,8 @@
     "encryption:key": "node scripts/encryption-key.mjs",
     "db:reset": "docker compose down -v && npm run stack:up && npm run db:migrate",
     "changelog": "node scripts/changelog.mjs",
-    "check": "node scripts/changelog.mjs --check && biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
+    "email:theme": "node scripts/email-theme.mjs",
+    "check": "node scripts/changelog.mjs --check && node scripts/email-theme.mjs --check && biome check . && tsc && docker compose run --rm php vendor/bin/phpstan analyse --no-progress",
     "format": "biome check --write .",
     "test:prepare": "node scripts/prepare-test-database.mjs",
     "pretest": "npm run test:prepare",

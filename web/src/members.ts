@@ -15,6 +15,8 @@ export type Member = MemberRecord & {
   /** For who manages members only: whether a password link is waiting, and until when (UTC). */
   hasPendingPasswordLink?: boolean;
   passwordLinkExpiresAt?: string | null;
+  /** When the app sent the pending link by email, for an invitation (#50); null: it did not. */
+  passwordLinkEmailedAt?: string | null;
 };
 
 export type Instrument = {

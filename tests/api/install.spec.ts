@@ -76,7 +76,7 @@ test('install creates the band, its sections and instruments, and the admin', as
     email: admin.email,
     status: 'ACTIVE',
     language: 'fr',
-    colorScheme: 'AUTO',
+    colorScheme: 'DARK',
     hasHighContrast: false,
     roles: ['ADMIN'],
   });
@@ -91,6 +91,7 @@ test('install creates the band, its sections and instruments, and the admin', as
     'manageSetlists',
     'manageQuotes',
     'runMigrations',
+    'transferData',
   ]);
 
   expect(sql('SELECT name, defaultLanguage FROM band')).toBe(

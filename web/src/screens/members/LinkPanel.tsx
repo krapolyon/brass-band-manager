@@ -6,7 +6,13 @@ import { TextField } from '../../components/TextField.tsx';
 import { linkAddress } from './manage.ts';
 
 /** A link that was just created: shown once, here. */
-export type CreatedLink = { token: string; nickname: string; isInvitation: boolean };
+export type CreatedLink = {
+  token: string;
+  nickname: string;
+  isInvitation: boolean;
+  /** The address the app sent the invitation to (#50); absent when it sent nothing. */
+  sentTo?: string;
+};
 
 type Props = { link: CreatedLink | null; onClose: () => void };
 
@@ -25,16 +31,18 @@ export function takeHandedOver(): CreatedLink | null {
   return link;
 }
 
-// Figma: Members / Manage — invitation link. The app shows a password link
-// once, when it is created; whoever manages members copies it and sends it by
-// the means of their choice (model/members.md, entry 3). It is kept nowhere:
-// closing this panel loses it, and a new one has to be created.
+// Figma: Members / Manage — invitation link, and "invitation sent" (section
+// 16, 0.4.0, #50). The app shows a password link once, when it is created;
+// whoever manages members copies it and sends it by the means of their choice
+// (model/members.md, entry 3). An invitation the app sent by email says where
+// it went, and keeps the link as a way to send it by hand. It is kept
+// nowhere: closing this panel loses it, and a new one has to be created.
 export function LinkPanel({ link, onClose }: Props) {
   const { t } = useTranslation();
   const [wasCopied, setCopied] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const address = link ? linkAddress(link.token, link.isInvitation) : '';
-  const kind = link?.isInvitation ? 'invitation' : 'password';
+  const kind = link?.sentTo ? 'sent' : link?.isInvitation ? 'invitation' : 'password';
 
   const close = () => {
     setCopied(false);
@@ -45,16 +53,21 @@ export function LinkPanel({ link, onClose }: Props) {
     <Panel open={link !== null} onClose={close} title={t(`manage.link.${kind}.title`)}>
       <div className="members-sheet" ref={sheet}>
         <p className="textBodyLarge">
-          {t(`manage.link.${kind}.text`, { nickname: link?.nickname ?? '' })}
+          {t(`manage.link.${kind}.text`, {
+            nickname: link?.nickname ?? '',
+            email: link?.sentTo ?? '',
+          })}
         </p>
         <TextField
           label={t(`manage.link.${kind}.label`)}
-          hint={t('manage.link.once')}
+          hint={t(kind === 'sent' ? 'manage.link.sent.once' : 'manage.link.once')}
           readOnly
           value={address}
           onFocus={(event) => event.target.select()}
         />
         <Button
+          // Sent by email, copying it is the way out, not the main action.
+          kind={kind === 'sent' ? 'secondary' : 'primary'}
           icon={wasCopied ? 'Check' : 'Copy'}
           onClick={async () => {
             try {
@@ -71,7 +84,7 @@ export function LinkPanel({ link, onClose }: Props) {
         {/* Only where the device has a share sheet. */}
         {'share' in navigator && (
           <Button
-            kind="secondary"
+            kind={kind === 'sent' ? 'quiet' : 'secondary'}
             icon="Share"
             onClick={() => navigator.share({ url: address }).catch(() => {})}
           >

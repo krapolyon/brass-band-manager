@@ -4,6 +4,17 @@
 // This list exists in three places that must agree: here, the blocks of
 // styles/tokens.css, and the API, which refuses any other value of
 // member.accentTheme.
-export const accentThemes = ['copper', 'coral', 'mint', 'lilac'] as const;
+export const accentThemes = [
+  'brass',
+  'tangerine',
+  'raspberry',
+  'orchid',
+  'cornflower',
+  'azure',
+  'lagoon',
+  'emerald',
+  'lime',
+  'ivory',
+] as const;
 
 export type AccentTheme = (typeof accentThemes)[number];

@@ -23,6 +23,10 @@ $config = require ($hasDataFolder ? $dataFolder : __DIR__) . '/config.php';
 
 // Not settings of config.php: where the files of the app are on this server.
 $config['storageFolder'] = ($hasDataFolder ? $dataFolder : $appFolder) . '/storage';
+// The folder an admin drops a large export or reprise into by FTP, at the
+// root of the data folder (0.4.0, issue #43, decided with the owner): the app
+// lists the zips it finds there, and an upload from the browser lands there too.
+$config['importFolder'] = ($hasDataFolder ? $dataFolder : $appFolder) . '/import';
 $config['migrationsFolder'] = $appFolder . '/database/migrations';
 
 // The clock of the app is the one of the band: the hour of the reminders of

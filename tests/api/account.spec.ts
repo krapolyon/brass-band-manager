@@ -34,7 +34,7 @@ test.describe('preferences', () => {
   const preferences = (changes: object = {}) => ({
     language: 'fr',
     colorScheme: 'DARK',
-    accentTheme: 'mint',
+    accentTheme: 'lagoon',
     hasHighContrast: true,
     hasIncreasedSpacing: false,
     hasLegibleFont: true,
@@ -74,7 +74,8 @@ test.describe('preferences', () => {
     await refused({ accentTheme: 'gold' }, { accentTheme: 'invalid' });
     await refused({ hasHighContrast: 'yes' }, { hasHighContrast: 'invalid' });
     await refused({ status: 'LEFT' }, { status: 'invalid' });
-    expect(sql("SELECT colorScheme FROM member WHERE nickname = 'Zaza'")).toBe('AUTO');
+    // Nothing moved: a new member starts in the dark scheme (Members v1.26).
+    expect(sql("SELECT colorScheme FROM member WHERE nickname = 'Zaza'")).toBe('DARK');
     await zaza.dispose();
   });
 

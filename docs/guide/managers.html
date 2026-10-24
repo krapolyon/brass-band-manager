@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'app de la fanfare — guide des gestionnaires</title>
+<meta name="description" content="Gérer les fanfarons, les morceaux, les plans, les setlists et les réglages de la fanfare.">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<header class="hero">
+  <h1>Gérer la fanfare</h1>
+  <p class="lead">Ce que l'app te permet de faire si tu as un rôle : fanfarons, morceaux, plans, setlists, réglages.</p>
+  <nav class="switch" aria-label="Public">
+    <a href="index.html">Je suis fanfaron</a>
+    <a href="managers.html" aria-current="page">Je gère quelque chose</a>
+  </nav>
+</header>
+
+<div class="page">
+  <nav class="toc" aria-label="Sommaire">
+    <a href="#roles"><span class="num">1</span>Les rôles</a>
+    <a href="#members"><span class="num">2</span>Fanfarons</a>
+    <a href="#songs"><span class="num">3</span>Morceaux</a>
+    <a href="#gigs"><span class="num">4</span>Plans</a>
+    <a href="#setlists"><span class="num">5</span>Setlists</a>
+    <a href="#band"><span class="num">6</span>La fanfare</a>
+  </nav>
+
+  <main>
+
+    <!-- 1 · Roles ------------------------------------------------------ -->
+    <section class="section" id="roles">
+      <figure class="phone"><div class="screen"><img src="img/manage-member.webp" alt="La fiche d'un fanfaron côté gestion : statut, actions, rôles" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Les rôles</h2>
+        <p class="intro">Un fanfaron peut cumuler plusieurs rôles. Un admin les donne depuis sa fiche.</p>
+        <table>
+          <thead><tr><th>Rôle</th><th>Détail</th></tr></thead>
+          <tbody>
+            <tr><td><b>Admin</b></td><td>Tout, rôles et réglages compris. Il faut toujours au moins un admin.</td></tr>
+            <tr><td><b>Gère les fanfarons</b></td><td>Invite, modifie, change les statuts.</td></tr>
+            <tr><td><b>Gère les morceaux</b></td><td>Ajoute, modifie, archive.</td></tr>
+            <tr><td><b>Gère les plans</b></td><td>Crée, modifie, annule.</td></tr>
+            <tr><td><b>Gère les setlists</b></td><td>Écrit, modifie, lance le direct.</td></tr>
+            <tr><td><b>Brasseur</b></td><td>Pas un rôle : désigné plan par plan. Il modifie son plan et note les réponses.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2 · Members ---------------------------------------------------- -->
+    <section class="section" id="members">
+      <figure class="phone"><div class="screen"><img src="img/manage-list.webp" alt="Gérer les fanfarons : la liste, avec les filtres" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Fanfarons</h2>
+        <p class="intro">Inviter, suivre les statuts, gérer les départs. Depuis Réglages › Gérer les fanfarons.</p>
+        <ul class="points">
+          <li><span class="ico">1</span><div><b>Inviter</b><span>Remplis ce que tu sais : surnom, prénom, instrument, e-mail. L'app envoie l'invitation par e-mail, et te donne le lien à copier au cas où. Il marche une fois, 7 jours.</span></div></li>
+          <li><span class="ico">2</span><div><b>Les statuts</b><span>Invité · Actif · Power member (pas de rappels) · Parti · Invitation expirée.</span></div></li>
+          <li><span class="ico">3</span><div><b>Mot de passe perdu</b><span>« Créer un lien de mot de passe » : un lien à usage unique pour qu'il en choisisse un nouveau.</span></div></li>
+          <li><span class="ico">4</span><div><b>Marquer comme parti</b><span>Coupe l'accès tout de suite, efface téléphone, adresse, photo et rôles. Le nom et les réponses aux plans passés restent. On peut le faire revenir.</span></div></li>
+          <li><span class="ico">5</span><div><b>Sur ordinateur, un tableau</b><span>Une ligne par fanfaron, avec statut et rôles. Filtres : tous, power members, invités, anciens.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/manage-invite.webp" alt="Inviter un fanfaron : la fiche à pré-remplir" width="780" height="1688" loading="lazy"></div></div><figcaption>Inviter : la fiche à pré-remplir</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Songs ------------------------------------------------------ -->
+    <section class="section" id="songs">
+      <figure class="phone"><div class="screen"><img src="img/song-import-files.webp" alt="Nouveau morceau, étape 1 : déposer les fichiers, l'app les range" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Morceaux</h2>
+        <p class="intro">Ajouter un morceau, c'est déposer ses fichiers en vrac : l'app les range.</p>
+        <ul class="points">
+          <li><span class="ico">1</span><div><b>Dépose tous les fichiers d'un coup</b><span>MuseScore, MIDI, PDF des parties, enregistrement, jaquette. L'app reconnaît l'instrument de chaque PDF à son nom, et pose une question seulement quand elle hésite.</span></div></li>
+          <li><span class="ico">2</span><div><b>Le fichier MuseScore fait le reste</b><span>Il donne le nom, le tempo, le MIDI et la partition du mode live. Sans lui, pas de MIDI ni de live.</span></div></li>
+          <li><span class="ico">3</span><div><b>La fiche</b><span>Nom interne, titre et interprète originaux, tempo de la fanfare, clip YouTube, salon Discord, droits d'auteur. Une note de version quand l'arrangement change.</span></div></li>
+          <li><span class="ico">4</span><div><b>Pour les setlists</b><span>Durée, ambiance (Chill · Normal · Teuf), positions possibles dans un set, pupitres pour qui c'est fatigant ou ça tricote. Le générateur s'en sert.</span></div></li>
+          <li><span class="ico">5</span><div><b>Changer le statut, remplacer un fichier</b><span>Le statut change tout de suite pour tous. Un nouveau fichier remplace celui qui a le même rôle. Pour ne plus jouer un morceau, passe-le en Abandonné plutôt que de le supprimer.</span></div></li>
+          <li><span class="ico">6</span><div><b>Sur ordinateur, le tableau de gestion</b><span>Statut, partitions présentes, moyennes de maîtrise et de kif, version.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/song-edit.webp" alt="Modifier le morceau : la fiche" width="780" height="1688" loading="lazy"></div></div><figcaption>La fiche d'un morceau</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/song-change-status.webp" alt="Changer le statut d'un morceau" width="780" height="1688" loading="lazy"></div></div><figcaption>Changer le statut</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · Gigs ------------------------------------------------------- -->
+    <section class="section" id="gigs">
+      <figure class="phone"><div class="screen"><img src="img/gig-form.webp" alt="Nouveau plan : le formulaire" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Plans</h2>
+        <p class="intro">Un plan naît en brouillon, se propose à la fanfare, et se valide tout seul quand il est jouable.</p>
+        <div class="flow">
+          <span class="step">Brouillon</span><span class="arrow">→</span>
+          <span class="step">Proposition</span><span class="arrow">→</span>
+          <span class="step">Accepté</span><span class="arrow">→</span>
+          <span class="step accent">Validé</span>
+          <span class="arrow">·</span><span class="step">Annulé</span>
+        </div>
+        <ul class="points">
+          <li><span class="ico">1</span><div><b>Créer le plan</b><span>Nom, dates, heure de rendez-vous, lieu et adresse (coordonnées GPS pour les endroits introuvables), déguiz à apporter, brasseurs, infos diverses.</span></div></li>
+          <li><span class="ico">2</span><div><b>Brouillon</b><span>Vu des brasseurs et des gestionnaires de plans seulement. Personne ne répond encore. Supprimable tant que personne n'a répondu.</span></div></li>
+          <li><span class="ico">3</span><div><b>Présences</b><span>Un plan d'une soirée a une présence sans nom. Sur plusieurs jours, découpe-le : chaque présence a son nom, sa note, son déguiz.</span></div></li>
+          <li><span class="ico">4</span><div><b>Jouable, validé</b><span>Un pupitre est présent dès qu'un de ses fanfarons a dit oui ou si besoin. Le plan passe en Validé tout seul ; tu peux aussi valider sans un pupitre, ou revenir en Proposition.</span></div></li>
+          <li><span class="ico">5</span><div><b>Qui vient, relancer</b><span>Touche un fanfaron pour noter la réponse qu'il t'a donnée de vive voix. « Relancer » prévient ceux qui n'ont pas répondu ; les rappels automatiques se taisent ce jour-là.</span></div></li>
+          <li><span class="ico">6</span><div><b>Annuler, clore</b><span>Annulé garde les réponses au cas où. Un plan passé jamais validé est « à clore » : annule-le pour le ranger.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/gig-status.webp" alt="Changer le statut d'un plan" width="780" height="1688" loading="lazy"></div></div><figcaption>Le statut du plan</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/gig-answer-for-someone.webp" alt="Noter la réponse d'un fanfaron à sa place" width="780" height="1688" loading="lazy"></div></div><figcaption>Noter la réponse d'un fanfaron</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · Setlists --------------------------------------------------- -->
+    <section class="section" id="setlists">
+      <figure class="phone"><div class="screen"><img src="img/setlist-typing.webp" alt="Écrire une setlist : taper quelques lettres, l'app propose" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Setlists</h2>
+        <p class="intro">Une setlist s'écrit une fois le plan validé. Quatre façons d'y mettre des morceaux.</p>
+        <div class="grid">
+          <div class="cell"><b>Taper</b><span>Quelques lettres, l'app propose.</span></div>
+          <div class="cell"><b>Dicter</b><span>Dis les morceaux dans l'ordre. L'app apprend tes façons de les dire.</span></div>
+          <div class="cell"><b>Tous les morceaux</b><span>La liste complète, filtrable, avec le nombre de fois où chacun est déjà joué sur ce plan.</span></div>
+          <div class="cell"><b>Proposer</b><span>L'app compose une setlist pour une durée donnée, selon l'ambiance, les positions et les pupitres.</span></div>
+        </div>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Réordonner, retirer</b><span>La poignée déplace un morceau, glisser vers la gauche le retire. La durée s'affiche en haut.</span></div></li>
+          <li><span class="ico">•</span><div><b>Lancer en direct</b><span>Pendant le plan : « Suivant » à la fin de chaque morceau, « Terminer » au dernier. Ceux qui ont dit oui suivent sur leur écran et par notification.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/setlist-song-picker.webp" alt="Tous les morceaux : la liste complète, avec filtres et le nombre de fois où chacun est déjà joué" width="780" height="1688" loading="lazy"></div></div><figcaption>Tous les morceaux : la liste, filtrable, déjà joués marqués</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/setlist-dictating.webp" alt="Dicter les morceaux d'une setlist" width="780" height="1688" loading="lazy"></div></div><figcaption>Dicter : chaque morceau s'ajoute dès qu'il est reconnu</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/setlist-proposed.webp" alt="Une setlist proposée par l'app pour 45 minutes" width="780" height="1688" loading="lazy"></div></div><figcaption>Proposer : une setlist pour la durée voulue</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/live-setlist-manager.webp" alt="Le direct côté gestionnaire, avec le bouton Suivant" width="780" height="1688" loading="lazy"></div></div><figcaption>Le direct : « Suivant » à la fin de chaque morceau</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · Band ------------------------------------------------------- -->
+    <section class="section" id="band">
+      <figure class="phone"><div class="screen"><img src="img/band-summary.webp" alt="Les réglages de la fanfare : apparence, pupitres, orthographes, déguiz, plans et setlists, intégrations" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>La fanfare</h2>
+        <p class="intro">Réservé aux admins. Réglages › Réglages de la fanfare.</p>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Apparence</b><span>Nom, logo, icône de l'app, couleur de la fanfare, langue par défaut.</span></div></li>
+          <li><span class="ico">•</span><div><b>Pupitres et instruments</b><span>Rangés comme dans les arrangements, avec un pictogramme. Un pupitre qui a des fanfarons ne se supprime pas.</span></div></li>
+          <li><span class="ico">•</span><div><b>Orthographes connues</b><span>Les mots que l'import cherche dans le nom d'un PDF pour trouver son instrument.</span></div></li>
+          <li><span class="ico">•</span><div><b>Déguiz</b><span>La liste, avec une image chacun. L'ordre est celui des choix d'un plan.</span></div></li>
+          <li><span class="ico">•</span><div><b>Plans et setlists</b><span>Les deux rappels (jours avant, heure d'envoi), le temps compté entre deux morceaux, la durée par défaut d'une setlist proposée.</span></div></li>
+          <li><span class="ico">•</span><div><b>Discord</b><span>Le serveur, le bot et le rôle Discord de chaque pupitre. Sans Discord, l'app n'en parle jamais.</span></div></li>
+          <li><span class="ico">•</span><div><b>Importer</b><span>Un zip de reprise avec un CSV par sujet (fanfarons, morceaux, plans, réponses), des modèles à télécharger, les photos et les fichiers des morceaux par dossier. L'app lit tout, dit ce qu'elle va ajouter, et ne charge qu'à ta confirmation.</span></div></li>
+          <li><span class="ico">•</span><div><b>Mise à jour de la base</b><span>Après une nouvelle version de l'app, la base suit parfois : une page le dit, et l'applique avec ton mot de passe.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/band-discord.webp" alt="Les réglages Discord : serveur, bot, rôles des pupitres" width="780" height="1688" loading="lazy"></div></div><figcaption>Discord : serveur, bot et rôles des pupitres</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/band-import-reprise.webp" alt="Importer : un zip de reprise lu, ce qu'il ajoute" width="780" height="1688" loading="lazy"></div></div><figcaption>Importer : le zip lu, ce qu'il va charger</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>Guide des gestionnaires</footer>
+
+<script>
+const links = [...document.querySelectorAll('.toc a')];
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id)); });
+}, { rootMargin: '-30% 0px -60% 0px' });
+document.querySelectorAll('main section').forEach(s => io.observe(s));
+</script>
+</body>
+</html>

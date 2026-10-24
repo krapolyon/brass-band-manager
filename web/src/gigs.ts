@@ -95,9 +95,17 @@ export type Gig = Omit<GigSummary, 'slots'> & {
   discordUrl: string | null;
   /** The time counted between two songs of a setlist (band.setlistGapSeconds). */
   setlistGapSeconds: number;
+  /** The length the setlist generator proposes first, in minutes (band.setlistTargetMinutes). */
+  setlistTargetMinutes: number;
 };
 
-export type SetlistSong = { position: number; songId: number; name: string };
+export type SetlistSong = {
+  position: number;
+  songId: number;
+  name: string;
+  /** How long the song lasts, in seconds; null: not known. For the length of the setlist. */
+  durationSeconds: number | null;
+};
 
 /** A setlist of a gig: its songs in order, and where its live session is. */
 export type Setlist = {

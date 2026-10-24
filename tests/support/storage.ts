@@ -33,3 +33,27 @@ export function emptyStorage(): void {
     'rm -rf /var/www/storage/band /var/www/storage/members /var/www/storage/songs /var/www/storage/costumes',
   ]);
 }
+
+/** The folder "import" of the test server (export-import.md), emptied of its zips. */
+export function emptyImportFolder(): void {
+  execFileSync('docker', [
+    'compose',
+    'exec',
+    '-T',
+    'web-test',
+    'sh',
+    '-c',
+    'rm -f /var/www/import/*.zip',
+  ]);
+}
+
+/** Drops a zip into the folder "import", as an admin does by FTP. */
+export function dropByFtp(name: string, zip: Buffer): void {
+  execFileSync(
+    'docker',
+    ['compose', 'exec', '-T', 'web-test', 'sh', '-c', `cat > '/var/www/import/${name}'`],
+    {
+      input: zip,
+    },
+  );
+}

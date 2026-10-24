@@ -67,10 +67,48 @@ A file saved by MuseScore 4.4 is read through its full score alone: the styles a
 
 If the app cannot read a MuseScore file (one saved by a version of MuseScore more recent than its engine, for instance), it says so and keeps the file. Export a MIDI file and a MusicXML file from MuseScore and drop them on the song: they are then used instead.
 
+## Setlists: how the app proposes one
+
+In the editor of a setlist, "Proposer des morceaux" fills it for you. You then move, remove and add songs by hand as usual, and nothing is saved until "Enregistrer la setlist". "Une autre proposition" draws again. The full rules are in `model/gigs.md` ("Proposing a setlist") and `model/songs.md` ("Setlist attributes").
+
+**What you choose**
+
+- **How long**: 45 minutes to start with, changed by 5 minutes, from 5 minutes to 3 hours. An admin sets the starting length in the band settings ("Plans et setlists", "Durée d’une setlist proposée").
+- **Whether to include the new songs**: off by default. A song is new for 2 months after it entered the repertoire.
+
+**Which songs it draws from**
+
+- Only songs that are in the repertoire or temporary.
+- A song never appears twice in one proposal.
+- The songs already in the other setlists of the gig are set aside while there are enough others. When there are not, it takes back only as many as it needs.
+
+**How many songs**
+
+The app counts the length of each song (from its MIDI file, or typed in its form) and the time between two songs (30 seconds by default, in "Plans et setlists"). A song without a length counts as the average length of the songs it can draw from. It first estimates how many songs fit (the length asked plus one gap, divided by the average song plus one gap), then adds or removes songs until the setlist is as long as possible without going over. When no song has a length at all, it proposes 10 songs.
+
+**The three rules, most important first**
+
+1. **Positions.** Each song has one or more possible positions in its form: Début, 1re moitié, Milieu, 2e moitié, Fin. It is placed only where one of them allows. The first three places take only songs marked Début, the last three only songs marked Fin. The other places belong to their half of the set, and those in the middle 30 % count as Milieu too. In a setlist of five songs or fewer, a place that is both among the first three and the last three takes either.
+2. **Tiring.** A song marked as tiring for a section stays in the first half, unless it is among the last three and marked Fin: Fin wins.
+3. **Tricky.** Two songs marked as tricky for the same section never follow each other.
+
+When the repertoire is too small to keep all three, the app drops the last rule first, then the second, then the first, and says which ones it could not keep. Not repeating a song already played in the gig matters more than a rule: the app would rather drop a rule.
+
+**The mood weighs the draw; it is not a rule**
+
+| | Chill | Normal | Teuf |
+|---|---|---|---|
+| At the start | about twice as likely as Normal | the reference | about three times less likely than Normal |
+| In the middle | a little more likely than Normal | the reference | a little more likely than Normal |
+| At the end | about three times less likely than Normal | the reference | about twice as likely as Normal |
+
+A setlist of six songs has three places for Début and three for Fin, and none in the middle: this follows from the rules.
+
 ## Documentation
 
 | Document | What it tells |
 |---|---|
+| [docs/guide/](docs/guide/index.html) | The guide of the app for members, and the one for whoever manages (`managers.html`) |
 | [docs/architecture.md](docs/architecture.md) | How the app is built, how to add a route, a screen, a text or a migration, and why each dependency is there |
 | [docs/scoping.md](docs/scoping.md) | What the app is for, the decisions taken and the build order |
 | [CLAUDE.md](CLAUDE.md) | The rules followed when writing code, for people and for AI assistants |

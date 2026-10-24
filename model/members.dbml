@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.26 — 2026-10-24 — validated, for 0.4.0: the default of colorScheme becomes DARK for new members (owner); ten accent themes, a former key is moved to its new name (issue #58); the invitation leaves by email from the app, and can be sent again (issue #50); memberPasswordLink.emailedAt serves invitations too
 // v1.25 — 2026-10-18 — validated, for 0.3.1 (migration 015): the encryption in place, one column per field; emailHash empty only for a row not encrypted yet, required in the next release (dictionary, "Moving to encryption")
 // v1.23 — 2026-10-18 — validated, for 0.3.1 (not in the migration of 0.3.0): the names, email, phone and address of a member encrypted in the database, the email found through emailHash (issue #32)
 // v1.22 — 2026-10-18 — validated (0.3.0): section.discordRoleId, the role that tags a section on Discord (issue #33); the channel of each notification, push, email or both, and the reminders to answer by push or email (issue #27); no Discord account on a member
@@ -103,8 +104,8 @@ Table member {
   status memberStatus [not null]
 
   language varchar [not null, note: 'Locale of the interface for this member, for instance fr. Set from band.defaultLanguage at creation.']
-  colorScheme colorScheme [not null, default: 'AUTO', note: 'Light or dark interface']
-  accentTheme varchar [note: 'Key of one of the accent themes shipped with the app, for instance copper. Empty means the default theme of the band. The list of themes is the one of the design system; the API refuses any other value.']
+  colorScheme colorScheme [not null, default: 'DARK', note: 'Light or dark interface. DARK for a new member from 0.4.0 (owner, 2026-10-24); the existing members keep their choice']
+  accentTheme varchar [note: 'Key of one of the accent themes shipped with the app, for instance brass. Empty means the default theme of the band. The list of themes is the one of the design system; the API refuses any other value.']
   hasHighContrast boolean [not null, default: false, note: 'Accessibility option: stronger contrast between text and background, opaque surfaces instead of translucent ones. Also applied when the device asks for it.']
   hasIncreasedSpacing boolean [not null, default: false, note: 'Accessibility option: more space between letters, words and lines']
   hasLegibleFont boolean [not null, default: false, note: 'Accessibility option: replaces the typefaces of the app with one designed to tell similar characters apart']
@@ -167,7 +168,7 @@ Table memberPasswordLink {
   memberId integer [not null, unique, ref: - member.id, note: 'One pending link per member at most: a new one replaces the previous one.']
   tokenHash varchar [not null, unique, note: 'SHA-256 of the random token carried by the link. The token itself is never stored.']
   expiresAt timestamp [not null, note: 'The link is refused after this instant: 7 days after a member manager created it, 1 hour after the app sent it by email']
-  emailedAt timestamp [note: 'Instant the app sent this link by email, for a forgotten password. Empty for a link created by a member manager. No new email is sent to the member within 5 minutes of it.']
+  emailedAt timestamp [note: 'Instant the app sent this link by email: a forgotten password, or an invitation (from 0.4.0). Empty for a link the app did not send (an instance without a mail server). No new email is sent to the member within 5 minutes of it.']
   refusedCount integer [not null, default: 0, note: 'How many times the record sent with this link was refused because a nickname or an email is taken. At ten, the link is deleted.']
   Note: 'A single-use link that lets a member choose a password: the invitation of a new member, or a forgotten password. A member manager copies the link and sends it to the member himself; a link asked from the sign-in screen is sent by the app, by email. Deleted once used.'
 }

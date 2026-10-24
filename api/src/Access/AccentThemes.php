@@ -11,5 +11,5 @@ namespace BrassBand\Access;
 // and the blocks of web/src/styles/tokens.css.
 final class AccentThemes
 {
-    public const AVAILABLE = ['copper', 'coral', 'mint', 'lilac'];
+    public const AVAILABLE = ['brass', 'tangerine', 'raspberry', 'orchid', 'cornflower', 'azure', 'lagoon', 'emerald', 'lime', 'ivory'];
 }

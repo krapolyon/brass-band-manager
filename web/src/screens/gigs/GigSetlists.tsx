@@ -9,6 +9,7 @@ import { SetlistCard } from '../../components/SetlistCard.tsx';
 import { SetlistSongRow } from '../../components/SetlistSongRow.tsx';
 import type { Gig, Setlist } from '../../gigs.ts';
 import { useMe } from '../../session.ts';
+import { lengthOf } from './generator.ts';
 
 type Props = {
   gig: Gig;
@@ -44,7 +45,17 @@ export function GigSetlists({ gig, headingLevel, canGoLive }: Props) {
     <>
       {gig.setlists.map((setlist) => {
         const isLive = setlist.livePosition !== null;
+        // "45 min · 6 morceaux" under the title (Gigs › 23, issue #60): the
+        // length as the editor counts it, when one song at least has one.
         const songs = t('gigs.setlist.songs', { count: setlist.songs.length });
+        const length = lengthOf(
+          setlist.songs.map((song) => song.durationSeconds),
+          gig.setlistGapSeconds,
+        );
+        const summary =
+          length.withoutLength < setlist.songs.length
+            ? t('gigs.setlist.lasts', { minutes: length.minutes, songs })
+            : songs;
         return (
           <SetlistCard
             key={setlist.id}
@@ -53,8 +64,8 @@ export function GigSetlists({ gig, headingLevel, canGoLive }: Props) {
             title={t('gigs.setlist.title', { number: setlist.number })}
             description={
               setlist.description
-                ? t('gigs.setlist.described', { description: setlist.description, songs })
-                : songs
+                ? t('gigs.setlist.described', { description: setlist.description, summary })
+                : summary
             }
             live={
               isLive

@@ -1,0 +1,70 @@
+{
+  "lists": {
+    "memberStatus": {
+      "ACTIVE": "Actif",
+      "POWER_MEMBER": "Power member",
+      "LEFT": "Parti"
+    },
+    "role": {
+      "ADMIN": "Admin",
+      "MEMBER_MANAGER": "Gère les fanfarons",
+      "SONG_MANAGER": "Gère les morceaux",
+      "GIG_MANAGER": "Gère les plans",
+      "SETLIST_MANAGER": "Gère les setlists"
+    },
+    "songStatus": {
+      "PROPOSED": "Proposé",
+      "IN_PROGRESS": "Montage en cours",
+      "IN_REPERTOIRE": "Au répertoire",
+      "TEMPORARY": "Temporaire",
+      "ABANDONED": "Abandonné"
+    },
+    "mood": {
+      "CHILL": "Chill",
+      "MEDIUM": "Normal",
+      "PARTY": "Teuf"
+    },
+    "position": {
+      "START": "Début",
+      "FIRST_HALF": "1re moitié",
+      "MIDDLE": "Milieu",
+      "SECOND_HALF": "2e moitié",
+      "END": "Fin"
+    },
+    "gigStatus": {
+      "DRAFT": "Brouillon",
+      "PROPOSED": "Proposition",
+      "ACCEPTED": "Accepté",
+      "CONFIRMED": "Validé",
+      "CANCELLED": "Annulé"
+    },
+    "answer": {
+      "YES": "Oui",
+      "NO": "Non",
+      "MAYBE": "Peut-être",
+      "IF_NEEDED": "Si besoin"
+    }
+  },
+  "examples": {
+    "members": [
+      ["kiki@example.org", "Kiki", "Christine", "Dupré", "{instrument}", "", "", "+33612345678", "", "", "", "", "", "", ""],
+      ["riton@example.org", "Riton", "Henri", "Blanc", "{instrument}", "ACTIVE", "GIG_MANAGER", "", "", "69001", "Lyon", "FR", "", "", ""]
+    ],
+    "songs": [
+      ["Seven Nation", "Seven Nation Army", "The White Stripes", "IN_REPERTOIRE", "2019-01-01", "PARTY", "SECOND_HALF|END", "", "", "124", "3:52", "", "", "", "", "", "seven nation armee"],
+      ["Valerie", "Valerie", "Amy Winehouse", "IN_PROGRESS", "", "MEDIUM", "", "", "", "", "", "", "", "", "", "", ""]
+    ],
+    "gigs": [
+      ["Fête des Lumières", "2026-12-04", "2026-12-06", "CONFIRMED", "18:00", "Place des Terreaux", "", "", "69001", "Lyon", "", "", "", "", "kiki@example.org", ""],
+      ["Anniversaire de Margaux", "2026-10-24", "", "PROPOSED", "17:30", "Salle des fêtes", "", "", "", "Lyon", "", "", "", "", "", ""]
+    ],
+    "slots": [
+      ["Fête des Lumières", "2026-12-04", "1", "Vendredi soir", "Défilé sur la presqu’île", ""],
+      ["Fête des Lumières", "2026-12-04", "2", "Samedi soir", "", ""]
+    ],
+    "answers": [
+      ["Fête des Lumières", "2026-12-04", "1", "kiki@example.org", "YES"],
+      ["Fête des Lumières", "2026-12-04", "2", "riton@example.org", "MAYBE"]
+    ]
+  }
+}

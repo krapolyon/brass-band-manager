@@ -123,6 +123,9 @@ test('sign-in and the forgotten password find a member by the hash of the email'
   expect((await signIn(other, 'Marilou.Fontaine@Example.org')).status()).toBe(200);
   expect((await signIn(other, 'marilou.fontaine@example.org', 'pas-le-bon')).status()).toBe(401);
 
+  // Her invitation left by email when she was created (#50): the five minutes
+  // between two emails are put behind her.
+  sql('UPDATE memberPasswordLink SET emailedAt = NOW() - INTERVAL 10 MINUTE');
   await emptyMailbox();
   await other.post('/api/passwordLink/request', { data: { email: marilou.email } });
   const [mail] = await receivedMails(1);

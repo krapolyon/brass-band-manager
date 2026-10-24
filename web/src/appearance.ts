@@ -61,7 +61,9 @@ function write() {
     'motion',
     current.hasReducedMotion || asks('(prefers-reduced-motion: reduce)') ? 'reduced' : null,
   );
-  set('theme', current.accentTheme ?? bandTheme);
+  // A key the app no longer ships (copper, coral, mint, lilac before 0.4.0, on
+  // a database not updated yet) takes the theme of the band (issue #58).
+  set('theme', accentThemes.find((known) => known === current.accentTheme) ?? bandTheme);
   set('textSize', current.textSizePercent === 100 ? null : String(current.textSizePercent));
   set('typeface', current.hasLegibleFont ? 'legible' : null);
   set('spacing', current.hasIncreasedSpacing ? 'increased' : null);

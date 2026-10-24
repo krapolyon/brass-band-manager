@@ -446,7 +446,9 @@ test.describe('the channel of each notification', () => {
     expect(mail?.subject).toBe(`${band} – Nouveau morceau`);
     expect(mail?.from).toBe(`${band} <app@example.org>`);
     expect(mail?.text).toContain('Rasputin – Boney M.');
-    expect(mail?.text).toContain(`Ouvrir dans l’app : http://localhost:8081/songs/${songId}`);
+    // The button of the email, written out in its plain text (#65).
+    expect(mail?.text).toContain(`Écouter le morceau\u00a0: http://localhost:8081/songs/${songId}`);
+    expect(mail?.html).toContain(`href="http://localhost:8081/songs/${songId}"`);
     expect(mail?.text).toContain('parce que tu l’as choisi');
     expect(mail?.text).toContain('http://localhost:8081/settings/notifications');
   });

@@ -62,21 +62,21 @@ test.describe('appearance', () => {
     await signIn(page);
     await page.goto('/band/appearance');
     await page.getByLabel('Nom de la fanfare').fill('Les Cuivres du Jeudi');
-    await page.getByRole('radio', { name: 'Menthe' }).check();
+    await page.getByRole('radio', { name: 'Lagon' }).check();
     await page.getByRole('button', { name: 'Enregistrer' }).click();
 
     await expect(page).toHaveURL('/band');
     expect(sql('SELECT name, defaultAccentTheme, defaultLanguage FROM band')).toBe(
-      'Les Cuivres du Jeudi\tmint\tfr',
+      'Les Cuivres du Jeudi\tlagoon\tfr',
     );
     // The admin follows the colour of the band: it changes for them too.
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'lagoon');
 
     // And for whoever is not signed in.
     await page.context().clearCookies();
     await page.goto('/sign-in');
     await expect(page.getByText('Les Cuivres du Jeudi')).toBeVisible();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'lagoon');
   });
 
   test('the name is required, and nothing is saved without it', async ({ page }) => {

@@ -24,7 +24,10 @@ export function InviteScreen() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const me = useMe().data;
-  const bandCountry = useBand().data?.defaultCountryCode ?? '';
+  const band = useBand().data;
+  const bandCountry = band?.defaultCountryCode ?? '';
+  // With a mail server the invitation leaves by email when it is created (#50).
+  const byEmail = band?.canSendEmail ?? false;
   const recordErrors = useRecordErrors();
   const instruments = instrumentsOf(useSections().data);
   const [draft, setDraft] = useState(emptyDraft);
@@ -33,10 +36,13 @@ export function InviteScreen() {
 
   const invite = useMutation({
     mutationFn: async () => {
-      const created = await api<Member & { passwordLinkToken: string }>('/api/members', {
-        method: 'POST',
-        body: recordOf(draft, bandCountry),
-      });
+      const created = await api<Member & { passwordLinkToken: string; invitationEmailed: boolean }>(
+        '/api/members',
+        {
+          method: 'POST',
+          body: recordOf(draft, bandCountry),
+        },
+      );
       if (photo.chosen) {
         // The invitation exists: a photo that fails to save can be given again from the record.
         await api(`/api/members/${created.id}/photo`, {
@@ -52,6 +58,7 @@ export function InviteScreen() {
         token: created.passwordLinkToken,
         nickname: created.nickname,
         isInvitation: true,
+        sentTo: created.invitationEmailed ? created.email : undefined,
       });
       navigate('/members/manage');
     },
@@ -101,7 +108,7 @@ export function InviteScreen() {
           }
         >
           <Button type="submit" disabled={invite.isPending}>
-            {t('manage.invite.submit')}
+            {t(byEmail ? 'manage.invite.send' : 'manage.invite.submit')}
           </Button>
         </BottomBar>
       }
@@ -114,6 +121,7 @@ export function InviteScreen() {
       )}
       <MemberRecordFields
         voice="invite"
+        emailHint={byEmail ? t('member.email.hint.inviteByEmail') : undefined}
         draft={draft}
         onChange={(changes) => setDraft({ ...draft, ...changes })}
         errors={errors}

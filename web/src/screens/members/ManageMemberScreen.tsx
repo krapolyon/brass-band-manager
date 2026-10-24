@@ -82,7 +82,10 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const bandCountry = useBand().data?.defaultCountryCode ?? '';
+  const band = useBand().data;
+  const bandCountry = band?.defaultCountryCode ?? '';
+  // With a mail server an invitation is sent again by email (#50).
+  const byEmail = band?.canSendEmail ?? false;
   const recordErrors = useRecordErrors();
   const instruments = instrumentsOf(useSections().data);
   const instrument = instruments.find((other) => other.id === member.instrumentId);
@@ -116,15 +119,20 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
 
   const changeStatus = useMutation({
     mutationFn: (next: Member['status']) =>
-      api<Member & { passwordLinkToken?: string }>(`/api/members/${member.id}/status`, {
-        method: 'PUT',
-        body: { status: next },
-      }),
+      api<Member & { passwordLinkToken?: string; invitationEmailed?: boolean }>(
+        `/api/members/${member.id}/status`,
+        { method: 'PUT', body: { status: next } },
+      ),
     onSuccess: async (answer) => {
       setLeaving(false);
       // Bringing a member back creates their invitation: its link is shown now, or never.
       if (answer.passwordLinkToken) {
-        setLink({ token: answer.passwordLinkToken, nickname: member.nickname, isInvitation: true });
+        setLink({
+          token: answer.passwordLinkToken,
+          nickname: member.nickname,
+          isInvitation: true,
+          sentTo: answer.invitationEmailed ? answer.email : undefined,
+        });
       }
       await refresh();
     },
@@ -143,6 +151,11 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
       });
       await refresh();
     },
+  });
+  // "Renvoyer l'invitation": a new link by email, the former one stops (#50).
+  const resend = useMutation({
+    mutationFn: () => api<Member>(`/api/members/${member.id}/invitation`, { method: 'POST' }),
+    onSuccess: refresh,
   });
   const cancelInvitation = useMutation({
     mutationFn: () => api(`/api/members/${member.id}`, { method: 'DELETE' }),
@@ -168,7 +181,7 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
     onError: focusFirstFieldError,
   });
 
-  const failure = [changeStatus, createLink, cancelInvitation, save]
+  const failure = [changeStatus, createLink, resend, cancelInvitation, save]
     .map((mutation) => mutation.error)
     .find(Boolean);
   const refused = save.error instanceof ApiError ? save.error.fields : {};
@@ -179,17 +192,26 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
       ? null
       : failure instanceof ApiError && failure.error === 'lastAdmin'
         ? 'manage.member.lastAdminRefused'
-        : failure instanceof ApiError && failure.status === 403
-          ? 'manage.member.reserved'
-          : 'errors.unreachable';
+        : failure instanceof ApiError && failure.error === 'emailedRecently'
+          ? 'manage.member.emailedRecently'
+          : failure instanceof ApiError && failure.status === 403
+            ? 'manage.member.reserved'
+            : 'errors.unreachable';
   const isBusy =
-    changeStatus.isPending || createLink.isPending || cancelInvitation.isPending || save.isPending;
+    changeStatus.isPending ||
+    createLink.isPending ||
+    resend.isPending ||
+    cancelInvitation.isPending ||
+    save.isPending;
 
-  const until = member.passwordLinkExpiresAt
-    ? new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long' }).format(
-        new Date(member.passwordLinkExpiresAt),
-      )
-    : '';
+  const dayOf = (instant: string | null | undefined) =>
+    instant
+      ? new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'long' }).format(
+          new Date(instant),
+        )
+      : '';
+  const until = dayOf(member.passwordLinkExpiresAt);
+  const sentOn = dayOf(member.passwordLinkEmailedAt);
 
   return (
     <>
@@ -234,11 +256,18 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
         )}
 
         <Sheet title={t('manage.table.status')}>
-          <NavRow
-            icon={statusIcon[status]}
-            label={t(`member.status.${status}`)}
-            detail={t(`manage.status.${status}`, { date: until })}
-          />
+          {/* Said when it changes: "Renvoyer l'invitation" has no other answer. */}
+          <div aria-live="polite">
+            <NavRow
+              icon={statusIcon[status]}
+              label={t(`member.status.${status}`)}
+              detail={
+                status === 'INVITED' && sentOn !== ''
+                  ? t('manage.status.INVITED_SENT', { sent: sentOn, date: until })
+                  : t(`manage.status.${status}`, { date: until })
+              }
+            />
+          </div>
         </Sheet>
 
         <Sheet title={t('manage.actions.title')}>
@@ -288,14 +317,24 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
             )}
             {member.status === 'INVITED' && (
               <>
-                <NavRow
-                  icon="Link"
-                  label={t('manage.actions.newLink')}
-                  detail={reserved ?? t('manage.actions.newLinkDetail')}
-                  onClick={() => createLink.mutate()}
-                  disabled={isBusy || !mayAct}
-                  opensPanel
-                />
+                {byEmail ? (
+                  <NavRow
+                    icon="Link"
+                    label={t('manage.actions.resend')}
+                    detail={reserved ?? t('manage.actions.resendDetail', { email: member.email })}
+                    onClick={() => resend.mutate()}
+                    disabled={isBusy || !mayAct}
+                  />
+                ) : (
+                  <NavRow
+                    icon="Link"
+                    label={t('manage.actions.newLink')}
+                    detail={reserved ?? t('manage.actions.newLinkDetail')}
+                    onClick={() => createLink.mutate()}
+                    disabled={isBusy || !mayAct}
+                    opensPanel
+                  />
+                )}
                 <NavRow
                   icon="Trash"
                   tone={mayAct ? 'danger' : 'default'}

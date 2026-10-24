@@ -18,7 +18,7 @@ test('the band is public: its name, its logo and its three defaults', async ({ r
     // Install does not ask for these: the language it was done in, the first
     // theme, and the country of the language.
     defaultLanguage: 'fr',
-    defaultAccentTheme: 'copper',
+    defaultAccentTheme: 'brass',
     defaultCountryCode: 'FR',
     // The test server has a mail server.
     canSendEmail: true,
@@ -74,18 +74,18 @@ test('an admin changes the accent theme and the country of the band, and nothing
   await signIn(request, admin.email, admin.password);
 
   const response = await request.patch('/api/band', {
-    data: { defaultAccentTheme: 'mint', defaultCountryCode: 'BE' },
+    data: { defaultAccentTheme: 'lagoon', defaultCountryCode: 'BE' },
   });
 
   expect(response.status()).toBe(200);
   expect(await response.json()).toMatchObject({
     name: 'La Fanfare des Cuivres Déchaînés',
-    defaultAccentTheme: 'mint',
+    defaultAccentTheme: 'lagoon',
     defaultCountryCode: 'BE',
     defaultLanguage: 'fr',
   });
   expect(sql('SELECT name, defaultAccentTheme, defaultCountryCode FROM band')).toBe(
-    'La Fanfare des Cuivres Déchaînés\tmint\tBE',
+    'La Fanfare des Cuivres Déchaînés\tlagoon\tBE',
   );
 });
 
@@ -102,7 +102,7 @@ test('a theme, a language or a country the app does not have is refused', async 
   await refused({ defaultCountryCode: 'fr' }, { defaultCountryCode: 'invalid' });
   await refused({ defaultCountryCode: 'ZZ' }, { defaultCountryCode: 'invalid' });
   expect(sql('SELECT defaultAccentTheme, defaultLanguage, defaultCountryCode FROM band')).toBe(
-    'copper\tfr\tFR',
+    'brass\tfr\tFR',
   );
 });
 

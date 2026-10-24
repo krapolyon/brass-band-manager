@@ -300,7 +300,8 @@
         "self": "C’est aussi ton identifiant pour te connecter.",
         "invited": "C’est aussi ton identifiant pour te connecter.",
         "other": "C’est son identifiant pour se connecter.",
-        "invite": "Ce sera son identifiant pour se connecter."
+        "invite": "Ce sera son identifiant pour se connecter.",
+        "inviteByEmail": "Son identifiant pour se connecter. L’invitation part à cette adresse."
       }
     },
     "mobilePhone": {
@@ -430,10 +431,16 @@
     "allWithPointer_other": "{{count}} fanfarons, de A à Z. Clique sur une tête pour l’appeler, lui écrire ou passer la voir."
   },
   "theme": {
-    "copper": "Cuivre",
-    "coral": "Corail",
-    "mint": "Menthe",
-    "lilac": "Lilas"
+    "brass": "Laiton",
+    "tangerine": "Mandarine",
+    "raspberry": "Framboise",
+    "orchid": "Orchidée",
+    "cornflower": "Bleuet",
+    "azure": "Azur",
+    "lagoon": "Lagon",
+    "emerald": "Émeraude",
+    "lime": "Citron vert",
+    "ivory": "Ivoire"
   },
   "settings": {
     "account": "Mon compte",
@@ -631,6 +638,7 @@
       "ACTIVE": "Joue régulièrement, reçoit les rappels pour les plans",
       "POWER_MEMBER": "Joue moins souvent, ne reçoit pas les rappels",
       "INVITED": "Le lien d’invitation marche jusqu’au {{date}}",
+      "INVITED_SENT": "Invitation envoyée le {{sent}}. Le lien marche jusqu’au {{date}}",
       "EXPIRED": "Le lien d’invitation ne marche plus : crée-en un nouveau",
       "LEFT": "Coordonnées, photo et rôles effacés à son départ",
       "expiredShort": "Expirée"
@@ -648,6 +656,8 @@
       "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
       "newLink": "Créer un nouveau lien",
       "newLinkDetail": "L’ancien ne marchera plus",
+      "resend": "Renvoyer l’invitation",
+      "resendDetail": "Un nouveau lien part à {{email}} ; l’ancien ne marchera plus",
       "cancelInvitation": "Annuler l’invitation",
       "cancelInvitationDetail": "Supprime cette fiche : rien d’autre n’en dépend",
       "bringBack": "Faire revenir {{nickname}}",
@@ -681,7 +691,8 @@
       "reserved": "Réservé aux admins : ce fanfaron a plus de droits que toi.",
       "notFound": "Cette fiche n’existe pas, ou plus.",
       "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
-      "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter."
+      "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter.",
+      "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer."
     },
     "leave": {
       "title": "Marquer {{nickname}} comme parti ?",
@@ -690,7 +701,8 @@
     "invite": {
       "open": "Inviter un fanfaron",
       "lead": "Remplis ce que tu sais. La personne vérifiera et complétera le reste en arrivant.",
-      "submit": "Créer l’invitation"
+      "submit": "Créer l’invitation",
+      "send": "Envoyer l’invitation"
     },
     "link": {
       "once": "On ne te le montrera plus : copie-le maintenant.",
@@ -701,6 +713,12 @@
         "title": "Invitation prête",
         "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours.",
         "label": "Lien d’invitation"
+      },
+      "sent": {
+        "title": "Invitation envoyée",
+        "text": "{{nickname}} la reçoit à {{email}}, avec un lien qui marche une fois, pendant 7 jours.",
+        "label": "Lien d’invitation",
+        "once": "Pas reçue ? Envoie-lui ce lien toi-même. On ne te le montrera plus."
       },
       "password": {
         "title": "Lien prêt",
@@ -829,7 +847,7 @@
       "detailOne_one": "Rappel {{count}} jour avant, {{gap}} s entre deux morceaux",
       "detailOne_other": "Rappel {{count}} jours avant, {{gap}} s entre deux morceaux",
       "detailNone": "Aucun rappel, {{gap}} s entre deux morceaux",
-      "lead": "Les rappels de ceux qui n’ont pas répondu, et le temps compté entre deux morceaux d’une setlist.",
+      "lead": "Les rappels de ceux qui n’ont pas répondu, et ce qui sert à compter et proposer une setlist.",
       "notYet": "Cette installation n’envoie pas encore de notifications : ces réglages sont gardés pour le jour où elle le fera.",
       "first": "Première relance",
       "second": "Seconde relance",
@@ -850,7 +868,11 @@
       "setlists": "Setlists",
       "gap": "Entre deux morceaux",
       "gapHint": "De 0 à 300 secondes. Compté pour donner la durée d’une setlist.",
-      "gapUnit": "s"
+      "gapUnit": "s",
+      "target": "Durée d’une setlist proposée",
+      "targetLabel": "Durée d’une setlist proposée, en minutes",
+      "targetUnit": "min",
+      "targetHint": "Ce que l’app propose d’abord quand on lui demande une setlist ; on l’ajuste à chaque fois, de 5 en 5 minutes."
     },
     "migrations": {
       "title": "Mise à jour de la base",
@@ -913,6 +935,169 @@
       "saved": "Les réglages Discord sont enregistrés.",
       "failed": "Les réglages Discord ne sont pas enregistrés. Réessaie dans un instant.",
       "roleTaken": "Ce rôle tague déjà un autre pupitre."
+    },
+    "transfer": {
+      "row": "Exporter et importer",
+      "rowDetail": "Passer d’une installation à une autre",
+      "data": "Données",
+      "password": "Mot de passe",
+      "part": {
+        "settings": "Config générale",
+        "members": "Fanfarons",
+        "songs": "Morceaux",
+        "gigs": "Plans",
+        "answers": "Réponses"
+      },
+      "export": {
+        "title": "Exporter",
+        "lead": "Un fichier .zip dans un format figé, pour réimporter sur une autre installation de l’app.",
+        "what": "Que veux-tu exporter ?",
+        "settingsDetail": "Nom, logo, couleur, pupitres et instruments, orthographes, déguiz, rappels",
+        "membersDetail_one": "{{count}} fanfaron, ses rôles et sa photo",
+        "membersDetail_other": "{{count}} fanfarons, leurs rôles et leurs photos",
+        "songsDetail_one": "{{count}} morceau et ses fichiers · environ {{weight}}",
+        "songsDetail_other": "{{count}} morceaux et leurs fichiers · environ {{weight}}",
+        "gigsDetail_one": "{{count}} plan, présences, réponses et setlists",
+        "gigsDetail_other": "{{count}} plans, présences, réponses et setlists",
+        "note": "Les plans ont besoin des fanfarons et de la config, les morceaux de la config : cochés avec eux. Les mots de passe partent sous leur forme protégée (illisibles, mais à garder pour toi). Ne sont jamais exportés : sessions et abonnements aux notifications.",
+        "personal": "Le fichier contient des données personnelles des fanfarons. Garde-le pour toi et supprime-le une fois importé.",
+        "weight": "Environ {{weight}}, surtout les fichiers des morceaux",
+        "submit": "Exporter en .zip",
+        "passwordTitle": "Ton mot de passe",
+        "passwordLead": "L’export contient les coordonnées des fanfarons : on te redemande ton mot de passe."
+      },
+      "import": {
+        "title": "Importer",
+        "lead": "Reprendre un export de cette app, ou charger tes tableaux pour démarrer.",
+        "drop": "Dépose le fichier .zip",
+        "dropHint": "Un export de l’app, ou un zip de reprise. Rien n’est chargé avant que tu confirmes.",
+        "choose": "Choisir des fichiers",
+        "reading": "On lit le fichier…",
+        "folder": "Dans le dossier « import »",
+        "templatesTitle": "Démarrer depuis un tableur",
+        "templatesLead": "Un tableau par sujet : fanfarons, morceaux, plans, réponses. Les photos et les fichiers des morceaux vont dans leurs dossiers, comme dans le modèle. Zippe le tout et dépose-le ici.",
+        "templates": "Télécharger les modèles",
+        "exportFirst": "Exporte d’abord ce qui existe ici : un import met à jour tout ce qu’il contient.",
+        "exportFirstButton": "Exporter d’abord",
+        "ftp": "Fichier trop lourd pour le navigateur ? Dépose-le par FTP dans le dossier « import » de l’hébergement : il apparaîtra ici, prêt à être lu.",
+        "loaded": "Les données sont chargées.",
+        "failure": {
+          "unreachable": "Le fichier n’a pas pu être lu. Vérifie ta connexion, puis réessaie.",
+          "notAZip": "Ce fichier n’est pas un zip lisible.",
+          "tooBig": "Fichier trop lourd pour le navigateur : dépose-le par FTP dans le dossier « import ».",
+          "refused": "Rien n’est chargé : le fichier ne passe plus les contrôles. Dépose-le à nouveau pour voir pourquoi."
+        }
+      },
+      "read": {
+        "notInFile": "Pas dans ce fichier",
+        "new_one": "{{count}} nouveau",
+        "new_other": "{{count}} nouveaux",
+        "updated_one": "{{count}} mis à jour",
+        "updated_other": "{{count}} mis à jour",
+        "invitationsTitle": "Invitations",
+        "invitations": "Envoyer les invitations par e-mail",
+        "invitationsReprise_one": "Au fanfaron du fichier, toi mis à part : il reçoit son lien pour choisir son mot de passe, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsReprise_other": "Aux {{count}} fanfarons du fichier, toi mis à part : chacun reçoit son lien pour choisir son mot de passe, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsExport_one": "Au fanfaron du fichier qui n’a pas encore de mot de passe : il reçoit son lien, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsExport_other": "Aux {{count}} fanfarons du fichier qui n’ont pas encore de mot de passe : chacun reçoit son lien, valable 7 jours. Coupe-le pour une installation de test.",
+        "passwordLead": "L’import change les données de la fanfare : on te redemande ton mot de passe.",
+        "loading": "Chargement…",
+        "export": {
+          "subtitle": "{{name}} · format {{format}} · exporté le {{date}}.",
+          "what": "Que veux-tu importer ?",
+          "settings": "Met à jour la config d’ici",
+          "members_one": "{{count}} fanfaron",
+          "members_other": "{{count}} fanfarons",
+          "songs_one": "{{count}} morceau et ses fichiers",
+          "songs_other": "{{count}} morceaux et leurs fichiers",
+          "gigs_one": "{{count}} plan",
+          "gigs_other": "{{count}} plans",
+          "note": "Les plans viennent avec les fanfarons et la config : on ne peut pas les importer seuls. Ajoute et met à jour, ne supprime rien. Chacun garde son mot de passe. Ton compte doit être admin dans le fichier, sinon l’import est refusé : tu te reconnectes ensuite avec ton mot de passe.",
+          "signedOut": "Ce qui est coché sera mis à jour, sans retour en arrière. Tu seras déconnecté : reconnecte-toi avec ton mot de passe.",
+          "ticked_one": "{{count}} partie cochée",
+          "ticked_other": "{{count}} parties cochées",
+          "submit": "Importer"
+        },
+        "reprise": {
+          "subtitle_one": "{{name}} · zip de reprise · {{count}} tableau, {{files}}.",
+          "subtitle_other": "{{name}} · zip de reprise · {{count}} tableaux, {{files}}.",
+          "what": "Que veux-tu charger ?",
+          "members_one": "{{count}} fanfaron et {{photos}}",
+          "members_other": "{{count}} fanfarons et {{photos}}",
+          "songs_one": "{{count}} morceau et {{files}}",
+          "songs_other": "{{count}} morceaux et {{files}}",
+          "filesReplace": " : leurs fichiers fournis remplacent les anciens, les autres restent",
+          "gigs_one": "{{count}} plan, {{slots}}",
+          "gigs_other": "{{count}} plans, {{slots}}",
+          "answers_one": "{{count}} réponse, avec les plans et les fanfarons",
+          "answers_other": "{{count}} réponses, avec les plans et les fanfarons",
+          "note": "Ajoute et met à jour, ne supprime rien : une fiche déjà là (même e-mail, même nom de morceau, même plan à la même date) est mise à jour, une case vide ne change rien. Aucune notification ne part. Les setlists ne se chargent pas : on les fait dans l’app.",
+          "ticked_one": "{{count}} tableau coché",
+          "ticked_other": "{{count}} tableaux cochés",
+          "submit": "Charger les données",
+          "photos_one": "{{count}} photo",
+          "photos_other": "{{count}} photos",
+          "files_one": "{{count}} fichier",
+          "files_other": "{{count}} fichiers",
+          "slots_one": "{{count}} créneau",
+          "slots_other": "{{count}} créneaux"
+        }
+      },
+      "problems": {
+        "lead": "Rien n’est chargé : corrige ces lignes dans tes tableaux, puis redépose le zip.",
+        "unknownZip": "Ce zip n’est ni un export de l’app ni un zip de reprise.",
+        "title_one": "{{count}} ligne à corriger",
+        "title_other": "{{count}} lignes à corriger",
+        "where": "{{file}}, ligne {{line}}",
+        "again": "Redéposer un zip"
+      },
+      "problem": {
+        "invalid": "Colonne {{column}} : « {{value}} » n’est pas valable.",
+        "emailInvalid": "L’adresse {{value}} est incomplète.",
+        "required": "La colonne {{column}} est vide.",
+        "tooLong": "La colonne {{column}} est trop longue.",
+        "tooShort": "La colonne {{column}} est trop courte.",
+        "duplicate": "« {{value}} » est déjà pris par un autre ici (colonne {{column}}).",
+        "twice": "« {{value}} » est déjà sur une autre ligne de ce fichier.",
+        "unknownValue": "« {{value}} » n’est pas une valeur de la colonne {{column}} : vois allowed-values.csv.",
+        "unknownColumn": "La colonne « {{value}} » n’existe pas dans ce modèle.",
+        "missingColumn": "Il manque la colonne {{value}}.",
+        "unknownInstrument": "L’instrument « {{value}} » n’existe pas ici. Choisis-en un de la liste des réglages.",
+        "unknownSection": "Le pupitre « {{value}} » n’existe pas ici.",
+        "unknownCostume": "Le déguiz « {{value}} » n’existe pas ici.",
+        "costumeNotOfGig": "Le déguiz « {{value}} » n’est pas un déguiz de ce plan.",
+        "unknownMember": "Aucun fanfaron avec l’adresse {{value}}, ni ici ni dans members.csv.",
+        "unknownGig": "Aucun plan « {{value}} », ni ici ni dans gigs.csv.",
+        "unknownSlot": "Ce plan n’a pas de créneau {{value}}.",
+        "unknownSong": "Aucun morceau « {{value}} », ni ici ni dans songs.csv.",
+        "slotWithoutName": "Le plan a plusieurs créneaux : donne un nom au créneau {{value}}.",
+        "unknownFile": "Le fichier « {{value}} » n’est pas dans members/photos.",
+        "phoneWithoutPrefix": "Le numéro « {{value}} » n’a pas d’indicatif : écris-le avec, par exemple +33 6 12 34 56 78.",
+        "partWithoutInstrument": "Ce fichier ne dit pas sa partie : ajoute le nom de l’instrument à son nom.",
+        "unknownKind": "La sorte de ce fichier n’est pas reconnue.",
+        "invalidPhoto": "Photo refusée : une image carrée PNG, JPEG ou WebP, 512 pixels de côté et 1 Mo au plus.",
+        "invalidFile": "Ce fichier n’est pas du type attendu, ou il est abîmé.",
+        "fileTooBig": "Ce fichier est trop lourd.",
+        "notUtf8": "Ce tableau n’est pas en UTF-8 : enregistre-le en « CSV UTF-8 ».",
+        "notAnExport": "Ce fichier n’est pas un export de l’app.",
+        "unreadable": "Ce fichier n’est pas lisible.",
+        "newerFormat": "« {{name}} » n’est pas lisible : il vient d’une version plus récente de l’app (format {{value}}). Mets cette installation à jour, puis réessaie.",
+        "missingFile": "Ce fichier manque dans le zip.",
+        "alteredFile": "Ce fichier a changé depuis l’export : le zip n’est plus celui de l’app.",
+        "adminNotInFile": "Ton compte ({{value}}) n’est pas admin dans ce fichier : l’import est refusé.",
+        "importerCannotSignIn": "Dans ce fichier, ton compte ({{value}}) n’a pas de mot de passe ou n’est plus actif : tu ne pourrais plus te connecter. L’import est refusé."
+      },
+      "scores": {
+        "waiting_one": "{{count}} morceau a un fichier MuseScore sans MIDI ni partition à lire. Ton navigateur peut les produire, comme quand tu déposes un fichier sur un morceau.",
+        "waiting_other": "{{count}} morceaux ont un fichier MuseScore sans MIDI ni partition à lire. Ton navigateur peut les produire, comme quand tu déposes un fichier sur un morceau.",
+        "start": "Lire les partitions",
+        "reading": "Lecture des partitions : {{done}} sur {{count}}. Garde cette page ouverte.",
+        "read_one": "MIDI et partition prêts pour {{count}} morceau.",
+        "read_other": "MIDI et partition prêts pour {{count}} morceaux.",
+        "notRead_one": "L’app n’a pas pu lire la partition de {{names}}. Exporte un MIDI et un MusicXML depuis MuseScore et dépose-les sur le morceau.",
+        "notRead_other": "L’app n’a pas pu lire les partitions de {{names}}. Exporte un MIDI et un MusicXML depuis MuseScore et dépose-les sur chaque morceau.",
+        "stopped": "La lecture s’est arrêtée : vérifie ta connexion. Les morceaux restants attendent ici."
+      }
     }
   },
   "songs": {
@@ -1387,7 +1572,8 @@
       "songs_zero": "aucun morceau",
       "songs_one": "{{count}} morceau",
       "songs_other": "{{count}} morceaux",
-      "described": "{{description}} · {{songs}}",
+      "described": "{{description}} · {{summary}}",
+      "lasts": "{{minutes}} min · {{songs}}",
       "live": "En direct · {{position}}/{{count}}",
       "startLive": "Lancer en direct",
       "resumeLive": "Reprendre le direct",
@@ -1470,24 +1656,23 @@
         "length_other": "{{count}} morceaux · ≈ {{minutes}} min",
         "withoutLength_one": "{{count}} morceau sans durée",
         "withoutLength_other": "{{count}} morceaux sans durée",
-        "withGap": "dont {{gap}} s entre deux morceaux",
+        "withGap": "({{gap}} s entre deux morceaux)",
         "propose": {
           "open": "Proposer des morceaux",
           "title": "Proposer une setlist",
-          "howMany": "Combien de morceaux ?",
-          "about": "Environ {{minutes}} min, avec {{gap}} s entre deux morceaux.",
+          "howLong": "Combien de temps ?",
+          "howLongLabel": "Durée de la setlist, en minutes",
+          "minutes": "min",
+          "about_one": "Environ {{count}} morceau, avec {{gap}} s entre deux.",
+          "about_other": "Environ {{count}} morceaux, avec {{gap}} s entre deux.",
           "includeNew": "Inclure les nouveaux morceaux",
           "includeNewHint": "Au répertoire depuis moins de 2 mois : {{names}}.",
-          "replaces_one": "Remplace le morceau de cette setlist. Rien n’est enregistré avant « Enregistrer la setlist ».",
-          "replaces_other": "Remplace les {{count}} morceaux de cette setlist. Rien n’est enregistré avant « Enregistrer la setlist ».",
-          "go_one": "Proposer {{count}} morceau",
-          "go_other": "Proposer {{count}} morceaux",
+          "replaces_one": "Remplace le morceau de cette setlist.",
+          "replaces_other": "Remplace les {{count}} morceaux de cette setlist.",
+          "go": "Proposer {{minutes}} min",
           "done_one": "{{count}} morceau proposé.",
           "done_other": "{{count}} morceaux proposés.",
-          "made": "Proposée par l’app : de {{first}} pour démarrer à {{last}} pour finir. Retouche-la à la main, ou tire-en une autre.",
           "dropped": "Le répertoire ne permet pas de tout respecter : {{rules}}.",
-          "short_one": "Le répertoire n’a que {{count}} morceau à proposer.",
-          "short_other": "Le répertoire n’a que {{count}} morceaux à proposer.",
           "again": "Une autre proposition",
           "rules": {
             "positions": "un morceau à une place que ses positions ne prévoient pas",
@@ -1868,7 +2053,9 @@
   },
   "stepper": {
     "fewer": "Un de moins",
-    "more": "Un de plus"
+    "more": "Un de plus",
+    "fewerBy": "{{step}} {{unit}} de moins",
+    "moreBy": "{{step}} {{unit}} de plus"
   },
   "discord": {
     "open": "Ouvrir dans Discord",

@@ -35,6 +35,7 @@ final class ChangeStatusAction
         private readonly Sessions $sessions,
         private readonly PasswordLinks $links,
         private readonly PhotoStore $photos,
+        private readonly Invitations $invitations,
     ) {
     }
 
@@ -65,9 +66,14 @@ final class ChangeStatusAction
         });
         $this->photos->delete($erasedPhoto);
 
+        // Coming back is an invitation: with a mail server, it leaves by email (#50).
+        $emailed = $next === 'INVITED' && $token !== null && $this->invitations->canSend();
+        if ($emailed) {
+            $this->invitations->sendLater([(int) $arguments['id'] => $token]);
+        }
         $member = $this->members->oneVisibleTo($me, (int) $arguments['id']);
 
-        return Json::write($response, $token === null ? $member : [...$member, 'passwordLinkToken' => $token]);
+        return Json::write($response, $token === null ? $member : [...$member, 'passwordLinkToken' => $token, 'invitationEmailed' => $emailed]);
     }
 
     /**
@@ -122,7 +128,7 @@ final class ChangeStatusAction
     {
         $this->set($memberId, ['status' => 'INVITED'], $me);
 
-        return $this->links->create($memberId, $me->id);
+        return $this->links->create($memberId, $me->id, emailed: $this->invitations->canSend(), isInvitation: true);
     }
 
     /**

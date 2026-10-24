@@ -4,7 +4,8 @@
   gap: var(--spaceMd);
 }
 
-/* The number as Figma draws it: a title, without the look of a field. */
+/* The number as Figma draws it: a title, without the look of a field. With a
+   unit, the number and the unit read as one value ("45 min"). */
 .Stepper-value {
   width: 3ch;
   min-height: var(--controlHeightSm);
@@ -30,4 +31,14 @@
 
 :root[data-contrast="more"] .Stepper .IconButton:disabled {
   opacity: 1;
+}
+
+.Stepper-unit {
+  margin-inline-start: calc(-1 * var(--spaceMd) + var(--spaceXs));
+  color: var(--text);
+}
+
+.Stepper:has(.Stepper-unit) .Stepper-value {
+  width: calc(var(--digits) * 1ch + 0.125rem);
+  text-align: end;
 }

@@ -11,6 +11,8 @@
   border-radius: var(--radiusFull);
   background: transparent;
   text-align: center;
+  /* A link drawn as a Button (a download) reads as one. */
+  text-decoration: none;
   cursor: pointer;
 }
 

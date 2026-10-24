@@ -13,9 +13,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // PUT /api/band/gigReminders: how many days before a gig its two reminders
-// are sent, from which hour, and the time counted between two songs of a
-// setlist (the screen "Plans et setlists"). Asks for MANAGE_BAND. Rules:
-// model/band.md, "Reminders of a gig" and "Length of a setlist".
+// are sent, from which hour, the time counted between two songs of a setlist
+// and the length of a setlist the generator proposes first (the screen "Plans
+// et setlists"). Asks for MANAGE_BAND. Rules: model/band.md, "Reminders of a
+// gig", "Length of a setlist" and "Length of a proposed setlist".
 final class UpdateGigRemindersAction
 {
     public function __construct(
@@ -45,6 +46,11 @@ final class UpdateGigRemindersAction
         if ($input->setlistGapSeconds < 0 || $input->setlistGapSeconds > 300) {
             $errors->add('setlistGapSeconds', 'invalid');
         }
+        // From 5 minutes to 3 hours, by steps of 5 (Band v1.12).
+        $target = $input->setlistTargetMinutes;
+        if ($target < 5 || $target > 180 || $target % 5 !== 0) {
+            $errors->add('setlistTargetMinutes', 'invalid');
+        }
         $errors->throwIfAny();
 
         $this->database->update(
@@ -54,6 +60,7 @@ final class UpdateGigRemindersAction
                 'gigSecondReminderDays' => $second,
                 'gigReminderHour' => $input->gigReminderHour,
                 'setlistGapSeconds' => $input->setlistGapSeconds,
+                'setlistTargetMinutes' => $target,
                 'updatedByMemberId' => CurrentMember::of($request)->id,
             ],
             ['id' => 1],

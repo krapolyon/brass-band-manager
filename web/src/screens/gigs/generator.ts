@@ -1,5 +1,7 @@
-// The setlist generator (model/gigs.md v1.9, entry 4, "Proposing a setlist";
-// model/songs.md v1.9, "Setlist attributes"; issues #25 and #47). It runs in the browser,
+// The setlist generator (model/gigs.md v1.11, entry 4, "Proposing a setlist";
+// model/songs.md v1.9, "Setlist attributes"; issues #25, #47 and #60). It
+// asks for a length (proposeForLength), and places the songs by the rules of
+// the model (propose). It runs in the browser,
 // from the songs the editor already has: nothing is asked of the server and
 // nothing about a draw is stored.
 //
@@ -227,6 +229,90 @@ export function propose({ songs, count, includeNew, avoid, today, random }: Opti
     dropped: [...rules],
     isShort: size < count,
   };
+}
+
+/** What the generator by length reads of a song: the rest, and how long it lasts. */
+export type TimedSong = CandidateSong & { durationSeconds: number | null };
+
+/**
+ * The mean length of the songs the generator can draw from, in seconds,
+ * counted on those whose length is known. Null when none is known.
+ */
+export function meanLengthOf(songs: TimedSong[]): number | null {
+  const known = songs.flatMap((song) => (song.durationSeconds ? [song.durationSeconds] : []));
+  return known.length > 0 ? known.reduce((sum, one) => sum + one, 0) / known.length : null;
+}
+
+/**
+ * How many songs should fit in a length (model/gigs.md v1.11, "Proposing a
+ * setlist"): the length asked plus one gap, divided by the mean length of a
+ * song plus one gap. One at least. Null when no length is known.
+ */
+export function songsThatFit(minutes: number, gapSeconds: number, mean: number | null) {
+  if (mean === null) return null;
+  return Math.max(1, Math.floor((minutes * 60 + gapSeconds) / (mean + gapSeconds)));
+}
+
+// When no song of the repertoire has a length, the generator cannot count in
+// minutes: it proposes the number of songs it proposed before 0.4.0.
+const COUNT_WITHOUT_LENGTHS = 10;
+// How many draws a number of songs gets before the generator takes one fewer.
+const DRAWS_PER_COUNT = 20;
+
+/**
+ * Proposes the songs of a setlist for a length, in minutes (issue #60): as
+ * many songs as stay within it, counting the length of each song and the time
+ * between two of them; a song without a length counts as the mean length of
+ * the songs it can draw from. The number of songs starts from the estimate,
+ * then moves by one while a draw stays within the length, or until it does:
+ * the places of a set depend on how many songs it has, so each number is a
+ * draw of its own.
+ */
+export function proposeForLength({
+  songs,
+  minutes,
+  gapSeconds,
+  ...options
+}: Omit<Options, 'count' | 'songs'> & {
+  songs: TimedSong[];
+  minutes: number;
+  gapSeconds: number;
+}): Proposal & { count: number } {
+  const pool = candidatesOf(songs, options.includeNew, options.today);
+  const mean = meanLengthOf(pool);
+  const byId = new Map(pool.map((song) => [song.id, song]));
+  const secondsOf = (proposal: Proposal) =>
+    proposal.songIds.reduce(
+      (sum, id) => sum + (byId.get(id)?.durationSeconds ?? mean ?? 0),
+      gapSeconds * Math.max(0, proposal.songIds.length - 1),
+    );
+  const fits = (proposal: Proposal) => secondsOf(proposal) <= minutes * 60;
+  const draw = (count: number) => ({ ...propose({ ...options, songs, count }), count });
+  // A few draws of the same number of songs: one of them may be short enough
+  // where the first was not. The first that fits, or the last one drawn.
+  const drawWithin = (count: number) => {
+    let drawn = draw(count);
+    for (let attempt = 1; attempt < DRAWS_PER_COUNT && !fits(drawn); attempt++) {
+      drawn = draw(count);
+    }
+    return drawn;
+  };
+
+  const estimate = songsThatFit(minutes, gapSeconds, mean);
+  if (estimate === null) return draw(COUNT_WITHOUT_LENGTHS);
+
+  const most = Math.max(1, pool.length);
+  let best = drawWithin(Math.min(estimate, most));
+  // Too long: one song fewer, down to one.
+  while (!fits(best) && best.count > 1) best = drawWithin(best.count - 1);
+  // Room left: one song more while it still fits and the repertoire allows.
+  // A short proposal already holds every song the draw could take.
+  while (fits(best) && !best.isShort && best.count < most) {
+    const more = drawWithin(best.count + 1);
+    if (!fits(more) || more.songIds.length <= best.songIds.length) break;
+    best = more;
+  }
+  return best;
 }
 
 /** A random number from a seed, always the same series for the same seed (mulberry32). */

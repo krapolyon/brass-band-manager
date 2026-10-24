@@ -1,6 +1,14 @@
 # The front is a single page: any address that is not a real file
 # is answered by index.html, and React shows the right screen.
 RewriteEngine On
+
+# Some browsers ask /favicon.ico whatever the page names (Safari and Chrome,
+# for bookmarks and restored tabs). It is answered with the icon of the band,
+# the one index.html names, never with index.html (issue #63). A redirect, not
+# a rewrite: the API reads the address the browser asked for. 302: asked again
+# each time, so that a new icon of the band is seen.
+RewriteRule ^favicon\.ico$ /api/band/icon/192 [R=302,L]
+
 RewriteCond %{REQUEST_URI} !^/api/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -10,3 +18,11 @@ RewriteRule ^ /index.html [L]
 # or a browser refuses to run them (web/src/screens/songs/score.worker.ts).
 AddType text/javascript .mjs
 AddType application/wasm .wasm
+
+# The typefaces of the app are also offered to the emails it sends (#65): a
+# mail client reads them from another origin than the app.
+<IfModule mod_headers.c>
+  <FilesMatch "\.woff2$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+</IfModule>
