@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'app de la fanfare — guide des fanfarons</title>
+<meta name="description" content="Tout ce que l'app de la fanfare sait faire, écran par écran.">
+<link rel="stylesheet" href="guide.css">
+</head>
+<body>
+
+<header class="hero">
+  <h1>L'app de la fanfare</h1>
+  <p class="lead">Les plans, les morceaux, les partitions et les fanfarons, dans ta poche. Voici ce qu'elle sait faire, écran par écran.</p>
+  <nav class="switch" aria-label="Public">
+    <a href="index.html" aria-current="page">Je suis fanfaron</a>
+    <a href="managers.html">Je gère quelque chose</a>
+  </nav>
+</header>
+
+<div class="page">
+  <nav class="toc" aria-label="Sommaire">
+    <a href="#install"><span class="num">1</span>Installer</a>
+    <a href="#home"><span class="num">2</span>Accueil</a>
+    <a href="#songs"><span class="num">3</span>Morceaux</a>
+    <a href="#gigs"><span class="num">4</span>Plans</a>
+    <a href="#setlists"><span class="num">5</span>Setlists</a>
+    <a href="#members"><span class="num">6</span>Fanfarons</a>
+    <a href="#settings"><span class="num">7</span>Réglages</a>
+    <a href="#roles"><span class="num">8</span>Qui fait quoi</a>
+  </nav>
+
+  <main>
+
+    <!-- 1 · Install ---------------------------------------------------- -->
+    <section class="section" id="install">
+      <figure class="phone"><div class="screen"><img src="img/onboarding-password.webp" alt="Écran « Plus qu'un mot de passe » : étape 2 sur 2 de l'arrivée dans l'app" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Installer l'app</h2>
+        <p class="intro">Pas de store : l'app s'installe depuis le navigateur, en deux minutes.</p>
+        <ul class="points">
+          <li><span class="ico">1</span><div><b>Tu reçois un lien d'invitation</b><span>Par e-mail. Il marche une fois, pendant 7 jours. Il ouvre une fiche pré-remplie : tu vérifies, tu complètes, tu choisis ton mot de passe.</span></div></li>
+          <li><span class="ico">2</span><div><b>Ton identifiant, c'est ton adresse e-mail</b><span>Mot de passe oublié : un lien par e-mail, ou demande à un admin.</span></div></li>
+          <li><span class="ico">3</span><div><b>Installe l'app sur ton téléphone</b><span>Il y a un guide dans l'app qui t'explique comment faire. Le guide s'affiche à l'accueil et reste disponible dans les réglages.</span></div></li>
+          <li><span class="ico">4</span><div><b>Sur iPhone, c'est obligatoire pour les notifs</b><span>Les notifications n'arrivent que si l'app est installée et ouverte depuis son icône.</span></div></li>
+          <li><span class="ico">5</span><div><b>Tu restes connecté</b><span>Pas besoin de te reconnecter à chaque fois. Tu peux déconnecter tous tes appareils d'un coup, depuis les réglages.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/install-guide-iphone.webp" alt="Le guide d'installation sur iPhone, en trois étapes" width="780" height="1688" loading="lazy"></div></div><figcaption>Le guide d'installation, montré une fois après la connexion</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · Home ------------------------------------------------------- -->
+    <section class="section" id="home">
+      <figure class="phone"><div class="screen"><img src="img/home.webp" alt="L'accueil : les plans à venir avec les boutons de réponse, et les derniers morceaux" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Accueil</h2>
+        <p class="intro">Pour avoir une vue d'ensemble</p>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Les plans à venir</b><span>Avec les boutons de réponse directement sous chaque plan.</span></div></li>
+          <li><span class="ico">•</span><div><b>Les plans qui attendent ta réponse</b><span>Une carte en haut t'indique les plans qui attendent tes dispos. Tu peux filtrer pour ne voir que ceux-là.</span></div></li>
+          <li><span class="ico">•</span><div><b>Le plan du jour en grand</b><span>Le jour d'un plan, il passe en tête avec l'heure du rendez-vous.</span></div></li>
+          <li><span class="ico">•</span><div><b>Les derniers morceaux au répertoire</b><span>Trois pochettes en bas de l'écran. Si tu as une lecture en cours, le mini-lecteur prend la place.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/home-gig-day.webp" alt="L'accueil le jour d'un plan : le plan en grand, avec l'heure du rendez-vous et « Y aller »" width="780" height="1688" loading="lazy"></div></div><figcaption>Le jour d'un plan, il passe en tête</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · Songs ------------------------------------------------------ -->
+    <section class="section" id="songs">
+      <figure class="phone"><div class="screen"><img src="img/song-mp3.webp" alt="La fiche d'un morceau en mode MP3 : pochette, barre des modes, lecteur" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Morceaux</h2>
+        <p class="intro">Tout le répertoire, avec plein de fonctionnalités pour chaque morceau.</p>
+        <div class="grid">
+          <div class="cell"><b>MP3</b><span>Un enregistrement audio. Il continue de jouer pendant que tu navigues.</span></div>
+          <div class="cell"><b>MIDI</b><span>Vue des pistes, qu'on peut masquer. On peut changer le tempo et boucler sur des mesures ou des repères.</span></div>
+          <div class="cell"><b>PDF</b><span>La partition de ton instru s'affiche par défaut mais tu peux voir les autres. Tu peux les afficher en plein écran.</span></div>
+          <div class="cell"><b>Clip</b><span>La version originale, depuis YouTube.</span></div>
+          <div class="cell"><b>Live</b><span>Lecture de partition en mode "karaoke" qui défile. Tu peux indiquer le tempo en tapant, et choisir la mesure de départ, ou lire avec le MIDI.</span></div>
+        </div>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Chercher et filtrer</b><span>Par nom, titre original ou interprète ; en liste ou grille. Les anciens morceaux ou les candidats sont visibles via un filtre.</span></div></li>
+          <li><span class="ico">•</span><div><b>Maîtrise et kif</b><span>Tu notes chaque morceau sur 5, pour toi. Personne ne voit tes notes : la fanfare ne voit que la moyenne. L'app te le rappelle si tu n'as pas noté, ou si ta note date de plus d'un an.</span></div></li>
+          <li><span class="ico">•</span><div><b>Tout télécharger</b><span>Toutes tes partitions, tous les enregistrements, tous les MIDI ou MuseScore : un zip des morceaux affichés.</span></div></li>
+          <li><span class="ico">•</span><div><b>Le fil Discord du morceau</b><span>Les messages du salon qui taguent l'app et ton pupitre s'affichent sur la fiche. Un bouton ouvre le salon.</span></div></li>
+          <li><span class="ico">•</span><div><b>Le statut</b><span>Proposé · Montage en cours · Au répertoire · Temporaire · Abandonné.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/song-midi.webp" alt="Le mode MIDI : une piste par instrument" width="780" height="1688" loading="lazy"></div></div><figcaption>MIDI : une piste par instrument, tempo et boucle</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/song-pdf.webp" alt="Le mode PDF : ta partition" width="780" height="1688" loading="lazy"></div></div><figcaption>PDF : ta partition, les autres au choix</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/song-live.webp" alt="Le mode live : la partition défile, mesure et tempo en bas" width="780" height="1688" loading="lazy"></div></div><figcaption>Live : ta partie défile pendant qu'on joue</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 · Gigs ------------------------------------------------------- -->
+    <section class="section" id="gigs">
+      <figure class="phone"><div class="screen"><img src="img/gig-confirmed.webp" alt="Un plan validé : image, date, rendez-vous et carte" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Plans</h2>
+        <p class="intro">Les plans (ou vacances ou résidences), avec les présences et toutes les infos</p>
+        <div class="flow">
+          <span class="step">Brouillon</span><span class="arrow">→</span>
+          <span class="step">Proposition</span><span class="arrow">→</span>
+          <span class="step">Accepté</span><span class="arrow">→</span>
+          <span class="step accent">Validé</span>
+          <span class="arrow">·</span><span class="step">Annulé</span>
+        </div>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Indique tes présences</b><span>Oui · Non · Peut-être · Si besoin. « Si besoin » : tu ne viens que si ça sauve le plan. Tu peux changer tant que le plan n'est pas passé.</span></div></li>
+          <li><span class="ico">•</span><div><b>Calcul automatique de jouabilité</b><span>Un plan accepté qui devient jouable passe automatiquement en validé.</span></div></li>
+          <li><span class="ico">•</span><div><b>Présences sur plusieurs jours</b><span>Tu réponds pour chacune, mais tu peux aussi dire « Oui partout ».</span></div></li>
+          <li><span class="ico">•</span><div><b>Rendez-vous et carte</b><span>L'heure, le lieu, un aperçu de carte. « Y aller » ouvre ton app de cartes.</span></div></li>
+          <li><span class="ico">•</span><div><b>Déguiz</b><span>Si un déguiz a été déterminé, l'image en fond du plan, c'est son déguiz (on peut en mettre deux).</span></div></li>
+          <li><span class="ico">•</span><div><b>Qui vient</b><span>Pupitre par pupitre : qui a dit oui, peut-être, si besoin, qui n'a pas répondu.</span></div></li>
+          <li><span class="ico">•</span><div><b>Rappels automatiques</b><span>Tant que tu n'as pas répondu, deux rappels avant le plan, par notification ou par e-mail.</span></div></li>
+          <li><span class="ico">•</span><div><b>Notifications</b><span>Tu peux être prévenu quand un plan où tu as dit oui devient jouable ou validé.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/gig-several-days.webp" alt="Un plan sur trois jours, avec ses présences" width="780" height="1688" loading="lazy"></div></div><figcaption>Un plan sur plusieurs jours : une réponse par présence</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/gig-who-comes.webp" alt="Qui vient, pupitre par pupitre" width="780" height="1688" loading="lazy"></div></div><figcaption>Qui vient, pupitre par pupitre</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 · Setlists --------------------------------------------------- -->
+    <section class="section" id="setlists">
+      <figure class="phone"><div class="screen"><img src="img/gig-setlists.webp" alt="Les setlists d'un plan : la première dépliée avec ses morceaux, la seconde repliée" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Setlists</h2>
+        <p class="intro">Retrouve les setlists du plan.</p>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Accessibles directement</b><span>Les setlist sont visibles dans le détail du plan.</span></div></li>
+          <li><span class="ico">•</span><div><b>Toucher un morceau l'ouvre</b><span>Pour réécouter ou relire ta partie avant le plan.</span></div></li>
+          <li><span class="ico">•</span><div><b>Le direct</b><span>Pendant le plan, le gestionnaire fait avancer la setlist. Si tu as dit oui, tu suis le morceau en cours sur ton écran et par notification : « 4/12 · Prochain : … ».</span></div></li>
+          <li><span class="ico">•</span><div><b>Depuis le direct, ouvre le morceau en mode live</b><span>Ta partie défile pendant qu'on joue.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/live-setlist-member.webp" alt="La setlist en direct : le morceau en cours en grand, les suivants en dessous" width="780" height="1688" loading="lazy"></div></div><figcaption>Le direct : le morceau en cours en grand</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · Members ---------------------------------------------------- -->
+    <section class="section" id="members">
+      <figure class="phone"><div class="screen"><img src="img/directory.webp" alt="Le trombi des fanfarons : photos, surnoms, pupitres" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Fanfarons</h2>
+        <p class="intro">Le trombi de la fanfare.</p>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Liste des membres</b><span>Photo, surnom et pictogramme du pupitre. Filtre « Mon pupitre » pour filtrer sur tes copupitres.</span></div></li>
+          <li><span class="ico">•</span><div><b>Appeler, écrire, y aller</b><span>Touche une tête : téléphone, e-mail, et l'adresse. Un bouton "Y aller" ouvre ton appli de navigation</span></div></li>
+          <li><span class="ico">•</span><div><b>Power members</b><span>Ils sont masqués par défaut, mais on peut les afficher. Ils ne reçoivent pas les rappels.</span></div></li>
+          <li><span class="ico">•</span><div><b>Données sécurisées</b><span>Chiffrées dans la base de données. Les données sont effacées en cas de départ.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/directory-member.webp" alt="La fiche d'un fanfaron : appeler, écrire, y aller" width="780" height="1688" loading="lazy"></div></div><figcaption>La fiche d'un fanfaron</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 · Settings --------------------------------------------------- -->
+    <section class="section" id="settings">
+      <figure class="phone"><div class="screen"><img src="img/settings-summary.webp" alt="Les réglages : mon compte, la fanfare" width="780" height="1688" loading="lazy"></div></figure>
+      <div class="text">
+        <h2>Réglages</h2>
+        <p class="intro">Ton compte, tes notifications, ton apparence.</p>
+        <ul class="points">
+          <li><span class="ico">•</span><div><b>Notifications, par type et par canal</b><span>Rappels de présence, plans jouables, plans validés, prochain morceau de la setlist, nouveau morceau, nouvelle partition pour ton instrument. Pour chacun : notification, e-mail, ou les deux.</span></div></li>
+          <li><span class="ico">•</span><div><b>Calendrier</b><span>Pour synchroniser l'agenda de ton téléphone ou ton ordi avec les plans où tu as dit oui, peut-être ou si besoin ; ils sont retirés s'ils sont annulés.</span></div></li>
+          <li><span class="ico">•</span><div><b>Mode clair / sombre et dix couleurs</b><span>L'app est en sombre par défaut. Pour la couleur principale, tu peux choisir parmi 10 valeurs.</span></div></li>
+          <li><span class="ico">•</span><div><b>Accessibilité</b><span>Taille du texte, contraste élevé, espacement, police plus lisible, mouvement réduit, délais augmentés. Disponibles dès l'écran de connexion.</span></div></li>
+          <li><span class="ico">•</span><div><b>Mon profil et mon mot de passe</b><span>Ce que les autres voient de toi. Changer de mot de passe déconnecte tes autres appareils.</span></div></li>
+          <li><span class="ico">•</span><div><b>À propos</b><span>Les nouveautés de chaque version.</span></div></li>
+        </ul>
+        <div class="strip">
+          <figure><div class="mini"><div class="screen"><img src="img/settings-notifications.webp" alt="Les notifications, par type, avec le canal : notification ou e-mail" width="780" height="1688" loading="lazy"></div></div><figcaption>Notifications : par type, notification ou e-mail</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/settings-calendar.webp" alt="Le calendrier synchronisé" width="780" height="1688" loading="lazy"></div></div><figcaption>Calendrier : tes plans dans ton agenda</figcaption></figure>
+          <figure><div class="mini"><div class="screen"><img src="img/settings-appearance.webp" alt="L'apparence : clair ou sombre, couleur d'accent" width="780" height="1688" loading="lazy"></div></div><figcaption>Apparence : clair ou sombre, dix couleurs</figcaption></figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 · Roles ------------------------------------------------------ -->
+    <section class="section" id="roles">
+      <div></div>
+      <div class="text">
+        <h2>Qui fait quoi</h2>
+        <p class="intro">Tout le monde voit tout. Certains peuvent modifier.</p>
+        <table>
+          <thead><tr><th>Rôle</th><th>Ce qu'il peut faire</th></tr></thead>
+          <tbody>
+            <tr><td><b>Fanfaron</b></td><td>Tout voir, répondre aux plans, noter les morceaux, télécharger, régler son compte.</td></tr>
+            <tr><td><b>Brasseur d'un plan</b></td><td>Modifier son plan, noter la réponse d'un fanfaron, relancer.</td></tr>
+            <tr><td><b>Gère les morceaux</b></td><td>Ajouter, modifier, changer le statut d'un morceau.</td></tr>
+            <tr><td><b>Gère les plans</b></td><td>Créer, modifier, annuler un plan.</td></tr>
+            <tr><td><b>Gère les setlists</b></td><td>Écrire une setlist, lancer le direct.</td></tr>
+            <tr><td><b>Gère les fanfarons</b></td><td>Inviter, modifier une fiche, changer un statut.</td></tr>
+            <tr><td><b>Admin</b></td><td>Tout, rôles et réglages de la fanfare compris.</td></tr>
+          </tbody>
+        </table>
+        <p class="intro" style="margin-top:20px">Tu gères quelque chose ? <a href="managers.html">La page des gestionnaires</a> détaille chaque écran.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>Guide des fanfarons</footer>
+
+<script>
+// Highlights the current section in the table of contents.
+const links = [...document.querySelectorAll('.toc a')];
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id)); });
+}, { rootMargin: '-30% 0px -60% 0px' });
+document.querySelectorAll('main section').forEach(s => io.observe(s));
+</script>
+</body>
+</html>

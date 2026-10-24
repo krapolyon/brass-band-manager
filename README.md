@@ -108,6 +108,7 @@ A setlist of six songs has three places for Début and three for Fin, and none i
 
 | Document | What it tells |
 |---|---|
+| [docs/guide/](docs/guide/index.html) | The guide of the app for members, and the one for whoever manages (`managers.html`) |
 | [docs/architecture.md](docs/architecture.md) | How the app is built, how to add a route, a screen, a text or a migration, and why each dependency is there |
 | [docs/scoping.md](docs/scoping.md) | What the app is for, the decisions taken and the build order |
 | [CLAUDE.md](CLAUDE.md) | The rules followed when writing code, for people and for AI assistants |
