@@ -256,15 +256,18 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
         )}
 
         <Sheet title={t('manage.table.status')}>
-          <NavRow
-            icon={statusIcon[status]}
-            label={t(`member.status.${status}`)}
-            detail={
-              status === 'INVITED' && sentOn !== ''
-                ? t('manage.status.INVITED_SENT', { sent: sentOn, date: until })
-                : t(`manage.status.${status}`, { date: until })
-            }
-          />
+          {/* Said when it changes: "Renvoyer l'invitation" has no other answer. */}
+          <div aria-live="polite">
+            <NavRow
+              icon={statusIcon[status]}
+              label={t(`member.status.${status}`)}
+              detail={
+                status === 'INVITED' && sentOn !== ''
+                  ? t('manage.status.INVITED_SENT', { sent: sentOn, date: until })
+                  : t(`manage.status.${status}`, { date: until })
+              }
+            />
+          </div>
         </Sheet>
 
         <Sheet title={t('manage.actions.title')}>

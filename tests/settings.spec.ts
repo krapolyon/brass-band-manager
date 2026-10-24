@@ -54,7 +54,7 @@ test.describe('the summary', () => {
     await expect(page.getByRole('link', { name: 'Mon profil' })).toContainText('Zaza');
     await expect(page.getByRole('link', { name: 'Mon profil' })).toContainText('Trompette');
     await expect(page.getByRole('link', { name: /Apparence/ })).toContainText(
-      'Auto · couleur de la fanfare',
+      'Sombre · couleur de la fanfare',
     );
     await expect(page.getByRole('link', { name: /Accessibilité/ })).toContainText(
       'Aucune option activée',

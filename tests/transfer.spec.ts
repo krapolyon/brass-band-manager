@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
 import { emptyMailbox, receivedMails } from './support/mail.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
+import { museScore, readableScore } from './support/songFiles.ts';
 import { emptyImportFolder, emptyStorage } from './support/storage.ts';
 import { makeZip, readZip } from './support/zip.ts';
 
@@ -110,6 +111,54 @@ test('a reprise with faults lists every line to correct, and loads nothing', asy
 
   await page.getByRole('button', { name: 'Redéposer un zip' }).click();
   await expect(page.getByText('Dépose le fichier .zip')).toBeVisible();
+});
+
+test('after a reprise, the browser reads each MuseScore file and sends its MIDI file, its MusicXML and its length', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await signIn(page);
+  await page.goto('/band/import');
+  const songs =
+    'name;originalTitle;originalArtist;status\r\n' +
+    'Hey Ya;Hey Ya!;OutKast;Au répertoire\r\n' +
+    'Sledge;Sledgehammer;Peter Gabriel;Au répertoire\r\n';
+  await drop(
+    page,
+    makeZip({
+      'songs.csv': songs,
+      // Four measures at 120, the first two played twice: 12 seconds.
+      'songs/Hey Ya/Hey Ya.mscz': readableScore('repeat'),
+      // Not a score the engine can read: it keeps its MuseScore file alone.
+      'songs/Sledge/Sledge.mscz': museScore,
+    }),
+  );
+  await page.getByRole('button', { name: 'Charger les données' }).click();
+  const panel = page.getByRole('dialog', { name: 'Ton mot de passe' });
+  await panel.getByLabel('Mot de passe', { exact: true }).fill(admin.password);
+  await panel.getByRole('button', { name: 'Charger les données' }).click();
+
+  await expect(page.getByText('MIDI et partition prêts pour 1 morceau.')).toBeVisible({
+    timeout: 90_000,
+  });
+  await expect(
+    page.getByText('L’app n’a pas pu lire la partition de Sledge.', { exact: false }),
+  ).toBeVisible();
+  expect(
+    sql(
+      "SELECT midiPath IS NOT NULL, musicXmlPath IS NOT NULL, durationSeconds FROM song WHERE name = 'Hey Ya'",
+    ),
+  ).toBe('1\t1\t12');
+  expect(sql("SELECT midiPath IS NULL FROM song WHERE name = 'Sledge'")).toBe('1');
+
+  // The one left waits on the screen, read again only when asked.
+  await page.reload();
+  await expect(
+    page.getByText('1 morceau a un fichier MuseScore sans MIDI ni partition à lire.', {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Lire les partitions' })).toBeVisible();
 });
 
 test('the export ticks what a part needs, asks the password again, and saves the zip', async ({

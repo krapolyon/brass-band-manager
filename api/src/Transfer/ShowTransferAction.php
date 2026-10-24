@@ -11,8 +11,8 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 // GET /api/transfer: what the screens "Exporter" and "Importer" show before
-// anything is chosen: how much each part holds, and the zips that wait in
-// the folder "import". For the admin only.
+// anything is chosen: how much each part holds, the zips that wait in
+// the folder "import", and the scores to read. For the admin only.
 final class ShowTransferAction
 {
     public function __construct(
@@ -38,6 +38,15 @@ final class ShowTransferAction
             'gigs' => (int) $this->database->fetchOne('SELECT COUNT(*) FROM gig'),
             'zips' => $this->folder->zips(),
             'canSendEmail' => $this->mailer->canSend(),
+            // The songs whose score waits to be read by the browser of the
+            // admin: a MuseScore file, and neither a MIDI file nor a MusicXML
+            // (a reprise gives the MuseScore file alone; readScores.ts).
+            'scoresToRead' => array_map(
+                fn (array $song) => ['id' => (int) $song['id'], 'name' => (string) $song['name']],
+                $this->database->fetchAllAssociative(
+                    'SELECT id, name FROM song WHERE museScorePath IS NOT NULL AND midiPath IS NULL AND musicXmlPath IS NULL ORDER BY name',
+                ),
+            ),
         ]);
     }
 }

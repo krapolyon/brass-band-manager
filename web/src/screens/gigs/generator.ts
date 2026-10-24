@@ -306,9 +306,10 @@ export function proposeForLength({
   // Too long: one song fewer, down to one.
   while (!fits(best) && best.count > 1) best = drawWithin(best.count - 1);
   // Room left: one song more while it still fits and the repertoire allows.
-  while (fits(best) && best.count < most) {
+  // A short proposal already holds every song the draw could take.
+  while (fits(best) && !best.isShort && best.count < most) {
     const more = drawWithin(best.count + 1);
-    if (!fits(more)) break;
+    if (!fits(more) || more.songIds.length <= best.songIds.length) break;
     best = more;
   }
   return best;

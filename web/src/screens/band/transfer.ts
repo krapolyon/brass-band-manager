@@ -17,6 +17,8 @@ export type TransferState = {
   gigs: number;
   zips: { name: string; bytes: number; at: string }[];
   canSendEmail: boolean;
+  /** The songs with a MuseScore file and neither a MIDI file nor a MusicXML: their scores wait to be read. */
+  scoresToRead: { id: number; name: string }[];
 };
 
 export type Problem = {
@@ -57,6 +59,9 @@ export function useTransfer() {
     queryFn: () => api<TransferState>('/api/transfer'),
   });
 }
+
+/** The largest zip the browser may send; a larger one goes by FTP (TransferFolder.php). */
+export const MAX_UPLOAD_BYTES = 250_000_000;
 
 /** Sends a zip as it is, as the body of its request; answers its name in the folder "import". */
 export async function uploadZip(file: File): Promise<string> {

@@ -12,8 +12,8 @@ use Doctrine\DBAL\Connection;
 final class SpokenNames
 {
     // model/songs.md, field `songSpokenName.phrase`.
-    private const MIN_LENGTH = 2;
-    private const MAX_LENGTH = 60;
+    public const MIN_LENGTH = 2;
+    public const MAX_LENGTH = 60;
     public const MAX_PER_SONG = 20;
 
     public function __construct(private readonly Connection $database)

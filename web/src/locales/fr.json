@@ -1084,7 +1084,19 @@
         "newerFormat": "« {{name}} » n’est pas lisible : il vient d’une version plus récente de l’app (format {{value}}). Mets cette installation à jour, puis réessaie.",
         "missingFile": "Ce fichier manque dans le zip.",
         "alteredFile": "Ce fichier a changé depuis l’export : le zip n’est plus celui de l’app.",
-        "adminNotInFile": "Ton compte ({{value}}) n’est pas admin dans ce fichier : l’import est refusé."
+        "adminNotInFile": "Ton compte ({{value}}) n’est pas admin dans ce fichier : l’import est refusé.",
+        "importerCannotSignIn": "Dans ce fichier, ton compte ({{value}}) n’a pas de mot de passe ou n’est plus actif : tu ne pourrais plus te connecter. L’import est refusé."
+      },
+      "scores": {
+        "waiting_one": "{{count}} morceau a un fichier MuseScore sans MIDI ni partition à lire. Ton navigateur peut les produire, comme quand tu déposes un fichier sur un morceau.",
+        "waiting_other": "{{count}} morceaux ont un fichier MuseScore sans MIDI ni partition à lire. Ton navigateur peut les produire, comme quand tu déposes un fichier sur un morceau.",
+        "start": "Lire les partitions",
+        "reading": "Lecture des partitions : {{done}} sur {{count}}. Garde cette page ouverte.",
+        "read_one": "MIDI et partition prêts pour {{count}} morceau.",
+        "read_other": "MIDI et partition prêts pour {{count}} morceaux.",
+        "notRead_one": "L’app n’a pas pu lire la partition de {{names}}. Exporte un MIDI et un MusicXML depuis MuseScore et dépose-les sur le morceau.",
+        "notRead_other": "L’app n’a pas pu lire les partitions de {{names}}. Exporte un MIDI et un MusicXML depuis MuseScore et dépose-les sur chaque morceau.",
+        "stopped": "La lecture s’est arrêtée : vérifie ta connexion. Les morceaux restants attendent ici."
       }
     }
   },

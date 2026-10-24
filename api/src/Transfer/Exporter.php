@@ -171,9 +171,12 @@ final class Exporter
     private function songs(): array
     {
         $rows = [];
+        // Two names can give the same folder ("Ça va" and "Ça va !"): a number tells them apart.
+        $folders = [];
         foreach ($this->database->fetchAllAssociative('SELECT * FROM song ORDER BY name') as $song) {
             $id = (int) $song['id'];
             $folder = self::slug((string) $song['name']) ?: "song-{$id}";
+            $folder = self::unused($folders, $folder);
             $file = function (mixed $path, string $name) use ($folder): ?string {
                 $source = is_string($path) ? $this->files->find($path) : null;
                 if ($source === null) {
@@ -240,11 +243,14 @@ final class Exporter
     private function gigs(): array
     {
         $costumes = [];
+        $pictures = [];
         foreach ($this->database->fetchAllAssociative('SELECT * FROM costume ORDER BY position') as $costume) {
             $source = is_string($costume['imagePath']) ? $this->files->find($costume['imagePath']) : null;
             $picture = null;
             if ($source !== null) {
-                $picture = 'files/' . (self::slug((string) $costume['name']) ?: "costume-{$costume['id']}") . '.' . pathinfo($source, PATHINFO_EXTENSION);
+                $base = self::slug((string) $costume['name']) ?: "costume-{$costume['id']}";
+                $base = self::unused($pictures, $base);
+                $picture = "files/{$base}." . pathinfo($source, PATHINFO_EXTENSION);
                 $this->add('gigs', $picture, $source);
             }
             $costumes[] = ['name' => $costume['name'], 'position' => (int) $costume['position'], 'picture' => $picture];
@@ -343,6 +349,22 @@ final class Exporter
     }
 
     /** "Les Krapos" → "les-krapos": letters, digits and hyphens. */
+    /**
+     * A name not yet taken among $used, then taken: "ca-va", then "ca-va-2".
+     *
+     * @param array<string, true> $used
+     */
+    private static function unused(array &$used, string $name): string
+    {
+        $unused = $name;
+        for ($number = 2; isset($used[$unused]); $number++) {
+            $unused = "{$name}-{$number}";
+        }
+        $used[$unused] = true;
+
+        return $unused;
+    }
+
     public static function slug(string $text): string
     {
         return implode('-', \BrassBand\Songs\FileNames::words($text));

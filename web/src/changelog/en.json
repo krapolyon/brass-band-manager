@@ -5,7 +5,7 @@
     "changes": [
       {
         "kind": "added",
-        "text": "The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings."
+        "text": "The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings. The browser then makes the MIDI file and the score of each MuseScore file loaded."
       },
       {
         "kind": "added",

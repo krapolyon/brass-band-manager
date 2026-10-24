@@ -14,6 +14,7 @@ use BrassBand\Gigs\GigRecord;
 use BrassBand\Gigs\Gigs;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
+use BrassBand\Http\Text;
 use BrassBand\Install\Languages;
 use BrassBand\Members\MemberInput;
 use BrassBand\Members\MemberRecord;
@@ -88,7 +89,7 @@ final class ExportImport
      */
     public function manifest(): ?array
     {
-        $manifest = json_decode((string) $this->zip->getFromName('manifest.json'), true);
+        $manifest = json_decode((string) ZipFiles::read($this->zip, 'manifest.json', ZipFiles::DATA_MAX_BYTES), true);
         if (!is_array($manifest) || ($manifest['app'] ?? null) !== 'brass-band-manager' || !is_int($manifest['format'] ?? null)) {
             $this->problems->add('manifest.json', null, null, 'notAnExport');
 
@@ -129,24 +130,36 @@ final class ExportImport
         $this->checkHashes($manifest);
         $data = [];
         foreach ($parts as $part) {
-            $read = json_decode((string) $this->zip->getFromName(self::PART_FILES[$part]), true);
+            if (ZipFiles::isTooBig($this->zip, self::PART_FILES[$part], ZipFiles::DATA_MAX_BYTES)) {
+                $this->problems->add(self::PART_FILES[$part], null, null, 'fileTooBig');
+                continue;
+            }
+            $read = json_decode((string) ZipFiles::read($this->zip, self::PART_FILES[$part], ZipFiles::DATA_MAX_BYTES), true);
             if (!is_array($read)) {
                 $this->problems->add(self::PART_FILES[$part], null, null, 'unreadable');
                 continue;
             }
             $data[$part] = $read;
         }
-        // The admin who imports must be an admin in the file: they keep the
-        // hand on the installation.
+        // The admin who imports must be an admin in the file, and able to
+        // sign in with it: every session ends after the import, theirs
+        // included, and they sign in again with the password of the file.
         if (isset($data['members'])) {
             $isAdmin = false;
+            $canSignIn = false;
             foreach (self::rows($data['members'], 'member') as $member) {
-                if (mb_strtolower((string) ($member['email'] ?? '')) === $this->importerEmail && in_array(Role::ADMIN->value, (array) ($member['roles'] ?? []), true)) {
-                    $isAdmin = true;
+                if (mb_strtolower((string) ($member['email'] ?? '')) !== $this->importerEmail) {
+                    continue;
                 }
+                $isAdmin = in_array(Role::ADMIN->value, (array) ($member['roles'] ?? []), true);
+                $hash = $member['passwordHash'] ?? null;
+                $canSignIn = in_array($member['status'] ?? null, ['ACTIVE', 'POWER_MEMBER'], true)
+                    && is_string($hash) && password_get_info($hash)['algo'] !== null;
             }
             if (!$isAdmin) {
                 $this->problems->add('members/data.json', null, null, 'adminNotInFile', $this->importerEmail);
+            } elseif (!$canSignIn) {
+                $this->problems->add('members/data.json', null, null, 'importerCannotSignIn', $this->importerEmail);
             }
         }
         if (!$this->problems->isEmpty()) {
@@ -199,8 +212,11 @@ final class ExportImport
     private function checkHashes(array $manifest): void
     {
         foreach (is_array($manifest['files'] ?? null) ? $manifest['files'] : [] as $path => $hash) {
-            $content = $this->zip->getFromName((string) $path);
-            if ($content === false) {
+            $max = str_ends_with((string) $path, '.json') ? ZipFiles::DATA_MAX_BYTES : ZipFiles::FILE_MAX_BYTES;
+            $content = ZipFiles::read($this->zip, (string) $path, $max);
+            if (ZipFiles::isTooBig($this->zip, (string) $path, $max)) {
+                $this->problems->add((string) $path, null, null, 'fileTooBig');
+            } elseif ($content === null) {
                 $this->problems->add((string) $path, null, null, 'missingFile');
             } elseif ('sha256:' . hash('sha256', $content) !== $hash) {
                 $this->problems->add((string) $path, null, null, 'alteredFile');
@@ -226,7 +242,8 @@ final class ExportImport
             return null;
         }
 
-        return (string) $this->zip->getFromName($inZip);
+        // Its size was checked with its hash (checkHashes).
+        return (string) ZipFiles::read($this->zip, $inZip, ZipFiles::FILE_MAX_BYTES);
     }
 
     // ------------------------------------------------------------------
@@ -268,12 +285,26 @@ final class ExportImport
         $values['gigReminderHour'] ??= 18;
         $values['setlistTargetMinutes'] ??= 45;
         $values['setlistGapSeconds'] ??= 30;
+        // The bounds of the screens that set them (UpdateGigRemindersAction),
+        // checked here too: not every MySQL enforces the CHECK of the table.
+        $before = $this->problems->count();
+        foreach (['gigFirstReminderDays' => [1, 90, 1], 'gigSecondReminderDays' => [1, 90, 1], 'gigReminderHour' => [0, 23, 1], 'setlistGapSeconds' => [0, 300, 1], 'setlistTargetMinutes' => [5, 180, 5]] as $field => [$min, $max, $step]) {
+            $value = $values[$field];
+            if ($value !== null && (!is_int($value) || $value < $min || $value > $max || $value % $step !== 0)) {
+                $this->problems->add($file, null, $field, 'invalid', is_scalar($value) ? (string) $value : '');
+            }
+        }
+        if ($values['discordServerId'] !== null && (!is_string($values['discordServerId']) || preg_match('/\A[0-9]{17,20}\z/', $values['discordServerId']) !== 1)) {
+            $this->problems->add($file, null, 'discordServerId', 'invalid', is_scalar($values['discordServerId']) ? (string) $values['discordServerId'] : '');
+        }
 
         // The logo and the icon of the app, with the icons drawn from them.
         foreach (['logo' => 'logoPath', 'appIcon' => 'iconPath'] as $name => $column) {
             $values[$column] = null;
             $main = $band[$name] ?? null;
             if (!is_string($main)) {
+                // The file has none: the one here goes, with its icons.
+                $this->replace($current[$column] ?? null);
                 continue;
             }
             $image = $this->file('settings', $main, $name);
@@ -296,8 +327,12 @@ final class ExportImport
             $this->replace($current[$column] ?? null);
         }
         $values['updatedByMemberId'] = $this->importerId;
+        // A value already found out of its bounds is said once, on its field.
+        $isChecked = $this->problems->count() === $before;
         try {
-            $this->database->update('band', $values, ['id' => 1]);
+            if ($isChecked) {
+                $this->database->update('band', $values, ['id' => 1]);
+            }
         } catch (\Doctrine\DBAL\Exception\DriverException) {
             $this->problems->add($file, null, 'band', 'invalid');
         }
@@ -394,6 +429,7 @@ final class ExportImport
             $language = $text('language') ?? '';
             $values = [...$values, 'status' => $status, 'passwordHash' => $hash, 'language' => Languages::isAvailable($language) ? $language : Languages::DEFAULT, 'updatedByMemberId' => $this->importerId];
 
+            $isNew = $id === null;
             $previousPhoto = $id === null ? null : $this->database->fetchOne('SELECT photoPath FROM member WHERE id = ?', [$id]);
             $photo = null;
             $content = $this->file('members', $member['photo'] ?? null, $email);
@@ -415,17 +451,28 @@ final class ExportImport
                 $count['updated']++;
             }
             $count['total']++;
-            $this->database->delete('memberRole', ['memberId' => $id]);
+            $before = $this->database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ?', [$id]);
+            $roles = [];
             foreach (array_unique((array) ($member['roles'] ?? [])) as $role) {
                 if (Role::tryFrom((string) $role) === null) {
                     $at('roles', 'unknownValue', (string) $role);
                     continue;
                 }
+                $roles[] = (string) $role;
+            }
+            // Changed roles cancel a pending password link, as in the app
+            // (Members, "Roles"): whoever holds it would get the new roles.
+            if (array_diff($before, $roles) !== [] || array_diff($roles, $before) !== []) {
+                $this->links->cancel($id);
+            }
+            $this->database->delete('memberRole', ['memberId' => $id]);
+            foreach ($roles as $role) {
                 $this->database->insert('memberRole', ['memberId' => $id, 'role' => $role, 'updatedByMemberId' => $this->importerId]);
             }
-            // An invited member arrives without a pending link: with the
-            // switch on, the import sends them their invitation (#50).
-            if ($status === 'INVITED' && $id !== $this->importerId) {
+            // A member the import adds arrives invited without a link: with
+            // the switch on, the import sends them their invitation (#50).
+            // One already here keeps theirs: importing twice invites no one again.
+            if ($status === 'INVITED' && $isNew) {
                 $count['invitations']++;
                 if ($invites && !$this->dryRun) {
                     $this->tokens[$id] = $this->links->create($id, $this->importerId, emailed: true, isInvitation: true);
@@ -499,8 +546,13 @@ final class ExportImport
                 if ($content === null) {
                     continue;
                 }
+                // Checked as an upload is: its size, and its type from its content.
+                if (strlen($content) > (SongFiles::MAX_BYTES[$kind] ?? SongFiles::MAX_BYTES['cover'])) {
+                    $this->problems->add('songs/' . $song[$kind], null, null, 'fileTooBig');
+                    continue;
+                }
                 try {
-                    $stored = $kind === 'clipThumbnail' ? 'clip.' . pathinfo((string) $song[$kind], PATHINFO_EXTENSION) : SongFiles::nameOf($kind, $content);
+                    $stored = $kind === 'clipThumbnail' ? self::thumbnailName($content) : SongFiles::nameOf($kind, $content);
                 } catch (ApiError) {
                     $this->problems->add('songs/' . $song[$kind], null, null, 'invalidFile');
                     continue;
@@ -560,11 +612,15 @@ final class ExportImport
                     $at('parts', 'unknownInstrument', (string) ($part['instrument'] ?? ''));
                     continue;
                 }
-                if ($content === null || !str_starts_with($content, '%PDF-')) {
+                if ($content === null) {
+                    continue;
+                }
+                if (strlen($content) > SongFiles::MAX_BYTES['part'] || !str_starts_with($content, '%PDF-')) {
+                    $this->problems->add('songs/' . $part['pdf'], null, null, strlen($content) > SongFiles::MAX_BYTES['part'] ? 'fileTooBig' : 'invalidFile');
                     continue;
                 }
                 $path = $this->dryRun ? 'songs/0000000000000000/part.pdf' : $this->remember($this->files->write('songs', ['part.pdf' => $content])) . '/part.pdf';
-                $this->database->insert('songPart', ['songId' => $id, 'instrumentId' => (int) $instrumentId, 'pdfPath' => $path, 'updatedByMemberId' => $this->importerId]);
+                $this->insert('songPart', ['songId' => $id, 'instrumentId' => (int) $instrumentId, 'pdfPath' => $path, 'updatedByMemberId' => $this->importerId], $file, 'parts', (string) ($part['instrument'] ?? ''));
                 $count['files']++;
             }
             $this->database->delete('memberSong', ['songId' => $id]);
@@ -574,14 +630,14 @@ final class ExportImport
                     $at('levels', 'unknownMember', (string) ($level['memberEmail'] ?? ''));
                     continue;
                 }
-                $this->database->insert('memberSong', [
+                $this->insert('memberSong', [
                     'memberId' => $memberId,
                     'songId' => $id,
                     'masteryLevel' => $level['masteryLevel'] ?? null,
                     'enjoymentLevel' => $level['enjoymentLevel'] ?? null,
                     'ratedOn' => $level['ratedOn'] ?? null,
                     'updatedByMemberId' => $this->importerId,
-                ]);
+                ], $file, 'levels', (string) ($level['memberEmail'] ?? ''));
             }
         }
 
@@ -692,22 +748,37 @@ final class ExportImport
             foreach ((array) ($gig['slots'] ?? []) as $slot) {
                 $position = (int) ($slot['position'] ?? 0);
                 $costume = is_string($slot['costume'] ?? null) ? ($costumeIds[$slot['costume']] ?? null) : null;
-                $this->database->insert('gigSlot', [
+                // Cleaned and measured as the form of a slot does (SaveSlotAction).
+                $errors = new FieldErrors();
+                $slotName = $errors->optionalText('name', is_string($slot['name'] ?? null) ? $slot['name'] : null, 40);
+                $note = $errors->optionalText('note', is_string($slot['note'] ?? null) ? $slot['note'] : null, 1000, lines: true);
+                if ($position < 1 || $position > 50 || isset($slotIds[$position]) || !$errors->isEmpty()) {
+                    $at('slots', 'invalid', (string) $position);
+                    continue;
+                }
+                $isSaved = $this->insert('gigSlot', [
                     'gigId' => $id,
                     'position' => $position,
-                    'name' => is_string($slot['name'] ?? null) ? $slot['name'] : null,
-                    'note' => is_string($slot['note'] ?? null) ? $slot['note'] : null,
+                    'name' => $slotName,
+                    'note' => $note,
                     'costumeId' => $costume,
                     'updatedByMemberId' => $this->importerId,
-                ]);
+                ], $file, 'slots', (string) $position);
+                if (!$isSaved) {
+                    continue;
+                }
                 $slotIds[$position] = (int) $this->database->lastInsertId();
                 foreach ((array) ($slot['answers'] ?? []) as $answer) {
                     $memberId = $this->memberId(mb_strtolower((string) ($answer['memberEmail'] ?? '')));
-                    if ($memberId === null || !in_array($answer['answer'] ?? null, ['YES', 'NO', 'MAYBE', 'IF_NEEDED'], true)) {
+                    if ($memberId === null) {
                         $at('answers', 'unknownMember', (string) ($answer['memberEmail'] ?? ''));
                         continue;
                     }
-                    $this->database->insert('gigSlotAttendance', ['gigSlotId' => $slotIds[$position], 'memberId' => $memberId, 'answer' => $answer['answer'], 'updatedByMemberId' => $this->importerId]);
+                    if (!in_array($answer['answer'] ?? null, ['YES', 'NO', 'MAYBE', 'IF_NEEDED'], true)) {
+                        $at('answers', 'unknownValue', is_string($answer['answer'] ?? null) ? $answer['answer'] : '');
+                        continue;
+                    }
+                    $this->insert('gigSlotAttendance', ['gigSlotId' => $slotIds[$position], 'memberId' => $memberId, 'answer' => $answer['answer'], 'updatedByMemberId' => $this->importerId], $file, 'answers', (string) ($answer['memberEmail'] ?? ''));
                 }
             }
             // A gig always has a slot (Gigs domain, "Slots").
@@ -718,7 +789,11 @@ final class ExportImport
             foreach ((array) ($gig['setlists'] ?? []) as $setlist) {
                 $slotId = $slotIds[(int) ($setlist['slotPosition'] ?? 1)] ?? reset($slotIds);
                 // The live state of a setlist does not travel.
-                $this->database->insert('setlist', ['gigId' => $id, 'gigSlotId' => $slotId, 'number' => (int) ($setlist['number'] ?? 1), 'description' => is_string($setlist['description'] ?? null) ? $setlist['description'] : null, 'updatedByMemberId' => $this->importerId]);
+                $number = (int) ($setlist['number'] ?? 1);
+                $isSaved = $this->insert('setlist', ['gigId' => $id, 'gigSlotId' => $slotId, 'number' => $number, 'description' => is_string($setlist['description'] ?? null) ? Text::clean($setlist['description']) : null, 'updatedByMemberId' => $this->importerId], $file, 'setlists', (string) $number);
+                if (!$isSaved) {
+                    continue;
+                }
                 $setlistId = (int) $this->database->lastInsertId();
                 foreach (array_values((array) ($setlist['songs'] ?? [])) as $index => $song) {
                     $songId = $this->database->fetchOne('SELECT id FROM song WHERE name = ?', [(string) $song]);
@@ -726,7 +801,7 @@ final class ExportImport
                         $at('setlists', 'unknownSong', (string) $song);
                         continue;
                     }
-                    $this->database->insert('setlistSong', ['setlistId' => $setlistId, 'position' => $index + 1, 'songId' => (int) $songId, 'updatedByMemberId' => $this->importerId]);
+                    $this->insert('setlistSong', ['setlistId' => $setlistId, 'position' => $index + 1, 'songId' => (int) $songId, 'updatedByMemberId' => $this->importerId], $file, 'setlists', (string) $song);
                 }
             }
         }
@@ -756,6 +831,37 @@ final class ExportImport
         } catch (\Doctrine\DBAL\Exception\DriverException) {
             $this->problems->add($file, null, $column, 'invalid', $value);
         }
+    }
+
+    /**
+     * Inserts a row; a refusal of the database (a value out of its bounds, a
+     * row twice) is a problem of the file, never a failure of the import.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function insert(string $table, array $row, string $file, string $column, string $value): bool
+    {
+        try {
+            $this->database->insert($table, $row);
+
+            return true;
+        } catch (\Doctrine\DBAL\Exception\DriverException) {
+            $this->problems->add($file, null, $column, 'invalid', $value);
+
+            return false;
+        }
+    }
+
+    /** The stored name of a clip thumbnail, from the type of its content. */
+    private static function thumbnailName(string $content): string
+    {
+        $size = @getimagesizefromstring($content);
+        $extension = $size === false ? null : ([IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'][$size[2]] ?? null);
+        if ($extension === null) {
+            throw new ApiError(422, 'invalidFile');
+        }
+
+        return "clip.{$extension}";
     }
 
     // A member of the installation, by email (encrypted: found by its hash).

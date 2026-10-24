@@ -7,7 +7,7 @@ What changes in the app, version after version. This file is written by
 
 ### Added
 
-- The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings.
+- The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings. The browser then makes the MIDI file and the score of each MuseScore file loaded.
 - An invitation leaves by email, and can be sent again from the record of the invited member.
 - The setlist generator asks for a length, 45 minutes to start with, set by the admin.
 

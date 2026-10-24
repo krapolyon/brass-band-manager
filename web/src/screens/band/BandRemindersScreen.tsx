@@ -173,9 +173,12 @@ export function BandRemindersScreen() {
               max={180}
               step={5}
               unit={t('band.reminders.targetUnit')}
+              describedBy="setlist-target-hint"
               onChange={setTarget}
             />
-            <p className="band-hint textCaption">{t('band.reminders.targetHint')}</p>
+            <p id="setlist-target-hint" className="band-hint textCaption">
+              {t('band.reminders.targetHint')}
+            </p>
           </div>
         </Sheet>
       </div>

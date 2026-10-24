@@ -113,11 +113,15 @@ final class Reprise
 
         $csv = [];
         foreach (array_keys(self::FILES) as $file) {
-            $content = $this->zip->getFromName("{$file}.csv");
-            if ($content === false) {
+            if ($this->zip->locateName("{$file}.csv") === false) {
                 continue;
             }
             $summary['files'][] = $file;
+            $content = ZipFiles::read($this->zip, "{$file}.csv", ZipFiles::DATA_MAX_BYTES);
+            if ($content === null) {
+                $this->problems->add("{$file}.csv", null, null, 'fileTooBig');
+                continue;
+            }
             $read = Csv::read($content);
             if ($read === null) {
                 $this->problems->add("{$file}.csv", null, null, 'notUtf8');
@@ -323,7 +327,8 @@ final class Reprise
                 'values' => [...$values, 'language' => $language, 'status' => $newStatus],
                 'roles' => $roles,
                 'photo' => $photo,
-                'invite' => $newStatus === 'INVITED' && $id !== $this->importerId,
+                // Only a member the reprise adds: loading it twice invites no one again.
+                'invite' => $newStatus === 'INVITED' && $id === null,
             ];
         }
 
@@ -357,8 +362,15 @@ final class Reprise
         if ($name === null) {
             return null;
         }
+        // Larger than a photo may be: refused without being unpacked.
+        $content = ZipFiles::read($this->zip, $name, ZipFiles::FILE_MAX_BYTES);
+        if ($content === null) {
+            $this->problems->add($name, null, null, 'invalidPhoto');
+
+            return null;
+        }
         $errors = new FieldErrors();
-        $photo = (new PhotoStore($this->database, new \BrassBand\Storage\Files(sys_get_temp_dir())))->read($errors, 'photo', new PhotoInput(base64_encode((string) $this->zip->getFromName($name))));
+        $photo = (new PhotoStore($this->database, new \BrassBand\Storage\Files(sys_get_temp_dir())))->read($errors, 'photo', new PhotoInput(base64_encode($content)));
         if ($photo === null) {
             $this->problems->add($name, null, null, 'invalidPhoto');
         }
@@ -378,6 +390,8 @@ final class Reprise
     {
         $plan = [];
         $names = [];
+        // A phrase names one song: the plain name of the song that has it in this file.
+        $phrases = [];
         $count = ['total' => 0, 'new' => 0, 'updated' => 0, 'files' => 0];
         $folders = $this->songFolders();
         $records = new SongRecord($this->database);
@@ -500,7 +514,14 @@ final class Reprise
                 $spoken = [];
                 foreach (Values::several($cell('spokenNames')) as $phrase) {
                     $clean = SpokenNames::clean($phrase);
-                    strlen($clean) < 3 || strlen($clean) > 60 ? $at('spokenNames', 'invalid', $phrase) : $spoken[] = $clean;
+                    if (strlen($clean) < SpokenNames::MIN_LENGTH || strlen($clean) > SpokenNames::MAX_LENGTH) {
+                        $at('spokenNames', 'invalid', $phrase);
+                    } elseif (($phrases[$clean] ?? $plainName) !== $plainName) {
+                        $at('spokenNames', 'twice', $phrase);
+                    } else {
+                        $phrases[$clean] = $plainName;
+                        $spoken[] = $clean;
+                    }
                 }
             }
 
@@ -565,9 +586,9 @@ final class Reprise
                 $this->problems->add($entry, null, null, $place['role'] === 'part' ? 'partWithoutInstrument' : 'unknownKind');
                 continue;
             }
-            $content = (string) $this->zip->getFromName($entry);
+            $content = ZipFiles::read($this->zip, $entry, SongFiles::MAX_BYTES[$place['role']]);
             try {
-                if (strlen($content) > SongFiles::MAX_BYTES[$place['role']]) {
+                if ($content === null) {
                     throw new ApiError(413, 'fileTooBig');
                 }
                 SongFiles::nameOf($place['role'], $content);
@@ -739,9 +760,11 @@ final class Reprise
                     continue;
                 }
             }
-            $name = $cell('name');
-            $note = $cell('note');
-            if (mb_strlen($name) > 40 || mb_strlen($note) > 1000) {
+            // Cleaned and measured as the form of a slot does (SaveSlotAction).
+            $errors = new FieldErrors();
+            $name = $errors->optionalText('name', $cell('name'), 40) ?? '';
+            $note = $errors->optionalText('note', $cell('note'), 1000, lines: true) ?? '';
+            if (!$errors->isEmpty()) {
                 $at(mb_strlen($name) > 40 ? 'name' : 'note', 'tooLong');
                 continue;
             }

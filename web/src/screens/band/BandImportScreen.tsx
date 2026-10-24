@@ -18,10 +18,12 @@ import { useMe, useSetMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { PasswordField } from '../access/PasswordField.tsx';
 import { AdminsOnlyScreen } from './BandSettingsScreen.tsx';
+import { ScoreReading } from './ScoreReading.tsx';
 import {
   type ExportPart,
   exportNeeds,
   exportParts,
+  MAX_UPLOAD_BYTES,
   megabytes,
   type Problem,
   type ReadFile,
@@ -92,6 +94,11 @@ export function BandImportScreen() {
   const drop = async (files: File[]) => {
     const zip = files[0];
     if (!zip) return;
+    // As the server refuses it (TransferFolder::MAX_UPLOAD_BYTES), without sending it first.
+    if (zip.size > MAX_UPLOAD_BYTES) {
+      setFailure('tooBig');
+      return;
+    }
     setBusy('reading');
     try {
       await read(await uploadZip(zip));
@@ -287,6 +294,9 @@ export function BandImportScreen() {
     >
       <div className="band-form">
         {loaded && <Message kind="success">{t('band.transfer.import.loaded')}</Message>}
+        {!file && state.data && (
+          <ScoreReading songs={state.data.scoresToRead} startsAtOnce={loaded} />
+        )}
         {failure && (
           <Message kind="danger">
             {t(`band.transfer.import.failure.${failure as 'unreachable'}`)}

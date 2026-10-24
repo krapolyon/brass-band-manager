@@ -98,6 +98,12 @@ final class Loader
             $this->memberIds[(string) $member['email']] = $id;
 
             if ($member['roles'] !== null) {
+                // Changed roles cancel a pending password link, as in the app
+                // (Members, "Roles"): whoever holds it would get the new roles.
+                $before = $this->database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ?', [$id]);
+                if (array_diff($before, $member['roles']) !== [] || array_diff($member['roles'], $before) !== []) {
+                    $this->links->cancel($id);
+                }
                 $this->database->delete('memberRole', ['memberId' => $id]);
                 foreach ($member['roles'] as $role) {
                     $this->database->insert('memberRole', ['memberId' => $id, 'role' => $role, 'updatedByMemberId' => $this->byMemberId]);
@@ -167,7 +173,8 @@ final class Loader
             // Each file given replaces the one of the same kind; the others stay.
             $columns = [];
             foreach ($song['files'] as $kind => $entry) {
-                $content = (string) $this->zip->getFromName($entry);
+                // Its size was checked when the zip was read (Reprise::songFiles).
+                $content = (string) ZipFiles::read($this->zip, $entry, SongFiles::MAX_BYTES[$kind]);
                 $name = SongFiles::nameOf($kind, $content);
                 $columns[SongFiles::COLUMNS[$kind]] = $this->write('songs', [$name => $content]) . "/{$name}";
             }
@@ -185,7 +192,7 @@ final class Loader
                 }
             }
             foreach ($song['parts'] as $instrumentId => $entry) {
-                $content = (string) $this->zip->getFromName($entry);
+                $content = (string) ZipFiles::read($this->zip, $entry, SongFiles::MAX_BYTES['part']);
                 $path = $this->write('songs', ['part.pdf' => $content]) . '/part.pdf';
                 $previous = $this->database->fetchOne('SELECT pdfPath FROM songPart WHERE songId = ? AND instrumentId = ?', [$id, $instrumentId]);
                 if ($previous === false) {

@@ -6,7 +6,7 @@ import { emptyMailbox, mailsAfterAWhile, receivedMails } from '../support/mail.t
 import { memberColumns } from '../support/personal.ts';
 import { emptyPushes, sentPushes } from '../support/push.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from '../support/scenario.ts';
-import { pdf } from '../support/songFiles.ts';
+import { addSong, pdf, sendFile } from '../support/songFiles.ts';
 import { dropByFtp, emptyImportFolder, emptyStorage } from '../support/storage.ts';
 import { makeZip, readZip } from '../support/zip.ts';
 
@@ -500,5 +500,149 @@ test.describe('the export and its import', () => {
       (await read(desk, await upload(desk, makeZip(Object.fromEntries(withoutAdmin)), 'c.zip')))
         .problems,
     ).toEqual([expect.objectContaining({ error: 'adminNotInFile' })]);
+  });
+});
+
+// What the independent review of 0.4.0 found, each with its test.
+test.describe('the checks added after the review', () => {
+  const csvOf = (rows: string[][]) => `${rows.map((row) => row.join(';')).join('\r\n')}\r\n`;
+  const memberRows = (roles: string) =>
+    csvOf([
+      ['email', 'nickname', 'firstName', 'lastName', 'instrument', 'roles'],
+      [email('Zaza'), 'Zaza', 'Isabelle', 'Garnier', souba(), roles],
+      ['lulu@example.org', 'Lulu', 'Lucie', 'Marchand', souba(), ''],
+    ]);
+  const exportOf = async (desk: APIRequestContext, parts: string[]) =>
+    readZip(
+      await (
+        await desk.post('/api/transfer/export', { data: { password: admin.password, parts } })
+      ).body(),
+    );
+  const problemsOf = async (desk: APIRequestContext, files: Map<string, Buffer>, name: string) =>
+    (await read(desk, await upload(desk, makeZip(Object.fromEntries(files)), name))).problems;
+
+  test('a reprise that changes the roles of a member cancels their pending password link', async ({
+    playwright,
+  }) => {
+    const momo = await deviceOf(playwright, email('Momo'));
+    const zazaId = sql("SELECT id FROM member WHERE nickname = 'Zaza'");
+    expect((await momo.post(`/api/members/${zazaId}/passwordLink`)).status()).toBe(201);
+    expect(sql(`SELECT COUNT(*) FROM memberPasswordLink WHERE memberId = ${zazaId}`)).toBe('1');
+
+    const desk = await jibe(playwright);
+    const zip = makeZip({ 'members.csv': memberRows('ADMIN') });
+    expect((await load(desk, await upload(desk, zip), ['members'], false)).status()).toBe(200);
+    expect(sql(`SELECT COUNT(*) FROM memberPasswordLink WHERE memberId = ${zazaId}`)).toBe('0');
+  });
+
+  test('a reprise loaded twice invites no one again: the first link still opens', async ({
+    playwright,
+  }) => {
+    const desk = await jibe(playwright);
+    const zip = makeZip({ 'members.csv': memberRows('') });
+    await load(desk, await upload(desk, zip), ['members']);
+    expect((await receivedMails(1)).map((mail) => mail.to)).toEqual(['lulu@example.org']);
+    const link = sql(
+      "SELECT tokenHash FROM memberPasswordLink l JOIN member m ON m.id = l.memberId WHERE m.nickname = 'Lulu'",
+    );
+
+    await emptyMailbox();
+    const second = await upload(desk, zip);
+    expect(await read(desk, second)).toMatchObject({ invitations: 0 });
+    await load(desk, second, ['members']);
+    expect(await mailsAfterAWhile()).toEqual([]);
+    expect(
+      sql(
+        "SELECT tokenHash FROM memberPasswordLink l JOIN member m ON m.id = l.memberId WHERE m.nickname = 'Lulu'",
+      ),
+    ).toBe(link);
+  });
+
+  test('an import that would leave its admin without a password is refused', async ({
+    playwright,
+  }) => {
+    const desk = await jibe(playwright);
+    const files = await exportOf(desk, ['settings', 'members']);
+    const data = JSON.parse(files.get('members/data.json')?.toString() ?? '{}');
+    data.member = data.member.map((one: { email: string }) =>
+      one.email === admin.email ? { ...one, passwordHash: null } : one,
+    );
+    files.set('members/data.json', jsonOf(data));
+    expect(await problemsOf(desk, files, 'locked.zip')).toEqual([
+      expect.objectContaining({ error: 'importerCannotSignIn', value: admin.email }),
+    ]);
+  });
+
+  test('a file larger than its limit is refused without being read', async ({ playwright }) => {
+    const desk = await jibe(playwright);
+    const zip = makeZip({
+      'members.csv': memberRows(''),
+      'members/photos/Lulu.png': Buffer.alloc(11_000_000, 1),
+    });
+    expect((await read(desk, await upload(desk, zip))).problems).toEqual([
+      expect.objectContaining({ file: 'members/photos/Lulu.png', error: 'invalidPhoto' }),
+    ]);
+  });
+
+  test('two songs cannot be given the same spoken name by one reprise', async ({ playwright }) => {
+    const desk = await jibe(playwright);
+    const zip = makeZip({
+      'songs.csv': csvOf([
+        ['name', 'originalTitle', 'originalArtist', 'spokenNames'],
+        ['Valerie', 'Valerie', 'Amy Winehouse', 'la valérie'],
+        ['Rasputin', 'Rasputin', 'Boney M.', 'La Valerie'],
+      ]),
+    });
+    expect((await read(desk, await upload(desk, zip))).problems).toEqual([
+      expect.objectContaining({
+        file: 'songs.csv',
+        line: 3,
+        column: 'spokenNames',
+        error: 'twice',
+      }),
+    ]);
+  });
+
+  test('two songs whose names give the same folder keep their own files in the export', async ({
+    playwright,
+  }) => {
+    const desk = await jibe(playwright);
+    for (const name of ['Ça va', 'Ça va !']) {
+      const id = addSong(name);
+      expect((await sendFile(desk, `/api/songs/${id}/cover`, png(64))).status()).toBe(200);
+    }
+    const files = await exportOf(desk, ['settings', 'songs']);
+    const covers = JSON.parse(files.get('songs/data.json')?.toString() ?? '{}').song.map(
+      (song: { cover: string }) => song.cover,
+    );
+    expect(new Set(covers).size).toBe(2);
+    for (const cover of covers) expect(files.has(`songs/${cover}`)).toBe(true);
+  });
+
+  test('an import checks each value and file as the app does, and lists what is wrong', async ({
+    playwright,
+  }) => {
+    const desk = await jibe(playwright);
+    const files = await exportOf(desk, ['settings', 'members']);
+    const settings = JSON.parse(files.get('settings/data.json')?.toString() ?? '{}');
+    settings.band[0].setlistTargetMinutes = 7;
+    settings.band[0].gigReminderHour = 30;
+    files.set('settings/data.json', jsonOf(settings));
+    expect(await problemsOf(desk, files, 'values.zip')).toEqual([
+      expect.objectContaining({ column: 'gigReminderHour', error: 'invalid', value: '30' }),
+      expect.objectContaining({ column: 'setlistTargetMinutes', error: 'invalid', value: '7' }),
+    ]);
+  });
+
+  test('the songs whose score waits to be read by the browser are listed for the admin', async ({
+    playwright,
+  }) => {
+    const desk = await jibe(playwright);
+    const id = addSong('Valerie');
+    sql(`UPDATE song SET museScorePath = 'songs/0123456789abcdef/score.mscz' WHERE id = ${id}`);
+    addSong('Rasputin');
+    expect((await (await desk.get('/api/transfer')).json()).scoresToRead).toEqual([
+      { id, name: 'Valerie' },
+    ]);
   });
 });

@@ -15,8 +15,9 @@ use Psr\Http\Message\ServerRequestInterface;
 // POST /api/transfer/import: loads a zip of the folder "import", all or
 // nothing, once the admin confirms with their password. Answers whether the
 // sessions ended (an export that holds members): the screen then goes to
-// the sign-in. Refused with "importRefused" when a problem is found; the
-// screen reads the file again to show them.
+// the sign-in. Refused with "importRefused" when a problem is found (the
+// file changed since it was read): the zip is deleted, and the screen asks
+// for it again, to read it and show what is wrong.
 final class ImportAction
 {
     public function __construct(

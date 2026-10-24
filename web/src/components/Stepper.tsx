@@ -12,6 +12,8 @@ type Props = {
   step?: number;
   /** Written after the number, as Figma writes the value ("45 min"). */
   unit?: string;
+  /** The id of a hint that explains the value, read with the field. */
+  describedBy?: string;
   onChange: (value: number) => void;
 };
 
@@ -20,7 +22,7 @@ type Props = {
 // the value can also be typed and a screen reader says it with its bounds;
 // at a bound, its button is disabled. What is typed is kept as it is until
 // the field is left, so that "15" can be typed through "1".
-export function Stepper({ label, value, min, max, step = 1, unit, onChange }: Props) {
+export function Stepper({ label, value, min, max, step = 1, unit, describedBy, onChange }: Props) {
   const { t } = useTranslation();
   const [typing, setTyping] = useState<string | null>(null);
   const set = (next: number) =>
@@ -43,6 +45,7 @@ export function Stepper({ label, value, min, max, step = 1, unit, onChange }: Pr
         type="number"
         inputMode="numeric"
         aria-label={label}
+        aria-describedby={describedBy}
         min={min}
         max={max}
         step={step}
