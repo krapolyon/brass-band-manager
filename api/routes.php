@@ -81,6 +81,14 @@ use BrassBand\Access\CurrentPassword;
 use BrassBand\Migrations\ListMigrationsAction;
 use BrassBand\Migrations\Migrations;
 use BrassBand\Migrations\RunMigrationsAction;
+use BrassBand\Transfer\ExportAction;
+use BrassBand\Transfer\ImportAction;
+use BrassBand\Transfer\ReadAction;
+use BrassBand\Transfer\ShowTransferAction;
+use BrassBand\Transfer\TemplatesAction;
+use BrassBand\Transfer\TransferFolder;
+use BrassBand\Transfer\Transfers;
+use BrassBand\Transfer\UploadAction;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\RequireSelfOrPermission;
 use BrassBand\Access\SignInFailures;
@@ -142,7 +150,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{storageFolder: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
+ * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -178,6 +186,14 @@ return function (App $app, Connection $database, array $config): void {
     $songPush = new SongPush($database, $push);
     // The bot of the band, which reads Discord (docs/discord-bot.md).
     $discord = Discord::from($config);
+    // Export, import and reprise of the data (model/export-import.md): the
+    // folder "import" beside storage/, where a large zip arrives by FTP.
+    $transferFolder = new TransferFolder($config['importFolder'] ?? dirname($config['storageFolder']) . '/import');
+    $transfers = new Transfers($database, $personal, $files, $links, $thumbnails, $invitations, $transferFolder);
+    // The version of the app, written in the export: version.json is at the
+    // root of the built front, which is what the web server serves.
+    $built = json_decode((string) @file_get_contents(($_SERVER['DOCUMENT_ROOT'] ?? '') . '/version.json'), true);
+    $appVersion = is_array($built) && is_string($built['version'] ?? null) ? $built['version'] : 'unknown';
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -229,6 +245,13 @@ return function (App $app, Connection $database, array $config): void {
         $migrations,
         $currentPassword,
         $discord,
+        $transferFolder,
+        $transfers,
+        $mailer,
+        $files,
+        $personal,
+        $appVersion,
+        $config,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
@@ -333,6 +356,15 @@ return function (App $app, Connection $database, array $config): void {
         $runMigrations = new RequirePermission(Permission::RUN_MIGRATIONS);
         $group->get('/api/migrations', new ListMigrationsAction($migrations))->add($runMigrations);
         $group->post('/api/migrations', new RunMigrationsAction($migrations, $currentPassword))->add($runMigrations);
+
+        // Export, import and reprise of the data: the admin only (export-import.md).
+        $transferData = new RequirePermission(Permission::TRANSFER_DATA);
+        $group->get('/api/transfer', new ShowTransferAction($database, $transferFolder, $mailer, $config['storageFolder']))->add($transferData);
+        $group->post('/api/transfer/export', new ExportAction($database, $personal, $files, $currentPassword, $appVersion))->add($transferData);
+        $group->get('/api/transfer/templates', new TemplatesAction($database))->add($transferData);
+        $group->put('/api/transfer/upload', new UploadAction($transferFolder))->add($transferData);
+        $group->post('/api/transfer/read', new ReadAction($transfers))->add($transferData);
+        $group->post('/api/transfer/import', new ImportAction($transfers, $currentPassword))->add($transferData);
 
         $manageSections = new RequirePermission(Permission::MANAGE_SECTIONS);
         $group->post('/api/sections', new SaveSectionAction($database, $sections))->add($manageSections);

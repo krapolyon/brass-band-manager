@@ -7,6 +7,8 @@ import { SignInScreen } from './screens/access/SignInScreen.tsx';
 import { BandAppearanceScreen } from './screens/band/BandAppearanceScreen.tsx';
 import { BandCostumesScreen } from './screens/band/BandCostumesScreen.tsx';
 import { BandDiscordScreen } from './screens/band/BandDiscordScreen.tsx';
+import { BandExportScreen } from './screens/band/BandExportScreen.tsx';
+import { BandImportScreen } from './screens/band/BandImportScreen.tsx';
 import { BandMigrationsScreen } from './screens/band/BandMigrationsScreen.tsx';
 import { BandRemindersScreen } from './screens/band/BandRemindersScreen.tsx';
 import { BandSectionsScreen } from './screens/band/BandSectionsScreen.tsx';
@@ -75,6 +77,8 @@ export const router = createBrowserRouter([
       { path: '/band/reminders', element: <BandRemindersScreen /> },
       { path: '/band/discord', element: <BandDiscordScreen /> },
       { path: '/band/migrations', element: <BandMigrationsScreen /> },
+      { path: '/band/export', element: <BandExportScreen /> },
+      { path: '/band/import', element: <BandImportScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/settings/profile', element: <ProfileScreen /> },
       { path: '/settings/password', element: <PasswordScreen /> },

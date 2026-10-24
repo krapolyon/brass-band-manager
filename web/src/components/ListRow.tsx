@@ -75,12 +75,13 @@ export function ListRow({
 
   if (onCheck) {
     return (
-      <div className="ListRow">
+      <div className="ListRow" data-disabled={disabled}>
         {/* The label is the touch target of the checkbox and gives it its name. */}
         <label className="ListRow-check" htmlFor={id}>
           <Checkbox
             id={id}
             checked={checked ?? false}
+            disabled={disabled}
             onChange={(event) => onCheck(event.target.checked)}
           />
           {texts}

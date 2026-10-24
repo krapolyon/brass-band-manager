@@ -63,6 +63,7 @@ export function BandSettingsScreen() {
   const band = useGigReminders(canManage === true).data;
   const discord = useDiscordSettings(canManage === true, false).data;
   const canRunMigrations = useCanRunMigrations() === true;
+  const canTransfer = useMe().data?.permissions.includes('transferData') ?? false;
   const pendingMigrations = usePendingMigrations().data;
 
   if (canManage === null) return null;
@@ -162,6 +163,17 @@ export function BandSettingsScreen() {
           )}
         </div>
       </Sheet>
+      {/* Figma: Band settings, section 4, "Données" (#43): the admin only. */}
+      {canTransfer && (
+        <Sheet title={t('band.transfer.data')}>
+          <NavRow
+            icon="Download"
+            label={t('band.transfer.row')}
+            detail={t('band.transfer.rowDetail')}
+            to="/band/import"
+          />
+        </Sheet>
+      )}
       <Sheet title={t('band.connections')}>
         <NavRow
           icon="Message"

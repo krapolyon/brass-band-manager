@@ -13,8 +13,8 @@ RUN apt-get update \
     && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
     # The storage folder belongs to the web server, as on the host. The
     # volumes mounted there (docker-compose.yml) take this owner.
-    && mkdir -p /var/www/storage \
-    && chown www-data:www-data /var/www/storage
+    && mkdir -p /var/www/storage /var/www/import \
+    && chown www-data:www-data /var/www/storage /var/www/import
 
 # Composer installs the PHP libraries. It is a development tool: the host
 # never runs it, it receives the vendor/ folder already filled.
