@@ -3,11 +3,15 @@ import {
   type CandidateSong,
   isNew,
   lengthOf,
+  meanLengthOf,
   positionsOf,
   propose,
+  proposeForLength,
   type Rule,
   type SetPosition,
   seeded,
+  songsThatFit,
+  type TimedSong,
 } from '../../web/src/screens/gigs/generator.ts';
 
 // The setlist generator (model/gigs.md v1.9, entry 4; model/songs.md v1.9,
@@ -364,4 +368,100 @@ test('the length of a setlist: its songs and the time between two, rounded to th
   expect(lengthOf([210, 210, 210, 210, 210, 210], 30)).toEqual({ minutes: 24, withoutLength: 0 });
   expect(lengthOf([232, null, 180, null], 30)).toEqual({ minutes: 8, withoutLength: 2 });
   expect(lengthOf([], 30)).toEqual({ minutes: 0, withoutLength: 0 });
+});
+
+// The generator asks for a length since 0.4.0 (model/gigs.md v1.11, "Proposing
+// a setlist", issue #60).
+test.describe('a proposal for a length', () => {
+  /** The repertoire above, each song with a length; `unknown` of them without. */
+  const timed = (lengths: number[], unknown = 0): TimedSong[] =>
+    repertoire(lengths.length).map((one, index) => ({
+      ...one,
+      durationSeconds: index < unknown ? null : (lengths[index] as number),
+    }));
+  const seconds = (songIds: number[], songs: TimedSong[], gap: number, mean: number) =>
+    songIds.reduce(
+      (sum, id) => sum + (songs.find((one) => one.id === id)?.durationSeconds ?? mean),
+      gap * (songIds.length - 1),
+    );
+
+  test('the songs that should fit: the length and one gap, over a mean song and one gap', () => {
+    // 45 min, 30 s between two, songs of 3:30: (2700 + 30) / (210 + 30) = 11.4.
+    expect(songsThatFit(45, 30, 210)).toBe(11);
+    expect(songsThatFit(5, 30, 600)).toBe(1);
+    expect(songsThatFit(45, 30, null)).toBeNull();
+    // The mean counts the songs whose length is known.
+    expect(meanLengthOf(timed([200, 220, 240], 1))).toBe(230);
+  });
+
+  test('as many songs as stay within the length, by the rules, whatever the draw', () => {
+    const lengths = Array.from({ length: 36 }, (_, index) => 150 + ((index * 37) % 150));
+    const songs = timed(lengths);
+    const mean = meanLengthOf(songs) as number;
+    for (const minutes of [10, 25, 45, 90]) {
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const proposal = proposeForLength({
+          songs,
+          minutes,
+          gapSeconds: 30,
+          includeNew: false,
+          avoid: [],
+          today,
+          random: seeded(seed),
+        });
+        const used = seconds(proposal.songIds, songs, 30, mean);
+        const label = `${minutes} min, seed ${seed}`;
+        expect(used, label).toBeLessThanOrEqual(minutes * 60);
+        // Close to the length: less than one long song and a gap short of it.
+        // Not always one short song away: the places of a set only take the
+        // songs their positions allow.
+        expect(used + 30 + Math.max(...lengths), label).toBeGreaterThan(minutes * 60);
+        expect(broken(proposal.songIds, songs), label).toEqual([]);
+        expect(proposal.count, label).toBe(proposal.songIds.length);
+      }
+    }
+  });
+
+  test('a song without a length counts as the mean of the others', () => {
+    // Twelve songs of 4 min, six without a length: they count 4 min too.
+    const songs = timed(Array(18).fill(240), 6);
+    const proposal = proposeForLength({
+      songs,
+      minutes: 30,
+      gapSeconds: 0,
+      includeNew: false,
+      avoid: [],
+      today,
+      random: seeded(7),
+    });
+    expect(proposal.songIds).toHaveLength(7);
+  });
+
+  test('the repertoire is the limit: every song, under the length asked', () => {
+    const songs = timed([200, 200, 200, 200]);
+    const proposal = proposeForLength({
+      songs,
+      minutes: 180,
+      gapSeconds: 30,
+      includeNew: false,
+      avoid: [],
+      today,
+      random: seeded(1),
+    });
+    expect(proposal.songIds).toHaveLength(4);
+  });
+
+  test('without any length known, ten songs as before', () => {
+    const songs = timed(Array(20).fill(0), 20);
+    const proposal = proposeForLength({
+      songs,
+      minutes: 45,
+      gapSeconds: 30,
+      includeNew: false,
+      avoid: [],
+      today,
+      random: seeded(1),
+    });
+    expect(proposal.songIds).toHaveLength(10);
+  });
 });

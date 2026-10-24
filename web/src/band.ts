@@ -50,6 +50,8 @@ export type GigReminders = {
   gigReminderHour: number;
   /** The time counted between two songs of a setlist, 0 to 300 seconds. */
   setlistGapSeconds: number;
+  /** The length of a setlist the generator proposes first, 5 to 180 minutes by 5 (issue #60). */
+  setlistTargetMinutes: number;
 };
 
 export function useGigReminders(enabled: boolean) {

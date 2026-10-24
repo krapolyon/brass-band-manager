@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { fakePush } from './support/fakePush.ts';
@@ -506,7 +506,7 @@ const phrases = () =>
     "SELECT CONCAT(s.name, '=', n.phrase) FROM songSpokenName n JOIN song s ON s.id = n.songId ORDER BY n.id",
   );
 
-test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47)', () => {
+test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47; 0.4.0, #60)', () => {
   /** A song with what the generator reads: its positions, its length. */
   function songWith(name: string, positions: string[], seconds: number | null, changes = '') {
     const songId = addSong(name);
@@ -530,8 +530,29 @@ test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47
     await asMember(page, 'Sissi');
     await page.goto(`/gigs/${gigId}/setlists/${setlistId}`);
     // 3:30 + 3:30 + 2 × 0:30 = 8 min; Crazy has no length.
-    await expect(page.getByText('3 morceaux · ≈ 8 min')).toBeVisible();
+    const length = page.getByText('3 morceaux · ≈ 8 min');
+    await expect(length).toBeVisible();
     await expect(page.getByText('1 morceau sans durée')).toBeVisible();
+    // Above the songs since 0.4.0.
+    const top = async (locator: Locator) => (await locator.boundingBox())?.y ?? 0;
+    expect(await top(length)).toBeLessThan(await top(page.locator('.SetlistSongRow').first()));
+  });
+
+  test('a setlist that is read says how long it lasts under its title (#60)', async ({ page }) => {
+    const { gigId, slotId } = confirmed();
+    const songs = [
+      songWith('Toxic', middle, 210),
+      songWith('Valerie', middle, 210),
+      songWith('Crazy', middle, 210),
+    ];
+    addSetlist(gigId, slotId, songs, 'Déambulation');
+    addSetlist(gigId, slotId, [addSong('Biffy')]);
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+    // 3 × 3:30 + 2 × 0:30 = 11:30, rounded to 12.
+    await expect(page.getByText('Déambulation · 12 min · 3 morceaux')).toBeVisible();
+    // No song with a length: the count alone.
+    await expect(page.getByText('1 morceau', { exact: true })).toBeVisible();
   });
 
   test('“Proposer des morceaux” fills the editor by the rules; nothing is saved before the button', async ({
@@ -550,23 +571,28 @@ test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47
 
     await page.getByRole('button', { name: 'Proposer des morceaux' }).click();
     const sheet = page.getByRole('dialog', { name: 'Proposer une setlist' });
-    const count = sheet.getByRole('spinbutton', { name: 'Combien de morceaux ?' });
-    await expect(count).toHaveValue('10');
-    await sheet.getByRole('button', { name: 'Un de moins' }).click();
-    await count.fill('3');
-    await expect(sheet.getByRole('button', { name: 'Un de moins' })).toBeDisabled();
-    // Typed digit by digit, "15" passes through "1" without being changed.
-    await count.fill('');
-    await count.pressSequentially('15');
-    await expect(count).toHaveValue('15');
-    await count.blur();
-    await expect(count).toHaveValue('15');
-    await count.fill('99');
-    await count.blur();
-    await expect(count).toHaveValue('30');
-    await count.fill('7');
+    // A length, from the setting of the band, by 5 minutes (#60).
+    const minutes = sheet.getByRole('spinbutton', { name: 'Durée de la setlist, en minutes' });
+    await expect(minutes).toHaveValue('45');
+    await sheet.getByRole('button', { name: '5 min de moins' }).click();
+    await expect(minutes).toHaveValue('40');
+    await minutes.fill('3');
+    await minutes.blur();
+    await expect(minutes).toHaveValue('5');
+    await expect(sheet.getByRole('button', { name: '5 min de moins' })).toBeDisabled();
+    await minutes.fill('999');
+    await minutes.blur();
+    await expect(minutes).toHaveValue('180');
+    await expect(sheet.getByRole('button', { name: '5 min de plus' })).toBeDisabled();
+    // Typed digit by digit, "30" passes through "3" without being changed.
+    await minutes.fill('');
+    await minutes.pressSequentially('30');
+    await minutes.blur();
+    await expect(minutes).toHaveValue('30');
+    // Seven songs of 3:34 on average and 30 s between two: (1800 + 30) / 244 = 7.
+    await expect(sheet.getByText('Environ 7 morceaux, avec 30 s entre deux.')).toBeVisible();
     await expect(sheet.getByText('Au répertoire depuis moins de 2 mois : Freed.')).toBeVisible();
-    await sheet.getByRole('button', { name: 'Proposer 7 morceaux' }).click();
+    await sheet.getByRole('button', { name: 'Proposer 30 min' }).click();
 
     // The songs with Début open, Crazy is in the middle, those with Fin close.
     const rows = page.locator('.SetlistSongRow');
@@ -580,14 +606,10 @@ test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47
     expect(names[3]).toBe('Crazy');
     expect(names.slice(4).sort()).toEqual(['Biffy', 'Toxic', 'Uptown Funk']);
     await expect(rows.filter({ hasText: 'Freed' })).toHaveCount(0);
-    await expect(
-      page.getByText(
-        `Proposée par l’app : de ${names[0]} pour démarrer à ${names[6]} pour finir.`,
-        {
-          exact: false,
-        },
-      ),
-    ).toBeVisible();
+    // No message: the length line says what was proposed. 3 × 3:40 + 4:00 +
+    // 3 × 3:20 + 6 × 0:30 = 28 min.
+    await expect(page.getByText('7 morceaux · ≈ 28 min')).toBeVisible();
+    await expect(page.locator('.gigs-setlistForm .Message')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Une autre proposition' })).toBeVisible();
     expect(sql('SELECT COUNT(*) FROM setlist')).toBe('0');
 
@@ -596,9 +618,7 @@ test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47
     expect(sql('SELECT COUNT(*) FROM setlistSong')).toBe('7');
   });
 
-  test('a repertoire too small says which rule could not be kept, and how many songs it had', async ({
-    page,
-  }) => {
+  test('a repertoire too small says which rule could not be kept', async ({ page }) => {
     const { gigId } = confirmed();
     // Nothing can close: no song has Fin.
     songWith('Bonfire', ['START'], 200);
@@ -609,13 +629,14 @@ test.describe('the length of a setlist and the generator (0.3.0, #25; 0.3.1, #47
     await page.goto(`/gigs/${gigId}`);
     await page.getByRole('button', { name: 'Nouvelle setlist' }).click();
     await page.getByRole('button', { name: 'Proposer des morceaux' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Proposer 10 morceaux' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Proposer 45 min' }).click();
 
+    // Every song of the repertoire, under the 45 minutes asked.
     await expect(page.locator('.SetlistSongRow')).toHaveCount(4);
+    await expect(page.getByText('4 morceaux · ≈ 17 min')).toBeVisible();
     await expect(
       page.getByText('un morceau à une place que ses positions ne prévoient pas', { exact: false }),
     ).toBeVisible();
-    await expect(page.getByText('Le répertoire n’a que 4 morceaux à proposer.')).toBeVisible();
   });
 });
 

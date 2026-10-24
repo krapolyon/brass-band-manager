@@ -26,7 +26,16 @@ import { type SongMood, type SongSummary, songMoods, useSongs } from '../../song
 import { AppLayout } from '../AppLayout.tsx';
 import { useLeaveGuard } from '../LeaveGuard.tsx';
 import { recogniseAny, type Spoken } from './dictation.ts';
-import { candidatesOf, isNew, lengthOf, type Proposal, propose, type Rule } from './generator.ts';
+import {
+  candidatesOf,
+  isNew,
+  lengthOf,
+  meanLengthOf,
+  type Proposal,
+  proposeForLength,
+  type Rule,
+  songsThatFit,
+} from './generator.ts';
 import { useDictation } from './useDictation.ts';
 import './gigs.css';
 
@@ -96,14 +105,13 @@ export function SetlistFormScreen() {
   const [failure, setFailure] = useState<'failed' | 'tooLong' | null>(null);
   const [isSaving, setSaving] = useState(false);
   const canManage = me?.permissions.includes('manageSetlists') ?? false;
-  // "Proposer des morceaux" (Gigs › 19, issue #25): its sheet, its two
-  // choices, and the proposal the editor holds until it is changed by hand.
+  // "Proposer des morceaux" (Gigs › 19 and 23, issues #25 and #60): its
+  // sheet, its two choices, and the proposal the editor holds until it is
+  // changed by hand. The length starts from the setting of the band.
   const [isProposing, setProposing] = useState(false);
-  const [proposedCount, setProposedCount] = useState(10);
+  const [chosenMinutes, setChosenMinutes] = useState<number | null>(null);
   const [includesNew, setIncludesNew] = useState(false);
-  const [proposal, setProposal] = useState<(Proposal & { first: string; last: string }) | null>(
-    null,
-  );
+  const [proposal, setProposal] = useState<Proposal | null>(null);
 
   // The dictation: what it knows of the songs, what it last heard, and the
   // choice it waits for.
@@ -230,23 +238,21 @@ export function SetlistFormScreen() {
   // the clock of the device, as for the other dates of a gig.
   const today = new Date().toLocaleDateString('sv');
   const newSongs = candidatesOf(songs, true, today).filter((song) => isNew(song, today));
-  const candidates = candidatesOf(songs, includesNew, today);
-  const known = candidates.flatMap((song) => (song.durationSeconds ? [song.durationSeconds] : []));
-  const averageLength =
-    known.length > 0 ? known.reduce((sum, one) => sum + one, 0) / known.length : null;
-  const proposedMinutes =
-    averageLength === null
-      ? null
-      : Math.round(
-          (averageLength * proposedCount + gig.setlistGapSeconds * (proposedCount - 1)) / 60,
-        );
+  const proposedMinutes = chosenMinutes ?? gig.setlistTargetMinutes;
+  // How many songs should fit, before the proposal (model/gigs.md v1.11).
+  const fitting = songsThatFit(
+    proposedMinutes,
+    gig.setlistGapSeconds,
+    meanLengthOf(candidatesOf(songs, includesNew, today)),
+  );
   const isProposalShown =
     proposal !== null &&
     JSON.stringify(proposal.songIds) === JSON.stringify(draft.lines.map((line) => line.songId));
   const draw = () => {
-    const drawn = propose({
+    const drawn = proposeForLength({
       songs,
-      count: proposedCount,
+      minutes: proposedMinutes,
+      gapSeconds: gig.setlistGapSeconds,
       includeNew: includesNew,
       avoid: [...elsewhere.keys()],
       today,
@@ -258,11 +264,7 @@ export function SetlistFormScreen() {
       return song ? [{ key: newKey(), songId, name: song.name }] : [];
     });
     setDraft({ ...draft, lines });
-    setProposal({
-      ...drawn,
-      first: lines[0]?.name ?? '',
-      last: lines.at(-1)?.name ?? '',
-    });
+    setProposal(drawn);
     setProposing(false);
     setSaid(t('gigs.setlist.form.propose.done', { count: lines.length }));
   };
@@ -490,6 +492,22 @@ export function SetlistFormScreen() {
           }}
         />
 
+        {/* Above the songs since 0.4.0 (Gigs › 23, issue #60). */}
+        {draft.lines.length > 0 && (
+          <SetlistLength
+            length={t('gigs.setlist.form.length', {
+              count: draft.lines.length,
+              minutes: lengthNow.minutes,
+            })}
+            note={
+              lengthNow.withoutLength > 0
+                ? t('gigs.setlist.form.withoutLength', { count: lengthNow.withoutLength })
+                : draft.lines.length > 1
+                  ? t('gigs.setlist.form.withGap', { gap: gig.setlistGapSeconds })
+                  : undefined
+            }
+          />
+        )}
         <section className="gigs-setlistSongs" aria-label={t('gigs.setlist.form.songs')}>
           {draft.lines.length === 0 ? (
             <p className="gigs-muted textCaption">
@@ -518,38 +536,17 @@ export function SetlistFormScreen() {
               </ol>
             </SortableList>
           )}
-          {draft.lines.length > 0 && (
-            <SetlistLength
-              length={t('gigs.setlist.form.length', {
-                count: draft.lines.length,
-                minutes: lengthNow.minutes,
-              })}
-              note={
-                lengthNow.withoutLength > 0
-                  ? t('gigs.setlist.form.withoutLength', { count: lengthNow.withoutLength })
-                  : draft.lines.length > 1
-                    ? t('gigs.setlist.form.withGap', { gap: gig.setlistGapSeconds })
-                    : undefined
-              }
-            />
-          )}
         </section>
         {isProposalShown && proposal && (
           <>
-            <Message>
-              {[
-                t('gigs.setlist.form.propose.made', {
-                  first: proposal.first,
-                  last: proposal.last,
-                }),
-                proposal.dropped.length > 0 &&
-                  t('gigs.setlist.form.propose.dropped', { rules: ruleNames(proposal.dropped) }),
-                proposal.isShort &&
-                  t('gigs.setlist.form.propose.short', { count: proposal.songIds.length }),
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            </Message>
+            {/* After a proposal the length line says what was proposed (Gigs
+                › 23): a message only when a rule could not be kept, which
+                the model asks the app to say. */}
+            {proposal.dropped.length > 0 && (
+              <Message>
+                {t('gigs.setlist.form.propose.dropped', { rules: ruleNames(proposal.dropped) })}
+              </Message>
+            )}
             <Button kind="secondary" icon="RotateCw" onClick={draw}>
               {t('gigs.setlist.form.propose.again')}
             </Button>
@@ -840,19 +837,21 @@ export function SetlistFormScreen() {
       >
         <div className="gigs-sheet">
           <p className="textBodyStrong" id="gigs-propose-count">
-            {t('gigs.setlist.form.propose.howMany')}
+            {t('gigs.setlist.form.propose.howLong')}
           </p>
           <Stepper
-            label={t('gigs.setlist.form.propose.howMany')}
-            value={proposedCount}
-            min={3}
-            max={30}
-            onChange={setProposedCount}
+            label={t('gigs.setlist.form.propose.howLongLabel')}
+            value={proposedMinutes}
+            min={5}
+            max={180}
+            step={5}
+            unit={t('gigs.setlist.form.propose.minutes')}
+            onChange={setChosenMinutes}
           />
-          {proposedMinutes !== null && (
-            <p className="gigs-muted textCaption">
+          {fitting !== null && (
+            <p className="gigs-muted textCaption" aria-live="polite">
               {t('gigs.setlist.form.propose.about', {
-                minutes: proposedMinutes,
+                count: fitting,
                 gap: gig.setlistGapSeconds,
               })}
             </p>
@@ -875,7 +874,7 @@ export function SetlistFormScreen() {
             </Message>
           )}
           <Button onClick={draw}>
-            {t('gigs.setlist.form.propose.go', { count: proposedCount })}
+            {t('gigs.setlist.form.propose.go', { minutes: proposedMinutes })}
           </Button>
         </div>
       </Panel>

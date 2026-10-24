@@ -1263,13 +1263,16 @@ test.describe('the picture of a costume', () => {
 });
 
 test.describe('the reminders of the band', () => {
-  test('only the admin sets them, with the time between two songs, within the bounds of the model', async ({
+  test('only the admin sets them, with the time between two songs and the length of a proposed setlist, within the bounds of the model', async ({
     playwright,
     request,
   }) => {
     const jibe = await deviceOf(playwright, admin.email, admin.password);
     const gigi = await deviceOf(playwright, email('Gigi'));
-    const reminders = (data: Record<string, unknown>) => ({ data });
+    // The length of a proposed setlist (issue #60) goes with them: 45 unless said.
+    const reminders = (data: Record<string, unknown>) => ({
+      data: { setlistTargetMinutes: 45, ...data },
+    });
 
     // Install gives the defaults: 15 days, 5 days, from 18, and 30 s
     // between two songs of a setlist (the screen "Plans et setlists").
@@ -1278,6 +1281,7 @@ test.describe('the reminders of the band', () => {
       gigSecondReminderDays: 5,
       gigReminderHour: 18,
       setlistGapSeconds: 30,
+      setlistTargetMinutes: 45,
     });
     // Read by who sets them only: the public answer of the band does not hold them.
     expect((await gigi.get('/api/band/gigReminders')).status()).toBe(403);
@@ -1288,6 +1292,7 @@ test.describe('the reminders of the band', () => {
       gigSecondReminderDays: 2,
       gigReminderHour: 9,
       setlistGapSeconds: 45,
+      setlistTargetMinutes: 60,
     });
     expect((await gigi.put('/api/band/gigReminders', asked)).status()).toBe(403);
     expect((await request.put('/api/band/gigReminders', asked)).status()).toBe(401);
@@ -1329,6 +1334,10 @@ test.describe('the reminders of the band', () => {
       [{ gigFirstReminderDays: 5, gigReminderHour: 24 }, 'gigReminderHour'],
       [{ gigReminderHour: 18, setlistGapSeconds: 301 }, 'setlistGapSeconds'],
       [{ gigReminderHour: 18, setlistGapSeconds: -1 }, 'setlistGapSeconds'],
+      // From 5 minutes to 3 hours, by steps of 5 (Band v1.12).
+      [{ gigReminderHour: 18, setlistTargetMinutes: 0 }, 'setlistTargetMinutes'],
+      [{ gigReminderHour: 18, setlistTargetMinutes: 185 }, 'setlistTargetMinutes'],
+      [{ gigReminderHour: 18, setlistTargetMinutes: 47 }, 'setlistTargetMinutes'],
     ];
     for (const [data, field] of faults) {
       const refused = await jibe.put(
@@ -1342,9 +1351,9 @@ test.describe('the reminders of the band', () => {
     }
     expect(
       sql(
-        'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band',
+        'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds, setlistTargetMinutes FROM band',
       ),
-    ).toBe('NULL\tNULL\t0\t0');
+    ).toBe('NULL\tNULL\t0\t0\t45');
   });
 });
 

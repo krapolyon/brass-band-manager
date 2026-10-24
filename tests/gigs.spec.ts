@@ -670,7 +670,7 @@ test.describe('the band settings', () => {
     );
   });
 
-  test('the admin sets the reminders and the time between two songs; a wrong number is said under its field', async ({
+  test('the admin sets the reminders, the time between two songs and the length of a proposed setlist; a wrong number is said under its field', async ({
     page,
   }) => {
     await signIn(page);
@@ -699,13 +699,21 @@ test.describe('the band settings', () => {
     await second.fill('');
     await gap.fill('45');
     await page.getByLabel('À partir de').selectOption('9');
+    // The length of a proposed setlist, by 5 minutes (#60).
+    const target = page.getByRole('spinbutton', {
+      name: 'Durée d’une setlist proposée, en minutes',
+    });
+    await expect(target).toHaveValue('45');
+    await page.getByRole('button', { name: '5 min de plus' }).click();
+    await page.getByRole('button', { name: '5 min de plus' }).click();
+    await expect(target).toHaveValue('55');
     await page.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(page.getByText('Les réglages sont enregistrés.')).toBeVisible();
     expect(
       sql(
-        'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band',
+        'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds, setlistTargetMinutes FROM band',
       ),
-    ).toBe('3\tNULL\t9\t45');
+    ).toBe('3\tNULL\t9\t45\t55');
   });
 
   test('costumes and reminders are for admins: anyone else is told so', async ({ page }) => {

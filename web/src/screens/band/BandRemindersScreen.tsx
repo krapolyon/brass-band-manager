@@ -7,6 +7,7 @@ import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
+import { Stepper } from '../../components/Stepper.tsx';
 import { SelectField, TextField } from '../../components/TextField.tsx';
 import { usePush } from '../../push.ts';
 import { AppLayout } from '../AppLayout.tsx';
@@ -28,7 +29,8 @@ function gapOf(text: string): number | false {
 
 // Figma: Band settings / Gigs and setlists (section 6, 0.3.0). How many days
 // before a gig its two reminders are sent, from which hour, and the time
-// counted between two songs of a setlist. It changes what every member
+// counted between two songs of a setlist; since 0.4.0 (section 8, issue #60)
+// the length of a setlist the generator proposes first. It changes what every member
 // receives: saved with its button. The second reminder may come before or
 // after the first (Band v1.9).
 export function BandRemindersScreen() {
@@ -41,6 +43,7 @@ export function BandRemindersScreen() {
   const [second, setSecond] = useState('');
   const [hour, setHour] = useState('18');
   const [gap, setGap] = useState('30');
+  const [target, setTarget] = useState(45);
   const [errors, setErrors] = useState<{ first?: string; second?: string; gap?: string }>({});
   const [outcome, setOutcome] = useState<'saved' | 'failed' | null>(null);
   const [isSaving, setSaving] = useState(false);
@@ -51,6 +54,7 @@ export function BandRemindersScreen() {
     setSecond(band.gigSecondReminderDays === null ? '' : String(band.gigSecondReminderDays));
     setHour(String(band.gigReminderHour));
     setGap(String(band.setlistGapSeconds));
+    setTarget(band.setlistTargetMinutes);
   }, [band]);
 
   if (canManage === null) return null;
@@ -78,6 +82,7 @@ export function BandRemindersScreen() {
           gigSecondReminderDays: secondDays,
           gigReminderHour: Number(hour),
           setlistGapSeconds: gapSeconds,
+          setlistTargetMinutes: target,
         },
       });
       queryClient.setQueryData(['gigReminders'], saved);
@@ -157,6 +162,21 @@ export function BandRemindersScreen() {
               </span>
             }
           />
+          <div className="band-stepper">
+            <p className="textBodyStrong" aria-hidden="true">
+              {t('band.reminders.target')}
+            </p>
+            <Stepper
+              label={t('band.reminders.targetLabel')}
+              value={target}
+              min={5}
+              max={180}
+              step={5}
+              unit={t('band.reminders.targetUnit')}
+              onChange={setTarget}
+            />
+            <p className="band-hint textCaption">{t('band.reminders.targetHint')}</p>
+          </div>
         </Sheet>
       </div>
     </AppLayout>

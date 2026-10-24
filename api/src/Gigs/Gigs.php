@@ -194,11 +194,26 @@ final class Gigs
             // (since 0.3.0). No link while the band has no server.
             'discordChannelId' => $channelId,
             'discordUrl' => $serverId === null || $channelId === null ? null : DiscordLinks::channelUrl($serverId, $channelId),
-            // What the setlist editor counts between two songs (band.setlistGapSeconds).
-            'setlistGapSeconds' => (int) $this->database->fetchOne('SELECT setlistGapSeconds FROM band WHERE id = 1'),
+            // What the setlist editor counts between two songs
+            // (band.setlistGapSeconds), and the length its generator proposes
+            // first (band.setlistTargetMinutes, 0.4.0, issue #60).
+            ...$this->setlistSettings(),
         ];
 
         return $view;
+    }
+
+    /**
+     * @return array{setlistGapSeconds: int, setlistTargetMinutes: int}
+     */
+    private function setlistSettings(): array
+    {
+        $band = $this->database->fetchAssociative('SELECT setlistGapSeconds, setlistTargetMinutes FROM band WHERE id = 1');
+
+        return [
+            'setlistGapSeconds' => (int) ($band['setlistGapSeconds'] ?? 30),
+            'setlistTargetMinutes' => (int) ($band['setlistTargetMinutes'] ?? 45),
+        ];
     }
 
     // True when one slot of the gig has a yes or an "if needed" in every

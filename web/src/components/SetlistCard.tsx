@@ -22,7 +22,8 @@ type Props = {
 };
 
 // Figma: Setlist/Card. A setlist of a gig, as an accordion. Open: its songs
-// and its actions. Closed: its number, its description and its count of songs.
+// and its actions. Closed: its number, its description, its length and its
+// count of songs.
 export function SetlistCard({
   open,
   onToggle,

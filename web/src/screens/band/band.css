@@ -154,6 +154,18 @@
 }
 
 /* The unit after a number typed in a field: "30 s". */
+/* A Stepper with its label and its hint, as a field reads (section 8, issue #60). */
+.band-stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spaceXs);
+}
+
+.band-hint {
+  color: var(--textMuted);
+}
+
 .band-unit {
   padding-inline-end: var(--spaceXs);
   color: var(--textMuted);
