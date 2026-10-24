@@ -430,10 +430,16 @@
     "allWithPointer_other": "{{count}} fanfarons, de A à Z. Clique sur une tête pour l’appeler, lui écrire ou passer la voir."
   },
   "theme": {
-    "copper": "Cuivre",
-    "coral": "Corail",
-    "mint": "Menthe",
-    "lilac": "Lilas"
+    "brass": "Laiton",
+    "tangerine": "Mandarine",
+    "raspberry": "Framboise",
+    "orchid": "Orchidée",
+    "cornflower": "Bleuet",
+    "azure": "Azur",
+    "lagoon": "Lagon",
+    "emerald": "Émeraude",
+    "lime": "Citron vert",
+    "ivory": "Ivoire"
   },
   "settings": {
     "account": "Mon compte",

@@ -221,16 +221,44 @@ test.describe('appearance and accessibility', () => {
     await page.getByRole('radio', { name: 'Clair' }).check();
     await expect(root(page)).toHaveAttribute('data-scheme', 'light');
 
-    // The colour of the band is the first one, copper, until the member chooses.
+    // The colour of the band is the first one, brass, until the member chooses.
     await expect(page.getByRole('radio', { name: 'Fanfare' })).toBeChecked();
-    await expect(root(page)).toHaveAttribute('data-theme', 'copper');
-    await page.getByRole('radio', { name: 'Menthe' }).check();
-    await expect(root(page)).toHaveAttribute('data-theme', 'mint');
-    await expect.poll(() => zaza('colorScheme, accentTheme')).toBe('LIGHT\tmint');
+    await expect(root(page)).toHaveAttribute('data-theme', 'brass');
+    await page.getByRole('radio', { name: 'Lagon' }).check();
+    await expect(root(page)).toHaveAttribute('data-theme', 'lagoon');
+    await expect.poll(() => zaza('colorScheme, accentTheme')).toBe('LIGHT\tlagoon');
 
     await page.getByRole('radio', { name: 'Fanfare' }).check();
-    await expect(root(page)).toHaveAttribute('data-theme', 'copper');
+    await expect(root(page)).toHaveAttribute('data-theme', 'brass');
     await expect.poll(() => zaza('accentTheme IS NULL')).toBe('1');
+  });
+
+  test('ten themes after the colour of the band, four to a line on a phone (#58)', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.getByRole('link', { name: /Apparence/ }).click();
+
+    const swatches = page.getByRole('radiogroup', { name: 'Couleur d’accent' }).getByRole('radio');
+    await expect(swatches).toHaveCount(11);
+    const names = ['Fanfare', 'Laiton', 'Mandarine', 'Framboise', 'Orchidée', 'Bleuet'];
+    for (const [index, name] of names.entries()) {
+      await expect(swatches.nth(index)).toHaveAccessibleName(name);
+    }
+    await expect(swatches.last()).toHaveAccessibleName('Ivoire');
+    const top = async (index: number) =>
+      (await page.locator('.ThemeSwatch').nth(index).boundingBox())?.y ?? 0;
+    expect(await top(3)).toBe(await top(0));
+    expect(await top(4)).toBeGreaterThan(await top(0));
+  });
+
+  test('a theme the app no longer has takes the colour of the band (#58)', async ({ page }) => {
+    // A key of before 0.4.0, on a database that was not updated yet.
+    sql(`UPDATE member SET accentTheme = 'copper' WHERE nickname = 'Zaza'`);
+    sql(`UPDATE band SET defaultAccentTheme = 'azure'`);
+    await signIn(page);
+
+    await expect(root(page)).toHaveAttribute('data-theme', 'azure');
   });
 
   test('a member who follows the band changes colour when the band does', async ({
@@ -238,14 +266,14 @@ test.describe('appearance and accessibility', () => {
     playwright,
   }) => {
     await signIn(page);
-    await expect(root(page)).toHaveAttribute('data-theme', 'copper');
+    await expect(root(page)).toHaveAttribute('data-theme', 'brass');
 
     const jibe = await deviceOf(playwright, admin.email, admin.password);
-    await jibe.patch('/api/band', { data: { defaultAccentTheme: 'lilac' } });
+    await jibe.patch('/api/band', { data: { defaultAccentTheme: 'orchid' } });
     await jibe.dispose();
     await page.reload();
 
-    await expect(root(page)).toHaveAttribute('data-theme', 'lilac');
+    await expect(root(page)).toHaveAttribute('data-theme', 'orchid');
   });
 
   test('the six options apply at once, follow the account, and stay off the device', async ({
