@@ -60,7 +60,7 @@ final class Bands
     public function gigReminders(): array
     {
         $band = $this->database->fetchAssociative(
-            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds FROM band WHERE id = 1',
+            'SELECT gigFirstReminderDays, gigSecondReminderDays, gigReminderHour, setlistGapSeconds, setlistTargetMinutes FROM band WHERE id = 1',
         );
         if ($band === false) {
             throw new ApiError(404, 'notInstalled');
@@ -71,6 +71,7 @@ final class Bands
             'gigSecondReminderDays' => $band['gigSecondReminderDays'] === null ? null : (int) $band['gigSecondReminderDays'],
             'gigReminderHour' => (int) $band['gigReminderHour'],
             'setlistGapSeconds' => (int) $band['setlistGapSeconds'],
+            'setlistTargetMinutes' => (int) $band['setlistTargetMinutes'],
         ];
     }
 }

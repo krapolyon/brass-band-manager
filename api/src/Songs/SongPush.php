@@ -33,7 +33,7 @@ final class SongPush
         if ($song === null) {
             return;
         }
-        $this->send($this->currentMembers(), $song, NotificationSetting::SONG_NEW, 'songs.push.new', ['artist' => (string) $song['originalArtist']], $bySessionId);
+        $this->send($this->currentMembers(), $song, NotificationSetting::SONG_NEW, 'songs.push.new', ['artist' => (string) $song['originalArtist']], $bySessionId, 'songNew');
     }
 
     /** The MuseScore file of the song replaced another one. */
@@ -43,7 +43,7 @@ final class SongPush
         if ($song === null || self::isNew($song)) {
             return;
         }
-        $this->send($this->currentMembers(), $song, NotificationSetting::SONG_SCORE, 'songs.push.score', [], $bySessionId);
+        $this->send($this->currentMembers(), $song, NotificationSetting::SONG_SCORE, 'songs.push.score', [], $bySessionId, 'songScore');
     }
 
     /** A part was added to the song, or replaced. */
@@ -58,15 +58,16 @@ final class SongPush
             "SELECT id FROM member WHERE instrumentId = ? AND status IN ('ACTIVE', 'POWER_MEMBER')",
             [$instrumentId],
         ));
-        $this->send($players, $song, NotificationSetting::SONG_PART, 'songs.push.part', ['instrument' => (string) $instrument], $bySessionId);
+        $this->send($players, $song, NotificationSetting::SONG_PART, 'songs.push.part', ['instrument' => (string) $instrument], $bySessionId, 'songPart');
     }
 
     /**
      * @param list<int> $memberIds
      * @param array<string, mixed> $song
      * @param array<string, string> $values
+     * @param string $email The kind of email (NotificationEmails, #65)
      */
-    private function send(array $memberIds, array $song, NotificationSetting $setting, string $key, array $values, int $bySessionId): void
+    private function send(array $memberIds, array $song, NotificationSetting $setting, string $key, array $values, int $bySessionId, string $email): void
     {
         $band = (string) $this->database->fetchOne('SELECT name FROM band WHERE id = 1');
         $values = ['band' => $band, 'name' => (string) $song['name'], ...$values];
@@ -77,6 +78,7 @@ final class SongPush
             'tag' => "song{$song['id']}",
             'renotify' => true,
             'url' => "/songs/{$song['id']}",
+            'email' => ['kind' => $email, 'songId' => (int) $song['id'], 'values' => $values],
         ], Push::TTL_NEWS, setting: $setting, exceptSessionId: $bySessionId);
     }
 

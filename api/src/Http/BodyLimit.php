@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Http;
 
+use BrassBand\Transfer\TransferFolder;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -22,6 +23,8 @@ final class BodyLimit implements MiddlewareInterface
     public const MAX_BYTES = 8_000_000;
     public const MAX_FILE_BYTES = 10_000_000;
 
+    // The address a zip to import is sent to (routes.php).
+    private const IMPORT_ADDRESS = '/api/transfer/upload';
     // The addresses a file of a song is sent to (routes.php).
     private const FILE_ADDRESS = '#\A/api/songs/[0-9]+/(cover|museScore|midi|musicXml|audio|parts/[0-9]+)\z#';
 
@@ -44,7 +47,13 @@ final class BodyLimit implements MiddlewareInterface
 
     private function limit(ServerRequestInterface $request): int
     {
-        $isFile = $request->getMethod() === 'PUT' && preg_match(self::FILE_ADDRESS, $request->getUri()->getPath()) === 1;
+        $isPut = $request->getMethod() === 'PUT';
+        // A zip of an export or a reprise (0.4.0, #43), copied piece by piece
+        // to the folder "import", never held whole in memory.
+        if ($isPut && $request->getUri()->getPath() === self::IMPORT_ADDRESS) {
+            return TransferFolder::MAX_UPLOAD_BYTES;
+        }
+        $isFile = $isPut && preg_match(self::FILE_ADDRESS, $request->getUri()->getPath()) === 1;
 
         return $isFile ? self::MAX_FILE_BYTES : self::MAX_BYTES;
     }

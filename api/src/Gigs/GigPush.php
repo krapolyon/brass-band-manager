@@ -65,6 +65,11 @@ final class GigPush
                 'tag' => "gig{$gig['id']}",
                 'renotify' => true,
                 'url' => "/gigs/{$gig['id']}",
+                // What the email shows (NotificationEmails, #65).
+                'email' => [
+                    'kind' => $setting === NotificationSetting::GIG_PLAYABLE ? 'gigPlayable' : 'gigConfirmed',
+                    'gigIds' => [(int) $gig['id']],
+                ],
             ];
         }, Push::TTL_NEWS, setting: $setting, exceptSessionId: $bySessionId);
     }

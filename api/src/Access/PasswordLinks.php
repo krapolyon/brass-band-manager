@@ -25,9 +25,12 @@ final class PasswordLinks
     // Creates the link of a member and returns its token. A member has one
     // pending link at most: a new one cancels the previous one.
     //
-    // A link created by a member manager, who sends it himself, lasts 7 days.
-    // A link the app sends by email ($emailed) lasts one hour.
-    public function create(int $memberId, ?int $byMemberId, bool $emailed = false): string
+    // A link created by a member manager lasts 7 days, whether he sends it
+    // himself or the app sends it as an invitation ($emailed and
+    // $isInvitation, issue #50). A link the app sends for a forgotten
+    // password ($emailed alone) lasts one hour. emailedAt says when the app
+    // sent it.
+    public function create(int $memberId, ?int $byMemberId, bool $emailed = false, bool $isInvitation = false): string
     {
         $token = bin2hex(random_bytes(32));
         $this->cancel($memberId);
@@ -37,7 +40,7 @@ final class PasswordLinks
             [
                 $memberId,
                 self::hash($token),
-                $emailed ? AccessRules::EMAILED_LINK_MINUTES : AccessRules::PASSWORD_LINK_DAYS * 24 * 60,
+                $emailed && !$isInvitation ? AccessRules::EMAILED_LINK_MINUTES : AccessRules::PASSWORD_LINK_DAYS * 24 * 60,
                 (int) $emailed,
                 $byMemberId,
             ],

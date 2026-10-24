@@ -107,7 +107,7 @@ final class Setlists
         $songs = [];
         // By name: the name the band gives the song, as in the list of songs.
         foreach ($this->database->fetchAllAssociative(
-            'SELECT ss.setlistId, ss.position, ss.songId, s.name
+            'SELECT ss.setlistId, ss.position, ss.songId, s.name, s.durationSeconds
              FROM setlistSong ss JOIN song s ON s.id = ss.songId
              WHERE ss.setlistId IN (?) ORDER BY ss.setlistId, ss.position',
             [array_column($rows, 'id')],
@@ -117,6 +117,9 @@ final class Setlists
                 'position' => (int) $song['position'],
                 'songId' => (int) $song['songId'],
                 'name' => (string) $song['name'],
+                // The length of the song, for the length of the setlist shown
+                // when it is read (0.4.0, issue #60). Null: not known.
+                'durationSeconds' => $song['durationSeconds'] === null ? null : (int) $song['durationSeconds'],
             ];
         }
 

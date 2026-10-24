@@ -81,6 +81,14 @@ use BrassBand\Access\CurrentPassword;
 use BrassBand\Migrations\ListMigrationsAction;
 use BrassBand\Migrations\Migrations;
 use BrassBand\Migrations\RunMigrationsAction;
+use BrassBand\Transfer\ExportAction;
+use BrassBand\Transfer\ImportAction;
+use BrassBand\Transfer\ReadAction;
+use BrassBand\Transfer\ShowTransferAction;
+use BrassBand\Transfer\TemplatesAction;
+use BrassBand\Transfer\TransferFolder;
+use BrassBand\Transfer\Transfers;
+use BrassBand\Transfer\UploadAction;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\RequireSelfOrPermission;
 use BrassBand\Access\SignInFailures;
@@ -91,11 +99,13 @@ use BrassBand\Members\CreateMemberAction;
 use BrassBand\Members\CreatePasswordLinkAction;
 use BrassBand\Members\DeleteMemberAction;
 use BrassBand\Members\DeletePasswordLinkAction;
+use BrassBand\Members\Invitations;
 use BrassBand\Members\ListMembersAction;
 use BrassBand\Members\MemberRecord;
 use BrassBand\Members\Members;
 use BrassBand\Members\PersonalData;
 use BrassBand\Members\PhotoStore;
+use BrassBand\Members\SendInvitationAction;
 use BrassBand\Members\SetRolesAction;
 use BrassBand\Members\ShowMemberAction;
 use BrassBand\Members\ShowPhotoAction;
@@ -140,7 +150,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{storageFolder: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
+ * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -162,6 +172,7 @@ return function (App $app, Connection $database, array $config): void {
     $photos = new PhotoStore($database, $files);
     $links = new PasswordLinks($database);
     $members = new Members($database, $personal);
+    $invitations = new Invitations($database, $mailer, $personal);
     $record = new MemberRecord($database, $personal);
     $sections = new Sections($database);
     $songFiles = new SongFiles($database, $files);
@@ -175,6 +186,14 @@ return function (App $app, Connection $database, array $config): void {
     $songPush = new SongPush($database, $push);
     // The bot of the band, which reads Discord (docs/discord-bot.md).
     $discord = Discord::from($config);
+    // Export, import and reprise of the data (model/export-import.md): the
+    // folder "import" beside storage/, where a large zip arrives by FTP.
+    $transferFolder = new TransferFolder($config['importFolder'] ?? dirname($config['storageFolder']) . '/import');
+    $transfers = new Transfers($database, $personal, $files, $links, $thumbnails, $invitations, $transferFolder);
+    // The version of the app, written in the export: version.json is at the
+    // root of the built front, which is what the web server serves.
+    $built = json_decode((string) @file_get_contents(($_SERVER['DOCUMENT_ROOT'] ?? '') . '/version.json'), true);
+    $appVersion = is_array($built) && is_string($built['version'] ?? null) ? $built['version'] : 'unknown';
 
     // ---------------------------------------------------------------
     // 1. Public
@@ -210,6 +229,7 @@ return function (App $app, Connection $database, array $config): void {
         $photos,
         $links,
         $members,
+        $invitations,
         $record,
         $sections,
         $songFiles,
@@ -225,6 +245,13 @@ return function (App $app, Connection $database, array $config): void {
         $migrations,
         $currentPassword,
         $discord,
+        $transferFolder,
+        $transfers,
+        $mailer,
+        $files,
+        $personal,
+        $appVersion,
+        $config,
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
@@ -307,15 +334,18 @@ return function (App $app, Connection $database, array $config): void {
         // 4. Permission
         // ---------------------------------------------------------------
         $manageMembers = new RequirePermission(Permission::MANAGE_MEMBERS);
-        $group->post('/api/members', new CreateMemberAction($database, $members, $record, $links))
+        $group->post('/api/members', new CreateMemberAction($database, $members, $record, $links, $invitations))
             ->add($manageMembers);
         $group->delete('/api/members/{id:[0-9]+}', new DeleteMemberAction($database, $members, $photos))
             ->add($manageMembers);
-        $group->put('/api/members/{id:[0-9]+}/status', new ChangeStatusAction($database, $members, $sessions, $links, $photos))
+        $group->put('/api/members/{id:[0-9]+}/status', new ChangeStatusAction($database, $members, $sessions, $links, $photos, $invitations))
             ->add($manageMembers);
         $group->post('/api/members/{id:[0-9]+}/passwordLink', new CreatePasswordLinkAction($database, $members, $links))
             ->add($manageMembers);
         $group->delete('/api/members/{id:[0-9]+}/passwordLink', new DeletePasswordLinkAction($members, $links))
+            ->add($manageMembers);
+        // "Renvoyer l'invitation": a new link, sent by email (#50).
+        $group->post('/api/members/{id:[0-9]+}/invitation', new SendInvitationAction($database, $members, $links, $invitations))
             ->add($manageMembers);
 
         $group->put('/api/members/{id:[0-9]+}/roles', new SetRolesAction($database, $members, $links))
@@ -326,6 +356,15 @@ return function (App $app, Connection $database, array $config): void {
         $runMigrations = new RequirePermission(Permission::RUN_MIGRATIONS);
         $group->get('/api/migrations', new ListMigrationsAction($migrations))->add($runMigrations);
         $group->post('/api/migrations', new RunMigrationsAction($migrations, $currentPassword))->add($runMigrations);
+
+        // Export, import and reprise of the data: the admin only (export-import.md).
+        $transferData = new RequirePermission(Permission::TRANSFER_DATA);
+        $group->get('/api/transfer', new ShowTransferAction($database, $transferFolder, $mailer, $config['storageFolder']))->add($transferData);
+        $group->post('/api/transfer/export', new ExportAction($database, $personal, $files, $currentPassword, $appVersion))->add($transferData);
+        $group->get('/api/transfer/templates', new TemplatesAction($database))->add($transferData);
+        $group->put('/api/transfer/upload', new UploadAction($transferFolder))->add($transferData);
+        $group->post('/api/transfer/read', new ReadAction($transfers))->add($transferData);
+        $group->post('/api/transfer/import', new ImportAction($transfers, $currentPassword))->add($transferData);
 
         $manageSections = new RequirePermission(Permission::MANAGE_SECTIONS);
         $group->post('/api/sections', new SaveSectionAction($database, $sections))->add($manageSections);
