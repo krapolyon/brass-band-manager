@@ -138,7 +138,7 @@ final class Members
     // The SQL condition that keeps the members a viewer may see.
     private static function visibility(CurrentMember $viewer): string
     {
-        return $viewer->can(Permission::MANAGE_MEMBERS) ? '1 = 1' : "status IN ('ACTIVE', 'POWER_MEMBER')";
+        return $viewer->can(Permission::MANAGE_MEMBERS) ? '1 = 1' : 'status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')';
     }
 
     /**

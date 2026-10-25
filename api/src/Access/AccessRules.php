@@ -38,4 +38,6 @@ final class AccessRules
 
     // The statuses of a member who can sign in ("current member" in the model).
     public const SIGN_IN_STATUSES = ['ACTIVE', 'POWER_MEMBER'];
+    // The same list, as an SQL "status IN (...)" reads it. Keep the two in step.
+    public const SIGN_IN_STATUSES_SQL = "'ACTIVE', 'POWER_MEMBER'";
 }

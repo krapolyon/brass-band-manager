@@ -73,7 +73,7 @@ final class PhotoStore
     {
         $written = null;
         try {
-            $this->database->transactional(function () use ($memberId, $photo, $byMemberId, &$written): void {
+            $previous = $this->database->transactional(function () use ($memberId, $photo, $byMemberId, &$written): ?string {
                 // Holds the row until the end: the next request waits here.
                 $member = $this->database->fetchAssociative('SELECT status, photoPath FROM member WHERE id = ? FOR UPDATE', [$memberId]);
                 // Judged here, with the row held: the member may have been
@@ -95,13 +95,16 @@ final class PhotoStore
                     ['photoPath' => $written, 'updatedByMemberId' => $byMemberId],
                     ['id' => $memberId],
                 );
-                $this->delete(is_string($previous) ? $previous : null);
+
+                return is_string($previous) ? $previous : null;
             });
         } catch (\Throwable $failure) {
             // Nothing was saved: the file just written belongs to nobody.
             $this->delete($written);
             throw $failure;
         }
+        // Once saved, never before: a change that fails keeps its file.
+        $this->delete($previous);
     }
 
     // Deletes the file of a photo, given the path that was in member.photoPath.

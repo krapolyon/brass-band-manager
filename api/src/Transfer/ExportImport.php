@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Transfer;
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\Role;
 use BrassBand\Band\LogoInput;
@@ -153,7 +154,7 @@ final class ExportImport
                 }
                 $isAdmin = in_array(Role::ADMIN->value, (array) ($member['roles'] ?? []), true);
                 $hash = $member['passwordHash'] ?? null;
-                $canSignIn = in_array($member['status'] ?? null, ['ACTIVE', 'POWER_MEMBER'], true)
+                $canSignIn = in_array($member['status'] ?? null, AccessRules::SIGN_IN_STATUSES, true)
                     && is_string($hash) && password_get_info($hash)['algo'] !== null;
             }
             if (!$isAdmin) {
@@ -423,7 +424,7 @@ final class ExportImport
                 continue;
             }
             // Without a password a member is invited, or has left.
-            if ($hash === null && in_array($status, ['ACTIVE', 'POWER_MEMBER'], true)) {
+            if ($hash === null && in_array($status, AccessRules::SIGN_IN_STATUSES, true)) {
                 $status = 'INVITED';
             }
             $language = $text('language') ?? '';

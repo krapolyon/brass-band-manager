@@ -226,6 +226,12 @@ export function momentOf(gig: Dated, now = new Date()): GigMoment {
   return now >= start ? 'inProgress' : null;
 }
 
+/** A gig behind us: played, or not played and its date passed. */
+export function isBehind(gig: Dated, now = new Date()): boolean {
+  const moment = momentOf(gig, now);
+  return moment === 'past' || moment === 'toClose' || moment === 'outdated';
+}
+
 /** Members answer while the gig is proposed, accepted or confirmed, until it is over. */
 export function isOpen(gig: Dated, now = new Date()): boolean {
   return ['PROPOSED', 'ACCEPTED', 'CONFIRMED'].includes(gig.status) && !isOver(gig, now);

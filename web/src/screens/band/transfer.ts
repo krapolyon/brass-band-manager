@@ -7,7 +7,6 @@ import { ApiError, api } from '../../api.ts';
 export const exportParts = ['settings', 'members', 'songs', 'gigs'] as const;
 export type ExportPart = (typeof exportParts)[number];
 export const repriseParts = ['members', 'songs', 'gigs', 'answers'] as const;
-export type ReprisePart = (typeof repriseParts)[number];
 
 /** What GET /api/transfer answers: how much each part holds, and the zips waiting. */
 export type TransferState = {

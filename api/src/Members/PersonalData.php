@@ -63,12 +63,6 @@ final class PersonalData
         return $personal;
     }
 
-    /** A new key, as config.php holds it. */
-    public static function newKey(): string
-    {
-        return base64_encode(sodium_crypto_kdf_keygen());
-    }
-
     /**
      * The key of the configuration, or null when there is none or it is not
      * one (anything but 32 bytes in base64).
@@ -233,12 +227,6 @@ final class PersonalData
         }
 
         return $count;
-    }
-
-    /** How many rows still hold their personal fields in clear. */
-    public function clearRowCount(): int
-    {
-        return $this->isMigrated() ? (int) $this->database->fetchOne('SELECT COUNT(*) FROM member WHERE emailHash IS NULL') : 0;
     }
 
     private function seal(string $field, ?string $value): ?string

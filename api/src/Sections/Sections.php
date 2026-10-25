@@ -32,7 +32,7 @@ final class Sections
      */
     public function all(bool $forManaging = false): array
     {
-        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+        $current = AccessRules::SIGN_IN_STATUSES_SQL;
         $instruments = [];
         $rows = $this->database->fetchAllAssociative(
             "SELECT i.id, i.sectionId, i.name, i.position,

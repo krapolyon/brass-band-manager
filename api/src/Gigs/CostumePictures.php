@@ -82,7 +82,7 @@ final class CostumePictures
     {
         $written = null;
         try {
-            $this->database->transactional(function () use ($costumeId, $picture, $byMemberId, &$written): void {
+            $previous = $this->database->transactional(function () use ($costumeId, $picture, $byMemberId, &$written): ?string {
                 // Holds the row until the end: the next request waits here.
                 $previous = $this->database->fetchOne('SELECT imagePath FROM costume WHERE id = ? FOR UPDATE', [$costumeId]);
                 if ($previous === false) {
@@ -93,7 +93,8 @@ final class CostumePictures
                     $written = $this->files->write('costumes', [$name => $picture['image']]) . "/{$name}";
                 }
                 $this->database->update('costume', ['imagePath' => $written, 'updatedByMemberId' => $byMemberId], ['id' => $costumeId]);
-                $this->files->delete(is_string($previous) ? $previous : null);
+
+                return is_string($previous) ? $previous : null;
             });
         } catch (\Throwable $failure) {
             // Nothing was saved: the file just written belongs to nobody.
@@ -101,6 +102,8 @@ final class CostumePictures
 
             throw $failure;
         }
+        // Once saved, never before: a change that fails keeps its file.
+        $this->files->delete($previous);
     }
 
     public function delete(?string $imagePath): void

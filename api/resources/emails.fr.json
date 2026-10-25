@@ -56,7 +56,6 @@
     "meeting": "RDV {time}",
     "playable": "Jouable",
     "missing": "Manque : {sections}",
-    "notYet": "Pas encore jouable",
     "toAnswer": "À répondre",
     "status": {
       "PROPOSED": "Proposition",

@@ -53,7 +53,7 @@ final class AnswerAction
                 throw new ApiError(404, 'notFound');
             }
             // Only a current member comes to a gig.
-            $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+            $current = AccessRules::SIGN_IN_STATUSES_SQL;
             if ($this->database->fetchOne("SELECT 1 FROM member WHERE id = ? AND status IN ({$current})", [$memberId]) === false) {
                 throw new ApiError(404, 'notFound');
             }

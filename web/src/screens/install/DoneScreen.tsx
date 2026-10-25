@@ -31,8 +31,6 @@ export function DoneScreen() {
       lead={t('install.done.lead')}
       actions={
         <BottomBar>
-          {/* Inviting belongs to the members feature, which is not built yet:
-              for now both buttons lead to the home address. */}
           <Button onClick={() => navigate('/members/manage/invite')}>
             {t('install.done.invite')}
           </Button>

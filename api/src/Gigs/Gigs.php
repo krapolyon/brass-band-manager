@@ -311,7 +311,7 @@ final class Gigs
      */
     private function missingSections(array $gigIds): array
     {
-        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+        $current = AccessRules::SIGN_IN_STATUSES_SQL;
         $sections = array_map(intval(...), $this->database->fetchFirstColumn(
             "SELECT DISTINCT i.sectionId FROM member m JOIN instrument i ON i.id = m.instrumentId
              WHERE m.status IN ({$current}) ORDER BY i.sectionId",
@@ -392,7 +392,7 @@ final class Gigs
 
         $answers = [];
         if ($withAnswers) {
-            $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+            $current = AccessRules::SIGN_IN_STATUSES_SQL;
             $given = $this->database->fetchAllAssociative(
                 "SELECT a.gigSlotId, a.memberId, a.answer, m.nickname, i.sectionId, m.status IN ({$current}) AS isCurrentMember
                  FROM gigSlotAttendance a

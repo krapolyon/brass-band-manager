@@ -165,7 +165,7 @@ final class LogoStore
         [$column, $name] = $appIcon ? ['iconPath', 'appIcon'] : ['logoPath', 'logo'];
         $written = null;
         try {
-            $this->database->transactional(function () use ($files, $memberId, $column, $name, &$written): void {
+            $previous = $this->database->transactional(function () use ($files, $memberId, $column, $name, &$written): ?string {
                 // Holds the row until the end: the next request waits here.
                 $previous = $this->database->fetchOne("SELECT {$column} FROM band WHERE id = 1 FOR UPDATE");
                 $written = $files === null ? null : $this->write($files, $name);
@@ -174,25 +174,22 @@ final class LogoStore
                     [$column => $written, 'updatedByMemberId' => $memberId],
                     ['id' => 1],
                 );
-                $this->delete(is_string($previous) ? $previous : null);
+
+                return is_string($previous) ? $previous : null;
             });
         } catch (\Throwable $failure) {
             // Nothing was saved: the files just written belong to no logo.
             $this->delete($written);
             throw $failure;
         }
+        // Once saved, never before: a change that fails keeps its files.
+        $this->delete($previous);
     }
 
     // Deletes the files of a logo, given the path that was in band.logoPath.
     public function delete(?string $logoPath): void
     {
         $this->files->delete($logoPath);
-    }
-
-    // The path of the logo of the band, or null when it has none.
-    public function current(): ?string
-    {
-        return $this->paths()['logoPath'];
     }
 
     /**

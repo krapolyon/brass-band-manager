@@ -7,7 +7,7 @@ import { FilterChip } from '../../components/FilterChip.tsx';
 import { GigCardLoading } from '../../components/GigCard.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { Message } from '../../components/Message.tsx';
-import { type GigSummary, isOpen, momentOf, useGigs } from '../../gigs.ts';
+import { type GigSummary, isBehind, isOpen, momentOf, useGigs } from '../../gigs.ts';
 import { useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
@@ -20,12 +20,6 @@ import './gigs.css';
 /** A gig that waits for who may edit it: a draft, or a gig that was not played and whose date has passed. */
 const isToHandle = (gig: GigSummary) =>
   gig.canEdit && (gig.status === 'DRAFT' || momentOf(gig) === 'toClose');
-
-/** A gig behind us: played, or never confirmed and seen by someone who cannot close it. */
-const isBehind = (gig: GigSummary) => {
-  const moment = momentOf(gig);
-  return moment === 'past' || moment === 'toClose' || moment === 'outdated';
-};
 
 // Figma: Gigs / List (sections 1 and 8), and from the desktop width the list
 // beside the gig (section 12). The gigs to come, by month, the nearest first;

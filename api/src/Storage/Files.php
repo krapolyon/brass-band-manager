@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Storage;
 
 // The files members give to the app (the logo of the band, the photos of
-// members, the files of songs), in the storage folder: a folder next to api/
+// members, the pictures of costumes, the files of songs), in the storage folder: a folder next to api/
 // that the web server does not serve. A file leaves it only through an action
 // of the API, which decides who may read it.
 //
