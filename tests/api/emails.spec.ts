@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
 import { addGig, day } from '../support/gigs.ts';
+import { logoInput, png } from '../support/images.ts';
 import { emptyMailbox, receivedMails } from '../support/mail.ts';
 import { emptyPushes } from '../support/push.ts';
 import { addMember, admin, deviceOf, install, memberId } from '../support/scenario.ts';
@@ -99,6 +100,28 @@ test('no image but the icon of the band; the typefaces from the app', async ({ p
     expect(address[1]).toMatch(/^http:\/\/localhost:8081\//);
   }
   expect(html).toContain("url('http://localhost:8081/fonts/BricolageGrotesque-latin.woff2')");
+});
+
+test('the icon of an email is the icon of the app, and a mail client may show it', async ({
+  playwright,
+  request,
+}) => {
+  const jibe = await deviceOf(playwright, admin.email, admin.password);
+  await jibe.put('/api/band/logo', { data: logoInput() });
+  const { icons } = await (
+    await jibe.put('/api/band/appIcon', { data: logoInput(png(600, 600, 40), 40) })
+  ).json();
+  await jibe.dispose();
+
+  await request.post('/api/passwordLink/request', { data: { email: email('Zaza') } });
+
+  const html = (await receivedMails(1))[0]?.html ?? '';
+  // The icon of the app (its own square image), not the logo.
+  expect(html).toContain(`<img src="http://localhost:8081${icons[192]}"`);
+  const icon = await request.get(icons[192]);
+  expect(await icon.body()).toEqual(png(192, 192, 40));
+  // A mail client reads it from another origin: same-origin would hide it.
+  expect(icon.headers()['cross-origin-resource-policy']).toBe('cross-origin');
 });
 
 test('the forgotten password, in HTML too', async ({ request }) => {

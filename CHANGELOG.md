@@ -13,6 +13,7 @@ What changes in the app, version after version. This file is written by
 
 - Security fixes following the pentest.
 - On a computer, a click anywhere on the line of a member in “Manage members” opens their record, the “…” at its end included.
+- The icon of the band shows again at the top of the emails.
 
 ## 0.4.0 — 2026-10-24
 

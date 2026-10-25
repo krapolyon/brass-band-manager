@@ -14,6 +14,10 @@
       {
         "kind": "fixed",
         "text": "On a computer, a click anywhere on the line of a member in “Manage members” opens their record, the “…” at its end included."
+      },
+      {
+        "kind": "fixed",
+        "text": "The icon of the band shows again at the top of the emails."
       }
     ]
   },
