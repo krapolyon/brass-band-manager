@@ -12,6 +12,7 @@ What changes in the app, version after version. This file is written by
 ### Fixed
 
 - Security fixes following the pentest.
+- On a computer, a click anywhere on the line of a member in “Manage members” opens their record, the “…” at its end included.
 
 ## 0.4.0 — 2026-10-24
 

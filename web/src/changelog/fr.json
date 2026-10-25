@@ -1,7 +1,8 @@
 {
   "1.0.0": {
     "Security fixes following the pentest.": "Correctifs de sécurité suite au pentest.",
-    "A new password has 15 characters at least, and can be neither among the most used passwords nor built from the email or the name of the band. A password chosen before still signs in.": "Un nouveau mot de passe fait au moins 15 caractères, et ne peut être ni parmi les plus utilisés, ni construit à partir de l’e-mail ou du nom de la fanfare. Un mot de passe choisi avant permet toujours de se connecter."
+    "A new password has 15 characters at least, and can be neither among the most used passwords nor built from the email or the name of the band. A password chosen before still signs in.": "Un nouveau mot de passe fait au moins 15 caractères, et ne peut être ni parmi les plus utilisés, ni construit à partir de l’e-mail ou du nom de la fanfare. Un mot de passe choisi avant permet toujours de se connecter.",
+    "On a computer, a click anywhere on the line of a member in “Manage members” opens their record, the “…” at its end included.": "Sur ordinateur, un clic n’importe où sur la ligne d’un fanfaron dans « Gérer les fanfarons » ouvre sa fiche, le « … » au bout compris."
   },
   "0.4.0": {
     "The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings. The browser then makes the MIDI file and the score of each MuseScore file loaded.": "L’admin peut exporter les données de la fanfare, importer un export, et charger une fanfare depuis un .csv  (fanfarons, morceaux, plans, réponses), dans les réglages de la fanfare. Le navigateur produit ensuite le MIDI et la partition de chaque fichier MuseScore chargé.",

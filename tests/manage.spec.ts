@@ -133,6 +133,16 @@ test.describe('the list', () => {
 
     await table.getByRole('link', { name: 'Ouvrir la fiche de Zaza' }).click();
     await expect(title(page)).toHaveText('Zaza');
+
+    // The whole line opens the record (Figma, Member/TableRow), its end included.
+    await page.goBack();
+    await page.getByRole('switch', { name: 'Afficher les anciens' }).check();
+    const end = await line('Jibé').boundingBox();
+    await line('Jibé').click({ position: { x: (end?.width ?? 0) - 20, y: 32 } });
+    await expect(title(page)).toHaveText('Jibé');
+    await page.goBack();
+    await line('Momo').click();
+    await expect(title(page)).toHaveText('Momo');
   });
 });
 
