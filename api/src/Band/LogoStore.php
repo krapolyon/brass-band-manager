@@ -57,13 +57,8 @@ final class LogoStore
      */
     public function read(FieldErrors $errors, string $field, LogoInput $input): ?array
     {
-        $image = base64_decode($input->image, true);
-        if ($image === false || $image === '') {
-            $errors->add($field, 'invalid');
-            return null;
-        }
-        if (strlen($image) > self::MAX_BYTES) {
-            $errors->add($field, 'tooBig');
+        $image = Images::decoded($errors, $field, $input->image, self::MAX_BYTES);
+        if ($image === null) {
             return null;
         }
 
@@ -107,13 +102,8 @@ final class LogoStore
      */
     public function readAppIcon(FieldErrors $errors, string $field, LogoInput $input): ?array
     {
-        $image = base64_decode($input->image, true);
-        if ($image === false || $image === '') {
-            $errors->add($field, 'invalid');
-            return null;
-        }
-        if (strlen($image) > self::MAX_BYTES) {
-            $errors->add($field, 'tooBig');
+        $image = Images::decoded($errors, $field, $input->image, self::MAX_BYTES);
+        if ($image === null) {
             return null;
         }
         // Never an SVG: a phone wants pixels, and the image is used as it is.
@@ -143,12 +133,23 @@ final class LogoStore
      */
     public function write(array $files, string $name = 'logo'): string
     {
-        $written = ["{$name}.{$files['extension']}" => $files['image']];
+        return $this->files->write('band', self::contents($files, $name)) . "/{$name}.{$files['extension']}";
+    }
+
+    /**
+     * The files of a logo, by name: the image and its three icons.
+     *
+     * @param array{extension: string, image: string, icons: array<int, string>} $files
+     * @return array<string, string>
+     */
+    private static function contents(array $files, string $name): array
+    {
+        $contents = ["{$name}.{$files['extension']}" => $files['image']];
         foreach ($files['icons'] as $size => $icon) {
-            $written["icon-{$size}.png"] = $icon;
+            $contents["icon-{$size}.png"] = $icon;
         }
 
-        return $this->files->write('band', $written) . "/{$name}.{$files['extension']}";
+        return $contents;
     }
 
     /**
@@ -163,27 +164,18 @@ final class LogoStore
     {
         // Written in the code, never taken from the request.
         [$column, $name] = $appIcon ? ['iconPath', 'appIcon'] : ['logoPath', 'logo'];
-        $written = null;
-        try {
-            $previous = $this->database->transactional(function () use ($files, $memberId, $column, $name, &$written): ?string {
-                // Holds the row until the end: the next request waits here.
-                $previous = $this->database->fetchOne("SELECT {$column} FROM band WHERE id = 1 FOR UPDATE");
-                $written = $files === null ? null : $this->write($files, $name);
-                $this->database->update(
-                    'band',
-                    [$column => $written, 'updatedByMemberId' => $memberId],
-                    ['id' => 1],
-                );
+        $this->files->replacing($this->database, function (callable $write) use ($files, $memberId, $column, $name): ?string {
+            // Holds the row until the end: the next request waits here.
+            $previous = $this->database->fetchOne("SELECT {$column} FROM band WHERE id = 1 FOR UPDATE");
+            $written = $files === null ? null : $write('band', self::contents($files, $name)) . "/{$name}.{$files['extension']}";
+            $this->database->update(
+                'band',
+                [$column => $written, 'updatedByMemberId' => $memberId],
+                ['id' => 1],
+            );
 
-                return is_string($previous) ? $previous : null;
-            });
-        } catch (\Throwable $failure) {
-            // Nothing was saved: the files just written belong to no logo.
-            $this->delete($written);
-            throw $failure;
-        }
-        // Once saved, never before: a change that fails keeps its files.
-        $this->delete($previous);
+            return is_string($previous) ? $previous : null;
+        });
     }
 
     // Deletes the files of a logo, given the path that was in band.logoPath.

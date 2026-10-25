@@ -513,15 +513,12 @@ function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoi
     setFrom(String(marks[next[0]]?.from ?? first));
     setTo(String(marks[next[1]]?.to ?? last));
   };
-  const isValid = useMemo(
-    () =>
-      Number.isInteger(first) &&
-      Number.isInteger(last) &&
-      first >= 1 &&
-      last <= total &&
-      first <= last,
-    [first, last, total],
-  );
+  const isValid =
+    Number.isInteger(first) &&
+    Number.isInteger(last) &&
+    first >= 1 &&
+    last <= total &&
+    first <= last;
 
   return (
     <form

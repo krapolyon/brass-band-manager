@@ -42,8 +42,8 @@ final class SaveSlotAction
             $this->database->transactional(function () use ($gigId, $slotId, $input, $me): void {
                 $this->gigs->row($gigId, lock: true);
                 $others = $this->database->fetchAllAssociative('SELECT id, name FROM gigSlot WHERE gigId = ? AND id <> ?', [$gigId, $slotId ?? 0]);
-                if ($slotId !== null && $this->database->fetchOne('SELECT 1 FROM gigSlot WHERE id = ? AND gigId = ?', [$slotId, $gigId]) === false) {
-                    throw new ApiError(404, 'notFound');
+                if ($slotId !== null) {
+                    $this->gigs->mustHaveSlot($gigId, $slotId);
                 }
                 if (array_filter($others, fn (array $other) => $other['name'] === null) !== []) {
                     throw new ApiError(409, 'slotWithoutName');

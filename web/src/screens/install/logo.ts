@@ -8,6 +8,32 @@ import type { LogoInput } from './installApi.ts';
 // included; the server then needs no image library. The API checks what it
 // receives (api/src/Band/LogoStore.php).
 
+// The rules of model/band.md for the name and the logo, at install and in
+// the band settings. The API checks them again.
+export const BAND_NAME_MAX_LENGTH = 80;
+export const LOGO_TYPES = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
+const LOGO_MAX_BYTES = 2 * 1000 * 1000;
+
+/**
+ * Checks a logo the member chose and prepares it for the API, or says why it
+ * is refused: not an image the app takes, or too large (with its size, for
+ * the message).
+ */
+export async function readLogo(
+  file: File,
+): Promise<{ input: LogoInput } | { problem: 'wrongType' } | { problem: 'tooBig'; bytes: number }> {
+  // Some systems give no type to an SVG file: its name then says what it is.
+  const type = file.type || (file.name.toLowerCase().endsWith('.svg') ? 'image/svg+xml' : '');
+  if (!LOGO_TYPES.includes(type)) return { problem: 'wrongType' };
+  if (file.size > LOGO_MAX_BYTES) return { problem: 'tooBig', bytes: file.size };
+  try {
+    // Drawn into its icons at once: a file the browser cannot read is refused here.
+    return { input: await prepareLogo(file) };
+  } catch {
+    return { problem: 'wrongType' };
+  }
+}
+
 // The share of the square left empty around the logo, on each side. Phones
 // round or crop the corners of an icon: what matters stays in the middle.
 const MARGIN = 0.125;

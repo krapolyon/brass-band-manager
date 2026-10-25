@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Mail;
 
+use BrassBand\Http\AfterResponse;
 use PHPMailer\PHPMailer\PHPMailer;
 
 // Sends the emails of the app, through the mail server written in the
@@ -67,6 +68,29 @@ final class Mailer
     public function url(string $path): string
     {
         return $this->appUrl . $path;
+    }
+
+    /**
+     * Sends emails once the answer has left (AfterResponse): the member does
+     * not wait for the mail server. One that fails does not stop the others;
+     * the log says which kind of email failed and why, never to whom.
+     *
+     * @param list<array{to: string, message: array{subject: string, html: string, text: string}}> $emails
+     */
+    public function sendLater(string $fromName, array $emails, string $kind): void
+    {
+        if ($emails === []) {
+            return;
+        }
+        AfterResponse::add(function () use ($fromName, $emails, $kind): void {
+            foreach ($emails as $email) {
+                try {
+                    $this->send($email['to'], $fromName, $email['message']);
+                } catch (\Throwable $failure) {
+                    error_log("An email ({$kind}) was not sent: " . $failure::class);
+                }
+            }
+        });
     }
 
     /**

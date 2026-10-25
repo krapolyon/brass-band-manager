@@ -4,20 +4,8 @@
     "date": "2026-10-24",
     "changes": [
       {
-        "kind": "changed",
-        "text": "A new password needs 15 characters at least, with no other rule; a password among the most used, or built from your email or the name of the band, is refused. The screen says what is still missing as you type."
-      },
-      {
-        "kind": "changed",
-        "text": "After many refused tries from one network, sign-in, the install and the password links pause for a quarter of an hour, and a forgotten password can be asked ten times an hour from one network."
-      },
-      {
-        "kind": "changed",
-        "text": "The app tells the browser what its pages may load, and no other site can show it inside its own pages."
-      },
-      {
         "kind": "fixed",
-        "text": "A wrong calendar address and a wrong install key are answered at once, without holding the server for a second."
+        "text": "Security fixes following the pentest."
       }
     ]
   },

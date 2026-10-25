@@ -273,22 +273,7 @@ final class Push
                 'message' => $emails->render($band, (int) $member['id'], $language, $payload, (bool) $member['isChosen']),
             ];
         }
-        if ($messages === []) {
-            return;
-        }
-
-        $name = $band->name;
-        AfterResponse::add(static function () use ($mailer, $name, $messages): void {
-            foreach ($messages as $email) {
-                try {
-                    $mailer->send($email['to'], $name, $email['message']);
-                } catch (\Throwable $failure) {
-                    // The others still leave. The log names the kind of
-                    // failure, never the address.
-                    error_log('A notification email was not sent: ' . $failure::class);
-                }
-            }
-        });
+        $mailer->sendLater($band->name, $messages, 'notification');
     }
 
     /**

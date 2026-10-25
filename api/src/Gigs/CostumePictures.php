@@ -43,15 +43,8 @@ final class CostumePictures
      */
     public function read(FieldErrors $errors, string $field, PhotoInput $input): ?array
     {
-        $image = base64_decode($input->image, true);
-        if ($image === false || $image === '') {
-            $errors->add($field, 'invalid');
-
-            return null;
-        }
-        if (strlen($image) > self::MAX_BYTES) {
-            $errors->add($field, 'tooBig');
-
+        $image = Images::decoded($errors, $field, $input->image, self::MAX_BYTES);
+        if ($image === null) {
             return null;
         }
         // A PNG, a JPEG or a WebP, whatever its name said, and no larger than
@@ -80,30 +73,21 @@ final class CostumePictures
      */
     public function replace(int $costumeId, ?array $picture, int $byMemberId): void
     {
-        $written = null;
-        try {
-            $previous = $this->database->transactional(function () use ($costumeId, $picture, $byMemberId, &$written): ?string {
-                // Holds the row until the end: the next request waits here.
-                $previous = $this->database->fetchOne('SELECT imagePath FROM costume WHERE id = ? FOR UPDATE', [$costumeId]);
-                if ($previous === false) {
-                    throw new ApiError(404, 'notFound');
-                }
-                if ($picture !== null) {
-                    $name = "picture.{$picture['extension']}";
-                    $written = $this->files->write('costumes', [$name => $picture['image']]) . "/{$name}";
-                }
-                $this->database->update('costume', ['imagePath' => $written, 'updatedByMemberId' => $byMemberId], ['id' => $costumeId]);
+        $this->files->replacing($this->database, function (callable $write) use ($costumeId, $picture, $byMemberId): ?string {
+            // Holds the row until the end: the next request waits here.
+            $previous = $this->database->fetchOne('SELECT imagePath FROM costume WHERE id = ? FOR UPDATE', [$costumeId]);
+            if ($previous === false) {
+                throw new ApiError(404, 'notFound');
+            }
+            $written = null;
+            if ($picture !== null) {
+                $name = "picture.{$picture['extension']}";
+                $written = $write('costumes', [$name => $picture['image']]) . "/{$name}";
+            }
+            $this->database->update('costume', ['imagePath' => $written, 'updatedByMemberId' => $byMemberId], ['id' => $costumeId]);
 
-                return is_string($previous) ? $previous : null;
-            });
-        } catch (\Throwable $failure) {
-            // Nothing was saved: the file just written belongs to nobody.
-            $this->files->delete($written);
-
-            throw $failure;
-        }
-        // Once saved, never before: a change that fails keeps its file.
-        $this->files->delete($previous);
+            return is_string($previous) ? $previous : null;
+        });
     }
 
     public function delete(?string $imagePath): void

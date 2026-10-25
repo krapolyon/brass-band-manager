@@ -6,9 +6,11 @@ namespace BrassBand\Members;
 
 use BrassBand\Access\AccessRules;
 use BrassBand\Access\CurrentMember;
+use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\Permission;
 use BrassBand\Access\Role;
 use BrassBand\Http\ApiError;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 // What the actions on members share: who sees whom, what a member looks like
@@ -41,7 +43,7 @@ final class Members
             'SELECT ' . self::COLUMNS . ' FROM member WHERE ' . self::visibility($viewer) . ' ORDER BY nickname',
         );
 
-        return array_map(fn (array $member) => $this->view($viewer, $member), $members);
+        return $this->views($viewer, $members);
     }
 
     /**
@@ -60,7 +62,22 @@ final class Members
             throw new ApiError(404, 'notFound');
         }
 
-        return $this->view($viewer, $member);
+        return $this->views($viewer, [$member])[0];
+    }
+
+    // The photo of a member a viewer may see: null when they have none, 404
+    // when the viewer may not see them.
+    public function photoPathVisibleTo(CurrentMember $viewer, int $memberId): ?string
+    {
+        $path = $this->database->fetchOne(
+            'SELECT COALESCE(photoPath, \'\') FROM member WHERE id = ? AND ' . self::visibility($viewer),
+            [$memberId],
+        );
+        if ($path === false) {
+            throw new ApiError(404, 'notFound');
+        }
+
+        return $path === '' ? null : (string) $path;
     }
 
     /**
@@ -97,6 +114,26 @@ final class Members
         $roles = $this->database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ? ORDER BY role', [$memberId]);
 
         return array_map(fn (string $role) => Role::from($role), $roles);
+    }
+
+    /**
+     * Gives a member exactly these roles. Changed roles cancel a pending
+     * password link: whoever created it was allowed to for the roles of then,
+     * not for those of now, and whoever holds it would get the new ones
+     * (model/members.md, "Roles"). Used by the app, an import and a reprise.
+     *
+     * @param list<string> $roles Values of Role
+     */
+    public static function replaceRoles(Connection $database, PasswordLinks $links, int $memberId, array $roles, ?int $byMemberId): void
+    {
+        $before = $database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ?', [$memberId]);
+        if (array_diff($before, $roles) !== [] || array_diff($roles, $before) !== []) {
+            $links->cancel($memberId);
+        }
+        $database->delete('memberRole', ['memberId' => $memberId]);
+        foreach (array_unique($roles) as $role) {
+            $database->insert('memberRole', ['memberId' => $memberId, 'role' => $role, 'updatedByMemberId' => $byMemberId]);
+        }
     }
 
     /**
@@ -142,32 +179,56 @@ final class Members
     }
 
     /**
-     * @param array<string, mixed> $member A row with COLUMNS
-     * @return array<string, mixed>
+     * Members as a viewer may see them, with their roles and, for who manages
+     * members, their pending password link: three queries for the whole list.
+     *
+     * @param list<array<string, mixed>> $rows Rows with COLUMNS
+     * @return list<array<string, mixed>>
      */
-    private function view(CurrentMember $viewer, array $member): array
+    private function views(CurrentMember $viewer, array $rows): array
     {
-        $member = $this->personal->opened($member);
-        $id = (int) $member['id'];
-        $member['photoUrl'] = PhotoStore::url($id, $member['photoPath']);
-        unset($member['photoPath']);
-        $member['roles'] = array_map(fn (Role $role) => $role->value, $this->roles($id));
-
+        $ids = array_map(fn (array $row) => (int) $row['id'], $rows);
+        if ($ids === []) {
+            return [];
+        }
+        $roles = [];
+        foreach ($this->database->fetchAllAssociative(
+            'SELECT memberId, role FROM memberRole WHERE memberId IN (?) ORDER BY role',
+            [$ids],
+            [ArrayParameterType::INTEGER],
+        ) as $row) {
+            $roles[(int) $row['memberId']][] = (string) $row['role'];
+        }
         // Whether a password link is waiting, and until when (in UTC): for who
         // manages members only. A link that has expired counts as none.
+        $links = [];
         if ($viewer->can(Permission::MANAGE_MEMBERS)) {
-            $link = $this->database->fetchAssociative(
-                "SELECT DATE_FORMAT(expiresAt, '%Y-%m-%dT%H:%i:%sZ') AS expiresAt, DATE_FORMAT(emailedAt, '%Y-%m-%dT%H:%i:%sZ') AS emailedAt
-                 FROM memberPasswordLink WHERE memberId = ? AND expiresAt > NOW()",
-                [$id],
-            );
-            $member['hasPendingPasswordLink'] = $link !== false;
-            $member['passwordLinkExpiresAt'] = $link === false ? null : (string) $link['expiresAt'];
-            // When the app sent it by email, for an invitation (#50): "Invitation
-            // envoyée le 24 octobre". Null when it was not sent by the app.
-            $member['passwordLinkEmailedAt'] = $link === false || $link['emailedAt'] === null ? null : (string) $link['emailedAt'];
+            foreach ($this->database->fetchAllAssociative(
+                "SELECT memberId, DATE_FORMAT(expiresAt, '%Y-%m-%dT%H:%i:%sZ') AS expiresAt, DATE_FORMAT(emailedAt, '%Y-%m-%dT%H:%i:%sZ') AS emailedAt
+                 FROM memberPasswordLink WHERE memberId IN (?) AND expiresAt > NOW()",
+                [$ids],
+                [ArrayParameterType::INTEGER],
+            ) as $row) {
+                $links[(int) $row['memberId']] = $row;
+            }
         }
 
-        return $member;
+        return array_map(function (array $row) use ($viewer, $roles, $links): array {
+            $member = $this->personal->opened($row);
+            $id = (int) $member['id'];
+            $member['photoUrl'] = PhotoStore::url($id, $member['photoPath']);
+            unset($member['photoPath']);
+            $member['roles'] = $roles[$id] ?? [];
+            if ($viewer->can(Permission::MANAGE_MEMBERS)) {
+                $link = $links[$id] ?? null;
+                $member['hasPendingPasswordLink'] = $link !== null;
+                $member['passwordLinkExpiresAt'] = $link === null ? null : (string) $link['expiresAt'];
+                // When the app sent it by email, for an invitation (#50): "Invitation
+                // envoyée le 24 octobre". Null when it was not sent by the app.
+                $member['passwordLinkEmailedAt'] = $link === null || $link['emailedAt'] === null ? null : (string) $link['emailedAt'];
+            }
+
+            return $member;
+        }, $rows);
     }
 }

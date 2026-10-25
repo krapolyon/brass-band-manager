@@ -167,28 +167,13 @@ final class Exporter
         return ['member' => $rows];
     }
 
-    /**
-     * The email of every member, by id, opened once for the whole export.
-     *
-     * @return array<int, string>
-     */
-    private function memberEmails(): array
-    {
-        $emails = [];
-        foreach ($this->database->fetchAllAssociative('SELECT id, email FROM member') as $member) {
-            $emails[(int) $member['id']] = (string) $this->personal->opened($member)['email'];
-        }
-
-        return $emails;
-    }
-
     /** @return array<string, mixed> */
     private function songs(): array
     {
         $rows = [];
         // Two names can give the same folder ("Ça va" and "Ça va !"): a number tells them apart.
         $folders = [];
-        $emails = $this->memberEmails();
+        $emails = $this->personal->emailsById();
         foreach ($this->database->fetchAllAssociative('SELECT * FROM song ORDER BY name') as $song) {
             $id = (int) $song['id'];
             $folder = self::slug((string) $song['name']) ?: "song-{$id}";
@@ -270,7 +255,7 @@ final class Exporter
             }
             $costumes[] = ['name' => $costume['name'], 'position' => (int) $costume['position'], 'picture' => $picture];
         }
-        $emails = $this->memberEmails();
+        $emails = $this->personal->emailsById();
 
         $rows = [];
         foreach ($this->database->fetchAllAssociative('SELECT * FROM gig ORDER BY startsOn, name') as $gig) {

@@ -1,9 +1,6 @@
 {
   "1.0.0": {
-    "After many refused tries from one network, sign-in, the install and the password links pause for a quarter of an hour, and a forgotten password can be asked ten times an hour from one network.": "Après beaucoup d’essais refusés depuis un même réseau, la connexion, l’installation et les liens de mot de passe se mettent en pause un quart d’heure, et un mot de passe oublié peut être demandé dix fois par heure depuis un même réseau.",
-    "The app tells the browser what its pages may load, and no other site can show it inside its own pages.": "L’app dit au navigateur ce que ses pages peuvent charger, et aucun autre site ne peut l’afficher dans ses propres pages.",
-    "A wrong calendar address and a wrong install key are answered at once, without holding the server for a second.": "Une adresse d’agenda ou une clé d’installation erronée reçoit sa réponse tout de suite, sans occuper le serveur une seconde.",
-    "A new password needs 15 characters at least, with no other rule; a password among the most used, or built from your email or the name of the band, is refused. The screen says what is still missing as you type.": "Un nouveau mot de passe compte 15 caractères au moins, sans autre règle ; un mot de passe parmi les plus utilisés, ou bâti sur ton adresse email ou le nom de la fanfare, est refusé. L’écran dit ce qu’il manque pendant que tu tapes."
+    "Security fixes following the pentest.": "Correctifs de sécurité suite au pentest."
   },
   "0.4.0": {
     "The admin can export the data of the band, import an export, and load a band from spreadsheets (members, songs, gigs, answers), from the band settings. The browser then makes the MIDI file and the score of each MuseScore file loaded.": "L’admin peut exporter les données de la fanfare, importer un export, et charger une fanfare depuis un .csv  (fanfarons, morceaux, plans, réponses), dans les réglages de la fanfare. Le navigateur produit ensuite le MIDI et la partition de chaque fichier MuseScore chargé.",

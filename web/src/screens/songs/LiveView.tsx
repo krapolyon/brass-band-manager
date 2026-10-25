@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
@@ -511,14 +511,8 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     };
   }, [score, partId, width, columns, measures.length]);
 
-  const lineOf = useCallback(
-    (measure: number) => {
-      const index = lines.findIndex((line) => line.measures.includes(measure));
-      return index === -1 ? 0 : index;
-    },
-    [lines],
-  );
-  const currentLine = lineOf(written);
+  const currentIndex = lines.findIndex((line) => line.measures.includes(written));
+  const currentLine = currentIndex === -1 ? 0 : currentIndex;
 
   // The score is moved so that the line being played sits at the reading
   // line; a drag adds to it until the member lets go.
@@ -576,14 +570,14 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   const tapsNeeded = Math.max(2, signature.beats);
   const [taps, setTaps] = useState<number[]>([]);
   // What the taps say so far, in counted beats a minute.
-  const tappedBpm = useMemo(() => {
+  const tappedBpm = (() => {
     if (taps.length < 2) return null;
     const first = taps[0] ?? 0;
     const last = taps[taps.length - 1] ?? 0;
     const perTap = 60000 / ((last - first) / (taps.length - 1));
     // In compound time the taps are eighths: three to a beat.
     return Math.round(isCompound(signature) ? perTap / 3 : perTap);
-  }, [taps, signature]);
+  })();
   const tap = () => {
     const now = performance.now();
     const last = taps[taps.length - 1];

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
 import { api } from '../../api.ts';
@@ -32,11 +32,20 @@ import {
 import { keep, kept, useIsTablet } from './device.ts';
 import { saveOutline } from './files.ts';
 import { average, duration as clock, day } from './format.ts';
-import { LiveView } from './LiveView.tsx';
-import { MidiView } from './MidiView.tsx';
 import { PdfView } from './PdfView.tsx';
 import { usePlayer } from './Player.tsx';
 import './songs.css';
+import { lazyPart } from '../../lazyPart.ts';
+
+// Loaded only when the member opens them: they bring the sound engine.
+const LiveView = lazyPart(
+  () => import('./LiveView.tsx'),
+  (module) => module.LiveView,
+);
+const MidiView = lazyPart(
+  () => import('./MidiView.tsx'),
+  (module) => module.MidiView,
+);
 
 // Every mode is built: none is shown as unavailable.
 const NOT_BUILT: SongMode[] = [];
@@ -144,16 +153,18 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
 
   if (mode === 'live' && data.musicXml) {
     return (
-      <LiveView
-        song={data}
-        onClose={() => {
-          changeMode(beforeLive.current);
-          // The focus goes back to where the member came from: the mode bar.
-          window.requestAnimationFrame(() =>
-            document.querySelector<HTMLElement>('.ModeBar [aria-current="true"]')?.focus(),
-          );
-        }}
-      />
+      <Suspense fallback={null}>
+        <LiveView
+          song={data}
+          onClose={() => {
+            changeMode(beforeLive.current);
+            // The focus goes back to where the member came from: the mode bar.
+            window.requestAnimationFrame(() =>
+              document.querySelector<HTMLElement>('.ModeBar [aria-current="true"]')?.focus(),
+            );
+          }}
+        />
+      </Suspense>
     );
   }
 
@@ -196,7 +207,9 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
 
           {mode === 'midi' &&
             (data.midi ? (
-              <MidiView song={data} />
+              <Suspense fallback={null}>
+                <MidiView song={data} />
+              </Suspense>
             ) : (
               <NothingYet
                 icon="Piano"

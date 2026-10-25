@@ -150,6 +150,22 @@ final class PersonalData
         return $row;
     }
 
+    /**
+     * The email of every member, in clear, by id: what an export, an import
+     * and a reprise match members with.
+     *
+     * @return array<int, string>
+     */
+    public function emailsById(): array
+    {
+        $emails = [];
+        foreach ($this->database->fetchAllAssociative('SELECT id, email FROM member') as $row) {
+            $emails[(int) $row['id']] = (string) $this->opened($row)['email'];
+        }
+
+        return $emails;
+    }
+
     /** The hash of an email, compared by sign-in and by the uniqueness of the email. */
     public function emailHash(string $email): string
     {

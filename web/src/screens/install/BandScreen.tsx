@@ -9,13 +9,8 @@ import { Sheet } from '../../components/Sheet.tsx';
 import { TextField } from '../../components/TextField.tsx';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
-import { prepareLogo } from './logo.ts';
+import { BAND_NAME_MAX_LENGTH, LOGO_TYPES, readLogo } from './logo.ts';
 import { StepNav } from './StepNav.tsx';
-
-// The rules of model/band.md for the logo.
-const LOGO_TYPES = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
-const LOGO_MAX_BYTES = 2 * 1000 * 1000;
-const NAME_MAX_LENGTH = 80;
 
 // Figma: Install / Band, and its states: empty, filled, errors, long name.
 export function BandScreen() {
@@ -34,24 +29,22 @@ export function BandScreen() {
 
   // A file that is refused is not kept: the logo stays what it was.
   const chooseLogo = async (file: File | null) => {
-    // Some systems give no type to an SVG file: its name then says what it is.
-    const type = file?.type || (file?.name.toLowerCase().endsWith('.svg') ? 'image/svg+xml' : '');
-    if (file && !LOGO_TYPES.includes(type)) {
-      setLogoError(t('install.band.logo.wrongType'));
-    } else if (file && file.size > LOGO_MAX_BYTES) {
+    if (file === null) {
+      setLogoError(undefined);
+      update({ logo: null, logoInput: null });
+      return;
+    }
+    const read = await readLogo(file);
+    if ('input' in read) {
+      setLogoError(undefined);
+      update({ logo: file, logoInput: read.input });
+    } else if (read.problem === 'tooBig') {
       const megabytes = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 }).format(
-        file.size / 1000 / 1000,
+        read.bytes / 1000 / 1000,
       );
       setLogoError(t('install.band.logo.tooBig', { size: megabytes }));
     } else {
-      try {
-        // Drawn into its icons at once: a file the browser cannot read is refused here.
-        const logoInput = file ? await prepareLogo(file) : null;
-        setLogoError(undefined);
-        update({ logo: file, logoInput });
-      } catch {
-        setLogoError(t('install.band.logo.wrongType'));
-      }
+      setLogoError(t('install.band.logo.wrongType'));
     }
   };
 
@@ -86,7 +79,7 @@ export function BandScreen() {
           error={nameError}
           name="bandName"
           autoComplete="organization"
-          maxLength={NAME_MAX_LENGTH}
+          maxLength={BAND_NAME_MAX_LENGTH}
           value={draft.bandName}
           onChange={(event) => update({ bandName: event.target.value })}
         />

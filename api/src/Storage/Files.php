@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace BrassBand\Storage;
 
+use Doctrine\DBAL\Connection;
+
 // The files members give to the app (the logo of the band, the photos of
 // members, the pictures of costumes, the files of songs), in the storage folder: a folder next to api/
 // that the web server does not serve. A file leaves it only through an action
@@ -50,6 +52,36 @@ final class Files
         }
 
         return $path;
+    }
+
+    /**
+     * Runs a change of the database that writes files in place of others:
+     * saved together, or not at all. $change receives $write, which writes
+     * as write() does, and returns the path of what it replaces, or null.
+     * What it replaces is deleted once the change is saved, never before;
+     * what it wrote is deleted if the change fails.
+     *
+     *   $files->replacing($database, function (callable $write) use (...): ?string {
+     *       $path = $write('members', ['photo.jpg' => $image]) . '/photo.jpg';
+     *       ... save $path, return the path it replaces
+     *   });
+     *
+     * @param callable(callable(string, array<string, string>): string): ?string $change
+     */
+    public function replacing(Connection $database, callable $change): void
+    {
+        $written = null;
+        $write = function (string $area, array $files) use (&$written): string {
+            return $written = $this->write($area, $files);
+        };
+        try {
+            $previous = $database->transactional(fn () => $change($write));
+        } catch (\Throwable $failure) {
+            // Nothing was saved: what was just written belongs to nobody.
+            $this->delete($written);
+            throw $failure;
+        }
+        $this->delete($previous);
     }
 
     // Writes one more file beside a file already kept, in its folder: what
