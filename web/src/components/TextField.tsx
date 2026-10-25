@@ -178,8 +178,14 @@ function Field({
         {label}
       </label>
       <div className="TextField-box">{children}</div>
-      {/* Announced when it changes, so that an error is heard as well as seen. */}
-      <p className="TextField-hint textCaption" id={`${id}-hint`} aria-live="polite">
+      {/* An error or a success is announced, so that it is heard as well as
+          seen. A neutral hint is only read with the field: a countdown would
+          be spoken at each key. */}
+      <p
+        className="TextField-hint textCaption"
+        id={`${id}-hint`}
+        aria-live={error || isMet ? 'polite' : 'off'}
+      >
         {error && <Icon name="Alert" size={16} />}
         {isMet && <Icon name="Check" size={16} />}
         {message && <span>{message}</span>}

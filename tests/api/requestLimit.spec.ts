@@ -82,6 +82,20 @@ test.describe('refusals', () => {
     );
   });
 
+  test('a form refused for what it holds is not counted: a band answering its invitations together', async ({
+    request,
+  }) => {
+    for (let i = 0; i < REFUSALS + 5; i++) {
+      // Refused for its content (422), and an install already done (409).
+      expect((await request.post('/api/session', { data: { email: 'zaza' } })).status()).toBe(422);
+      expect(
+        (await request.post('/api/install/key', { data: { installKey: 'x' } })).status(),
+      ).not.toBe(429);
+    }
+
+    expect((await signIn(request, admin.email, admin.password)).status()).toBe(200);
+  });
+
   test('what is stored is a hash of 32 bytes, never the network address', async ({ request }) => {
     await signIn(request, 'nobody@example.org', 'x');
 
@@ -89,16 +103,15 @@ test.describe('refusals', () => {
     expect(sql("SELECT COUNT(*) FROM requestLimit WHERE keyHash LIKE '%.%'")).toBe('0');
   });
 
-  test('the rows of ended windows are deleted at the next count', async ({ request }) => {
+  test('the rows of ended windows are deleted at the next check, a successful one included', async ({
+    request,
+  }) => {
     await signIn(request, 'nobody@example.org', 'x');
     endWindows();
 
-    await signIn(request, 'nobody@example.org', 'x');
+    expect((await signIn(request, admin.email, admin.password)).status()).toBe(200);
 
-    expect(sql('SELECT COUNT(*) FROM requestLimit')).toBe('1');
-    expect(sql('SELECT COUNT(*) FROM requestLimit WHERE windowEndsAt <= UTC_TIMESTAMP()')).toBe(
-      '0',
-    );
+    expect(sql('SELECT COUNT(*) FROM requestLimit')).toBe('0');
   });
 
   test('a database without the table yet is not limited: sign-in still reaches the migrations', async ({
@@ -106,7 +119,11 @@ test.describe('refusals', () => {
   }) => {
     sql('RENAME TABLE requestLimit TO requestLimitAway');
     try {
+      // Nothing is counted, so a wrong secret is answered after a second:
+      // what slows a guess of the install key on a new host.
+      const started = Date.now();
       expect((await signIn(request, 'nobody@example.org', 'x')).status()).toBe(401);
+      expect(Date.now() - started).toBeGreaterThanOrEqual(1000);
       expect((await signIn(request, admin.email, admin.password)).status()).toBe(200);
     } finally {
       sql('RENAME TABLE requestLimitAway TO requestLimit');

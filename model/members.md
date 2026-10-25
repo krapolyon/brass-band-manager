@@ -1,5 +1,6 @@
 # Business dictionary — Members domain
 
+> v1.31 — 2026-10-25 · For 1.0.0, after the review · Model: `members.dbml` v1.29 · No change to the tables · Limits per visitor: only a wrong secret is counted (a wrong password, install key or link), not a form refused for its content; an IPv6 visitor is known by the first half of its address; before the install, a wrong key is answered after a second again
 > v1.30 — 2026-10-24 · Validated by the owner, for 1.0.0 · Model: `members.dbml` v1.28 · No change to the tables · The password rule follows NIST SP 800-63B-4: 15 characters at least, no composition rule, the most used passwords and those built from the email or the band refused (`passwordHash`, rule "Choosing a password")
 > v1.29 — 2026-10-24 · Validated by the owner, for 1.0.0 · Model: `members.dbml` v1.27 · Migration: `018_requestLimit.sql` · Limits per visitor on the public addresses (issue #51, pentest), with a keyed hash of the network address, entry 3 "Limits per visitor"; wrong install keys are counted, and wrong install keys and calendar addresses are answered at once, no longer after a second
 > v1.28 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · The permission to export and import the data (admin only, `export-import.md`); the photo travels in an export, as the owner decided
@@ -319,13 +320,13 @@ Decided with the owner on 2026-10-24 (issue #51, pentest), for 1.0.0. The public
 
 | Addresses | What is counted | Limit per visitor |
 |---|---|---|
-| Sign-in, install key, install, the check, validation and use of a password link | Each refusal | 30 in 15 minutes |
+| Sign-in, install key, install, the check, validation and use of a password link | Each wrong secret: a wrong password, install key or link | 30 in 15 minutes |
 | Forgotten password | Each request | 10 in an hour |
 
 - Beyond the limit, the address answers "too many requests" (HTTP 429) with the time to wait, until the window ends; the screens show it as a refusal or as "try again in a moment". Windows are fixed: a count starts again at the quarter or the hour.
-- Refusals are counted rather than requests, so that thirty members signed in on the same network at a rehearsal are not stopped.
+- Wrong secrets are counted rather than requests, so that thirty members signed in on the same network at a rehearsal are not stopped. A form refused for what it holds (a password too common, a nickname already taken) is not a guess and is not counted: a band answering its invitations together on the hall's network must not lock itself out.
 - The calendar address is not limited: a calendar service (Google Agenda) reads the addresses of many people from the same network address, and an address that was reset and is still read there would stop the others. Its 32 random characters cannot be guessed, and a wrong one costs the server one read.
-- The visitor is known by the network address the server sees, never by what a request says of itself (`X-Forwarded-For`). It is stored only as a keyed hash, with the kind of count, in a row deleted when its window ends, one hour later at most.
+- The visitor is known by the network address the server sees, never by what a request says of itself (`X-Forwarded-For`); an IPv6 address by its first half, which one device or one home usually holds whole. It is stored only as a keyed hash, with the kind of count, in a row deleted when its window has ended, at the next check of any visitor.
 - The forgotten password limit protects the mailbox of the band as much as the members: the host sends 100 emails an hour at most, and the 5 minutes between two emails go member by member.
 - The numbers are fixed in the code, like the other rules of access.
 
@@ -351,7 +352,7 @@ Decided with the owner on 2026-10-18 (issue #36), **for 0.3.1**. The app asks to
 - **Kept on the device**, in the storage of the browser, like the text size: whether the guide was offered. Nothing is sent to the server, nothing is stored about the device.
 
 ### Personal data
-- No device name is stored, and no IP address in clear. `requestLimit`: a keyed hash of the network address of a visitor of the public addresses. Purpose: the limits per visitor. Seen by no one, never logged, deleted when its window ends, one hour later at most.
+- No device name is stored, and no IP address in clear. `requestLimit`: a keyed hash of the network address of a visitor of the public addresses. Purpose: the limits per visitor. Seen by no one, never logged, deleted once its window has ended, at the next check of any visitor.
 - `pushSubscription`: the address and the keys of a device. Purpose: the notifications of the app, the reminders to answer for a gig and those the member chose in their notification settings (entry 1). Seen by no one, the member included; never sent to the front, never written to a log.
 
 ## 4. Storage conventions
@@ -371,7 +372,7 @@ Kept as they are, by default:
 - A name holds at least one letter or digit. A nickname can still imitate another one with letters of another alphabet that look the same (a Cyrillic "А" for a Latin "A"): accepted; members know each other, and refusing mixed alphabets would refuse real names.
 - A member who edits their own record learns that an email or a nickname is taken, even by an invited member or one who left, whom they cannot see: the two must be unique.
 - A member changes their own email without being asked their password.
-- Wrong install keys are counted per visitor (entry 3, "Limits per visitor"), since 1.0.0; before, a wrong key was answered after one second, which held a worker of the server. The key must also be 16 characters at least: a shorter one counts as no key, and install stays closed.
+- Wrong install keys are counted per visitor (entry 3, "Limits per visitor"), since 1.0.0. On a database without its tables yet (a new host, before the install), nothing can be counted: a wrong key is then answered after one second, as before 1.0.0. The key must also be 16 characters at least: a shorter one counts as no key, and install stays closed.
 - A server whose install key is still empty answers like a wrong key.
 
 Not built yet:

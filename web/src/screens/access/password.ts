@@ -11,9 +11,9 @@ export type PasswordHint = { hint?: string; hintTone?: 'neutral' | 'success'; er
 /**
  * The one hint line that lives with the typing (Figma: Members, section 17):
  * the rule while the field is empty, the characters still missing, then
- * Success once the password is long enough. Once sent, what is still missing
- * is an error, and so is a refusal of the API, while the password is the one
- * it refused.
+ * Success once the password is long enough. What was still missing when it
+ * was sent is an error, and so is a refusal of the API, while the password is
+ * the one sent: typing again counts down as before.
  *
  *   const hintOf = usePasswordHint();
  *   <PasswordField {...hintOf(password, sentPassword, fields.password)} />
@@ -32,7 +32,7 @@ export function usePasswordHint() {
         password === '' && sent === null
           ? t('password.rule')
           : t('password.remaining', { count: missing });
-      return sent === null ? { hint: text } : { error: text };
+      return password === sent ? { error: text } : { hint: text };
     }
     if (refused && password === sent) {
       return {

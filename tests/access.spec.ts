@@ -230,6 +230,13 @@ test.describe('forgotten password', () => {
     await expect(hint).toHaveText('Encore 10 caractères.');
     await expect(field).toHaveAttribute('aria-invalid', 'true');
     await expect(field).toBeFocused();
+    // The error is announced; typing again counts down as before, neutral
+    // and silent: a countdown read at each key would drown the typing.
+    await expect(hint).toHaveAttribute('aria-live', 'polite');
+    await field.fill('courte');
+    await expect(hint).toHaveText('Encore 9 caractères.');
+    await expect(field).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(hint).toHaveAttribute('aria-live', 'off');
 
     // Refused by the API: among the most used passwords.
     await field.fill('jetaimemonamour');

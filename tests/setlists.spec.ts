@@ -939,6 +939,20 @@ test.describe('the live setlist', () => {
     await expect(page.locator('.gigs-liveSongs')).toHaveCount(0);
   });
 
+  test('the Live mode is fetched as the live setlist opens: a song opened during the gig does not wait for the network', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = confirmed();
+    const setlistId = addSetlist(gigId, slotId, [addSong('Toxic')]);
+    sql(
+      `UPDATE setlist SET liveStartedAt = UTC_TIMESTAMP(), livePosition = 1 WHERE id = ${setlistId}`,
+    );
+    await asMember(page, 'Sissi');
+    const fetched = page.waitForRequest(/\/assets\/LiveView-[^/]+\.js$/);
+    await page.goto(`/setlists/${setlistId}/live`);
+    await fetched;
+  });
+
   test('who manages setlists corrects by scrolling: the song that rests on the line is played', async ({
     page,
   }) => {

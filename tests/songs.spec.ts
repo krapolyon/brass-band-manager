@@ -623,6 +623,29 @@ test.describe('the MIDI player', () => {
     expect(asked).toBe(2);
   });
 
+  test('without a network, the page is not loaded again: it stays, and says the player cannot load', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // A mark on the page: a reload would wipe it.
+    await page.evaluate(() => {
+      (window as unknown as { stayed: boolean }).stayed = true;
+    });
+    await page.context().setOffline(true);
+
+    await openMidi(page);
+
+    await expect(
+      page.getByText('Le fichier MIDI ne se charge pas.', { exact: false }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(
+      true,
+    );
+    await page.context().setOffline(false);
+  });
+
   test('a file written by MuseScore 4.4, with a line the engine does not know, is read all the same', async ({
     page,
   }) => {

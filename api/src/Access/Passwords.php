@@ -63,7 +63,12 @@ final class Passwords
         static $common = null;
         if ($common === null) {
             $common = [];
-            foreach (file(__DIR__ . '/../../resources/common-passwords.txt', FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+            $lines = file(__DIR__ . '/../../resources/common-passwords.txt', FILE_IGNORE_NEW_LINES);
+            if ($lines === false) {
+                // A rule that would pass quietly without its list is worse than an error.
+                throw new \RuntimeException('The list of common passwords cannot be read.');
+            }
+            foreach ($lines as $line) {
                 if ($line !== '' && !str_starts_with($line, '# ') && $line !== '#') {
                     $common[$line] = true;
                 }

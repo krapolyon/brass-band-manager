@@ -70,15 +70,17 @@ final class Files
      */
     public function replacing(Connection $database, callable $change): void
     {
-        $written = null;
+        $written = [];
         $write = function (string $area, array $files) use (&$written): string {
-            return $written = $this->write($area, $files);
+            return $written[] = $this->write($area, $files);
         };
         try {
             $previous = $database->transactional(fn () => $change($write));
         } catch (\Throwable $failure) {
             // Nothing was saved: what was just written belongs to nobody.
-            $this->delete($written);
+            foreach ($written as $path) {
+                $this->delete($path);
+            }
             throw $failure;
         }
         $this->delete($previous);

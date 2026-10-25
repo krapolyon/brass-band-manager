@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { ApiError, api } from '../../api.ts';
@@ -12,14 +12,8 @@ import { ScreenTop } from '../../components/ScreenTop.tsx';
 import { type Setlist, useSetlist } from '../../gigs.ts';
 import { useMe } from '../../session.ts';
 import { useSong } from '../../songs.ts';
+import { LivePart, preloadLive } from '../songs/SoundParts.tsx';
 import './gigs.css';
-import { lazyPart } from '../../lazyPart.ts';
-
-// Loaded only when a song is opened over the setlist: it brings the sound engine.
-const LiveView = lazyPart(
-  () => import('../songs/LiveView.tsx'),
-  (module) => module.LiveView,
-);
 
 // How long the list must rest before the song on the focus line becomes the
 // one being played.
@@ -82,6 +76,9 @@ export function LiveSetlistScreen() {
   // Counts the changes that failed: the list then goes back to the song being played.
   const [failures, setFailures] = useState(0);
   const touching = useRef(false);
+
+  // Fetched while the network is there: a song opened during the gig does not depend on it.
+  useEffect(preloadLive, []);
 
   const setlist = query.data;
   const position = setlist?.livePosition ?? null;
@@ -332,11 +329,7 @@ function SongOver({ songId, onClose }: { songId: number; onClose: () => void }) 
   const song = useSong(songId);
 
   if (song.data?.musicXml) {
-    return (
-      <Suspense fallback={null}>
-        <LiveView song={song.data} onClose={onClose} />
-      </Suspense>
-    );
+    return <LivePart song={song.data} onClose={onClose} />;
   }
   return (
     <main className="gigs-live">
