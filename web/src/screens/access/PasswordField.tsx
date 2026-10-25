@@ -6,6 +6,7 @@ import { TextField } from '../../components/TextField.tsx';
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'id' | 'type'> & {
   label: string;
   hint?: string;
+  hintTone?: 'neutral' | 'success';
   error?: string;
 };
 

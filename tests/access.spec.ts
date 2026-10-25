@@ -1,7 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
 import { emptyMailbox, receivedMails } from './support/mail.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The screens shown before sign-in: sign-in, forgotten password, the screen a
 // password link opens, the link that no longer works, and the accessibility
@@ -212,10 +213,30 @@ test.describe('forgotten password', () => {
     await page.goto(link);
     await expect(title(page)).toHaveText('Un nouveau mot de passe');
     const field = page.getByLabel('Nouveau mot de passe');
+    const hint = page.locator('.TextField-hint');
+    // The hint lives with the typing (Figma: Members, section 17): the rule
+    // while the field is empty, what is still missing, then Success.
+    await expect(hint).toHaveText(
+      '15 caractères au moins. Le plus simple : une phrase, genre « ma trompette fait des pirouettes ».\nMais pas celle-là, hein.',
+    );
+    await field.fill('tubatubat');
+    await expect(hint).toHaveText('Encore 6 caractères.');
+    await field.fill('tubatubatubatub');
+    await expect(hint).toHaveText('Nickel. Même ta mère ne le devinerait pas.');
+    await expect(page.locator('.TextField[data-hint="success"]')).toHaveCount(1);
+
     await field.fill('court');
     await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();
-    await expect(page.getByText('Encore 5 caractères : il en faut 10 au minimum.')).toBeVisible();
+    await expect(hint).toHaveText('Encore 10 caractères.');
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
     await expect(field).toBeFocused();
+
+    // Refused by the API: among the most used passwords.
+    await field.fill('jetaimemonamour');
+    await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();
+    await expect(hint).toHaveText(
+      'Trop connu : il est dans la liste des mots de passe les plus utilisés. Choisis-en un autre.',
+    );
 
     await field.fill('un-tout-nouveau-mot-de-passe');
     await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();

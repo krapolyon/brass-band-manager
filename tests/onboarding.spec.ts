@@ -1,10 +1,11 @@
-import { expect, type Page, type PlaywrightWorkerArgs, test } from '@playwright/test';
+import type { Page, PlaywrightWorkerArgs } from '@playwright/test';
 import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase } from './support/database.ts';
 import { png } from './support/images.ts';
 import { memberColumns } from './support/personal.ts';
 import { addMember, admin, deviceOf, install, memberId } from './support/scenario.ts';
 import { emptyStorage, storedFiles } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // Arriving from an invitation, in two steps: the details to check and
 // complete, then the password. Rules: model/members.md, entry 3 ("An
@@ -63,7 +64,7 @@ test('an invited member checks their details, chooses a password and is in', asy
 
   await password(page).fill('court');
   await enter(page).click();
-  await expect(page.getByText('Encore 5 caractères : il en faut 10 au minimum.')).toBeVisible();
+  await expect(page.getByText('Encore 10 caractères.')).toBeVisible();
   await password(page).fill('helicon-en-fa-diese-9');
   await enter(page).click();
 

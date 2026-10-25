@@ -1,10 +1,11 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { channel, discordServer, emptyDiscord, roles, server } from './support/discord.ts';
 import { png } from './support/images.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
 import { emptyStorage, storedFiles } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The settings of the band, for admins: its name, logo, accent colour and
 // default language, and its sections and instruments. Rules: model/band.md,

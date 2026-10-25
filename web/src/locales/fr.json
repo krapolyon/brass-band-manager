@@ -157,10 +157,6 @@
       },
       "password": {
         "label": "Mot de passe",
-        "hint": "{{min}} caractères minimum.",
-        "tooShort_one": "Trop court : il manque {{count}} caractère sur {{min}}.",
-        "tooShort_other": "Trop court : il manque {{count}} caractères sur {{min}}.",
-        "invalid": "Ce mot de passe ne convient pas. Choisis-en un autre.",
         "show": "Afficher le mot de passe",
         "hide": "Masquer le mot de passe"
       },
@@ -218,9 +214,12 @@
     "forAccount": "Ces réglages seront enregistrés avec ton compte. Tu pourras les changer à tout moment dans tes réglages."
   },
   "password": {
-    "hint": "{{min}} caractères minimum.",
-    "tooShort_one": "Encore {{count}} caractère : il en faut {{min}} au minimum.",
-    "tooShort_other": "Encore {{count}} caractères : il en faut {{min}} au minimum.",
+    "rule": "15 caractères au moins. Le plus simple : une phrase, genre « ma trompette fait des pirouettes ».\nMais pas celle-là, hein.",
+    "remaining_one": "Encore {{count}} caractère.",
+    "remaining_other": "Encore {{count}} caractères.",
+    "met": "Nickel. Même ta mère ne le devinerait pas.",
+    "tooCommon": "Trop connu : il est dans la liste des mots de passe les plus utilisés. Choisis-en un autre.",
+    "tooPersonal": "Il contient ton adresse email ou le nom de la fanfare. Choisis-en un autre.",
     "invalid": "Ce mot de passe ne convient pas. Choisis-en un autre.",
     "show": "Afficher le mot de passe",
     "hide": "Masquer le mot de passe"
@@ -905,7 +904,7 @@
         "cancel": "Annuler"
       },
       "encryptionKeyMissing": "Il manque la clé de chiffrement dans config.php : génère-la sur ton ordinateur avec « npm run encryption:key », colle la ligne dans config.php, puis recommence. Garde-en une copie à part : sans elle, les fiches des membres sont perdues.",
-      "encryptionKeyWrong": "La clé de chiffrement de config.php n’est pas celle qui a chiffré les fiches des membres : rien n’a été fait. Remets la clé gardée à part pour cette instance, puis recommence."
+      "encryptionKeyWrong": "La clé de chiffrement de config.php n’est pas celle qui a chiffré les fiches des membres : rien n’a été fait. Remets la clé gardée à part pour cette instance, puis recommence."
     },
     "discordSettings": {
       "title": "Discord",
@@ -1768,7 +1767,6 @@
     },
     "gig": {
       "back": "Retour aux plans",
-      "more": "Gérer le plan",
       "loading": "On sort le plan…",
       "notFound": "Ce plan n’existe pas, ou plus.",
       "yourAnswer": "Ta réponse",
@@ -2025,15 +2023,10 @@
       "deleteLead": "Les réponses données pour cette présence sont effacées. Ça ne se rattrape pas.",
       "keep": "Garder la présence",
       "nameFirst": "Donne d’abord un nom à la première présence : un plan qui en a plusieurs les nomme toutes.",
-      "failed": "La présence n’est pas enregistrée. Réessaie dans un instant.",
       "errors": {
         "name": {
           "required": "Il manque le nom de la présence.",
-          "duplicate": "Une autre présence de ce plan porte déjà ce nom.",
-          "tooLong": "Ce nom est trop long : 40 caractères au plus."
-        },
-        "note": {
-          "tooLong": "Cette note est trop longue : 1 000 caractères au plus."
+          "duplicate": "Une autre présence de ce plan porte déjà ce nom."
         }
       }
     },

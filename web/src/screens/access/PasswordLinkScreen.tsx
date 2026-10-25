@@ -14,8 +14,7 @@ import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import { AccessibilityButton } from './AccessibilityButton.tsx';
 import { type Invitation, OnboardingScreen } from './OnboardingScreen.tsx';
 import { PasswordField } from './PasswordField.tsx';
-
-export const PASSWORD_MIN_CHARACTERS = 10;
+import { usePasswordHint } from './password.ts';
 
 // What POST /api/passwordLink/check answers (api/src/Access/CheckPasswordLinkAction.php).
 export type PasswordLink = { isInvitation: false; nickname: string } | Invitation;
@@ -39,18 +38,6 @@ export function usePasswordLink(token: string) {
   });
 }
 
-/** What is wrong with a password before it is sent, in the words of the field; null when nothing is. */
-export function usePasswordError() {
-  const { t } = useTranslation();
-
-  return (password: string, refused: boolean): string | null => {
-    const missing = PASSWORD_MIN_CHARACTERS - [...password].length;
-    if (missing > 0)
-      return t('password.tooShort', { count: missing, min: PASSWORD_MIN_CHARACTERS });
-    return refused ? t('password.invalid') : null;
-  };
-}
-
 // Figma: Members / New password, and Members / Link expired. The screen a
 // password link opens for a member who forgot theirs.
 export function PasswordLinkScreen() {
@@ -59,9 +46,10 @@ export function PasswordLinkScreen() {
   const setMe = useSetMe();
   const token = usePasswordLinkToken();
   const link = usePasswordLink(token);
-  const passwordError = usePasswordError();
+  const hintOf = usePasswordHint();
   const [password, setPassword] = useState('');
-  const [wasSent, setSent] = useState(false);
+  // The password last sent: null before the first try.
+  const [sent, setSent] = useState<string | null>(null);
 
   const save = useMutation({
     mutationFn: () =>
@@ -81,8 +69,8 @@ export function PasswordLinkScreen() {
   if (link.data?.isInvitation) return <OnboardingScreen token={token} invitation={link.data} />;
 
   const refused = save.error instanceof ApiError ? save.error.fields : {};
-  const error = wasSent ? passwordError(password, Boolean(refused.password)) : null;
-  const isUnreachable = link.isError || (save.isError && !error);
+  const hint = hintOf(password, sent, refused.password);
+  const isUnreachable = link.isError || (save.isError && !refused.password);
 
   return (
     <FlowLayout
@@ -92,8 +80,8 @@ export function PasswordLinkScreen() {
       lead={t('newPassword.lead')}
       onSubmit={() => {
         if (save.isPending) return;
-        setSent(true);
-        if (passwordError(password, false)) {
+        setSent(password);
+        if (hintOf(password, password).error) {
           focusFirstError();
         } else {
           save.mutate(undefined, { onError: focusFirstError });
@@ -113,8 +101,7 @@ export function PasswordLinkScreen() {
           label={t('newPassword.label')}
           name="password"
           autoComplete="new-password"
-          hint={t('password.hint', { min: PASSWORD_MIN_CHARACTERS })}
-          error={error ?? undefined}
+          {...hint}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />

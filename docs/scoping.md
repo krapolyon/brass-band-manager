@@ -56,6 +56,7 @@ The session is long but not eternal, and above all revocable: the app holds pers
 | Expiry on inactivity | 90 days without opening the app, extended on each use |
 | Maximum length of a session | 1 year, so one sign-in per year and per device |
 | Account creation | On invitation by someone who manages members; the member chooses a password. In the first version the invitation link is copied and sent by whoever invites, and stays valid 7 days; sending it by email from the app comes later |
+| Password | 15 characters at least, no composition rule; the most used passwords and those built from the email or the name of the band are refused (NIST SP 800-63B-4, decided on 2026-10-24) |
 | Forgotten password | By email, with a link valid 1 hour (decided on 2026-10-11). On an instance that cannot send email, the screen sends the member to those who manage members, who create a link |
 
 - **Revocation**: sessions are stored on the server. A member can sign out all devices, and disabling an account cuts access immediately.

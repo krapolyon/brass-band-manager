@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase } from './support/database.ts';
 import { addMember, install, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The version of the app and its changelog, in the settings (Figma: Members,
 // section 5, "Settings — about"; docs/architecture.md, "Versions and the

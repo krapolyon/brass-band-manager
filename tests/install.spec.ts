@@ -1,7 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase } from './support/database.ts';
 import { install, installInput } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The screens of the install, in a browser. What the API accepts and refuses
 // is tested in tests/api/install.spec.ts.
@@ -37,6 +38,13 @@ test('starting without the install key says that it is missing', async ({ page }
 test('a wrong install key is refused before the first step', async ({ page }) => {
   await page.goto('/install');
   await keyField(page).fill('not-the-right-key');
+  // The server answers a wrong key at once: the answer is held a moment here,
+  // to see the button while the key is checked.
+  await page.route('**/api/install/key', async (route) => {
+    const answer = await route.fetch();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.fulfill({ response: answer });
+  });
   await start(page).click();
 
   // While the key is checked, the button cannot be pressed again.

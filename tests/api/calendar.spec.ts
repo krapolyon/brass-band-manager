@@ -90,13 +90,32 @@ test.describe('the address', () => {
     await jibe.put(`/api/members/${memberId('Zaza')}/status`, { data: { status: 'LEFT' } });
 
     expect(sql(`SELECT calendarToken FROM member WHERE id = ${memberId('Zaza')}`)).toBe('NULL');
+    // At once: until 1.0.0 an address of the right shape waited a second,
+    // which held a worker of the server (#51).
+    const before = Date.now();
     const gone = await request.get(`/api/calendar/${token}.ics`);
     const never = await request.get(`/api/calendar/${'0'.repeat(32)}.ics`);
     const wrong = await request.get('/api/calendar/not-a-token.ics');
+    expect(Date.now() - before).toBeLessThan(1500);
     for (const answer of [gone, never, wrong]) {
       expect(answer.status()).toBe(404);
       expect(await answer.json()).toEqual({ error: 'notFound' });
     }
+  });
+
+  test('wrong addresses are not limited per visitor: a calendar service reads many from one network', async ({
+    playwright,
+    request,
+  }) => {
+    for (let i = 0; i < 40; i++) {
+      expect((await request.get(`/api/calendar/${String(i).padStart(32, 'a')}.ics`)).status()).toBe(
+        404,
+      );
+    }
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const token = (await (await zaza.post('/api/me/calendar')).json()).token;
+    expect((await request.get(`/api/calendar/${token}.ics`)).status()).toBe(200);
+    expect(sql('SELECT COUNT(*) FROM requestLimit')).toBe('0');
   });
 });
 

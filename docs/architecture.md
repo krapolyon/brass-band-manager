@@ -50,7 +50,7 @@ The app is then at http://localhost:8080.
 | Work on the front | `npm run dev` | http://localhost:5173, reloads on every change. Calls to `/api` go to the stack, which must be running |
 | Build the front | `npm run build` | Type-checks, then writes `web/dist/`, which is what port 8080 serves |
 | Run the tests | `npm test` | Against the test server on port 8081: run `npm run build` first if the front changed |
-| Check the code | `npm run check` | Biome, TypeScript and PHPStan. Must pass before a commit |
+| Check the code | `npm run check` | The checks of the changelog and of the email theme, then Biome, TypeScript and PHPStan. Must pass before a commit |
 | Fix the layout of the code | `npm run format` | |
 | Apply the migrations | `npm run db:migrate` | |
 | Install the PHP libraries | `npm run api:install` | After `api/composer.lock` changed |
@@ -302,7 +302,7 @@ Decided in [api/routes.php](../api/routes.php), by the block a route is written 
 
 | Block | Who | How |
 |---|---|---|
-| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in, checking and using a password link, and the calendar feed of a member, whose address carries its key. Adding a route here is a decision to justify |
+| 1. Public | Anyone | Written directly on `$app`. Today: health, the name, logo and icons of the band, the manifest, install, sign-in, a forgotten password, checking, validating and using a password link, and the calendar feed of a member, whose address carries its key. Adding a route here is a decision to justify |
 | 2. Signed in | Any current member (`ACTIVE` or `POWER_MEMBER`) | Inside the group that carries `RequireSession` |
 | 3. Oneself or one's own gig, or a permission | The member the address names, or a member holding a permission; for a gig, its organisers or who manages gigs | A route of block 2 with `->add(new RequireSelfOrPermission(Permission::...))`, or `->add(new RequireGigEditor($gigs))` |
 | 4. Permission | A signed-in member holding a permission | A route of block 2 with `->add(new RequirePermission(Permission::...))` |
@@ -320,8 +320,11 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - **Every request** behind `RequireSession` looks the session up again: it must exist, be less than a year old, have been used in the last 90 days, and belong to a member who can still sign in. A member marked as gone, or a role taken away, takes effect at the next request.
 - **Sign-in** ([SignInAction](../api/src/Access/SignInAction.php)) gives one answer to every refusal, `invalidCredentials`, and takes the same time for an unknown email as for a wrong password: the route cannot be used to find out who is a member. After five wrong passwords in a row, sign-in for that member is refused for fifteen minutes, right password included. Tries are judged one at a time for a given member (the row is locked with `SELECT ... FOR UPDATE`), so that sending many at once gives no extra guesses.
 - **Passwords** ([Passwords](../api/src/Access/Passwords.php)) are hashed by PHP's own `password_hash()`. Never stored, logged or sent back.
+- **The rule of a new password** (1.0.0, NIST SP 800-63B-4; model/members.md, "passwordHash"). `Passwords::check()` refuses, in this order: a NUL character (`invalid`), fewer than 15 characters (`tooShort`), more than 72 bytes (`tooLong`), a password of the list of the most used (`tooCommon`), and one that holds the part of the member's email before the `@` or a word of the band's name, 4 characters or more, compared without case or accents (`tooPersonal`, with [PasswordContext](../api/src/Access/PasswordContext.php): the email of the first member and the name typed at install, the email an invited member sends, the saved email otherwise). Nothing else: no composition rule, no expiry. Hashes made under the former rule (10 characters) are kept. The front shows one hint line under every field that chooses a password, never under one that asks it ([password.ts](../web/src/screens/access/password.ts), `usePasswordHint`; `TextField` `hintTone`, Figma Hint=Success).
+- **The list of the most used passwords** is [api/resources/common-passwords.txt](../api/resources/common-passwords.txt), read once per request: one per line, lowercase, sorted, lines starting with `# ` are comments. It comes from SecLists (MIT), at the commit its header names: the first 20,000 lines of `100k-most-used-passwords-NCSC.txt` and `xato-net-10-million-passwords-1000000.txt`, and `French-common-password-list-top-20000.txt`, kept at 15 characters and more, 72 bytes at most, without `@`. Entries that read like the name of a person, a birth date or a phone number were removed by hand: lists built from leaks hold them, and the repository holds no personal data, which is also why the list stops at the most used and is short (about fifty entries: few common passwords are that long). To refresh it: download the same files at a newer commit, filter them the same way (lowercase, deduplicated, sorted), read every line before committing, and change the commit in the header.
 - **Forged requests (CSRF).** Three barriers: the `SameSite=Strict` cookie, [SameSiteOnly](../api/src/Access/SameSiteOnly.php) which refuses a write that a browser announces as coming from another site, and JSON-only input.
-- **The numbers** (durations, number of tries, password length) are in [AccessRules](../api/src/Access/AccessRules.php).
+- **Limits per visitor** ([RequestLimit](../api/src/Http/RequestLimit.php), 1.0.0, issue #51; model/members.md, "Limits per visitor"). A middleware added in `routes.php` to the public routes that check a secret (sign-in, install key, install, the check, validation and use of a password link: 30 refusals in 15 minutes) or send an email (forgotten password: 10 requests an hour). It counts the refusals the route throws (any 4xx), or every request, in the table `requestLimit`, and beyond the limit answers 429 `tooManyRequests` with `Retry-After`. The visitor is `REMOTE_ADDR`, never `X-Forwarded-For`, stored as an HMAC with a key derived from `encryptionKey` (or `installKey` before the install); the rows of ended windows are deleted at each count. A database without the table (before its migration) is not limited, so that sign-in still reaches the migrations screen. The sign-in screen shows a 429 as its refusal; the other screens as "try again in a moment". Counting refusals rather than requests lets a band sign in from one network at a rehearsal. The calendar feed is not limited (see "The calendar feed").
+- **The numbers** (durations, number of tries, password length, limits per visitor) are in [AccessRules](../api/src/Access/AccessRules.php).
 - **What a member receives about themself** is built by [Profile](../api/src/Access/Profile.php) from an explicit list of columns: a column added to the table is never sent by accident.
 
 | Route | Does |
@@ -343,7 +346,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 **The install key** ([InstallKey](../api/src/Install/InstallKey.php)) is a text that the person who puts the app online writes in `config.php`, the file where the database password already is. The install asks for it again: only someone who can read the files of the server knows it, so nobody else can install the app and become its admin while it sits online, not yet installed. Once the app is installed the key is of no use.
 
 - A key shorter than 16 characters counts as no key: install stays closed until a real one is written.
-- A wrong key costs a second. With a long key, guessing leads nowhere, and the app does not need to remember who tried: no counter, no address stored.
+- Wrong keys are counted per visitor (see "Limits per visitor"). Until 1.0.0 a wrong key cost a second instead, which held a PHP worker of the host.
 - Locally, `npm run setup` writes a public key (`config.local.php`); nothing to do.
 
 **The install screens** are in `web/src/screens/install/`, one file per screen of Figma:
@@ -361,7 +364,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 - Each screen checks what it can before sending (required fields, the length of the password, the weight and the type of the logo), with the rules of the API copied as constants at the top of the file. The API checks everything again: the screens only save the member a round trip.
 - [FlowLayout](../web/src/screens/FlowLayout.tsx) is the frame shared by the five screens. Its CSS also holds the three layout helpers of the steps: `FlowLayout-pair` (two fields side by side from the tablet width), `FlowLayout-columns` (cards in two then three columns, filled one after the other as drawn) and `FlowLayout-start`.
 - The logo chosen at step 1 is prepared for the API as soon as it is chosen ([logo.ts](../web/src/screens/install/logo.ts)) and sent with the rest at the last step.
-- **Not done: where the last screen leads.** Its two buttons go to the home address until the members feature (inviting) and the home screen exist.
+- The last screen leads to inviting the first members, or to the home screen.
 - [Languages](../api/src/Install/Languages.php) lists the languages the app is shipped in.
 
 ### Members
@@ -416,7 +419,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 `api/src/Calendar/`. Rules: [model/members.md](../model/members.md) ("Calendar address") and [model/gigs.md](../model/gigs.md) (entry 5). Issue #21, decided on 2026-10-16: a subscribed calendar, never a write into anybody's calendar.
 
 - **The address** is `/api/calendar/<calendarToken>.ics`, under `/api` so that it reaches PHP like every other route. The token is 32 hexadecimal characters drawn at random (`CalendarFeed::newToken()`), stored in clear because the screen shows the address again; it gives read access to the gigs of one member and nothing else. `POST /api/me/calendar` creates it the first time the member copies or adds the address, `PUT` replaces it ("Réinitialiser la synchro"), leaving the band erases it (`ChangeStatusAction`).
-- **A wrong address** (unknown, reset, a member who left, not 32 hexadecimal characters) is answered the same 404 after a second, like a wrong install key: trying addresses leads nowhere and nothing says why.
+- **A wrong address** (unknown, reset, a member who left, not 32 hexadecimal characters) is answered the same 404, at once: nothing says why, and 32 random characters are not guessed. It is not limited per visitor (see "Limits per visitor"): Google Agenda reads the addresses of many people from the same network address. Until 1.0.0 the answer came after a second, which held a PHP worker of the host for each wrong address (issue #51).
 - **What it holds** ([CalendarFeed](../api/src/Calendar/CalendarFeed.php)): iCalendar written by hand (a few lines, no library), one `VEVENT` per gig in `PROPOSED`, `ACCEPTED` or `CONFIRMED` where the member said yes, maybe or if needed on a slot, whose last day is less than 12 months ago. `STATUS:CONFIRMED` for a yes, `TENTATIVE` otherwise; the title is "<band> – <gig>", with the status in front when the gig is not confirmed (texts in `api/resources/push.<language>.json`, `calendar.*`). From the meeting time of the first day to the midnight that ends the last day, written in UTC from `timeZone` of `config.php`; whole days without a meeting time. `UID` is `gig-<id>@<host of appUrl>`; `SEQUENCE` counts the minutes since 2026 to the last change of the gig or of the member's answers, so that it grows when the event changes. Lines are folded at 75 bytes and texts escaped.
 - **Headers**: `text/calendar`, `Cache-Control: private, max-age=0`, `X-Robots-Tag: noindex`. Nothing about the token or the feed is logged by the app. The access log of the host does hold the addresses it is asked (see "To check on the real host").
 - **The screen** ([CalendarScreen](../web/src/screens/settings/CalendarScreen.tsx), [calendar.ts](../web/src/calendar.ts)) follows the device from its user agent: an iPhone, an iPad or a Mac opens its Calendar app with `webcal://`; anything else copies the `https://` address, with the steps of Google Agenda, which subscribes from a computer only. When the browser refuses to copy, the address is shown selected, to copy by hand. The app does not record when a calendar reads the feed (decided with the owner): the screen never says "in your calendar since".
@@ -454,7 +457,7 @@ The app sends the link of a forgotten password ([ForgotPasswordAction](../api/sr
 - **The files are in `storage/`**, a folder the web server does not serve: next to `api/` locally, in the data folder on a host (see "Deployment"; `bootstrap.php` gives its path as `storageFolder`). Each logo has a folder under a name drawn at random (`storage/band/<16 characters>/`); `band.logoPath` holds the path of the logo. Replacing a logo writes a new folder and deletes the old one.
 - **Serving** ([ShowLogoAction](../api/src/Band/ShowLogoAction.php)): the type comes from the stored extension, the browser is told not to guess another one, and a policy forbids the file to run or load anything, because an SVG can carry scripts. An address carries the version of the logo (`?v=...`): with the current version the browser may keep the file for good, otherwise it asks again.
 - **What is checked, and what is not.** A logo is at most 2 MB and 4096 pixels a side; a PNG must end as a PNG; an SVG must be written in UTF-8 and declare no document type. What an icon shows is not checked: only someone who manages the band can send one. Replacing a logo holds the row of the band until it is done, so that two replacements at the same instant leave the files of one logo only.
-- **`storage/.htaccess`** is written by `LogoStore` and tells Apache to serve nothing from the folder, should a host put it where it can be reached.
+- **`storage/.htaccess`** is written by [Files](../api/src/Storage/Files.php) and tells Apache to serve nothing from the folder, should a host put it where it can be reached.
 - **No request body above 8 MB** is read ([BodyLimit](../api/src/Http/BodyLimit.php), for every route): it is refused with 413 before anything else, signed in or not.
 - **At install**, the files are written before the transaction and removed if it fails: the band is saved with its logo or not at all.
 - **On the page**, [band.ts](../web/src/band.ts) gives the tab the name of the band and its icon, and the icon an iPhone takes when the app is added to its home screen.
@@ -681,7 +684,7 @@ const addSong = useMutation({
 - A refusal of the API becomes an `ApiError` with `status`, `error` (the key) and `fields`. A server that cannot be reached gives the key `unreachable`.
 - The types of what the API returns (`Song` above) are written in TypeScript with the field names of the model. Nothing generates them: they are kept true by hand, next to the code that uses them.
 
-[HomeScreen](../web/src/screens/HomeScreen.tsx) is the smallest real example.
+[NotFoundScreen](../web/src/screens/NotFoundScreen.tsx) is the smallest screen; [GigsScreen](../web/src/screens/gigs/GigsScreen.tsx) shows a list read with `useQuery`.
 
 ### Text and translations
 
@@ -696,7 +699,7 @@ t('gigs.answersLeft', { count: 3 })     // variables and plurals
 - Keys are grouped by screen or by object, in camelCase.
 - French is the reference: a key is added there first. TypeScript knows the keys of `fr.json` ([i18next.d.ts](../web/src/i18next.d.ts)) and refuses one that does not exist.
 - Plurals use i18next's suffixes in the JSON: `"answersLeft_one"`, `"answersLeft_other"`.
-- Error keys sent by the API will be translated under `errors.<key>`.
+- The key of a refusal of the API is turned into text by the screen that made the request, which knows which refusals it can meet (`signIn.refused`, `invalidPasswordLink`…). `errors.unreachable` is the text of any other failure.
 - Dates and numbers are formatted with the browser's `Intl`, not with a library.
 - Content typed by members (song titles, places) is never translated.
 - To add a language: add `locales/<language>.json` with the same keys and list it in `i18n.ts`. The default language will come from the `band` table.
@@ -770,12 +773,12 @@ The schema is described in `model/` (DBML, one file per domain), and created by 
 
 - A script is named `001_members.sql`, `002_songs.sql`: a number, then what it does.
 - `npm run db:migrate` runs [database/migrate.php](../database/migrate.php), which applies, in order, the scripts that have not run yet. On a host without a command line, the install and the admin ask the same work through the API (see "Deployment").
-- Scripts that have run are recorded in the `schemaMigration` table. It is technical: it is created by `migrate.php` itself and is not part of the model.
+- Scripts that have run are recorded in the `schemaMigration` table. It is technical: it is created by the runner ([Migrations](../api/src/Migrations/Migrations.php)) and is not part of the model.
 - **A script that has run is never edited**, since it would not run again. A correction is a new script.
 - If a script fails halfway, the runner stops and says so. MySQL does not undo table changes: what ran before the error stays. Locally, fix the script and run `npm run db:reset`. On the host, the database must be repaired by hand before trying again, which is why a migration is always tried locally first.
 - A migration, the DBML and the dictionary change in the same commit.
 
-Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code ([Migrations](../api/src/Migrations/Migrations.php), about 100 lines).
+Migrations are plain SQL files rather than the PHP classes that migration libraries use, so that the owner can read and review them. This is why the runner is our own code ([Migrations](../api/src/Migrations/Migrations.php), about 150 lines).
 
 The migrations are listed at the top of each dictionary of `model/`, with the version of the model they come from.
 
@@ -851,9 +854,8 @@ Each one was validated by the owner. The rule ([CLAUDE.md](../CLAUDE.md), "Guidi
 | `doctrine/dbal` | 4.5.0 | Database access: prepared statements, insert and update helpers, transactions | The most widely used database layer in PHP. Doctrine ORM is built on it and can be added later without a rewrite |
 | `phpmailer/phpmailer` | 7.1.1 | Sends emails through a mail server (SMTP) | No dependency of its own, maintained for more than twenty years, the most used mail library in PHP. LGPL 2.1 |
 | `cuyz/valinor` | 2.6.0 | Turns incoming JSON into typed objects, or refuses it | No dependency of its own, strict by default, works with PHP enums |
-
 | `minishlink/web-push` | 11.0.0 | Encrypts a push notification for a device and signs the request to the push service (Web Push, VAPID) | The reference in PHP, MIT, maintained. Encryption is not written at home. It brings `web-token/jwt-library`, `spomky-labs/base64url`, `spomky-labs/pki-framework`, `brick/math`, `php-http/discovery`, `php-http/httplug`, `php-http/promise` and three PSR interface packages, and needs an HTTP client that it does not bring: Guzzle, below |
-| `guzzlehttp/guzzle` | 8.2.0 | The HTTP client the Web Push library calls the push services with; it finds it by itself (`Psr18ClientDiscovery`) | The most used HTTP client in PHP, MIT. It brings `guzzlehttp/psr7`, `guzzlehttp/promises` and two Symfony polyfills |
+| `guzzlehttp/guzzle` | 8.2.0 | The HTTP client the Web Push library calls the push services with (it finds it by itself, `Psr18ClientDiscovery`), and that the bot of the band calls Discord with ([Discord](../api/src/Discord/Discord.php)) | The most used HTTP client in PHP, MIT. It brings `guzzlehttp/psr7`, `guzzlehttp/promises` and two Symfony polyfills |
 
 `php-http/discovery` is also a Composer plugin that can install a client by itself: it is turned off in `composer.json` (`allow-plugins`), so that nothing is installed that the owner did not validate.
 
@@ -907,7 +909,7 @@ Mailpit (`axllent/mailpit`, v1.31.3) is a Docker image of the local stack only: 
 | What | Why not a library |
 |---|---|
 | The migration runner (`api/src/Migrations/Migrations.php`) | Migration libraries impose PHP classes; the project wants plain SQL scripts |
-| Sessions and passwords (to come) | PHP provides password hashing natively, and authentication libraries impose their own tables, which would contradict the model |
+| Sessions and passwords ([api/src/Access/](../api/src/Access/)) | PHP provides password hashing natively, and authentication libraries impose their own tables, which would contradict the model |
 | `ApiError`, `Json`, `ErrorHandler`, `Input` | A few lines each, gluing the libraries to this app's error format |
 
 ### Adding or updating one
@@ -956,6 +958,8 @@ database/            migrate.php and the migrations
 - **Only `web/` is public.** The root `.htaccess` refuses everything, and `web/.htaccess` opens that folder alone. The code of the API, its libraries and the migrations are files a browser never reaches. The files written for the host are in [deploy/](../deploy/).
 - **`/api` reaches PHP through a relay**, `web/api/index.php`: the only PHP file under `web/`, with no logic. Shared hosting has no `Alias`, which is what the local stack uses (`docker/apache.conf`).
 - **Two guards**, written in `web/.htaccess` and again in `web/api/.htaccess` (the rewrite rules of a folder replace those of the folder above: keep the two files in step). An address that starts with `/web/` is refused: it only exists through the technical site, and the app has no such route. And everything is sent to HTTPS, unless one of four signs says the request already arrived encrypted (`HTTPS`, the `HTTPS` environment variable, `X-Forwarded-Proto`, port 443): which one a host gives depends on what stands in front of Apache.
+
+- **Security headers of the front** (1.0.0, issue #51). [web/public/.htaccess](../web/public/.htaccess) sets, on every answer that is not under `/api`: `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY` and the `Content-Security-Policy`; [deploy/web.htaccess](../deploy/web.htaccess) adds `Strict-Transport-Security` on the host (without `includeSubDomains`, which would bind the other sites of the domain). `/api` is left out with an `<If>`, because PHP writes the headers of its answers (HSTS in `index.php`, a CSP of its own on files in `ServeFile`): the same header twice would carry two values. The CSP is enforced directly, without a Report-Only phase (decided with the owner on 2026-10-24: nobody would read the reports, and an address to receive them would be one more public route): the tests run under it, and beta is where it meets real use. What it allows, and why, is written beside it. One script has a policy of its own: the worker that reads MuseScore files (`/assets/score.worker-*.js`), whose engine writes functions at start and needs `'unsafe-eval'`. A worker follows the policy sent with its own script, so the pages never get it. A new kind of resource (a script from another site, a frame other than YouTube) needs a change of it; `tests/api/securityHeaders.spec.ts` checks the headers, and every screen test fails when its page is refused something (`tests/support/test.ts`, the `test` the screen tests import).
 
 ### The data folder
 
@@ -1049,7 +1053,9 @@ Because it cannot be checked locally. Checked on beta first:
 - the install guide (#36): on an Android phone, Chrome offers its install window from "Installer l’app" (the tests only stand in for it); on an iPhone and an iPad with iOS 26 and iPadOS 26, the menus are those the steps name (the address, then Partager, [+] « Sur l’écran d’accueil », « Ouvrir comme app web », as the owner saw them, #57);
 - the icon of the browser tab, in Safari and Chrome (#48, #56): the icon of the app, not the icons of the logo;
 - the Discord messages that tag the app (#45), by the bot and by its role, with the real bot: `GET /users/@me` answers, and the role Discord gave the bot carries `tags.bot_id`;
-- the key signatures of the Live mode (#41) on the songs of the band, once their MuseScore file is sent again.
+- the key signatures of the Live mode (#41) on the songs of the band, once their MuseScore file is sent again;
+- the security headers of 1.0.0 (#51): `curl -sI https://<beta>/sign-in` shows HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and the CSP once each, and `curl -sI https://<beta>/api/band` shows HSTS once and no CSP (the `<If>` of the `.htaccess` works on the host); the map, a score, a PDF part, a YouTube clip and the install of the app work under the CSP;
+- the limits per visitor (#51): `REMOTE_ADDR` is the address of the visitor, not one of the host (otherwise every visitor would share one count). After deployment, the rows of `requestLimit` made by two phones on different networks must differ.
 
 ## Traps
 

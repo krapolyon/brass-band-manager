@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
 import { emptyDatabase } from './support/database.ts';
 import { logoInput, png, svg } from './support/images.ts';
 import { install } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 type Manifest = {
   display: string;

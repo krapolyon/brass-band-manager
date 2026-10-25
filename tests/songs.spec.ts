@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
@@ -25,6 +25,7 @@ import {
   sendFile,
 } from './support/songFiles.ts';
 import { emptyStorage } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The screens of songs: the list, the song in its modes, the levels a member
 // gives it, and what whoever manages songs does (import, edit, status,

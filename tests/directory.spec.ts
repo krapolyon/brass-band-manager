@@ -1,7 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The frame of the app once signed in (TabBar on a phone, SideNav on a
 // desktop) and the directory of the band with the sheet of a member. Rules:

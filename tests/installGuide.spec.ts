@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase } from './support/database.ts';
 import { addMember, install, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The install guide (issue #36): putting the app on the home screen, offered
 // once per device after sign-in, on a phone or a tablet in a browser. Rules:

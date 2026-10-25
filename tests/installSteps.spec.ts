@@ -1,7 +1,8 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { admin, install, installInput } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The three steps of the install and its last screen, in a browser. The
 // welcome screen is tested in tests/install.spec.ts, and what the API accepts
@@ -281,8 +282,10 @@ test.describe('step 3, the first member', () => {
     await expect(field(page, 'email')).toHaveAttribute('aria-invalid', 'true');
     await expect(field(page, 'password')).toHaveAttribute('aria-invalid', 'true');
     await expect(field(page, 'firstName')).not.toHaveAttribute('aria-invalid', 'true');
-    // The error says how many characters are missing: 2 out of 10.
-    await expect(page.locator('.TextField[data-error="true"]').last()).toContainText('2');
+    // The error says how many characters are missing: 7 out of 15.
+    await expect(page.locator('.TextField[data-error="true"]').last()).toContainText(
+      'Encore 7 caractères.',
+    );
   });
 
   test('the instrument is chosen among those kept at step 2, and only those', async ({ page }) => {

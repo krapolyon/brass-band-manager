@@ -1,9 +1,10 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { emptyMailbox, receivedMails } from './support/mail.ts';
 import { memberColumns } from './support/personal.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // Managing members: the list (a table on a desktop), the record of a member
 // in each status, the invitation and its link, the departure, and the page

@@ -1,8 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addGig, addSong, answerOf, day, localDay, organise, plays } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 import { emptyStorage } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The home screen: the gigs to come with the answers in place, the alert and
 // its filter, the gig of the day, what is new, and the latest songs of the

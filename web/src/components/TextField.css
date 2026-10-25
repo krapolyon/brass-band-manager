@@ -86,6 +86,15 @@
   color: var(--danger);
 }
 
+.TextField[data-hint="success"] .TextField-hint {
+  color: var(--success);
+}
+
+/* A hint may hold a line break (the rule of a password). */
+.TextField-hint > span {
+  white-space: pre-line;
+}
+
 /* The select and the picker: the whole box opens the choice, and the chevron
    sits over its end without catching the press. */
 .TextField select,

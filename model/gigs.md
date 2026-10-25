@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.12 — 2026-10-24 · Validated by the owner, for 1.0.0 · No change to the tables · A wrong calendar address is answered at once, no longer after a second (issue #51)
 > v1.11 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · The setlist generator asks for a length, 45 minutes by default (Band v1.12), instead of a number of songs; the length of a setlist is shown above its songs in the editor, and in its card when it is read (issue #60)
 > v1.10 — 2026-10-24 · Validated by the owner, for 0.3.2 · No change to the tables · A gig shows the messages of its Discord channel that tag the app (issue #45); the song picker of a setlist filters "Pas joués" and the moods (issue #52)
 > v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · No change to the tables · The setlist generator places songs by their possible positions and draws Chill songs near the start, Teuf near the end (issue #47, Songs v1.9)
@@ -248,7 +249,7 @@ Decided on 2026-10-16 (issue #21): a member subscribes their calendar app to a p
 - Nothing about other members, the notes of the gig or the Discord channel.
 
 ### Rules
-- The address is public (no session): a calendar app has no sign-in. It answers only when its token is the one of a current member; any other address, whatever the reason (unknown token, member who left, reset token), gets the same "not found", after a second, so that trying addresses leads nowhere.
+- The address is public (no session): a calendar app has no sign-in. It answers only when its token is the one of a current member; any other address, whatever the reason (unknown token, member who left, reset token), gets the same "not found", at once, so that nothing says why. With a 32-character random token, trying addresses leads nowhere; it is not limited per visitor (Members, entry 3, "Limits per visitor").
 - The answer is marked private, to be asked again each time (`private, max-age=0`), and asks search engines not to index it.
 - Nothing about the address or the feed is written to a log.
 

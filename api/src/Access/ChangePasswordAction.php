@@ -7,6 +7,7 @@ namespace BrassBand\Access;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
+use BrassBand\Members\PersonalData;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -23,6 +24,7 @@ final class ChangePasswordAction
         private readonly Connection $database,
         private readonly PasswordLinks $links,
         private readonly CurrentPassword $currentPassword,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -39,7 +41,7 @@ final class ChangePasswordAction
                 return $errors;
             }
 
-            Passwords::check($errors, 'newPassword', $input->newPassword);
+            Passwords::check($errors, 'newPassword', $input->newPassword, PasswordContext::ofMember($this->database, $this->personal, $me->id));
             if ($errors->isEmpty()) {
                 $this->database->update(
                     'member',

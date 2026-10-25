@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The known spellings of the instruments, in the settings of the band: the
 // list, the sheet of an instrument, and who reaches them. Rules:

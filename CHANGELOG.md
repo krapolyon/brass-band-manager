@@ -3,6 +3,18 @@
 What changes in the app, version after version. This file is written by
 `npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.
 
+## 1.0.0 — 2026-10-24
+
+### Changed
+
+- A new password needs 15 characters at least, with no other rule; a password among the most used, or built from your email or the name of the band, is refused. The screen says what is still missing as you type.
+- After many refused tries from one network, sign-in, the install and the password links pause for a quarter of an hour, and a forgotten password can be asked ten times an hour from one network.
+- The app tells the browser what its pages may load, and no other site can show it inside its own pages.
+
+### Fixed
+
+- A wrong calendar address and a wrong install key are answered at once, without holding the server for a second.
+
 ## 0.4.0 — 2026-10-24
 
 ### Added

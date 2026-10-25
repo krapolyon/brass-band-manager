@@ -1,10 +1,11 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { fakePush } from './support/fakePush.ts';
 import { addGig, addSetlist, addSong, day } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 import { emptyStorage } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The setlists of a gig: in the gig, their form, and the live screen. Rules:
 // model/gigs.md, entry 4; screens: Figma, page Gigs, sections 11 and 15. The

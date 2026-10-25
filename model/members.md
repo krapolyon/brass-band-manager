@@ -1,5 +1,7 @@
 # Business dictionary — Members domain
 
+> v1.30 — 2026-10-24 · Validated by the owner, for 1.0.0 · Model: `members.dbml` v1.28 · No change to the tables · The password rule follows NIST SP 800-63B-4: 15 characters at least, no composition rule, the most used passwords and those built from the email or the band refused (`passwordHash`, rule "Choosing a password")
+> v1.29 — 2026-10-24 · Validated by the owner, for 1.0.0 · Model: `members.dbml` v1.27 · Migration: `018_requestLimit.sql` · Limits per visitor on the public addresses (issue #51, pentest), with a keyed hash of the network address, entry 3 "Limits per visitor"; wrong install keys are counted, and wrong install keys and calendar addresses are answered at once, no longer after a second
 > v1.28 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · The permission to export and import the data (admin only, `export-import.md`); the photo travels in an export, as the owner decided
 > v1.27 — 2026-10-24 · Validated by the owner, for 0.4.0 · Model: `members.dbml` v1.26 · The invitation leaves by email and can be sent again (issue #50); the dark scheme by default for a new member (owner); ten accent themes, a former key moved to its new name (issue #58, Band domain)
 > v1.26 — 2026-10-24 · Validated by the owner, for 0.3.2 · No change to the tables · The steps of the install guide on an iPhone, as the owner sees Safari (issue #57)
@@ -36,7 +38,7 @@ A person who plays or has played in the band, and their account in the app: the 
 | `addressInstructions` | Access instructions | Instructions d'accès | No | Code 4812B, 3e étage gauche | 0 to 200 | Door code, floor, parking |
 | `photoPath` | Photo | Photo | No | — | — | An image file: JPEG, PNG or WebP. See "Profile photo" |
 | `instrumentId` | Instrument | Instrument | Yes | Sax Ténor | — | One instrument per member. Gives the section |
-| `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. The password has 10 characters at least and no composition rule. Two technical limits: 72 bytes at most (what the hashing keeps), and no NUL character |
+| `passwordHash` | Password | Mot de passe | When ACTIVE or POWER_MEMBER | — | — | Never displayed, never sent to the front. Chosen under the rule of NIST SP 800-63B-4: 15 characters at least (counted in characters, spaces and accents allowed, nothing trimmed), no composition rule, no expiry; refused when it is among the most used passwords (`api/resources/common-passwords.txt`, compared in lowercase) or when it contains the local part of the member’s email (4 characters and more) or a word of the band’s name (4 characters and more), compared without case or accents. Two technical limits: 72 bytes at most (what the hashing keeps), and no NUL character. A password chosen under the former rule (10 characters) stays valid until the member changes it |
 | `status` | Status | Statut | Yes | ACTIVE | — | See life cycle |
 | `language` | Language | Langue | Yes | fr | 2 to 5 | Set from the band's default language at creation |
 | `colorScheme` | Appearance | Apparence | Yes | DARK | — | Automatic (follows the device), light or dark. Dark for a new member (decided on 2026-10-24); a member who chose keeps their choice |
@@ -99,7 +101,8 @@ A member is never deleted once `ACTIVE`: their answers to past gigs stay. The em
 - **Nobody acts on the access of someone who may do more than them.** Changing the email of another member, creating their password link, changing their status or cancelling their invitation asks to hold every permission that member holds. Without this rule, someone who manages members could create the password link of an admin, choose a password with it, and be admin. In practice: a `MEMBER_MANAGER` does all this for members without a role, or with the same role; for the others, an admin does it. For the same reason, changing the roles of a member cancels their pending password link: whoever created it was allowed to for the roles of then.
 - **A member who left is not edited.** Their record, their photo and their roles stay as the departure left them until they are brought back. Their password is erased with the rest: a member who comes back chooses a new one.
 - **Sign-in.** Email and password, for current members only (`ACTIVE` and `POWER_MEMBER`). Every refusal gets the same answer, in the same time: wrong email, wrong password, member who cannot sign in, sign-in locked. The screen therefore says both things at once: wrong email or password, and wait a while after several tries. Signing in again on a device replaces its session.
-- **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose; the app stores no IP address, so it does not limit tries per visitor.
+- **Choosing a password.** The screen gives the rule and nudges to a passphrase before anything is typed, counts the characters still missing while typing, says when the password is long enough, and shows the reason when the API refuses it (`tooShort`, `tooLong`, `invalid`, `tooCommon`, `tooPersonal`). Nothing of this under a field that asks an existing password.
+- **Wrong passwords.** After 5 wrong passwords in a row, sign-in for this member is refused for 15 minutes (`signInLockedUntil`), right password included. A successful sign-in resets the count. Sessions already open are not affected. Known limit: someone who knows a member's email can keep that member from signing in on a new device by failing on purpose. Tries are also limited per visitor (entry 3, "Limits per visitor"), which keeps one visitor from trying many accounts.
 - **Password change.** Asks for the current password. Deletes every other session of the member, and their pending password link. A wrong current password counts like a wrong password at sign-in: at the fifth, sign-in is locked and the device is signed out.
 - **Forgotten password.** On the sign-in screen, a person gives an email address. If it is the address of a current member, the app creates a password link and sends it to that address (entry 3). Whatever the address, the screen answers the same thing, in the same time: nothing tells whether an address belongs to a member. A member still `INVITED` gets nothing: their link comes from the person who invited them.
 - **Notification settings.** See "Notification settings" below. **Calendar address.** See "Calendar address" below.
@@ -311,6 +314,21 @@ A session is a device on which a member is signed in. A password link is a singl
 - **An invitation is completed in one request.** The link of a member still `INVITED` shows them their own record, as whoever invited them filled it in, so that they can check and complete it. Their details, their photo, their accessibility options and their password are then sent together and saved together, or not at all: an invitation that is abandoned changes nothing. Whoever holds the link reads that record; the link already lets them take the account, so it gives away nothing more. The link of a current member (a forgotten password) shows the nickname only.
 - **An invitation tolerates ten refusals.** A record sent with the link of an invitation is refused when its nickname or its email is already taken, which tells whoever holds the link that someone of the band has it. These refusals are counted on the link (`refusedCount`), at the first step as at the last: at the tenth the link is deleted, the invitation shows as expired, and a member manager creates a new link.
 
+### Limits per visitor
+Decided with the owner on 2026-10-24 (issue #51, pentest), for 1.0.0. The public addresses count what each visitor does, so that one visitor can neither try secrets without end nor tie up the server (`requestLimit`).
+
+| Addresses | What is counted | Limit per visitor |
+|---|---|---|
+| Sign-in, install key, install, the check, validation and use of a password link | Each refusal | 30 in 15 minutes |
+| Forgotten password | Each request | 10 in an hour |
+
+- Beyond the limit, the address answers "too many requests" (HTTP 429) with the time to wait, until the window ends; the screens show it as a refusal or as "try again in a moment". Windows are fixed: a count starts again at the quarter or the hour.
+- Refusals are counted rather than requests, so that thirty members signed in on the same network at a rehearsal are not stopped.
+- The calendar address is not limited: a calendar service (Google Agenda) reads the addresses of many people from the same network address, and an address that was reset and is still read there would stop the others. Its 32 random characters cannot be guessed, and a wrong one costs the server one read.
+- The visitor is known by the network address the server sees, never by what a request says of itself (`X-Forwarded-For`). It is stored only as a keyed hash, with the kind of count, in a row deleted when its window ends, one hour later at most.
+- The forgotten password limit protects the mailbox of the band as much as the members: the host sends 100 emails an hour at most, and the 5 minutes between two emails go member by member.
+- The numbers are fixed in the code, like the other rules of access.
+
 ### Access rights
 | Who | View | Create | Delete |
 |---|---|---|---|
@@ -333,14 +351,14 @@ Decided with the owner on 2026-10-18 (issue #36), **for 0.3.1**. The app asks to
 - **Kept on the device**, in the storage of the browser, like the text size: whether the guide was offered. Nothing is sent to the server, nothing is stored about the device.
 
 ### Personal data
-- No IP address and no device name is stored.
+- No device name is stored, and no IP address in clear. `requestLimit`: a keyed hash of the network address of a visitor of the public addresses. Purpose: the limits per visitor. Seen by no one, never logged, deleted when its window ends, one hour later at most.
 - `pushSubscription`: the address and the keys of a device. Purpose: the notifications of the app, the reminders to answer for a gig and those the member chose in their notification settings (entry 1). Seen by no one, the member included; never sent to the front, never written to a log.
 
 ## 4. Storage conventions
 
 These apply to every table of the app and are not repeated in the DBML.
 
-- Every table carries `createdAt`, `updatedAt` and `updatedByMemberId` (the member who made the last change; empty when the app did it by itself, at install for instance). This is a technical trace, not business history: no screen shows it.
+- Every table carries `createdAt`, `updatedAt` and `updatedByMemberId` (the member who made the last change; empty when the app did it by itself, at install for instance). This is a technical trace, not business history: no screen shows it. One exception: `requestLimit`, a counter no member edits, whose rows last an hour at most.
 - Instants are stored in UTC, in `DATETIME` columns. `TIMESTAMP` is not used: in MySQL it stops in January 2038.
 - Text is compared without regard to case or accents (`utf8mb4_unicode_ci`): "Jibé" and "jibe" are the same nickname.
 
@@ -353,7 +371,7 @@ Kept as they are, by default:
 - A name holds at least one letter or digit. A nickname can still imitate another one with letters of another alphabet that look the same (a Cyrillic "А" for a Latin "A"): accepted; members know each other, and refusing mixed alphabets would refuse real names.
 - A member who edits their own record learns that an email or a nickname is taken, even by an invited member or one who left, whom they cannot see: the two must be unique.
 - A member changes their own email without being asked their password.
-- Wrong install keys are not counted: no member exists yet to carry a count, and the app stores no IP address. Instead, the key must be 16 characters at least (a shorter one counts as no key, and install stays closed), and a wrong key is answered after one second.
+- Wrong install keys are counted per visitor (entry 3, "Limits per visitor"), since 1.0.0; before, a wrong key was answered after one second, which held a worker of the server. The key must also be 16 characters at least: a shorter one counts as no key, and install stays closed.
 - A server whose install key is still empty answers like a wrong key.
 
 Not built yet:

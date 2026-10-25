@@ -8,6 +8,8 @@ type Common = {
   label: string;
   /** Under the field: the rule, given before the member breaks it. */
   hint?: string;
+  /** Figma: Hint=Success, a check and the success colour: the rule the hint gave is met. */
+  hintTone?: 'neutral' | 'success';
   /** What is wrong and what to do. Replaces the hint and turns the field red. */
   error?: string;
 };
@@ -29,7 +31,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> &
 // A date shows Icon/Calendar at its end, and the whole field opens the picker
 // of the device. The browser's own calendar button is hidden: one icon, the
 // one of the design.
-export function TextField({ label, hint, error, trailing, clear, ...input }: Props) {
+export function TextField({ label, hint, hintTone, error, trailing, clear, ...input }: Props) {
   const id = useId();
   const field = useRef<HTMLInputElement>(null);
   const isDate = input.type === 'date';
@@ -54,7 +56,14 @@ export function TextField({ label, hint, error, trailing, clear, ...input }: Pro
   }
 
   return (
-    <Field id={id} label={label} hint={hint} error={error} disabled={input.disabled}>
+    <Field
+      id={id}
+      label={label}
+      hint={hint}
+      hintTone={hintTone}
+      error={error}
+      disabled={input.disabled}
+    >
       <input
         className="textBodyLarge"
         id={id}
@@ -150,14 +159,21 @@ function Field({
   id,
   label,
   hint,
+  hintTone,
   error,
   disabled,
   children,
 }: Common & { id: string; disabled?: boolean; children: ReactNode }) {
   const message = error ?? hint;
+  const isMet = !error && hint !== undefined && hintTone === 'success';
 
   return (
-    <div className="TextField" data-error={error ? 'true' : undefined} data-disabled={disabled}>
+    <div
+      className="TextField"
+      data-error={error ? 'true' : undefined}
+      data-hint={isMet ? 'success' : undefined}
+      data-disabled={disabled}
+    >
       <label className="textLabel" id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
@@ -165,6 +181,7 @@ function Field({
       {/* Announced when it changes, so that an error is heard as well as seen. */}
       <p className="TextField-hint textCaption" id={`${id}-hint`} aria-live="polite">
         {error && <Icon name="Alert" size={16} />}
+        {isMet && <Icon name="Check" size={16} />}
         {message && <span>{message}</span>}
       </p>
     </div>

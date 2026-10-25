@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
@@ -16,6 +16,7 @@ import { addCostume, addGig, answerOf, day, organise, plays } from './support/gi
 import { png } from './support/images.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 import { emptyStorage, storedFiles } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The screens of gigs: the list, a gig in its states, the answers, what who
 // may edit a gig does (form, status, answering for someone), and the

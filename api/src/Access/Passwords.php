@@ -5,14 +5,22 @@ declare(strict_types=1);
 namespace BrassBand\Access;
 
 use BrassBand\Http\FieldErrors;
+use BrassBand\Http\Text;
 
 // Everything about passwords: the rule a new one must follow, and the hashing,
 // which is PHP's own (password_hash, password_verify). A password is never
 // stored, logged or sent back; only its hash is kept.
 final class Passwords
 {
-    // Checks a password a member is choosing. The only rule is its length.
-    public static function check(FieldErrors $errors, string $field, string $password): void
+    // A word of the band's name, or the start of an email, this long or
+    // longer is a word someone who knows the member would try.
+    private const PERSONAL_MIN_CHARACTERS = 4;
+
+    // Checks a password a member is choosing (model/members.md,
+    // "passwordHash"; NIST SP 800-63B-4): its length, and nothing about what
+    // it is made of, except that it is not among the most used passwords and
+    // not built from the member's email or the band's name.
+    public static function check(FieldErrors $errors, string $field, #[\SensitiveParameter] string $password, PasswordContext $context): void
     {
         if (str_contains($password, "\0")) {
             // The hashing function of PHP refuses this character.
@@ -21,7 +29,48 @@ final class Passwords
             $errors->add($field, 'tooShort');
         } elseif (strlen($password) > AccessRules::PASSWORD_MAX_BYTES) {
             $errors->add($field, 'tooLong');
+        } elseif (isset(self::common()[mb_strtolower($password)])) {
+            $errors->add($field, 'tooCommon');
+        } elseif (self::isPersonal($password, $context)) {
+            $errors->add($field, 'tooPersonal');
         }
+    }
+
+    // Whether the password holds the part of the email before the @, or a
+    // word of the band's name, compared without case or accents.
+    private static function isPersonal(#[\SensitiveParameter] string $password, PasswordContext $context): bool
+    {
+        $plain = Text::plain($password);
+        $local = Text::plain(explode('@', $context->email)[0]);
+        $pieces = [$local, ...(preg_split('/[^\p{L}\p{N}]+/u', Text::plain($context->bandName)) ?: [])];
+        foreach ($pieces as $piece) {
+            if (mb_strlen($piece) >= self::PERSONAL_MIN_CHARACTERS && str_contains($plain, $piece)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The most used passwords (api/resources/common-passwords.txt), read once
+     * per request, as the keys of an array so that looking one up is direct.
+     *
+     * @return array<string, true>
+     */
+    private static function common(): array
+    {
+        static $common = null;
+        if ($common === null) {
+            $common = [];
+            foreach (file(__DIR__ . '/../../resources/common-passwords.txt', FILE_IGNORE_NEW_LINES) ?: [] as $line) {
+                if ($line !== '' && !str_starts_with($line, '# ') && $line !== '#') {
+                    $common[$line] = true;
+                }
+            }
+        }
+
+        return $common;
     }
 
     public static function hash(#[\SensitiveParameter] string $password): string

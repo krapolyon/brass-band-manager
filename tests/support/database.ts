@@ -29,6 +29,7 @@ const tables = [
   'instrument',
   'section',
   'band',
+  'requestLimit',
 ];
 
 /** Runs SQL and returns what it prints, one row per line, columns separated by tabs. */
