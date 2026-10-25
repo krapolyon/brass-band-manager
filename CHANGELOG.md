@@ -5,6 +5,10 @@ What changes in the app, version after version. This file is written by
 
 ## 1.0.0 — 2026-10-24
 
+### Changed
+
+- A new password has 15 characters at least, and can be neither among the most used passwords nor built from the email or the name of the band. A password chosen before still signs in.
+
 ### Fixed
 
 - Security fixes following the pentest.
