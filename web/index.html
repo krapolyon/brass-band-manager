@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Installed on an iPhone, the app draws under the status bar, which
+         stays translucent: no band of another colour above the screen (#28).
+         The top of each screen keeps clear of it (ScreenTop, safe areas). -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- The colour of the ground, set again by appearance.ts with the scheme. -->
+    <meta name="theme-color" content="#0a0f1a" />
+    <link rel="manifest" href="/api/manifest" />
+    <!-- The icon of the band, else its logo, else the neutral icon (#48): the
+         server decides, so that the tab has it before the app has loaded. -->
+    <link rel="icon" href="/api/band/icon/192" type="image/png" />
+    <link rel="apple-touch-icon" href="/api/band/icon/180" />
+    <!-- Replaced at startup by the translated name. -->
+    <title>Brass band</title>
+    <!-- Sets the scheme of the device before anything is drawn. -->
+    <script src="/appearance.js"></script>
+    <script type="module" crossorigin src="/assets/index-C6cRNgFK.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-BLdHbfdN.js">
+    <link rel="modulepreload" crossorigin href="/assets/midi-DqvED6Y8.js">
+    <link rel="stylesheet" crossorigin href="/assets/midi-DrJuJqK3.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-BSlc6wME.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

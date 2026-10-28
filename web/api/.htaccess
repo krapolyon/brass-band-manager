@@ -1,0 +1,26 @@
+# web/api/ on the host: every /api/... address is handled by index.php, which
+# hands over to the API, kept outside the folder a browser reaches.
+#
+# The rules of a folder replace those of the folder above: the two guards of
+# web/.htaccess are written again here. Keep them in step with
+# deploy/web.htaccess.
+RewriteEngine On
+
+# The host serves this folder as the root of the app. Reached under /web/, it
+# is being read through a site that serves the whole deployed folder, which
+# exists for the host's own needs (the Git deployment of OVH): refused.
+RewriteCond %{REQUEST_URI} ^/+web/
+RewriteRule ^ - [F]
+
+# Everything goes over HTTPS. A host says in more than one way that a request
+# arrived encrypted, depending on what stands in front of Apache: the request
+# is sent to HTTPS only when none of them says so.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{ENV:HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteCond %{SERVER_PORT} !=443
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+RewriteBase /api/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [L]

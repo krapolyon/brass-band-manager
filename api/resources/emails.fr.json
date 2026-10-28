@@ -1,0 +1,72 @@
+{
+  "common": {
+    "linkFallback": "Le bouton ne marche pas ? Copie ce lien dans ton navigateur : {link}",
+    "sender": "Envoyé par l’app de {band}",
+    "settings": "Changer mes réglages",
+    "open": "Ouvrir dans l’app",
+    "settingsText": "Changer mes réglages : {link}",
+    "reasonChosen": "Tu reçois cet e-mail parce que tu l’as choisi dans tes réglages de notifications.",
+    "reasonWithoutDevice": "Tu reçois ce rappel par e-mail parce qu’aucun de tes appareils ne reçoit les notifications de l’app."
+  },
+  "passwordLink": {
+    "subject": "Ton nouveau mot de passe pour {band}",
+    "title": "Choisis un nouveau mot de passe",
+    "lead": "Attention, ce lien n’est valide qu’une heure.",
+    "button": "Choisir mon mot de passe",
+    "after": "Tu n’es pas à l’origine de la demande ? Ignore ce message : ton mot de passe ne change pas.",
+    "reason": "Quelqu’un a demandé un nouveau mot de passe pour ton compte."
+  },
+  "invitation": {
+    "subject": "{band} t’attendent dans leur app",
+    "title": "Bienvenue, {nickname} !",
+    "lead": "Tu as été invité à rejoindre l’application {band} pour gérer le répertoire et les présences.",
+    "lead2": "Pense à vérifier tes informations.",
+    "button": "Rejoindre l’application {band}",
+    "after": "Le lien marche une fois, pendant 7 jours. Passé ce délai, demande-en un autre."
+  },
+  "gigReminder": {
+    "title_one": "Il te reste 1 plan à répondre",
+    "title_other": "Il te reste {count} plans à répondre",
+    "button": "Répondre"
+  },
+  "gigPlayable": {
+    "title": "Le plan est jouable",
+    "lead": "Chaque pupitre a quelqu’un. Plus qu’à le valider.",
+    "button": "Voir le plan"
+  },
+  "gigConfirmed": {
+    "title": "C’est validé !",
+    "lead": "Rendez-vous à {time}.",
+    "button": "Voir le plan"
+  },
+  "songNew": {
+    "title": "Un nouveau morceau au répertoire",
+    "button": "Écouter le morceau"
+  },
+  "songScore": {
+    "title": "La partition a changé",
+    "lead": "Le MuseScore de {name} a été remplacé.",
+    "button": "Voir le morceau"
+  },
+  "songPart": {
+    "title": "Une nouvelle partition pour toi",
+    "button": "Voir ma nouvelle partoche"
+  },
+  "gig": {
+    "meeting": "RDV {time}",
+    "playable": "Jouable",
+    "missing": "Manque : {sections}",
+    "toAnswer": "À répondre",
+    "status": {
+      "PROPOSED": "Proposition",
+      "ACCEPTED": "Accepté",
+      "CONFIRMED": "Validé"
+    },
+    "answer": {
+      "YES": "Oui",
+      "NO": "Non",
+      "MAYBE": "Peut-être",
+      "IF_NEEDED": "Si besoin"
+    }
+  }
+}

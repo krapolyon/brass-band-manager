@@ -1,0 +1,34 @@
+{
+  "sections": [
+    {"name": "Trompette", "icon": "trumpet", "instruments": [
+      {"name": "Trompette", "preselected": true, "aliases": ["trompettes", "tp", "trumpet", "cornet"]}
+    ]},
+    {"name": "Saxophone", "icon": "saxophone", "instruments": [
+      {"name": "Sax Alto", "preselected": true, "aliases": ["sax", "saxo", "saxophone", "sax mib", "saxo alto", "saxo mib", "saxophone alto", "saxophone mib", "sxm"]},
+      {"name": "Sax Ténor", "preselected": true, "aliases": ["sax sib", "saxo tenor", "saxo sib", "saxophone tenor", "saxophone sib", "sxt"]},
+      {"name": "Sax Baryton", "preselected": false, "aliases": []},
+      {"name": "Sax C Melody", "preselected": true, "aliases": ["sax ut", "sax melody", "sax melodie", "saxo ut", "saxo melody", "saxo melodie", "saxophone ut", "saxophone melody", "saxophone melodie", "sxc"]}
+    ]},
+    {"name": "Trombone", "icon": "trombone", "instruments": [
+      {"name": "Trombone Ut", "preselected": true, "aliases": ["tbut"]},
+      {"name": "Trombone Sib", "preselected": true, "aliases": ["trombone", "tb"]}
+    ]},
+    {"name": "P’tites basses", "icon": "tuba", "instruments": [
+      {"name": "P’tite basse", "preselected": true, "aliases": ["basse", "basses", "bs", "french horn"]}
+    ]},
+    {"name": "Souba", "icon": "sousaphone", "instruments": [
+      {"name": "Souba", "preselected": true, "aliases": ["soubassophone", "sb", "sousaphone", "tuba"]}
+    ]},
+    {"name": "Percu", "icon": "drum", "instruments": [
+      {"name": "Batterie", "preselected": true, "aliases": ["drumset"]},
+      {"name": "Percus", "preselected": true, "aliases": ["percu", "percussion", "percussions", "bongo"]}
+    ]},
+    {"name": "Flûte", "icon": "flute", "instruments": [
+      {"name": "Flûte", "preselected": false, "aliases": []},
+      {"name": "Piccolo", "preselected": false, "aliases": []}
+    ]},
+    {"name": "Clarinette", "icon": "clarinet", "instruments": [
+      {"name": "Clarinette", "preselected": false, "aliases": []}
+    ]}
+  ]
+}
