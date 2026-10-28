@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Transfer;
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\Role;
 use BrassBand\Band\LogoInput;
@@ -16,6 +17,7 @@ use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
 use BrassBand\Http\Text;
 use BrassBand\Install\Languages;
+use BrassBand\Members\Members;
 use BrassBand\Members\MemberInput;
 use BrassBand\Members\MemberRecord;
 use BrassBand\Members\PersonalData;
@@ -153,7 +155,7 @@ final class ExportImport
                 }
                 $isAdmin = in_array(Role::ADMIN->value, (array) ($member['roles'] ?? []), true);
                 $hash = $member['passwordHash'] ?? null;
-                $canSignIn = in_array($member['status'] ?? null, ['ACTIVE', 'POWER_MEMBER'], true)
+                $canSignIn = in_array($member['status'] ?? null, AccessRules::SIGN_IN_STATUSES, true)
                     && is_string($hash) && password_get_info($hash)['algo'] !== null;
             }
             if (!$isAdmin) {
@@ -423,7 +425,7 @@ final class ExportImport
                 continue;
             }
             // Without a password a member is invited, or has left.
-            if ($hash === null && in_array($status, ['ACTIVE', 'POWER_MEMBER'], true)) {
+            if ($hash === null && in_array($status, AccessRules::SIGN_IN_STATUSES, true)) {
                 $status = 'INVITED';
             }
             $language = $text('language') ?? '';
@@ -451,7 +453,6 @@ final class ExportImport
                 $count['updated']++;
             }
             $count['total']++;
-            $before = $this->database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ?', [$id]);
             $roles = [];
             foreach (array_unique((array) ($member['roles'] ?? [])) as $role) {
                 if (Role::tryFrom((string) $role) === null) {
@@ -460,15 +461,7 @@ final class ExportImport
                 }
                 $roles[] = (string) $role;
             }
-            // Changed roles cancel a pending password link, as in the app
-            // (Members, "Roles"): whoever holds it would get the new roles.
-            if (array_diff($before, $roles) !== [] || array_diff($roles, $before) !== []) {
-                $this->links->cancel($id);
-            }
-            $this->database->delete('memberRole', ['memberId' => $id]);
-            foreach ($roles as $role) {
-                $this->database->insert('memberRole', ['memberId' => $id, 'role' => $role, 'updatedByMemberId' => $this->importerId]);
-            }
+            Members::replaceRoles($this->database, $this->links, $id, $roles, $this->importerId);
             // A member the import adds arrives invited without a link: with
             // the switch on, the import sends them their invitation (#50).
             // One already here keeps theirs: importing twice invites no one again.

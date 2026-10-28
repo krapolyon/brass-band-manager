@@ -183,9 +183,7 @@ final class Reprise
         foreach ($this->database->fetchAllAssociative('SELECT id, name FROM costume') as $row) {
             $this->costumes[Values::plain((string) $row['name'])] = (int) $row['id'];
         }
-        foreach ($this->database->fetchAllAssociative('SELECT id, email FROM member') as $row) {
-            $this->knownMembers[(string) $this->personal->opened($row)['email']] = (int) $row['id'];
-        }
+        $this->knownMembers = array_flip($this->personal->emailsById());
     }
 
     private function countFiles(): int

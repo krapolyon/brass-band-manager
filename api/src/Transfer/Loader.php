@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace BrassBand\Transfer;
 
 use BrassBand\Access\PasswordLinks;
+use BrassBand\Members\Members;
 use BrassBand\Members\PersonalData;
 use BrassBand\Songs\ClipThumbnails;
 use BrassBand\Songs\SongFiles;
+use BrassBand\Songs\SongRecord;
 use BrassBand\Songs\SpokenNames;
 use BrassBand\Storage\Files;
 use Doctrine\DBAL\Connection;
@@ -53,9 +55,7 @@ final class Loader
         $thumbnails = $this->fetchThumbnails($plan['songs'] ?? []);
         try {
             $tokens = $this->database->transactional(function () use ($plan, $invites, $thumbnails): array {
-                foreach ($this->database->fetchAllAssociative('SELECT id, email FROM member') as $row) {
-                    $this->memberIds[(string) $this->personal->opened($row)['email']] = (int) $row['id'];
-                }
+                $this->memberIds = array_flip($this->personal->emailsById());
                 $tokens = $this->members($plan['members'] ?? [], $invites);
                 $this->songs($plan['songs'] ?? [], $thumbnails);
                 $gigIds = $this->gigs($plan['gigs'] ?? []);
@@ -98,16 +98,7 @@ final class Loader
             $this->memberIds[(string) $member['email']] = $id;
 
             if ($member['roles'] !== null) {
-                // Changed roles cancel a pending password link, as in the app
-                // (Members, "Roles"): whoever holds it would get the new roles.
-                $before = $this->database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ?', [$id]);
-                if (array_diff($before, $member['roles']) !== [] || array_diff($member['roles'], $before) !== []) {
-                    $this->links->cancel($id);
-                }
-                $this->database->delete('memberRole', ['memberId' => $id]);
-                foreach ($member['roles'] as $role) {
-                    $this->database->insert('memberRole', ['memberId' => $id, 'role' => $role, 'updatedByMemberId' => $this->byMemberId]);
-                }
+                Members::replaceRoles($this->database, $this->links, $id, $member['roles'], $this->byMemberId);
             }
             if ($values['status'] === 'LEFT') {
                 // Their access ends, and their photo goes, as when someone leaves in the app.
@@ -156,12 +147,7 @@ final class Loader
                 $this->database->update('song', $values, ['id' => $id]);
             }
 
-            foreach (['songPosition' => ['position', $song['positions']], 'songTiringSection' => ['sectionId', $song['tiring']], 'songTrickySection' => ['sectionId', $song['tricky']]] as $table => [$column, $list]) {
-                $this->database->delete($table, ['songId' => $id]);
-                foreach ($list as $value) {
-                    $this->database->insert($table, ['songId' => $id, $column => $value, 'updatedByMemberId' => $this->byMemberId]);
-                }
-            }
+            SongRecord::replaceAttributes($this->database, $id, $song['positions'], $song['tiring'], $song['tricky'], $this->byMemberId);
             if ($song['spokenNames'] !== null) {
                 $this->database->delete('songSpokenName', ['songId' => $id]);
                 $row = ['id' => $id, 'name' => $values['name']];

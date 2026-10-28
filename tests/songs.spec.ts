@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
@@ -25,6 +25,7 @@ import {
   sendFile,
 } from './support/songFiles.ts';
 import { emptyStorage } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The screens of songs: the list, the song in its modes, the levels a member
 // gives it, and what whoever manages songs does (import, edit, status,
@@ -593,6 +594,56 @@ test.describe('the MIDI player', () => {
     await expect(
       page.getByText('Le fichier MIDI ne se charge pas.', { exact: false }),
     ).toBeVisible();
+  });
+
+  test('the player is loaded when it is opened; a page from before a new version loads itself again', async ({
+    page,
+  }, testInfo) => {
+    // Safari keeps the failure of a module for its address, even after the
+    // page is loaded again. A real new version asks for a file of another
+    // name, which this test cannot imitate: it runs on Android only.
+    test.skip(testInfo.project.name === 'iphone', 'Safari keeps a failed module for its address');
+    // The first ask of the player fails, as when a new version replaced its
+    // file (web/src/lazyPart.ts): the page is loaded again, and the player
+    // shows. A second failure would be an error.
+    let asked = 0;
+    await page.route('**/assets/MidiView-*.js', async (route) => {
+      asked++;
+      if (asked === 1)
+        await route.fulfill({ status: 404, body: '', headers: { 'Cache-Control': 'no-store' } });
+      else await route.continue();
+    });
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    expect(asked).toBe(0);
+    await openMidi(page);
+    await expect(
+      page.getByText('Le fichier MIDI ne se charge pas.', { exact: false }),
+    ).toBeVisible();
+    expect(asked).toBe(2);
+  });
+
+  test('without a network, the page is not loaded again: it stays, and says the player cannot load', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // A mark on the page: a reload would wipe it.
+    await page.evaluate(() => {
+      (window as unknown as { stayed: boolean }).stayed = true;
+    });
+    await page.context().setOffline(true);
+
+    await openMidi(page);
+
+    await expect(
+      page.getByText('Le fichier MIDI ne se charge pas.', { exact: false }),
+    ).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(
+      true,
+    );
+    await page.context().setOffline(false);
   });
 
   test('a file written by MuseScore 4.4, with a line the engine does not know, is read all the same', async ({

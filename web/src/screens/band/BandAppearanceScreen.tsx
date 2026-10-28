@@ -16,15 +16,12 @@ import i18n, { languageName } from '../../i18n.ts';
 import { accentThemes } from '../../themes.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import type { LogoInput } from '../install/installApi.ts';
-import { prepareLogo } from '../install/logo.ts';
+import { BAND_NAME_MAX_LENGTH, LOGO_TYPES, readLogo } from '../install/logo.ts';
 import { focusFirstFieldError } from '../settings/ProfileScreen.tsx';
 import '../settings/settings.css';
 import { APP_ICON_TYPES, type AppIconProblem, prepareAppIcon } from './appIcon.ts';
 import { AdminsOnlyScreen, useCanManageBand } from './BandSettingsScreen.tsx';
 
-const LOGO_TYPES = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
-const LOGO_MAX_BYTES = 2 * 1000 * 1000;
-const NAME_MAX_LENGTH = 80;
 const languages = Object.keys(i18n.options.resources ?? {});
 
 // Figma: Band settings / Appearance (section 6, 0.3.0). The name, the logo,
@@ -106,21 +103,16 @@ function AppearanceForm({ band }: { band: Band }) {
       setLogoError(undefined);
       return;
     }
-    // Some systems give no type to an SVG file: its name then says what it is.
-    const type = file.type || (file.name.toLowerCase().endsWith('.svg') ? 'image/svg+xml' : '');
-    if (!LOGO_TYPES.includes(type)) {
-      setLogoError(t('install.band.logo.wrongType'));
-    } else if (file.size > LOGO_MAX_BYTES) {
-      setLogoError(t('install.band.logo.tooBig', { size: megabytes(file.size) }));
+    const read = await readLogo(file);
+    if ('input' in read) {
+      setLogoInput(read.input);
+      setLogoFile(file);
+      setLogoRemoved(false);
+      setLogoError(undefined);
+    } else if (read.problem === 'tooBig') {
+      setLogoError(t('install.band.logo.tooBig', { size: megabytes(read.bytes) }));
     } else {
-      try {
-        setLogoInput(await prepareLogo(file));
-        setLogoFile(file);
-        setLogoRemoved(false);
-        setLogoError(undefined);
-      } catch {
-        setLogoError(t('install.band.logo.wrongType'));
-      }
+      setLogoError(t('install.band.logo.wrongType'));
     }
   };
 
@@ -215,7 +207,7 @@ function AppearanceForm({ band }: { band: Band }) {
           error={nameError}
           name="bandName"
           autoComplete="off"
-          maxLength={NAME_MAX_LENGTH}
+          maxLength={BAND_NAME_MAX_LENGTH}
           value={name}
           onChange={(event) => setName(event.target.value)}
         />

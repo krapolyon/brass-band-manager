@@ -32,6 +32,10 @@ final class ErrorHandler
                 $body['fields'] = $thrown->fields;
             }
 
+            foreach ($thrown->headers as $name => $value) {
+                $response = $response->withHeader($name, $value);
+            }
+
             return Json::write($response, $body, $thrown->status);
         }
 

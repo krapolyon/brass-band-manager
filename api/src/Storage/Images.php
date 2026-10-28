@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace BrassBand\Storage;
 
+use BrassBand\Http\FieldErrors;
+
 // What an image file really is, read from its content: never from the name
 // or the type that came with it. Uses only what every PHP has: no image
 // library, which a shared host may not provide.
@@ -24,6 +26,26 @@ final class Images
 
     // The last bytes of every PNG file: its closing chunk.
     private const PNG_END = "IEND\xAE\x42\x60\x82";
+
+    // The file an image field sends, written in base64. Reports on $field an
+    // image that is not base64 or is empty (invalid), or larger than
+    // $maxBytes (tooBig), and returns null; otherwise the bytes of the file.
+    public static function decoded(FieldErrors $errors, string $field, string $base64, int $maxBytes): ?string
+    {
+        $image = base64_decode($base64, true);
+        if ($image === false || $image === '') {
+            $errors->add($field, 'invalid');
+
+            return null;
+        }
+        if (strlen($image) > $maxBytes) {
+            $errors->add($field, 'tooBig');
+
+            return null;
+        }
+
+        return $image;
+    }
 
     /**
      * The format and the size of a PNG, a JPEG or a WebP; null for anything

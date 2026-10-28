@@ -20,4 +20,13 @@ RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteCond %{SERVER_PORT} !=443
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
+# Over HTTPS only, which the host always is: the browser never comes back
+# over plain HTTP. The answers of the API say it themselves (index.php).
+# Without includeSubDomains: other sites of the domain are not this app.
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} !~ m#^/api/#">
+    Header always set Strict-Transport-Security "max-age=31536000"
+  </If>
+</IfModule>
+
 # Below: web/public/.htaccess, as on the local stack.

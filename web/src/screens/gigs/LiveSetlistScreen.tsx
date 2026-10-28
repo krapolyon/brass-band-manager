@@ -12,7 +12,7 @@ import { ScreenTop } from '../../components/ScreenTop.tsx';
 import { type Setlist, useSetlist } from '../../gigs.ts';
 import { useMe } from '../../session.ts';
 import { useSong } from '../../songs.ts';
-import { LiveView } from '../songs/LiveView.tsx';
+import { LivePart, preloadLive } from '../songs/SoundParts.tsx';
 import './gigs.css';
 
 // How long the list must rest before the song on the focus line becomes the
@@ -76,6 +76,9 @@ export function LiveSetlistScreen() {
   // Counts the changes that failed: the list then goes back to the song being played.
   const [failures, setFailures] = useState(0);
   const touching = useRef(false);
+
+  // Fetched while the network is there: a song opened during the gig does not depend on it.
+  useEffect(preloadLive, []);
 
   const setlist = query.data;
   const position = setlist?.livePosition ?? null;
@@ -325,7 +328,9 @@ function SongOver({ songId, onClose }: { songId: number; onClose: () => void }) 
   const { t } = useTranslation();
   const song = useSong(songId);
 
-  if (song.data?.musicXml) return <LiveView song={song.data} onClose={onClose} />;
+  if (song.data?.musicXml) {
+    return <LivePart song={song.data} onClose={onClose} />;
+  }
   return (
     <main className="gigs-live">
       <div className="gigs-liveColumn">

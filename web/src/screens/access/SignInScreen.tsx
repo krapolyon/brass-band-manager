@@ -33,7 +33,8 @@ export function SignInScreen() {
       navigate(afterSignIn(), { replace: true });
     },
   });
-  const isRefused = signIn.error instanceof ApiError && signIn.error.status === 401;
+  // Too many refusals from this network (429) reads like a locked sign-in.
+  const isRefused = signIn.error instanceof ApiError && [401, 429].includes(signIn.error.status);
 
   return (
     <FlowLayout

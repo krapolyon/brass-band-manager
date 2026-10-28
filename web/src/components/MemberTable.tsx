@@ -34,8 +34,10 @@ type Props = {
 
 // Figma: Member/TableHeader and Member/TableRow. The members as a table, on a
 // desktop, for those who manage them: one line per member, the status in its
-// own column. The nickname is the link that opens the record; a chevron at
-// the end of the line says so to the eye.
+// own column. The nickname is the link that opens the record, stretched over
+// the whole line (Figma: "The whole line opens the record"). The More icon at
+// the end is drawn as an IconButton in Figma, but what it would offer is not
+// drawn: until it is, it is part of the line and opens the record too.
 export function MemberTable({ caption, columns, rows }: Props) {
   return (
     <table className="MemberTable">

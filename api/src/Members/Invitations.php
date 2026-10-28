@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace BrassBand\Members;
 
-use BrassBand\Http\AfterResponse;
 use BrassBand\Mail\AccountEmails;
 use BrassBand\Mail\EmailBand;
 use BrassBand\Mail\Mailer;
@@ -60,18 +59,6 @@ final class Invitations
             ];
         }
 
-        $mailer = $this->mailer;
-        $name = $band->name;
-        AfterResponse::add(static function () use ($mailer, $name, $messages): void {
-            foreach ($messages as $email) {
-                try {
-                    $mailer->send($email['to'], $name, $email['message']);
-                } catch (\Throwable $failure) {
-                    // The others still leave. The log names the kind of
-                    // failure, never the address.
-                    error_log('An invitation email was not sent: ' . $failure::class);
-                }
-            }
-        });
+        $this->mailer->sendLater($band->name, $messages, 'invitation');
     }
 }

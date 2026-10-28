@@ -20,7 +20,9 @@ final class AccessRules
     public const SIGN_IN_MAX_FAILURES = 5;
     public const SIGN_IN_LOCK_MINUTES = 15;
 
-    public const PASSWORD_MIN_CHARACTERS = 10;
+    // NIST SP 800-63B-4 (model/members.md, "passwordHash"). A password chosen
+    // under the former rule (10) stays valid until it is changed.
+    public const PASSWORD_MIN_CHARACTERS = 15;
     // The hashing function of PHP ignores what comes after 72 bytes: a longer
     // password is refused rather than silently cut.
     public const PASSWORD_MAX_BYTES = 72;
@@ -36,6 +38,16 @@ final class AccessRules
     // nickname or an email is taken is cancelled: its link says what is taken.
     public const INVITATION_MAX_REFUSALS = 10;
 
+    // Limits per visitor on the public addresses (entry 3, "Limits per
+    // visitor"; RequestLimit). Refusals of sign-in, install and password links...
+    public const VISITOR_REFUSALS_MAX = 30;
+    public const VISITOR_REFUSALS_MINUTES = 15;
+    // ...and requests of a forgotten password, which send emails.
+    public const VISITOR_EMAIL_REQUESTS_MAX = 10;
+    public const VISITOR_EMAIL_REQUESTS_MINUTES = 60;
+
     // The statuses of a member who can sign in ("current member" in the model).
     public const SIGN_IN_STATUSES = ['ACTIVE', 'POWER_MEMBER'];
+    // The same list, as an SQL "status IN (...)" reads it. Keep the two in step.
+    public const SIGN_IN_STATUSES_SQL = "'ACTIVE', 'POWER_MEMBER'";
 }

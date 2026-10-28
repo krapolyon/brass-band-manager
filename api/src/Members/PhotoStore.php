@@ -40,13 +40,8 @@ final class PhotoStore
      */
     public function read(FieldErrors $errors, string $field, PhotoInput $input): ?array
     {
-        $image = base64_decode($input->image, true);
-        if ($image === false || $image === '') {
-            $errors->add($field, 'invalid');
-            return null;
-        }
-        if (strlen($image) > self::MAX_BYTES) {
-            $errors->add($field, 'tooBig');
+        $image = Images::decoded($errors, $field, $input->image, self::MAX_BYTES);
+        if ($image === null) {
             return null;
         }
 
@@ -71,37 +66,31 @@ final class PhotoStore
      */
     public function replace(int $memberId, ?array $photo, int $byMemberId): void
     {
-        $written = null;
-        try {
-            $this->database->transactional(function () use ($memberId, $photo, $byMemberId, &$written): void {
-                // Holds the row until the end: the next request waits here.
-                $member = $this->database->fetchAssociative('SELECT status, photoPath FROM member WHERE id = ? FOR UPDATE', [$memberId]);
-                // Judged here, with the row held: the member may have been
-                // deleted, or have left, since the request arrived.
-                if ($member === false) {
-                    throw new ApiError(404, 'notFound');
-                }
-                if ($member['status'] === 'LEFT') {
-                    // The photo of a member who left was erased, and stays so.
-                    throw new ApiError(409, 'memberLeft');
-                }
-                $previous = $member['photoPath'];
-                if ($photo !== null) {
-                    $name = "photo.{$photo['extension']}";
-                    $written = $this->files->write('members', [$name => $photo['image']]) . "/{$name}";
-                }
-                $this->database->update(
-                    'member',
-                    ['photoPath' => $written, 'updatedByMemberId' => $byMemberId],
-                    ['id' => $memberId],
-                );
-                $this->delete(is_string($previous) ? $previous : null);
-            });
-        } catch (\Throwable $failure) {
-            // Nothing was saved: the file just written belongs to nobody.
-            $this->delete($written);
-            throw $failure;
-        }
+        $this->files->replacing($this->database, function (callable $write) use ($memberId, $photo, $byMemberId): ?string {
+            // Holds the row until the end: the next request waits here.
+            $member = $this->database->fetchAssociative('SELECT status, photoPath FROM member WHERE id = ? FOR UPDATE', [$memberId]);
+            // Judged here, with the row held: the member may have been
+            // deleted, or have left, since the request arrived.
+            if ($member === false) {
+                throw new ApiError(404, 'notFound');
+            }
+            if ($member['status'] === 'LEFT') {
+                // The photo of a member who left was erased, and stays so.
+                throw new ApiError(409, 'memberLeft');
+            }
+            $written = null;
+            if ($photo !== null) {
+                $name = "photo.{$photo['extension']}";
+                $written = $write('members', [$name => $photo['image']]) . "/{$name}";
+            }
+            $this->database->update(
+                'member',
+                ['photoPath' => $written, 'updatedByMemberId' => $byMemberId],
+                ['id' => $memberId],
+            );
+
+            return is_string($member['photoPath']) ? $member['photoPath'] : null;
+        });
     }
 
     // Deletes the file of a photo, given the path that was in member.photoPath.

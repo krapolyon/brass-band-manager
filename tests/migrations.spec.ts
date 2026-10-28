@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
   dropTables,
@@ -8,6 +8,7 @@ import {
   unapplyLast,
 } from './support/migrations.ts';
 import { addMember, admin, install, installInput, memberPassword } from './support/scenario.ts';
+import { expect, test } from './support/test.ts';
 
 // The screen where an admin applies the migrations, and the notice that tells
 // them some wait. Rules: model/band.md, "Updating the database". The screen

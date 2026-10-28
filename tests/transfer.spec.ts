@@ -1,9 +1,10 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { emptyDatabase, sql } from './support/database.ts';
 import { emptyMailbox, receivedMails } from './support/mail.ts';
 import { addMember, admin, install, memberPassword } from './support/scenario.ts';
 import { museScore, readableScore } from './support/songFiles.ts';
 import { emptyImportFolder, emptyStorage } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 import { makeZip, readZip } from './support/zip.ts';
 
 // The screens "Exporter" and "Importer" (0.4.0, issue #43, and #50 for the

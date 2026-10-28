@@ -3,6 +3,18 @@
 What changes in the app, version after version. This file is written by
 `npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.
 
+## 1.0.0 — 2026-10-24
+
+### Changed
+
+- A new password has 15 characters at least, and can be neither among the most used passwords nor built from the email or the name of the band. A password chosen before still signs in.
+
+### Fixed
+
+- Security fixes following the pentest.
+- On a computer, a click anywhere on the line of a member in “Manage members” opens their record, the “…” at its end included.
+- The icon of the band now shows at the top of the emails, whatever the mail app.
+
 ## 0.4.0 — 2026-10-24
 
 ### Added

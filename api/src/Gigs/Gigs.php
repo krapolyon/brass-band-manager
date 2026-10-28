@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Gigs;
 
+use BrassBand\Positions;
 use BrassBand\Access\AccessRules;
 use BrassBand\Access\CurrentMember;
 use BrassBand\Access\Permission;
@@ -50,6 +51,15 @@ final class Gigs
             'SELECT 1 FROM gigOrganizer WHERE gigId = ? AND memberId = ?',
             [$gigId, $member->id],
         ) !== false;
+    }
+
+    // Refuses with 404 a slot that is not one of this gig: an address that
+    // pairs a gig with the slot of another leads nowhere.
+    public function mustHaveSlot(int $gigId, int $slotId): void
+    {
+        if ($this->database->fetchOne('SELECT 1 FROM gigSlot WHERE id = ? AND gigId = ?', [$slotId, $gigId]) === false) {
+            throw new ApiError(404, 'notFound');
+        }
     }
 
     /**
@@ -280,21 +290,7 @@ final class Gigs
      */
     public function placeSlot(int $gigId, ?int $slotId, int $position, int $byMemberId): void
     {
-        $ids = array_map(
-            intval(...),
-            $this->database->fetchFirstColumn('SELECT id FROM gigSlot WHERE gigId = ? ORDER BY position, id FOR UPDATE', [$gigId]),
-        );
-        if ($slotId !== null) {
-            $ids = array_values(array_filter($ids, fn (int $other) => $other !== $slotId));
-            array_splice($ids, max(0, min($position - 1, count($ids))), 0, [$slotId]);
-        }
-
-        foreach ($ids as $index => $id) {
-            $this->database->executeStatement(
-                'UPDATE gigSlot SET position = ?, updatedByMemberId = IF(position = ?, updatedByMemberId, ?) WHERE id = ?',
-                [$index + 1, $index + 1, $byMemberId, $id],
-            );
-        }
+        Positions::place($this->database, 'gigSlot', 'gigId = ?', [$gigId], 'id', $slotId, $position, $byMemberId);
     }
 
     /**
@@ -311,7 +307,7 @@ final class Gigs
      */
     private function missingSections(array $gigIds): array
     {
-        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+        $current = AccessRules::SIGN_IN_STATUSES_SQL;
         $sections = array_map(intval(...), $this->database->fetchFirstColumn(
             "SELECT DISTINCT i.sectionId FROM member m JOIN instrument i ON i.id = m.instrumentId
              WHERE m.status IN ({$current}) ORDER BY i.sectionId",
@@ -392,7 +388,7 @@ final class Gigs
 
         $answers = [];
         if ($withAnswers) {
-            $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+            $current = AccessRules::SIGN_IN_STATUSES_SQL;
             $given = $this->database->fetchAllAssociative(
                 "SELECT a.gigSlotId, a.memberId, a.answer, m.nickname, i.sectionId, m.status IN ({$current}) AS isCurrentMember
                  FROM gigSlotAttendance a

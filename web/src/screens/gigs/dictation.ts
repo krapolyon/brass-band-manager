@@ -206,16 +206,9 @@ function decide(phrase: string, ranked: Scored[]): Heard {
   };
 }
 
-/** What a phrase heard means among the songs a setlist can hold. */
-export function recognise(text: string, songs: Spoken[]): Heard {
-  const phrase = cleanPhrase(text);
-  if (phrase === '') return { kind: 'none', phrase };
-  return decide(phrase, rank(compared(text), songs));
-}
-
 /**
- * The same, for what a recogniser gives: several wordings of one thing heard,
- * the likeliest first. The wording kept is the one whose closest song is the
+ * What a phrase heard means among the songs a setlist can hold, from what a
+ * recogniser gives: several wordings of one thing heard, the likeliest first. The wording kept is the one whose closest song is the
  * closest of all; the phrase is always of that wording.
  */
 export function recogniseAny(wordings: string[], songs: Spoken[]): Heard & { said: string } {

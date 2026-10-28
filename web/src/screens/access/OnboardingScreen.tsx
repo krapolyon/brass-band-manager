@@ -24,11 +24,8 @@ import { MemberRecordFields, type PhotoDraft } from '../members/MemberRecordFiel
 import { draftOf, type MemberRecord, recordOf, useRecordErrors } from '../members/record.ts';
 import { AccessibilityButton } from './AccessibilityButton.tsx';
 import { PasswordField } from './PasswordField.tsx';
-import {
-  LinkExpiredScreen,
-  PASSWORD_MIN_CHARACTERS,
-  usePasswordError,
-} from './PasswordLinkScreen.tsx';
+import { LinkExpiredScreen } from './PasswordLinkScreen.tsx';
+import { usePasswordHint } from './password.ts';
 
 // What POST /api/passwordLink/check answers for an invitation
 // (api/src/Access/CheckPasswordLinkAction.php).
@@ -60,7 +57,7 @@ export function OnboardingScreen({ token, invitation }: Props) {
   const setMe = useSetMe();
   const bandCountry = useBand().data?.defaultCountryCode ?? '';
   const recordErrors = useRecordErrors();
-  const passwordError = usePasswordError();
+  const hintOf = usePasswordHint();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [draft, setDraft] = useState(() => draftOf(invitation.member, bandCountry));
@@ -71,7 +68,8 @@ export function OnboardingScreen({ token, invitation }: Props) {
   });
   const [password, setPassword] = useState('');
   const [wasChecked, setChecked] = useState(false);
-  const [wasSent, setSent] = useState(false);
+  // The password last sent: null before the first try.
+  const [sent, setSent] = useState<string | null>(null);
 
   // The options start as those of the device and are shown at once; they are
   // saved with the account, not on the device, except the text size, which
@@ -175,8 +173,8 @@ export function OnboardingScreen({ token, invitation }: Props) {
     );
   }
 
-  const error = wasSent ? passwordError(password, Boolean(refused.password)) : null;
-  const isUnreachable = finish.isError && !error;
+  const hint = hintOf(password, sent, refused.password);
+  const isUnreachable = finish.isError && !refused.password;
 
   return (
     <FlowLayout
@@ -196,8 +194,8 @@ export function OnboardingScreen({ token, invitation }: Props) {
       lead={t('onboarding.password.lead')}
       onSubmit={() => {
         if (finish.isPending) return;
-        setSent(true);
-        if (passwordError(password, false)) {
+        setSent(password);
+        if (hintOf(password, password).error) {
           focusFirstError();
         } else {
           finish.mutate();
@@ -217,8 +215,7 @@ export function OnboardingScreen({ token, invitation }: Props) {
           label={t('signIn.password')}
           name="password"
           autoComplete="new-password"
-          hint={t('password.hint', { min: PASSWORD_MIN_CHARACTERS })}
-          error={error ?? undefined}
+          {...hint}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />

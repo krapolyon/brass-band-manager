@@ -19,11 +19,13 @@ final class ApiError extends Exception
 {
     /**
      * @param array<string, string> $fields For "invalidInput": field path => what is wrong with it
+     * @param array<string, string> $headers Headers of the answer, such as Retry-After for a 429
      */
     public function __construct(
         public readonly int $status,
         public readonly string $error,
         public readonly array $fields = [],
+        public readonly array $headers = [],
     ) {
         parent::__construct($error);
     }

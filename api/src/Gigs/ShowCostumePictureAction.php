@@ -27,13 +27,7 @@ final class ShowCostumePictureAction
         if ($found === null) {
             throw new ApiError(404, 'notFound');
         }
-        // Kept by the browser of the member only, and asked again each time:
-        // when it is still the right version, the answer carries no image.
-        $version = '"' . $found['version'] . '"';
-        if ($request->getHeaderLine('If-None-Match') === $version) {
-            return $response->withStatus(304)->withHeader('ETag', $version)->withHeader('Cache-Control', 'private, no-cache');
-        }
-
-        return ServeFile::write($response, $found['file'], 'private, no-cache')->withHeader('ETag', $version);
+        // Kept by the browser of the member only, and asked again each time.
+        return ServeFile::privately($request, $response, $found['file'], $found['version']);
     }
 }

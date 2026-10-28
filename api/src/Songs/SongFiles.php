@@ -194,18 +194,10 @@ final class SongFiles
      */
     private function writing(callable $change): void
     {
-        $written = null;
-        $write = function (string $name, string $content) use (&$written): string {
-            return $written = $this->store($name, $content);
-        };
-        try {
-            $previous = $this->database->transactional(fn () => $change($write));
-        } catch (\Throwable $failure) {
-            // Nothing was saved: the file just written belongs to nobody.
-            $this->files->delete($written);
-            throw $failure;
-        }
-        $this->files->delete($previous);
+        $this->files->replacing(
+            $this->database,
+            fn (callable $write) => $change(fn (string $name, string $content): string => $write(self::AREA, [$name => $content]) . "/{$name}"),
+        );
     }
 
     // Keeps a file, and returns its path in the storage folder.

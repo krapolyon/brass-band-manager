@@ -11,6 +11,7 @@ import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { PickerField, TextField } from '../../components/TextField.tsx';
+import { PASSWORD_MIN_CHARACTERS, usePasswordHint } from '../access/password.ts';
 import { FlowLayout, focusFirstError } from '../FlowLayout.tsx';
 import type { DraftMember } from './InstallDraft.tsx';
 import { useInstallDraft } from './InstallDraft.tsx';
@@ -20,7 +21,6 @@ import { countInstruments, keptSections, useSections } from './sections.ts';
 
 // The rules of the API (AccessRules.php, InstallAction.php), so that the
 // member learns of a problem before sending. The API checks them again.
-const PASSWORD_MIN_CHARACTERS = 10;
 const NAME_MAX_LENGTH = 50;
 const EMAIL_MAX_LENGTH = 254;
 
@@ -30,6 +30,7 @@ type Field = 'firstName' | 'lastName' | 'nickname' | 'instrument' | 'email' | 'p
 // instrument picker, sending, server error.
 export function MemberScreen() {
   const { t, i18n } = useTranslation();
+  const hintOf = usePasswordHint();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { draft, update } = useInstallDraft();
@@ -101,7 +102,13 @@ export function MemberScreen() {
 
   // What the API refused, when it refused fields: { "admin.email": "invalid" }.
   const refused = send.error instanceof ApiError ? send.error.fields : {};
-  const missingCharacters = PASSWORD_MIN_CHARACTERS - [...member.password].length;
+  // A change of the form resets what the API refused (set()), so a refusal
+  // always speaks of the password on the screen.
+  const passwordHint = hintOf(
+    member.password,
+    wasSent ? member.password : null,
+    refused['admin.password'],
+  );
 
   const errors: Partial<Record<Field, string>> = {};
   if (wasSent) {
@@ -119,13 +126,8 @@ export function MemberScreen() {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email.trim()) || refused['admin.email']) {
       errors.email = t('install.member.email.invalid');
     }
-    if (missingCharacters > 0) {
-      errors.password = t('install.member.password.tooShort', {
-        count: missingCharacters,
-        min: PASSWORD_MIN_CHARACTERS,
-      });
-    } else if (refused['admin.password']) {
-      errors.password = t('install.member.password.invalid');
+    if (passwordHint.error) {
+      errors.password = passwordHint.error;
     }
   }
   const errorCount = Object.keys(errors).length;
@@ -148,7 +150,7 @@ export function MemberScreen() {
       member.nickname.trim() !== '' &&
       instrument !== undefined &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email.trim()) &&
-      missingCharacters <= 0;
+      [...member.password].length >= PASSWORD_MIN_CHARACTERS;
     if (!isComplete || !instrument) {
       focusFirstError();
       return;
@@ -253,7 +255,8 @@ export function MemberScreen() {
             />
             <TextField
               label={t('install.member.password.label')}
-              hint={t('install.member.password.hint', { min: PASSWORD_MIN_CHARACTERS })}
+              hint={passwordHint.hint}
+              hintTone={passwordHint.hintTone}
               error={errors.password}
               type={isPasswordShown ? 'text' : 'password'}
               name="password"

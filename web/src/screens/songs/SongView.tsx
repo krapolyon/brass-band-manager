@@ -32,11 +32,10 @@ import {
 import { keep, kept, useIsTablet } from './device.ts';
 import { saveOutline } from './files.ts';
 import { average, duration as clock, day } from './format.ts';
-import { LiveView } from './LiveView.tsx';
-import { MidiView } from './MidiView.tsx';
 import { PdfView } from './PdfView.tsx';
 import { usePlayer } from './Player.tsx';
 import './songs.css';
+import { LivePart, MidiPart } from './SoundParts.tsx';
 
 // Every mode is built: none is shown as unavailable.
 const NOT_BUILT: SongMode[] = [];
@@ -144,7 +143,7 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
 
   if (mode === 'live' && data.musicXml) {
     return (
-      <LiveView
+      <LivePart
         song={data}
         onClose={() => {
           changeMode(beforeLive.current);
@@ -196,7 +195,7 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
 
           {mode === 'midi' &&
             (data.midi ? (
-              <MidiView song={data} />
+              <MidiPart song={data} />
             ) : (
               <NothingYet
                 icon="Piano"

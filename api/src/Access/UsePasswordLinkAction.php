@@ -6,6 +6,7 @@ namespace BrassBand\Access;
 
 use BrassBand\Http\ApiError;
 use BrassBand\Members\MemberRecord;
+use BrassBand\Members\PersonalData;
 use BrassBand\Members\PhotoStore;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use BrassBand\Http\FieldErrors;
@@ -35,6 +36,7 @@ final class UsePasswordLinkAction
         private readonly Profile $profile,
         private readonly MemberRecord $record,
         private readonly PhotoStore $photos,
+        private readonly PersonalData $personal,
     ) {
     }
 
@@ -51,7 +53,11 @@ final class UsePasswordLinkAction
             throw new ApiError(409, 'notInvited');
         }
         $errors = new FieldErrors();
-        Passwords::check($errors, 'password', $input->password);
+        // An invited member is judged with the email they are sending.
+        $context = $input->member !== null
+            ? PasswordContext::withEmail($this->database, trim($input->member->email))
+            : PasswordContext::ofMember($this->database, $this->personal, $found['memberId']);
+        Passwords::check($errors, 'password', $input->password, $context);
         $photo = $input->photo === null ? null : $this->photos->read($errors, 'photo', $input->photo);
         $errors->throwIfAny();
         // The record is checked once here, so that its faults are said before

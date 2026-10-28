@@ -258,11 +258,21 @@ test('the install key can be checked before the first step', async ({ request })
   expect(sql('SELECT COUNT(*) FROM member')).toBe('0');
 });
 
-test('a wrong install key costs a second', async ({ request }) => {
+test('a wrong install key is answered at once, and counted per visitor', async ({ request }) => {
+  // Until 1.0.0 it cost a second, which held a worker of the server (#51).
   const before = Date.now();
-  await request.post('/api/install/key', { data: { installKey: 'x'.repeat(40) } });
+  const wrong = await request.post('/api/install/key', { data: { installKey: 'x'.repeat(40) } });
+  expect(Date.now() - before).toBeLessThan(800);
+  expect(wrong.status()).toBe(403);
+  expect(sql('SELECT hits FROM requestLimit')).toBe('1');
 
-  expect(Date.now() - before).toBeGreaterThanOrEqual(1000);
+  for (let i = 1; i < 30; i++) {
+    await request.post('/api/install/key', { data: { installKey: 'x'.repeat(40) } });
+  }
+  const right = await request.post('/api/install/key', {
+    data: { installKey: installInput().installKey },
+  });
+  expect(right.status()).toBe(429);
 });
 
 test('once installed, the key is no longer checked for anyone', async ({ request }) => {

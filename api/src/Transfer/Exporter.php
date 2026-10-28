@@ -173,6 +173,7 @@ final class Exporter
         $rows = [];
         // Two names can give the same folder ("Ça va" and "Ça va !"): a number tells them apart.
         $folders = [];
+        $emails = $this->personal->emailsById();
         foreach ($this->database->fetchAllAssociative('SELECT * FROM song ORDER BY name') as $song) {
             $id = (int) $song['id'];
             $folder = self::slug((string) $song['name']) ?: "song-{$id}";
@@ -202,8 +203,7 @@ final class Exporter
             }
             $levels = [];
             foreach ($this->database->fetchAllAssociative('SELECT memberId, masteryLevel, enjoymentLevel, ratedOn FROM memberSong WHERE songId = ?', [$id]) as $level) {
-                $email = $this->personal->opened(['email' => $this->database->fetchOne('SELECT email FROM member WHERE id = ?', [$level['memberId']])])['email'];
-                $levels[] = ['memberEmail' => $email, 'masteryLevel' => self::intOrNull($level['masteryLevel']), 'enjoymentLevel' => self::intOrNull($level['enjoymentLevel']), 'ratedOn' => $level['ratedOn']];
+                $levels[] = ['memberEmail' => $emails[(int) $level['memberId']] ?? null, 'masteryLevel' => self::intOrNull($level['masteryLevel']), 'enjoymentLevel' => self::intOrNull($level['enjoymentLevel']), 'ratedOn' => $level['ratedOn']];
             }
             $sections = fn (string $table) => $this->database->fetchFirstColumn("SELECT s.name FROM {$table} t JOIN section s ON s.id = t.sectionId WHERE t.songId = ? ORDER BY s.position", [$id]);
             $rows[] = [
@@ -255,10 +255,7 @@ final class Exporter
             }
             $costumes[] = ['name' => $costume['name'], 'position' => (int) $costume['position'], 'picture' => $picture];
         }
-        $emails = [];
-        foreach ($this->database->fetchAllAssociative('SELECT id, email FROM member') as $member) {
-            $emails[(int) $member['id']] = (string) $this->personal->opened($member)['email'];
-        }
+        $emails = $this->personal->emailsById();
 
         $rows = [];
         foreach ($this->database->fetchAllAssociative('SELECT * FROM gig ORDER BY startsOn, name') as $gig) {

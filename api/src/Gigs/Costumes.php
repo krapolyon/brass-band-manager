@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Gigs;
 
+use BrassBand\Positions;
 use Doctrine\DBAL\Connection;
 
 // What the actions on costumes share: how they are listed and ordered.
@@ -46,15 +47,6 @@ final class Costumes
     // whole list again from 1.
     public function place(int $costumeId, int $position, int $byMemberId): void
     {
-        $ids = array_map(intval(...), $this->database->fetchFirstColumn('SELECT id FROM costume ORDER BY position, name FOR UPDATE'));
-        $ids = array_values(array_filter($ids, fn (int $other) => $other !== $costumeId));
-        array_splice($ids, max(0, min($position - 1, count($ids))), 0, [$costumeId]);
-
-        foreach ($ids as $index => $id) {
-            $this->database->executeStatement(
-                'UPDATE costume SET position = ?, updatedByMemberId = IF(position = ?, updatedByMemberId, ?) WHERE id = ?',
-                [$index + 1, $index + 1, $byMemberId, $id],
-            );
-        }
+        Positions::place($this->database, 'costume', '1 = 1', [], 'name', $costumeId, $position, $byMemberId);
     }
 }

@@ -27,23 +27,14 @@ final class ShowPhotoAction
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $arguments): ResponseInterface
     {
         // 404 for a member the viewer may not see.
-        $this->members->oneVisibleTo(CurrentMember::of($request), (int) $arguments['id']);
-
-        $found = $this->photos->file($this->members->target((int) $arguments['id'])['photoPath']);
+        $found = $this->photos->file($this->members->photoPathVisibleTo(CurrentMember::of($request), (int) $arguments['id']));
         if ($found === null) {
             throw new ApiError(404, 'notFound');
         }
 
-        // Kept by the browser of the member only, never by a shared cache, and
-        // asked again each time: a photo is not shown from a cache to someone
-        // who has signed out, or after its member has left. The browser sends
-        // back the version it holds; when it is still the right one, the
-        // answer is "unchanged" and carries no image.
-        $version = '"' . $found['version'] . '"';
-        if ($request->getHeaderLine('If-None-Match') === $version) {
-            return $response->withStatus(304)->withHeader('ETag', $version)->withHeader('Cache-Control', 'private, no-cache');
-        }
-
-        return ServeFile::write($response, $found['file'], 'private, no-cache')->withHeader('ETag', $version);
+        // Kept by the browser of the member only, and asked again each time: a
+        // photo is not shown from a cache to someone who has signed out, or
+        // after its member has left.
+        return ServeFile::privately($request, $response, $found['file'], $found['version']);
     }
 }

@@ -20,9 +20,6 @@ export type AccessibilityOptions = {
   hasExtendedTimeouts: boolean;
 };
 
-/** The five options of an account: every one but the text size. */
-export type AccountAccessibility = Omit<AccessibilityOptions, 'textSizePercent'>;
-
 export type Appearance = AccessibilityOptions & {
   colorScheme: 'AUTO' | 'LIGHT' | 'DARK';
   /** Null: the theme of the band. */

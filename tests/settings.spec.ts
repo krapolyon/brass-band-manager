@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { fakePush } from './support/fakePush.ts';
@@ -13,6 +13,7 @@ import {
   memberPassword,
 } from './support/scenario.ts';
 import { emptyStorage, storedFiles } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The settings of a member: their profile, their password, the appearance,
 // the accessibility options, and signing out. Rules: model/members.md,
@@ -173,13 +174,15 @@ test.describe('the password', () => {
   test('the current password is asked, and the new one follows the rule', async ({ page }) => {
     await signIn(page);
     await page.getByRole('link', { name: /Mot de passe/ }).click();
+    // The rule is given under the new password only, never under the current one.
+    await expect(page.locator('.TextField-hint:not(:empty)')).toHaveCount(1);
     await change(page).click();
     await expect(page.getByText('Il manque ton mot de passe actuel.')).toBeVisible();
 
     await current(page).fill('pas-le-bon-mot-de-passe');
     await next(page).fill('court');
     await change(page).click();
-    await expect(page.getByText('Encore 5 caractères : il en faut 10 au minimum.')).toBeVisible();
+    await expect(page.getByText('Encore 10 caractères.')).toBeVisible();
 
     await next(page).fill('un-tout-nouveau-mot-de-passe');
     await change(page).click();

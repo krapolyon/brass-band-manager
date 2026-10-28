@@ -13,10 +13,16 @@ declare(strict_types=1);
 //   1. Public        no sign-in. A short list; adding to it is a decision.
 //                    The calendar feed is one: its address carries its key.
 //   2. Signed in     any current member. This is where a new route goes.
-//   3. Permission    a signed-in member holding a permission: a route of
+//   3. Oneself       the member the address names, or one holding a
+//                    permission: a route of block 2 with
+//                    ->add(new RequireSelfOrPermission(...)); for a gig,
+//                    its organisers, with ->add(new RequireGigEditor(...)).
+//   4. Permission    a signed-in member holding a permission: a route of
 //                    block 2 with ->add(new RequirePermission(...)).
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Access\MeAction;
+use BrassBand\Http\RequestLimit;
 use BrassBand\Access\Permission;
 use BrassBand\Access\Profile;
 use BrassBand\Access\RequirePermission;
@@ -150,7 +156,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
+ * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, encryptionKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -195,8 +201,15 @@ return function (App $app, Connection $database, array $config): void {
     $built = json_decode((string) @file_get_contents(($_SERVER['DOCUMENT_ROOT'] ?? '') . '/version.json'), true);
     $appVersion = is_array($built) && is_string($built['version'] ?? null) ? $built['version'] : 'unknown';
 
+    // What one visitor may do on the public addresses (RequestLimit).
+    $limitKey = RequestLimit::keyFrom($config);
+    $refusals = new RequestLimit($database, $limitKey, 'refusals', AccessRules::VISITOR_REFUSALS_MAX, AccessRules::VISITOR_REFUSALS_MINUTES);
+    $emailRequests = new RequestLimit($database, $limitKey, 'emails', AccessRules::VISITOR_EMAIL_REQUESTS_MAX, AccessRules::VISITOR_EMAIL_REQUESTS_MINUTES, countsEveryRequest: true);
+
     // ---------------------------------------------------------------
     // 1. Public
+    // Every route here that checks a secret or sends an email is limited
+    // per visitor: ->add($refusals) or ->add($emailRequests).
     // ---------------------------------------------------------------
     $app->get('/api/health', new HealthAction($database));
     $app->get('/api/band', new ShowBandAction($bands));
@@ -204,16 +217,18 @@ return function (App $app, Connection $database, array $config): void {
     $app->get('/api/band/icon/{size:180|192|512}', new ShowLogoAction($logos));
     $app->get('/api/manifest', new ManifestAction($database, $logos));
     $app->get('/api/install', new InstallStatusAction($database));
-    $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey, $migrations));
-    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations, $personal));
-    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal));
+    $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey, $migrations))->add($refusals);
+    $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations, $personal))->add($refusals);
+    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal))->add($refusals);
     // Whoever holds a password link is not signed in yet.
-    $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer, $personal));
-    $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections, $personal));
-    $app->post('/api/passwordLink/validate', new ValidateInvitationAction($links, $record));
-    $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile, $record, $photos));
+    $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer, $personal))->add($emailRequests);
+    $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections, $personal))->add($refusals);
+    $app->post('/api/passwordLink/validate', new ValidateInvitationAction($links, $record))->add($refusals);
+    $app->post('/api/passwordLink/use', new UsePasswordLinkAction($database, $links, $sessions, $cookie, $profile, $record, $photos, $personal))->add($refusals);
     // A calendar app has no session: the token of the address is the key
     // (model/gigs.md, entry 5). The same "not found" whatever is wrong with it.
+    // Not limited per visitor: a calendar service reads the addresses of many
+    // people from one network address, and 32 random characters are not guessed.
     $app->get('/api/calendar/{token}.ics', new CalendarFeedAction($database, new CalendarFeed($database, is_string($config['appUrl'] ?? null) ? trim($config['appUrl']) : '')));
 
     // ---------------------------------------------------------------
@@ -264,7 +279,7 @@ return function (App $app, Connection $database, array $config): void {
         $group->get('/api/me/calendar', $calendar);
         $group->post('/api/me/calendar', $calendar);
         $group->put('/api/me/calendar', $calendar);
-        $group->put('/api/me/password', new ChangePasswordAction($database, $links, $currentPassword));
+        $group->put('/api/me/password', new ChangePasswordAction($database, $links, $currentPassword, $personal));
         $group->delete('/api/session', new SignOutAction($sessions, $cookie, everywhere: false));
         $group->delete('/api/sessions', new SignOutAction($sessions, $cookie, everywhere: true));
 

@@ -22,6 +22,12 @@ final class NotificationEmails
 {
     private readonly Gigs $gigs;
 
+    // What every email of one notification shares, read for the first
+    // recipient and kept for the others: the rows of gigs and songs, and the
+    // sections missing for a gig. The answers are the member's own.
+    /** @var array<string, mixed> */
+    private array $read = [];
+
     public function __construct(
         private readonly Connection $database,
         private readonly Mailer $mailer,
@@ -65,10 +71,11 @@ final class NotificationEmails
             case 'songScore':
             case 'songPart':
                 $heading = Emails::text("{$kind}.title", $language);
-                $song = $this->database->fetchAssociative(
+                $songId = (int) ($email['songId'] ?? 0);
+                $song = $this->once("song {$songId}", fn () => $this->database->fetchAssociative(
                     'SELECT name, originalArtist FROM song WHERE id = ?',
-                    [(int) ($email['songId'] ?? 0)],
-                );
+                    [$songId],
+                ));
                 if ($song !== false && Emails::has("{$kind}.lead", $language)) {
                     $paragraphs[] = Emails::text("{$kind}.lead", $language, ['name' => (string) $song['name']]);
                 }
@@ -111,10 +118,10 @@ final class NotificationEmails
      */
     private function gigCard(int $gigId, int $memberId, string $language, bool $withPlayability): array
     {
-        $gig = $this->database->fetchAssociative(
+        $gig = $this->once("gig {$gigId}", fn () => $this->database->fetchAssociative(
             'SELECT id, name, status, startsOn, meetingTime, placeName, postalCode, city FROM gig WHERE id = ?',
             [$gigId],
-        );
+        ));
         if ($gig === false) {
             return [];
         }
@@ -149,7 +156,7 @@ final class NotificationEmails
 
         $banner = null;
         if ($withPlayability) {
-            $missing = $this->gigs->missingSectionNames($gigId);
+            $missing = $this->once("missing {$gigId}", fn () => $this->gigs->missingSectionNames($gigId));
             $banner = $missing === []
                 ? ['tone' => 'success', 'text' => Emails::text('gig.playable', $language)]
                 : ['tone' => 'warning', 'text' => Emails::text('gig.missing', $language, ['sections' => implode(', ', $missing)])];
@@ -167,5 +174,19 @@ final class NotificationEmails
             'chips' => $chips,
             'banner' => $banner,
         ];
+    }
+
+    /**
+     * @template T
+     * @param callable(): T $read
+     * @return T
+     */
+    private function once(string $key, callable $read): mixed
+    {
+        if (!array_key_exists($key, $this->read)) {
+            $this->read[$key] = $read();
+        }
+
+        return $this->read[$key];
     }
 }

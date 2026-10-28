@@ -20,6 +20,7 @@
 }
 
 .MemberTable tbody tr {
+  position: relative;
   height: 4rem; /* 64 */
 }
 
@@ -29,6 +30,15 @@
   gap: var(--spaceSm);
   color: var(--text);
   text-decoration: none;
+}
+
+/* Figma: "The whole line opens the record". The link of the nickname
+   stretches over the line, so a click anywhere on it, the end included,
+   opens the record; the keyboard and screen readers keep the one link. */
+.MemberTable-member::after {
+  content: "";
+  position: absolute;
+  inset: 0;
 }
 
 .MemberTable-texts {

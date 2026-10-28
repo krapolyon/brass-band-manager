@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace BrassBand\Install;
 
 use BrassBand\Members\PersonalData;
+use BrassBand\Access\PasswordContext;
 use BrassBand\Access\Passwords;
 use BrassBand\Access\Profile;
 use BrassBand\Access\Role;
@@ -134,7 +135,7 @@ final class InstallAction
 
         $admin = $input->admin;
         $errors->email('admin.email', trim($admin->email));
-        Passwords::check($errors, 'admin.password', $admin->password);
+        Passwords::check($errors, 'admin.password', $admin->password, new PasswordContext(trim($admin->email), $input->bandName));
         $errors->text('admin.lastName', $admin->lastName, 50);
         $errors->text('admin.firstName', $admin->firstName, 50);
         $errors->text('admin.nickname', $admin->nickname, 50);

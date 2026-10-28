@@ -13,7 +13,7 @@ import { Icon } from '../../components/Icon.tsx';
 import { Message } from '../../components/Message.tsx';
 import { SongLatest } from '../../components/SongLatest.tsx';
 import { SongRow } from '../../components/SongRow.tsx';
-import { dayOf, type GigSummary, isOpen, isOver, momentOf, useGig, useGigs } from '../../gigs.ts';
+import { dayOf, type GigSummary, isBehind, isOpen, isOver, useGig, useGigs } from '../../gigs.ts';
 import { type Section, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { useSongs } from '../../songs.ts';
@@ -49,12 +49,6 @@ function useNow(every = 30_000): Date {
   }, [every]);
   return now;
 }
-
-/** A gig behind us: played, or never played and its date passed. */
-const isBehind = (gig: GigSummary, now: Date) => {
-  const moment = momentOf(gig, now);
-  return moment === 'past' || moment === 'toClose' || moment === 'outdated';
-};
 
 /** The confirmed gig of the day: from the start of its first day until it is past. */
 const isToday = (gig: GigSummary, now: Date) =>

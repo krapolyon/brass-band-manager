@@ -10,7 +10,7 @@ import { Sheet } from '../../components/Sheet.tsx';
 import { useSetMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { PasswordField } from '../access/PasswordField.tsx';
-import { PASSWORD_MIN_CHARACTERS, usePasswordError } from '../access/PasswordLinkScreen.tsx';
+import { usePasswordHint } from '../access/password.ts';
 import { focusFirstFieldError } from './ProfileScreen.tsx';
 
 // Figma: Members / Settings — password. Asks for the current password; a
@@ -21,10 +21,11 @@ export function PasswordScreen() {
   const navigate = useNavigate();
   const setMe = useSetMe();
   const queryClient = useQueryClient();
-  const passwordError = usePasswordError();
+  const hintOf = usePasswordHint();
   const [currentPassword, setCurrent] = useState('');
   const [newPassword, setNew] = useState('');
-  const [wasSent, setSent] = useState(false);
+  // The new password last sent: null before the first try.
+  const [sent, setSent] = useState<string | null>(null);
 
   const change = useMutation({
     mutationFn: () =>
@@ -44,17 +45,16 @@ export function PasswordScreen() {
   });
 
   const refused = change.error instanceof ApiError ? change.error.fields : {};
-  const currentError = !wasSent
-    ? undefined
-    : currentPassword === ''
-      ? t('settings.password.currentMissing')
-      : refused.currentPassword
-        ? t('settings.password.currentWrong')
-        : undefined;
-  const newError = wasSent
-    ? (passwordError(newPassword, Boolean(refused.newPassword)) ?? undefined)
-    : undefined;
-  const isUnreachable = change.isError && !currentError && !newError;
+  const currentError =
+    sent === null
+      ? undefined
+      : currentPassword === ''
+        ? t('settings.password.currentMissing')
+        : refused.currentPassword
+          ? t('settings.password.currentWrong')
+          : undefined;
+  const newHint = hintOf(newPassword, sent, refused.newPassword);
+  const isUnreachable = change.isError && !currentError && !refused.newPassword;
 
   return (
     <AppLayout
@@ -65,8 +65,8 @@ export function PasswordScreen() {
       title={t('settings.password.title')}
       onSubmit={() => {
         if (change.isPending) return;
-        setSent(true);
-        if (currentPassword === '' || passwordError(newPassword, false)) {
+        setSent(newPassword);
+        if (currentPassword === '' || hintOf(newPassword, newPassword).error) {
           focusFirstFieldError();
         } else {
           change.mutate();
@@ -94,8 +94,7 @@ export function PasswordScreen() {
           label={t('newPassword.label')}
           name="newPassword"
           autoComplete="new-password"
-          hint={t('password.hint', { min: PASSWORD_MIN_CHARACTERS })}
-          error={newError}
+          {...newHint}
           value={newPassword}
           onChange={(event) => setNew(event.target.value)}
         />

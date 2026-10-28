@@ -1,10 +1,11 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import { fakePush } from './support/fakePush.ts';
 import { addGig, addSetlist, addSong, day } from './support/gigs.ts';
 import { addMember, admin, install, memberId, memberPassword } from './support/scenario.ts';
 import { emptyStorage } from './support/storage.ts';
+import { expect, test } from './support/test.ts';
 
 // The setlists of a gig: in the gig, their form, and the live screen. Rules:
 // model/gigs.md, entry 4; screens: Figma, page Gigs, sections 11 and 15. The
@@ -936,6 +937,20 @@ test.describe('the live setlist', () => {
       timeout: 10_000,
     });
     await expect(page.locator('.gigs-liveSongs')).toHaveCount(0);
+  });
+
+  test('the Live mode is fetched as the live setlist opens: a song opened during the gig does not wait for the network', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = confirmed();
+    const setlistId = addSetlist(gigId, slotId, [addSong('Toxic')]);
+    sql(
+      `UPDATE setlist SET liveStartedAt = UTC_TIMESTAMP(), livePosition = 1 WHERE id = ${setlistId}`,
+    );
+    await asMember(page, 'Sissi');
+    const fetched = page.waitForRequest(/\/assets\/LiveView-[^/]+\.js$/);
+    await page.goto(`/setlists/${setlistId}/live`);
+    await fetched;
   });
 
   test('who manages setlists corrects by scrolling: the song that rests on the line is played', async ({

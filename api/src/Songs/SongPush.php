@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Songs;
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Push\NotificationSetting;
 use BrassBand\Push\Push;
 use BrassBand\Push\PushTexts;
@@ -55,7 +56,7 @@ final class SongPush
             return;
         }
         $players = array_map(fn (mixed $id) => (int) $id, $this->database->fetchFirstColumn(
-            "SELECT id FROM member WHERE instrumentId = ? AND status IN ('ACTIVE', 'POWER_MEMBER')",
+            'SELECT id FROM member WHERE instrumentId = ? AND status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')',
             [$instrumentId],
         ));
         $this->send($players, $song, NotificationSetting::SONG_PART, 'songs.push.part', ['instrument' => (string) $instrument], $bySessionId, 'songPart');
@@ -86,7 +87,7 @@ final class SongPush
     private function currentMembers(): array
     {
         return array_map(fn (mixed $id) => (int) $id, $this->database->fetchFirstColumn(
-            "SELECT id FROM member WHERE status IN ('ACTIVE', 'POWER_MEMBER')",
+            'SELECT id FROM member WHERE status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')',
         ));
     }
 

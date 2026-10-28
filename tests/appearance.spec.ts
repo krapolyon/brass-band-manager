@@ -1,6 +1,7 @@
-import { expect, type Page, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { chooseAccessibility } from './support/accessibility.ts';
 import { emptyDatabase } from './support/database.ts';
+import { expect, test } from './support/test.ts';
 
 // The scheme and the accessibility options, as the root element carries them
 // (web/src/appearance.ts, web/src/styles/tokens.css). Seen on the welcome
