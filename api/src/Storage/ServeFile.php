@@ -119,8 +119,10 @@ final class ServeFile
             ->withHeader('Cache-Control', $cache)
             // The file is what its type says, never a page.
             ->withHeader('X-Content-Type-Options', 'nosniff')
-            // Shown by this app only, never embedded by another site.
-            ->withHeader('Cross-Origin-Resource-Policy', 'same-origin')
+            // Public, and shown outside the app too: in an email, read by a
+            // mail client from another origin, and on the home screen of a
+            // phone. same-origin would hide the icon of every email.
+            ->withHeader('Cross-Origin-Resource-Policy', 'cross-origin')
             // An SVG can carry scripts. Shown as an image it runs none; opened
             // by its address, this forbids it to run or to load anything.
             ->withHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");

@@ -63,12 +63,6 @@ final class PersonalData
         return $personal;
     }
 
-    /** A new key, as config.php holds it. */
-    public static function newKey(): string
-    {
-        return base64_encode(sodium_crypto_kdf_keygen());
-    }
-
     /**
      * The key of the configuration, or null when there is none or it is not
      * one (anything but 32 bytes in base64).
@@ -156,6 +150,22 @@ final class PersonalData
         return $row;
     }
 
+    /**
+     * The email of every member, in clear, by id: what an export, an import
+     * and a reprise match members with.
+     *
+     * @return array<int, string>
+     */
+    public function emailsById(): array
+    {
+        $emails = [];
+        foreach ($this->database->fetchAllAssociative('SELECT id, email FROM member') as $row) {
+            $emails[(int) $row['id']] = (string) $this->opened($row)['email'];
+        }
+
+        return $emails;
+    }
+
     /** The hash of an email, compared by sign-in and by the uniqueness of the email. */
     public function emailHash(string $email): string
     {
@@ -233,12 +243,6 @@ final class PersonalData
         }
 
         return $count;
-    }
-
-    /** How many rows still hold their personal fields in clear. */
-    public function clearRowCount(): int
-    {
-        return $this->isMigrated() ? (int) $this->database->fetchOne('SELECT COUNT(*) FROM member WHERE emailHash IS NULL') : 0;
     }
 
     private function seal(string $field, ?string $value): ?string

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Songs;
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Access\CurrentMember;
 use BrassBand\Discord\DiscordLinks;
 use BrassBand\Http\ApiError;
@@ -33,8 +34,8 @@ final class Songs
             AVG(l.masteryLevel) AS masteryAverage, COUNT(l.masteryLevel) AS masteryCount,
             AVG(l.enjoymentLevel) AS enjoymentAverage, COUNT(l.enjoymentLevel) AS enjoymentCount
         FROM memberSong l
-        JOIN member m ON m.id = l.memberId AND m.status IN ('ACTIVE', 'POWER_MEMBER')
-        GROUP BY l.songId";
+        JOIN member m ON m.id = l.memberId AND m.status IN (" . AccessRules::SIGN_IN_STATUSES_SQL . ')
+        GROUP BY l.songId';
 
     public function __construct(
         private readonly Connection $database,

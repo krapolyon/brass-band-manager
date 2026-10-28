@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Push;
 
+use BrassBand\Access\AccessRules;
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\ApiError;
 use BrassBand\Mail\AllowedRecipients;
@@ -144,7 +145,7 @@ final class Push
                     WHERE s.memberId = m.id AND s.expiresAt > UTC_TIMESTAMP()
                 ) AS hasDevice
              FROM member m
-             WHERE m.id IN (?) AND m.status IN ('ACTIVE', 'POWER_MEMBER')",
+             WHERE m.id IN (?) AND m.status IN (" . AccessRules::SIGN_IN_STATUSES_SQL . ')',
             [$memberIds],
             [ArrayParameterType::INTEGER],
         );
@@ -272,22 +273,7 @@ final class Push
                 'message' => $emails->render($band, (int) $member['id'], $language, $payload, (bool) $member['isChosen']),
             ];
         }
-        if ($messages === []) {
-            return;
-        }
-
-        $name = $band->name;
-        AfterResponse::add(static function () use ($mailer, $name, $messages): void {
-            foreach ($messages as $email) {
-                try {
-                    $mailer->send($email['to'], $name, $email['message']);
-                } catch (\Throwable $failure) {
-                    // The others still leave. The log names the kind of
-                    // failure, never the address.
-                    error_log('A notification email was not sent: ' . $failure::class);
-                }
-            }
-        });
+        $mailer->sendLater($band->name, $messages, 'notification');
     }
 
     /**

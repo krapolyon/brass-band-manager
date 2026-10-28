@@ -62,23 +62,7 @@ final class SetRolesAction
                 throw new ApiError(409, 'lastAdmin');
             }
 
-            // A password link created before gives the account as it is now.
-            // Whoever created it was allowed to for the roles of then, not
-            // for those of now: the link is cancelled, a new one is created
-            // by someone who may.
-            $values = fn (array $list) => array_map(fn (Role $role) => $role->value, $list);
-            if (array_diff($values($roles), $values($target['roles'])) !== [] || count($roles) !== count($target['roles'])) {
-                $this->links->cancel($target['id']);
-            }
-
-            $this->database->delete('memberRole', ['memberId' => $target['id']]);
-            foreach ($roles as $role) {
-                $this->database->insert('memberRole', [
-                    'memberId' => $target['id'],
-                    'role' => $role->value,
-                    'updatedByMemberId' => $me->id,
-                ]);
-            }
+            Members::replaceRoles($this->database, $this->links, $target['id'], array_map(fn (Role $role) => $role->value, $roles), $me->id);
         });
 
         return Json::write($response, $this->members->oneVisibleTo($me, (int) $arguments['id']));

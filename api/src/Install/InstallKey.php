@@ -11,12 +11,10 @@ use BrassBand\Http\ApiError;
 // asked again by the install screen. Only someone who can read the files of
 // the server knows it, so only they can install the app and become its admin.
 //
-// Guessing it is made pointless rather than counted:
+// Guessing it leads nowhere:
 //   - a key shorter than MIN_LENGTH is treated as no key at all, and install
 //     stays closed until a real one is written;
-//   - each wrong key costs a second.
-// At that length and that pace, trying keys leads nowhere, and the app does
-// not need to remember who tried.
+//   - wrong keys are counted per visitor (RequestLimit, in routes.php).
 final class InstallKey
 {
     public const MIN_LENGTH = 16;
@@ -33,7 +31,6 @@ final class InstallKey
         $isSet = strlen($this->key) >= self::MIN_LENGTH;
 
         if (!$isSet || !hash_equals($this->key, $given)) {
-            sleep(1);
             throw new ApiError(403, 'invalidInstallKey');
         }
     }

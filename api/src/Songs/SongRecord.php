@@ -106,15 +106,27 @@ final class SongRecord
     // The positions and the sections of a song, replaced whole.
     public function saveAttributes(int $songId, SongInput $input, int $memberId): void
     {
+        self::replaceAttributes($this->database, $songId, self::positionsOf($input), $input->tiringSectionIds, $input->trickySectionIds, $memberId);
+    }
+
+    /**
+     * The same, from lists already checked: the form of the app, a reprise.
+     *
+     * @param list<string> $positions Values of SetPosition
+     * @param list<int> $tiringSectionIds
+     * @param list<int> $trickySectionIds
+     */
+    public static function replaceAttributes(Connection $database, int $songId, array $positions, array $tiringSectionIds, array $trickySectionIds, ?int $byMemberId): void
+    {
         $lists = [
-            'songPosition' => ['position', self::positionsOf($input)],
-            'songTiringSection' => ['sectionId', array_unique($input->tiringSectionIds)],
-            'songTrickySection' => ['sectionId', array_unique($input->trickySectionIds)],
+            'songPosition' => ['position', array_unique($positions)],
+            'songTiringSection' => ['sectionId', array_unique($tiringSectionIds)],
+            'songTrickySection' => ['sectionId', array_unique($trickySectionIds)],
         ];
         foreach ($lists as $table => [$column, $values]) {
-            $this->database->delete($table, ['songId' => $songId]);
+            $database->delete($table, ['songId' => $songId]);
             foreach ($values as $value) {
-                $this->database->insert($table, ['songId' => $songId, $column => $value, 'updatedByMemberId' => $memberId]);
+                $database->insert($table, ['songId' => $songId, $column => $value, 'updatedByMemberId' => $byMemberId]);
             }
         }
     }

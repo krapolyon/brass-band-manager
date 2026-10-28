@@ -12,9 +12,10 @@ use Psr\Http\Message\ServerRequestInterface;
 
 // GET /api/calendar/{token}.ics: the gigs of a member, as a calendar app reads
 // them (model/gigs.md, entry 5, "Calendar feed"). Public: a calendar app has no
-// session. The token is the only key, so the answer is the same "not found",
-// after a second, whatever is wrong with it (unknown, reset, a member who
-// left): trying addresses leads nowhere, and nothing tells why.
+// session. The token is the only key, so the answer is the same "not found"
+// whatever is wrong with it (unknown, reset, a member who left): nothing
+// tells why. With 32 random characters, trying addresses leads nowhere: it
+// needs no wait and no count (routes.php).
 //
 // Nothing about the token or the feed is written to a log.
 final class CalendarFeedAction
@@ -31,19 +32,12 @@ final class CalendarFeedAction
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $arguments): ResponseInterface
     {
         $token = $arguments['token'];
-        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
-        $isWellFormed = preg_match('/^[0-9a-f]{32}$/', $token) === 1;
-        $member = $isWellFormed ? $this->database->fetchAssociative(
+        $current = AccessRules::SIGN_IN_STATUSES_SQL;
+        $member = preg_match('/^[0-9a-f]{32}$/', $token) === 1 ? $this->database->fetchAssociative(
             "SELECT id, language FROM member WHERE calendarToken = ? AND status IN ({$current})",
             [$token],
         ) : false;
         if ($member === false) {
-            // A second for an address that could have been one: an address of
-            // another shape is answered at once, and holds no PHP worker of
-            // the host asleep.
-            if ($isWellFormed) {
-                sleep(1);
-            }
             throw new ApiError(404, 'notFound');
         }
 

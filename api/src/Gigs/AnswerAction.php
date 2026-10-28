@@ -49,11 +49,9 @@ final class AnswerAction
 
         $news = $this->database->transactional(function () use ($me, $gigId, $slotId, $memberId, $answer): ?string {
             $gig = $this->gigs->rowVisibleTo($me, $gigId, lock: true);
-            if ($this->database->fetchOne('SELECT 1 FROM gigSlot WHERE id = ? AND gigId = ?', [$slotId, $gigId]) === false) {
-                throw new ApiError(404, 'notFound');
-            }
+            $this->gigs->mustHaveSlot($gigId, $slotId);
             // Only a current member comes to a gig.
-            $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+            $current = AccessRules::SIGN_IN_STATUSES_SQL;
             if ($this->database->fetchOne("SELECT 1 FROM member WHERE id = ? AND status IN ({$current})", [$memberId]) === false) {
                 throw new ApiError(404, 'notFound');
             }

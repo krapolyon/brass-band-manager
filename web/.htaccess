@@ -20,6 +20,15 @@ RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteCond %{SERVER_PORT} !=443
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
+# Over HTTPS only, which the host always is: the browser never comes back
+# over plain HTTP. The answers of the API say it themselves (index.php).
+# Without includeSubDomains: other sites of the domain are not this app.
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} !~ m#^/api/#">
+    Header always set Strict-Transport-Security "max-age=31536000"
+  </If>
+</IfModule>
+
 # Below: web/public/.htaccess, as on the local stack.
 # The front is a single page: any address that is not a real file
 # is answered by index.html, and React shows the right screen.
@@ -41,6 +50,37 @@ RewriteRule ^ /index.html [L]
 # or a browser refuses to run them (web/src/screens/songs/score.worker.ts).
 AddType text/javascript .mjs
 AddType application/wasm .wasm
+
+# Security headers of the front (issue #51). Not on /api, whose answers PHP
+# writes with their own headers (api/public/index.php, ServeFile): an address
+# answered twice would carry two values.
+#   - Content-Security-Policy: what a page of the app may load and run. Scripts
+#     come from the app only, never written in the page; 'wasm-unsafe-eval'
+#     lets the MuseScore and Verovio engines run, blob: lets the map start its
+#     workers. Connections and images may go to any https address: the server
+#     of the map tiles is a setting of each instance (mapTilesUrl); and to
+#     blob: and data:, how the app reads a file the member chose (a logo). Styles may
+#     be written in the page, as the map and the score engines do. The only
+#     frame is the YouTube player. No page may show the app in a frame.
+#   - X-Frame-Options says the same last point to older browsers.
+#   - The one exception is the worker that reads MuseScore files
+#     (score.worker.ts): the MuseScore engine writes functions at start
+#     ('unsafe-eval'). A worker follows the policy sent with its own script,
+#     so this one gets it, and the pages do not: it has no access to them and
+#     only receives a file and sends back what it read.
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} !~ m#^/api/#">
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Frame-Options "DENY"
+  </If>
+  <If "%{REQUEST_URI} =~ m#^/assets/score\.worker-#">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; object-src 'none'; base-uri 'self'"
+  </If>
+  <ElseIf "%{REQUEST_URI} !~ m#^/api/#">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https: blob: data:; media-src 'self' blob:; worker-src 'self' blob:; frame-src https://www.youtube-nocookie.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  </ElseIf>
+</IfModule>
 
 # The typefaces of the app are also offered to the emails it sends (#65): a
 # mail client reads them from another origin than the app.

@@ -28,4 +28,20 @@ final class Text
 
         return preg_replace('/^[\s\p{Z}]+|[\s\p{Z}]+$/u', '', $text) ?? '';
     }
+
+    // A text as it is compared without case or accents: "Fanfare Déchaînée"
+    // gives "fanfare dechainee". A Mac writes "é" as an "e" followed by its
+    // accent: the accent alone is dropped, so that both spellings agree.
+    public static function plain(string $text): string
+    {
+        return strtr(mb_strtolower((string) preg_replace('/\p{Mn}+/u', '', $text)), self::UNACCENTED);
+    }
+
+    private const UNACCENTED = [
+        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'æ' => 'ae',
+        'ç' => 'c', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i', 'ñ' => 'n',
+        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ø' => 'o', 'œ' => 'oe',
+        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u', 'ý' => 'y', 'ÿ' => 'y', 'ß' => 'ss',
+    ];
 }

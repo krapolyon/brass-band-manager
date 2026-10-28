@@ -10,7 +10,7 @@ use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-// GET /api/songs/{id}/cover, /clipThumbnail, /audio, /midi, /museScore and
+// GET /api/songs/{id}/cover, /clipThumbnail, /audio, /midi, /musicXml, /museScore and
 // /parts/{instrumentId}: a file of a song. For signed-in members only: no
 // file of a song is public (model/songs.md, "Files").
 //

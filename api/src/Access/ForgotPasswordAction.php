@@ -64,7 +64,7 @@ final class ForgotPasswordAction
                 try {
                     // To the address of the member as the database holds it,
                     // never to the one that was typed.
-                    $mailer->send($link['email'], $link['band'], $message);
+                    $mailer->send($link['email'], $band->name, $message);
                 } catch (\Throwable $failure) {
                     // The email did not leave: the link nobody received is
                     // removed, so that the member can ask again at once.
@@ -86,7 +86,7 @@ final class ForgotPasswordAction
      * email was sent to them in the last minutes.
      *
      * @param array{0: string, 1: list<string>} $byEmail What finds the member (PersonalData::whereEmail)
-     * @return array{memberId: int, email: string, token: string, language: string, band: string}|null Null: no email is to be sent
+     * @return array{memberId: int, email: string, token: string, language: string}|null Null: no email is to be sent
      */
     private function createLink(string $email, array $byEmail): ?array
     {
@@ -114,7 +114,6 @@ final class ForgotPasswordAction
             'email' => (string) $member['email'],
             'token' => $this->links->create((int) $member['id'], null, emailed: true),
             'language' => (string) $member['language'],
-            'band' => (string) $this->database->fetchOne('SELECT name FROM band WHERE id = 1'),
         ];
     }
 }

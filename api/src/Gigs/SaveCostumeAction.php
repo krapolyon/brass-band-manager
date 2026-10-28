@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Gigs;
 
+use BrassBand\Positions;
 use BrassBand\Access\CurrentMember;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
@@ -52,7 +53,7 @@ final class SaveCostumeAction
                 if ($id === null) {
                     $this->database->insert('costume', [
                         'name' => $name,
-                        'position' => (int) $this->database->fetchOne('SELECT COALESCE(MAX(position), 0) + 1 FROM costume'),
+                        'position' => Positions::end($this->database, 'costume', '1 = 1', []),
                         'updatedByMemberId' => $me->id,
                     ]);
                     $id = (int) $this->database->lastInsertId();

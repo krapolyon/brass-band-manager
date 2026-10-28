@@ -84,7 +84,7 @@ final class GigRecord
         // An organiser is a current member, or is already on the gig: a
         // member who left stays organiser of the gigs already played. A
         // costume is one of the band.
-        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+        $current = AccessRules::SIGN_IN_STATUSES_SQL;
         $already = array_map(intval(...), $this->database->fetchFirstColumn('SELECT memberId FROM gigOrganizer WHERE gigId = ?', [$gigId ?? 0]));
         $added = array_values(array_diff($input->organizerIds, $already));
         if (!$this->allExist("SELECT COUNT(*) FROM member WHERE status IN ({$current}) AND id IN (?)", $added)) {

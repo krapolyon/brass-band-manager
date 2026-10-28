@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Sections;
 
+use BrassBand\Positions;
 use BrassBand\Access\AccessRules;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\FieldErrors;
@@ -32,7 +33,7 @@ final class Sections
      */
     public function all(bool $forManaging = false): array
     {
-        $current = "'" . implode("', '", AccessRules::SIGN_IN_STATUSES) . "'";
+        $current = AccessRules::SIGN_IN_STATUSES_SQL;
         $instruments = [];
         $rows = $this->database->fetchAllAssociative(
             "SELECT i.id, i.sectionId, i.name, i.position,
@@ -101,27 +102,15 @@ final class Sections
      */
     public function place(string $table, int $id, int $position, ?int $sectionId, int $byMemberId): void
     {
-        $where = $sectionId === null ? '1 = 1' : 'sectionId = ' . $sectionId;
-        $ids = array_map(
-            intval(...),
-            $this->database->fetchFirstColumn("SELECT id FROM {$table} WHERE {$where} ORDER BY position, name FOR UPDATE"),
-        );
-        $ids = array_values(array_filter($ids, fn (int $other) => $other !== $id));
-        array_splice($ids, max(0, min($position - 1, count($ids))), 0, [$id]);
-
-        foreach ($ids as $index => $rowId) {
-            $this->database->executeStatement(
-                "UPDATE {$table} SET position = ?, updatedByMemberId = IF(position = ?, updatedByMemberId, ?) WHERE id = ?",
-                [$index + 1, $index + 1, $byMemberId, $rowId],
-            );
-        }
+        [$list, $values] = $sectionId === null ? ['1 = 1', []] : ['sectionId = ?', [$sectionId]];
+        Positions::place($this->database, $table, $list, $values, 'name', $id, $position, $byMemberId);
     }
 
     // The position after the last row of a list.
     public function end(string $table, ?int $sectionId): int
     {
-        $where = $sectionId === null ? '1 = 1' : 'sectionId = ' . $sectionId;
+        [$list, $values] = $sectionId === null ? ['1 = 1', []] : ['sectionId = ?', [$sectionId]];
 
-        return (int) $this->database->fetchOne("SELECT COALESCE(MAX(position), 0) + 1 FROM {$table} WHERE {$where}");
+        return Positions::end($this->database, $table, $list, $values);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Songs;
 
+use BrassBand\Http\Text;
 use Doctrine\DBAL\Connection;
 
 // Says where each file dropped on a song goes, from its name alone: its kind
@@ -35,14 +36,6 @@ final class FileNames
     // The accented letters of the languages the app is likely to meet, and
     // the letter each is read as. Written here because not every PHP has the
     // extension that knows them all.
-    private const UNACCENTED = [
-        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'æ' => 'ae',
-        'ç' => 'c', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
-        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i', 'ñ' => 'n',
-        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o', 'ø' => 'o', 'œ' => 'oe',
-        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u', 'ý' => 'y', 'ÿ' => 'y', 'ß' => 'ss',
-    ];
-
     public function __construct(private readonly Connection $database)
     {
     }
@@ -106,11 +99,7 @@ final class FileNames
      */
     public static function words(string $text): array
     {
-        // A Mac writes "é" as an "e" followed by its accent: the accent alone
-        // is dropped, so that both spellings give the same word.
-        $plain = strtr(mb_strtolower((string) preg_replace('/\p{Mn}+/u', '', $text)), self::UNACCENTED);
-
-        return array_values(array_filter(preg_split('/[^a-z0-9]+/', $plain) ?: [], fn (string $word) => $word !== ''));
+        return array_values(array_filter(preg_split('/[^a-z0-9]+/', Text::plain($text)) ?: [], fn (string $word) => $word !== ''));
     }
 
     /**
