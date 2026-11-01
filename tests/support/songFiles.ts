@@ -39,10 +39,20 @@ const builtScores = new Map<string, Buffer>();
  * "Tuba", four measures, a rehearsal mark on the third. Built on demand
  * (makeScore.mjs), never kept. With "repeat", the first two measures are
  * played twice; with "lastEid", the file is written as MuseScore 4.4 does;
- * with "keySignature", the trumpet is in two sharps and the tuba in three flats.
+ * with "keySignature", the trumpet is in two sharps and the tuba in three flats;
+ * with "tpc2First", the second staff is a Sax Ténor whose notes write <tpc2>
+ * before <tpc>; with "lateTempo", the first measure is silent and the tempo,
+ * 148, is on the second.
  */
 export function readableScore(
-  variant: '' | 'repeat' | 'lastEid' | 'hiddenPart' | 'keySignature' = '',
+  variant:
+    | ''
+    | 'repeat'
+    | 'lastEid'
+    | 'hiddenPart'
+    | 'keySignature'
+    | 'tpc2First'
+    | 'lateTempo' = '',
 ): Buffer {
   let built = builtScores.get(variant);
   if (!built) {

@@ -3,6 +3,14 @@
 What changes in the app, version after version. This file is written by
 `npm run changelog` from `web/src/changelog/en.json`: do not edit it by hand.
 
+## 1.1.0 — 2026-11-01
+
+### Fixed
+
+- A MuseScore file edited by a script plays every instrument at its pitch in the MIDI player (“8 bit”).
+- The tempo of a song is the one where its music starts, even when its first measure is silent: the MIDI player and the Live mode no longer play it too fast.
+- Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.
+
 ## 1.0.0 — 2026-10-24
 
 ### Changed

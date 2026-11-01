@@ -104,6 +104,26 @@ export async function unzipped(
 // ---- Key signatures written by MuseScore 4 ----
 
 /**
+ * A MuseScore file whose notes write <tpc2> before <tpc>, rewritten with
+ * <tpc> first (issue #71). The engine of the app reads <tpc> as the spelling
+ * of both the concert and the written note, then <tpc2> as the written one:
+ * read in the other order, the written spelling is lost and the engine
+ * "repairs" the pitch from inconsistent data, a tone off. MuseScore writes
+ * <tpc> first; a script that edits the files may not. Plain text, as
+ * withWrittenKeys().
+ */
+export const TPC2_FIRST = /<tpc2>-?\d+<\/tpc2>\s*<tpc>/;
+
+export function withTpcInOrder(mscx: string): string {
+  return mscx.replace(/<Note>[\s\S]*?<\/Note>/g, (note) => {
+    const found = /(\s*)(<tpc2>-?\d+<\/tpc2>)([\s\S]*?)(<tpc>-?\d+<\/tpc>)/.exec(note);
+    if (!found) return note;
+    const [whole, space, second, between, first] = found;
+    return note.replace(whole, `${space}${first}${between}${second}`);
+  });
+}
+
+/**
  * The text of a MuseScore file with its key signatures written the way the
  * engine of the app reads them (issue #41). MuseScore 4 writes the key of a
  * staff as the concert key (<concertKey>) and works out the key each
@@ -419,6 +439,48 @@ function playedOrder(lines: Barlines[]): number[] {
   return played;
 }
 
+// A tempo mark, in quarter notes a minute: as it is written (so many of a
+// note value a minute), else as it is played. Null when the element has none.
+function tempoIn(element: Element): number | null {
+  const metronome = element.querySelector('metronome');
+  const perMinute = Number(metronome?.querySelector('per-minute')?.textContent);
+  const unit = { whole: 4, half: 2, quarter: 1, eighth: 0.5, '16th': 0.25 }[
+    metronome?.querySelector('beat-unit')?.textContent ?? ''
+  ];
+  const written = unit ? unit * (metronome?.querySelector('beat-unit-dot') ? 1.5 : 1) : null;
+  if (written && perMinute > 0) return perMinute * written;
+  const sounded = Number(element.querySelector('sound[tempo]')?.getAttribute('tempo'));
+  return sounded > 0 ? sounded : null;
+}
+
+/**
+ * The tempo of the score, in quarter notes a minute: the last one written
+ * before, or in, the first measure that holds a note in any part
+ * (model/songs.md, "The tempo of a file"). A silent first measure, a count-in
+ * or an anacrusis may come before the tempo mark (issue #71).
+ */
+function startTempo(parts: Element[]): number | null {
+  const measuresOf = parts.map((part) => childrenOf(part, 'measure'));
+  const count = Math.max(0, ...measuresOf.map((measures) => measures.length));
+  let tempo: number | null = null;
+  for (let index = 0; index < count; index++) {
+    let hasNote = false;
+    for (const measures of measuresOf) {
+      const measure = measures[index];
+      if (!measure) continue;
+      for (const child of measure.children) {
+        if (child.tagName === 'direction') tempo = tempoIn(child) ?? tempo;
+        else if (child.tagName === 'sound' && Number(child.getAttribute('tempo')) > 0) {
+          tempo = Number(child.getAttribute('tempo'));
+        }
+      }
+      hasNote ||= childrenOf(measure, 'note').some((note) => !note.querySelector('rest'));
+    }
+    if (hasNote) return tempo;
+  }
+  return tempo;
+}
+
 /** What the Live mode follows: the measures, their order, the marks and the tempo. */
 export function timelineOf(score: Document): Timeline {
   const top = partElements(score)[0];
@@ -464,19 +526,7 @@ export function timelineOf(score: Document): Timeline {
 
   const start = first ?? signature;
   const beatQuarters = isCompound(start) ? 1.5 : 4 / start.beatType;
-  // The tempo of the first measure: as it is written (so many of a note
-  // value a minute), else as it is played (quarter notes a minute).
-  const opening = elements[0];
-  const metronome = opening?.querySelector('metronome');
-  const perMinute = Number(metronome?.querySelector('per-minute')?.textContent);
-  const unit = { whole: 4, half: 2, quarter: 1, eighth: 0.5, '16th': 0.25 }[
-    metronome?.querySelector('beat-unit')?.textContent ?? ''
-  ];
-  const written = unit ? unit * (metronome?.querySelector('beat-unit-dot') ? 1.5 : 1) : null;
-  const sounded = Number(opening?.querySelector('sound[tempo]')?.getAttribute('tempo'));
-  const quartersPerMinute =
-    written && perMinute > 0 ? perMinute * written : sounded > 0 ? sounded : null;
-
+  const quartersPerMinute = startTempo(partElements(score));
   return {
     measures,
     played: playedOrder(barlinesOf(elements)),

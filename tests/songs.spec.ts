@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { parseMidi } from 'midi-file';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
@@ -667,6 +668,77 @@ test.describe('the MIDI player', () => {
     });
     await openMidi(page);
     await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+  });
+
+  test('a file whose notes write <tpc2> before <tpc> plays every staff at its pitch (#71)', async ({
+    page,
+  }) => {
+    // "Sax Ténor", in B flat, reads a scale from C: it sounds a ninth lower,
+    // from B flat. The engine of the app put it a tone off before 1.1.0.
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: 'Djidji.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore('tpc2First'),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Djidji');
+    await page.getByLabel('Interprète original').fill('Les Inconnus');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Djidji', level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const id = sql("SELECT id FROM song WHERE name = 'Djidji'");
+    const answer = await page.request.get(`/api/songs/${id}/midi`);
+    expect(answer.status()).toBe(200);
+    const played = parseMidi(await answer.body()).tracks.map((events) =>
+      events.flatMap((event) =>
+        event.type === 'noteOn' && event.velocity > 0 ? [event.noteNumber] : [],
+      ),
+    );
+    const scale = [46, 48, 50, 51, 53, 55, 57, 46];
+    expect(played.filter((notes) => notes.length > 0)).toEqual([
+      [60, 62, 64, 65, 67, 69, 71, 60, 60, 62, 64, 65, 67, 69, 71, 60],
+      [...scale, ...scale],
+    ]);
+  });
+
+  test('the tempo of the file is the one at its first note, not the 120 of a silent first measure (#71)', async ({
+    page,
+  }) => {
+    // The first measure rests, the tempo mark (148) is on the second: the
+    // MIDI file says 120 at its start, then 148 where the music starts.
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: '8 bit.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore('lateTempo'),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('8 bit');
+    await page.getByLabel('Interprète original').fill('Daft Punk');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: '8 bit', level: 1 })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await openMidi(page);
+    await expect(page.getByText('Celui de la fanfare\u00a0: 148')).toBeVisible();
+    await expect(page.getByLabel('148 battements par minute')).toBeVisible();
+
+    // The Live mode reads the tempo of the score by the same rule.
+    await page
+      .getByRole('group', { name: 'Modes du morceau' })
+      .getByRole('button', { name: 'Live' })
+      .click();
+    await expect(page.locator('[data-tile="tempo"]')).toContainText('148', { timeout: 30_000 });
   });
 
   test('a part hidden in MuseScore, and a staff without any note, are not shown (#35)', async ({
