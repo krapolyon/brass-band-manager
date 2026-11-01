@@ -653,8 +653,8 @@
       "leave": "Marquer comme parti",
       "leaveDetail": "Coupe son accès, efface ses coordonnées",
       "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
-      "newLink": "Créer un nouveau lien",
-      "newLinkDetail": "L’ancien ne marchera plus",
+      "newLink": "Copier un lien d’invitation",
+      "newLinkDetail": "Sans e-mail, à lui envoyer toi-même ; l’ancien ne marchera plus",
       "resend": "Renvoyer l’invitation",
       "resendDetail": "Un nouveau lien part à {{email}} ; l’ancien ne marchera plus",
       "cancelInvitation": "Annuler l’invitation",
@@ -691,7 +691,8 @@
       "notFound": "Cette fiche n’existe pas, ou plus.",
       "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
       "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter.",
-      "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer."
+      "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer.",
+      "emailChanged": "L’invitation est partie à l’ancienne adresse. Renvoie-la à {{email}}."
     },
     "leave": {
       "title": "Marquer {{nickname}} comme parti ?",

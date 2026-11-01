@@ -18,6 +18,14 @@
       {
         "kind": "fixed",
         "text": "The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network."
+      },
+      {
+        "kind": "fixed",
+        "text": "The record of an invited member can be edited, its email included; a changed email offers to send the invitation again to the new address."
+      },
+      {
+        "kind": "added",
+        "text": "Sending an invitation again confirms it, and shows the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email."
       }
     ]
   },

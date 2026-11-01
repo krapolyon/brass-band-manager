@@ -60,6 +60,14 @@
   gap: var(--spaceXxs);
 }
 
+/* The email of an invited member changed: the warning, then "Renvoyer l'invitation" (#72). */
+.members-emailChanged {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spaceXs);
+}
+
 /* A list on a phone and a tablet, a table on a desktop: each exists once on
    the screen, the other is not drawn and is not read out. */
 .members-desktopOnly {

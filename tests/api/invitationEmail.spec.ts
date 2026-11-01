@@ -82,7 +82,7 @@ test('without a mail server, nothing is sent: the link is copied as before', asy
 });
 
 test.describe('sending the invitation again', () => {
-  test('a new link leaves by email, the former one stops; not again within 5 minutes', async ({
+  test('a new link leaves by email and is shown once, the former one stops; not again within 5 minutes', async ({
     playwright,
     request,
   }) => {
@@ -103,12 +103,14 @@ test.describe('sending the invitation again', () => {
     const resent = await momo.post(`/api/members/${created.id}/invitation`);
     expect(resent.status()).toBe(200);
     const answer = await resent.json();
-    expect(answer).not.toHaveProperty('passwordLinkToken');
     expect(answer.passwordLinkEmailedAt).not.toBeNull();
     const [second] = await receivedMails(1);
     expect(second?.to).toBe('kiki@example.org');
     const [oldToken, newToken] = [tokenIn(first?.text ?? ''), tokenIn(second?.text ?? '')];
     expect(newToken).not.toBe(oldToken);
+    // The new link is in the answer too, once, as at the creation (#73).
+    expect(answer.passwordLinkToken).toBe(newToken);
+    expect(answer.invitationEmailed).toBe(true);
     expect(
       (await request.post('/api/passwordLink/check', { data: { token: oldToken } })).status(),
     ).toBe(404);
