@@ -2,7 +2,8 @@
   "1.1.0": {
     "A MuseScore file edited by a script plays every instrument at its pitch in the MIDI player (“8 bit”).": "Un fichier MuseScore retouché par un script joue chaque instrument à sa hauteur dans le lecteur MIDI (« 8 bit »).",
     "The tempo of a song is the one where its music starts, even when its first measure is silent: the MIDI player and the Live mode no longer play it too fast.": "Le tempo d’un morceau est celui où sa musique commence, même quand sa première mesure est muette : le lecteur MIDI et le mode live ne le jouent plus trop vite.",
-    "Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.": "Les morceaux importés avant la 1.1.0 dont le fichier MuseScore a été retouché par un script peuvent demander de redéposer ce fichier pour corriger le MIDI."
+    "Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.": "Les morceaux importés avant la 1.1.0 dont le fichier MuseScore a été retouché par un script peuvent demander de redéposer ce fichier pour corriger le MIDI.",
+    "The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network.": "Le lecteur MIDI joue sur un ordinateur dont le son met du temps à démarrer (casque Bluetooth, Safari, Windows). Quand le son de l’appareil ne démarre pas, l’app le dit et propose de réessayer, au lieu d’accuser le réseau."
   },
   "1.0.0": {
     "Security fixes following the pentest.": "Correctifs de sécurité suite au pentest.",

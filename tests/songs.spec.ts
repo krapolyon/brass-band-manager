@@ -559,7 +559,8 @@ test.describe('the MIDI player', () => {
     await page.getByLabel('Titre original').fill('Hey Ya!');
     await page.getByLabel('Interprète original').fill('OutKast');
     await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
-    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible({
+    // The title of the song: level 1 on a phone, 2 beside the list on a computer.
+    await expect(page.getByRole('heading', { name: 'Hey Ya', exact: true })).toBeVisible({
       timeout: 30_000,
     });
     void playwright;
@@ -663,11 +664,75 @@ test.describe('the MIDI player', () => {
     await page.getByLabel('Titre original').fill('Sledge');
     await page.getByLabel('Interprète original').fill('Dance with the Dead');
     await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
-    await expect(page.getByRole('heading', { name: 'Sledge', level: 1 })).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Sledge', exact: true })).toBeVisible({
       timeout: 30_000,
     });
     await openMidi(page);
     await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+  });
+
+  test('a device whose sound takes more than a second to start plays all the same (#70)', async ({
+    page,
+    playwright,
+  }) => {
+    // A Bluetooth headset, Windows or Safari: resume() answers after 1.5 s.
+    await page.addInitScript(() => {
+      const resume = AudioContext.prototype.resume;
+      AudioContext.prototype.resume = function (this: AudioContext) {
+        return new Promise<void>((done) => setTimeout(done, 1500)).then(() => resume.call(this));
+      };
+    });
+    await withScore(playwright, page);
+    await openMidi(page);
+    await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/ne se chargent pas|ne démarre pas/)).toHaveCount(0);
+  });
+
+  test('a device whose sound never starts is told so, not blamed on the network, and can try again (#70)', async ({
+    page,
+    playwright,
+  }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { isStuck: boolean }).isStuck = true;
+      const resume = AudioContext.prototype.resume;
+      AudioContext.prototype.resume = function (this: AudioContext) {
+        if ((window as unknown as { isStuck: boolean }).isStuck) {
+          return new Promise<void>(() => {});
+        }
+        return resume.call(this);
+      };
+      // The clock stays suspended while it is stuck.
+      const state = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, 'state');
+      Object.defineProperty(BaseAudioContext.prototype, 'state', {
+        get(this: BaseAudioContext) {
+          return (window as unknown as { isStuck: boolean }).isStuck
+            ? 'suspended'
+            : state?.get?.call(this);
+        },
+      });
+    });
+    await withScore(playwright, page);
+    await openMidi(page);
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+
+    await expect(page.getByText('Le son ne démarre pas sur cet appareil.')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText('Les sons des instruments ne se chargent pas.', { exact: false }),
+    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled();
+
+    // The device lets the sound start now: "Réessayer" plays.
+    await page.evaluate(() => {
+      (window as unknown as { isStuck: boolean }).isStuck = false;
+    });
+    await page.getByRole('button', { name: 'Réessayer' }).click();
+    await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Le son ne démarre pas sur cet appareil.')).toHaveCount(0);
   });
 
   test('a file whose notes write <tpc2> before <tpc> plays every staff at its pitch (#71)', async ({
@@ -688,7 +753,7 @@ test.describe('the MIDI player', () => {
     await page.getByLabel('Titre original').fill('Djidji');
     await page.getByLabel('Interprète original').fill('Les Inconnus');
     await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
-    await expect(page.getByRole('heading', { name: 'Djidji', level: 1 })).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Djidji', exact: true })).toBeVisible({
       timeout: 30_000,
     });
 
@@ -725,7 +790,7 @@ test.describe('the MIDI player', () => {
     await page.getByLabel('Titre original').fill('8 bit');
     await page.getByLabel('Interprète original').fill('Daft Punk');
     await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
-    await expect(page.getByRole('heading', { name: '8 bit', level: 1 })).toBeVisible({
+    await expect(page.getByRole('heading', { name: '8 bit', exact: true })).toBeVisible({
       timeout: 30_000,
     });
 

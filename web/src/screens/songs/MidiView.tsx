@@ -29,7 +29,7 @@ import {
   readMidi,
   tickedAfter,
 } from './midi.ts';
-import { MidiEngine } from './midiEngine.ts';
+import { ClockError, MidiEngine } from './midiEngine.ts';
 import { useMidiSettings } from './midiSettings.ts';
 import { usePlayer } from './Player.tsx';
 import './songs.css';
@@ -124,6 +124,22 @@ export function tempoRange(fileBpm: number, bandBpm: number) {
   };
 }
 
+/** What the sounds of the MIDI player are doing; they load from the first press (issue #70). */
+export type Sounds = 'waiting' | 'loading' | 'ready' | 'failed';
+
+/** The sound of the device does not start: said as it is, with a way to try again. */
+export function SilentClock({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="songs-midiSilent">
+      <Message kind="danger">{t('songs.midi.clockError')}</Message>
+      <Button kind="secondary" size="small" onClick={onRetry}>
+        {t('songs.midi.retry')}
+      </Button>
+    </div>
+  );
+}
+
 type TempoAndVolumeProps = {
   bandBpm: number;
   bpm: number;
@@ -207,7 +223,9 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
   const marks = useMemo(() => markRanges(midi), [midi]);
 
   const engine = useRef<MidiEngine | null>(null);
-  const [sounds, setSounds] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [sounds, setSounds] = useState<Sounds>('waiting');
+  // The clock of the device did not start (issue #70).
+  const [isSilent, setSilent] = useState(false);
   const [isPlaying, setPlaying] = useState(false);
   const [measure, setMeasure] = useState(1);
   // Shared with the Live mode driven by the MIDI player.
@@ -232,10 +250,8 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
     const created = new MidiEngine(midi);
     engine.current = created;
     created.onEnd = () => isAlive && setPlaying(false);
-    created.loaded.then(
-      () => isAlive && setSounds('ready'),
-      () => isAlive && setSounds('failed'),
-    );
+    // The sounds load from the first press (midiEngine.ts, issue #70).
+    created.onSounds = (state) => isAlive && setSounds(state);
     // What was set before, here or in the Live mode.
     const { muted: cut, mutedStep: step } = settingsNow.current;
     cut.forEach((isMuted, index) => {
@@ -273,11 +289,13 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
     }
     recording.pause();
     setPlaying(true);
+    setSilent(false);
     try {
       await player.play();
-    } catch {
+    } catch (error) {
       setPlaying(false);
-      setSounds('failed');
+      if (error instanceof ClockError) setSilent(true);
+      else setSounds('failed');
     }
   };
 
@@ -366,6 +384,7 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
   return (
     <div className="songs-midi">
       {sounds === 'failed' && <Message kind="danger">{t('songs.midi.soundsError')}</Message>}
+      {isSilent && <SilentClock onRetry={toggle} />}
 
       <section className="songs-midiTracks" aria-label={t('songs.midi.tracks')}>
         <div className="songs-midiHeading">

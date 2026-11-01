@@ -1277,7 +1277,9 @@
       "loopStop": "Arrêter la boucle",
       "loopMarksRule": "Cocher un repère plus loin coche ceux d’entre les deux : la boucle va du premier au dernier.",
       "loopHintWithMarks_one": "Le morceau a 1 mesure ; sans repère, seules les mesures se choisissent.",
-      "loopHintWithMarks_other": "Le morceau a {{count}} mesures ; sans repère, seules les mesures se choisissent."
+      "loopHintWithMarks_other": "Le morceau a {{count}} mesures ; sans repère, seules les mesures se choisissent.",
+      "retry": "Réessayer",
+      "clockError": "Le son ne démarre pas sur cet appareil."
     },
     "song": {
       "more": "Plus d’actions",

@@ -796,6 +796,14 @@
   text-align: center;
 }
 
+/* The clock of the device did not start (issue #70): the message, then "Réessayer". */
+.songs-midiSilent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spaceXs);
+}
+
 .songs-midiSettings {
   gap: var(--spaceMd);
   padding: var(--spaceLg);

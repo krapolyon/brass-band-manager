@@ -10,6 +10,7 @@ What changes in the app, version after version. This file is written by
 - A MuseScore file edited by a script plays every instrument at its pitch in the MIDI player (“8 bit”).
 - The tempo of a song is the one where its music starts, even when its first measure is silent: the MIDI player and the Live mode no longer play it too fast.
 - Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.
+- The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network.
 
 ## 1.0.0 — 2026-10-24
 

@@ -16,9 +16,16 @@ import { TextField } from '../../components/TextField.tsx';
 import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import type { Song } from '../../songs.ts';
-import { mutedVolumeOf, TempoAndVolume, tempoRange, useTracks } from './MidiView.tsx';
+import {
+  mutedVolumeOf,
+  SilentClock,
+  type Sounds,
+  TempoAndVolume,
+  tempoRange,
+  useTracks,
+} from './MidiView.tsx';
 import { countedBpm, type MidiSong, readMidi, tickOfPlace, writtenAt } from './midi.ts';
-import { MidiEngine } from './midiEngine.ts';
+import { ClockError, MidiEngine } from './midiEngine.ts';
 import { useMidiSettings } from './midiSettings.ts';
 import { usePlayer } from './Player.tsx';
 import { isCompound, partAlone, partsOf, readScore, type Timeline, timelineOf } from './score.ts';
@@ -225,7 +232,9 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   const fileBpm = midi ? countedBpm(midi) : 120;
   const midiBandBpm = song.bpm ?? Math.round(fileBpm);
   const [settings, setSettings] = useMidiSettings(song.id, midiBandBpm, midi?.tracks.length ?? 0);
-  const [sounds, setSounds] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const [sounds, setSounds] = useState<Sounds>('waiting');
+  // The clock of the device did not start (issue #70).
+  const [isSilent, setSilent] = useState(false);
   // One engine, made when the member first opens the sheet, kept until the
   // Live mode closes: its sounds load while the member sets the tracks.
   const engineFor = (file: MidiSong) => {
@@ -237,10 +246,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     });
     created.setMutedVolume(mutedVolumeOf(settings.mutedStep));
     created.setSpeed(settings.bpm / fileBpm);
-    created.loaded.then(
-      () => setSounds('ready'),
-      () => setSounds('failed'),
-    );
+    created.onSounds = setSounds;
     created.onEnd = () => {
       setState('ready');
       setDriver('clock');
@@ -275,10 +281,13 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     setDriver('midi');
     setState('playing');
     setPanel(null);
+    setSilent(false);
     try {
       await player.play();
-    } catch {
-      setSounds('failed');
+    } catch (error) {
+      if (error instanceof ClockError) setSilent(true);
+      else setSounds('failed');
+      setPanel('midi');
       setState('ready');
       setDriver('clock');
     }
@@ -858,6 +867,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
             measure={label}
             total={measures.length}
             sounds={sounds}
+            isSilent={isSilent}
             onPlay={playWithMidi}
           />
         )}
@@ -892,7 +902,8 @@ type MidiChoiceProps = {
   /** The measure the score starts from, as it is written: "33". */
   measure: string;
   total: number;
-  sounds: 'loading' | 'ready' | 'failed';
+  sounds: Sounds;
+  isSilent: boolean;
   onPlay: () => void;
 };
 
@@ -902,7 +913,8 @@ type MidiChoiceProps = {
 // tracks; the loop is not offered. Its button starts the player from the
 // measure chosen.
 function MidiChoice(props: MidiChoiceProps) {
-  const { midi, settings, onChange, bandBpm, fileBpm, measure, total, sounds, onPlay } = props;
+  const { midi, settings, onChange, bandBpm, fileBpm, measure, total, sounds, isSilent, onPlay } =
+    props;
   const { t } = useTranslation();
   const { tracks } = useTracks(midi);
   const { slowest, fastest } = tempoRange(fileBpm, bandBpm);
@@ -912,6 +924,7 @@ function MidiChoice(props: MidiChoiceProps) {
     <div className="songs-panel songs-liveMidi">
       <p className="songs-muted">{t('songs.live.midi.lead')}</p>
       {sounds === 'failed' && <Message kind="danger">{t('songs.midi.soundsError')}</Message>}
+      {isSilent && <SilentClock onRetry={onPlay} />}
       <section className="songs-midiTracks" aria-label={t('songs.midi.tracks')}>
         <div className="songs-midiHeading">
           <span className="textLabel songs-muted">
