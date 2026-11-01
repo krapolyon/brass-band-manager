@@ -406,6 +406,50 @@ test.describe('songs', () => {
     expect(sentPushes()).toEqual([]);
   });
 
+  test('a quiet change notifies nobody: neither the MuseScore file nor a part; creating still does (1.1.0)', async ({
+    playwright,
+  }) => {
+    const sonia = await deviceOf(playwright, email('Sonia'));
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    await subscribe(zaza, 'zaza');
+    sql(`UPDATE member SET notifySongScore = 'PUSH_AND_EMAIL' WHERE id = ${memberId('Zaza')}`);
+    const trumpet = Number(sql("SELECT id FROM instrument WHERE name = 'Trompette'"));
+
+    // A new song is news, whatever the switch of the edit form.
+    const created = await sonia.post('/api/songs', { data: songRecord({ name: 'Rasputin' }) });
+    const songId = (await created.json()).id;
+    expect(received()).toContain(`zaza: ${band} – Nouveau morceau`);
+    await sendFile(sonia, `/api/songs/${songId}/museScore`, museScore);
+    sql(`UPDATE song SET createdAt = UTC_TIMESTAMP() - INTERVAL 2 HOUR WHERE id = ${songId}`);
+    emptyPushes();
+    await emptyMailbox();
+
+    // "Ne pas prévenir la fanfare": a corrected MuseScore file and a part, quietly.
+    const quietScore = await sendFile(sonia, `/api/songs/${songId}/museScore?quiet=1`, museScore);
+    expect(quietScore.status()).toBe(200);
+    expect(
+      (await sendFile(sonia, `/api/songs/${songId}/parts/${trumpet}?quiet=1`, pdf)).status(),
+    ).toBe(200);
+    expect(sentPushes()).toEqual([]);
+    expect(await mailsAfterAWhile()).toEqual([]);
+
+    // The same, not quiet: as before.
+    await sendFile(sonia, `/api/songs/${songId}/museScore`, museScore);
+    expect(received()).toEqual([`zaza: ${band} – Nouveau MuseScore`]);
+    expect((await receivedMails(1))[0]?.to).toBe('zaza@example.org');
+
+    // Any other value of the flag is refused, and nothing is saved.
+    for (const value of ['0', 'yes', '']) {
+      const refused = await sendFile(
+        sonia,
+        `/api/songs/${songId}/museScore?quiet=${value}`,
+        museScore,
+      );
+      expect(refused.status()).toBe(400);
+      expect(await refused.json()).toEqual({ error: 'invalidQuery' });
+    }
+  });
+
   test('a member who left is never told', async ({ playwright }) => {
     const sonia = await deviceOf(playwright, email('Sonia'));
     const zaza = await deviceOf(playwright, email('Zaza'));

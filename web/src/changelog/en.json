@@ -26,6 +26,10 @@
       {
         "kind": "added",
         "text": "Sending an invitation again confirms it, and shows the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email."
+      },
+      {
+        "kind": "added",
+        "text": "When editing a song, “Ne pas prévenir la fanfare” saves its files without any notification, for a technical correction."
       }
     ]
   },

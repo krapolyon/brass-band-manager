@@ -1450,7 +1450,9 @@
       "deleteNote": "Pour un morceau créé par erreur : ses fichiers et les niveaux des fanfarons partent avec. Pour ne plus le jouer, passe-le plutôt en « Abandonné ».",
       "noRightTitle": "Pas par ici",
       "noRight": "Modifier un morceau, c’est pour celles et ceux qui gèrent les morceaux. Tu penses devoir y être ? Vois ça avec un admin.",
-      "backToSong": "Retour au morceau"
+      "backToSong": "Retour au morceau",
+      "quiet": "Ne pas prévenir la fanfare",
+      "quietHint": "Pour une correction technique : les fichiers envoyés avec ce formulaire ne déclenchent aucune notification."
     },
     "import": {
       "step1": "Étape 1 sur 2 · les fichiers",

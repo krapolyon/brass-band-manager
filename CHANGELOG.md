@@ -8,6 +8,7 @@ What changes in the app, version after version. This file is written by
 ### Added
 
 - Sending an invitation again confirms it, and shows the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email.
+- When editing a song, “Ne pas prévenir la fanfare” saves its files without any notification, for a technical correction.
 
 ### Fixed
 

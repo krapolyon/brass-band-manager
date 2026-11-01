@@ -1,6 +1,6 @@
 # Business dictionary — Songs domain
 
-> v1.11 — 2026-11-01 · For 1.1.0, to validate by the owner · No change to the tables · The tempo of a file is the one in force at its first note (issue #71); the engine of the app reads a third thing of MuseScore 4 wrongly, the order of `<tpc>` and `<tpc2>` (issue #71); the Live mode reworked (issues #69, #74, #75, #76, #77): one column from 768, one line in landscape, the switch "Jouer avec le MIDI", the Tempo sheet, the reading settings kept on the device, the visual metronome, the playhead, hidden controls
+> v1.11 — 2026-11-01 · For 1.1.0, to validate by the owner · No change to the tables · The tempo of a file is the one in force at its first note (issue #71); the engine of the app reads a third thing of MuseScore 4 wrongly, the order of `<tpc>` and `<tpc2>` (issue #71); the Live mode reworked (issues #69, #74, #75, #76, #77): one column from 768, one line in landscape, the switch "Jouer avec le MIDI", the Tempo sheet, the reading settings kept on the device, the visual metronome, the playhead, hidden controls; a quiet change of a song, without notification
 > v1.10 — 2026-10-24 · Validated by the owner, for 0.3.2 · Model: `songs.dbml` v1.10 · Migration: `016_memberSongRatedOn.sql` · A song the member has not rated stands out on its sheet, and levels older than a year are asked again (`memberSong.ratedOn`, issue #44); the Discord card of a song shows the messages that tag both the app and the section, without the tag of the app, all of them (issue #45); the mood Médium is labelled Normal
 > v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · Model: `songs.dbml` v1.9 · The mood of a song and the places a set can give it replace its categories, "can also be" and "never first" (issue #47); the copyright of a song (issues #47 and #46); the form of a song shows nothing of Discord for a band without it (issue #49)
 > v1.8 — 2026-10-18 · Validated by the owner (0.3.0) · No change to the tables · A part hidden in the MuseScore file is shown neither by the MIDI player nor by the Live mode (issue #35)
@@ -160,6 +160,7 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 
 - A song becomes news once: a MuseScore file given to a song that had none, and the parts sent in the first hour after the song was created, notify nothing; "Nouveau morceau" covers the files of an import.
 - The device that sent the song or the file does not receive the notification.
+- **A quiet change** (1.1.0, added on 2026-11-01). The files card of the edit form ends with a switch "Ne pas prévenir la fanfare", off each time the form opens. When it is on, the MuseScore file and the parts saved with that form send no notification (`notifySongScore`, `notifySongPart`). It is meant for a correction that does not change the music (a MuseScore file saved again to fix its MIDI). A new song always notifies (`notifySongNew`): the switch is not on the creation form. Nothing is stored: the choice lives in the request, not in the song.
 
 ### Relations
 - Part: a song has zero to several parts, one per instrument at most (entry 2).

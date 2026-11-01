@@ -13,6 +13,7 @@ import {
   server,
   tagApp,
 } from './support/discord.ts';
+import { emptyPushes, sentPushes, subscribe } from './support/push.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from './support/scenario.ts';
 import {
   addSong,
@@ -1774,6 +1775,41 @@ test.describe('who manages songs', () => {
       sql("SELECT midiPath IS NOT NULL, musicXmlPath IS NULL FROM song WHERE name = 'Roses'"),
     ).toBe('1\t1');
     await sisi.dispose();
+  });
+
+  test('“Ne pas prévenir la fanfare”: the files of that save notify nobody; the switch is off again next time (1.1.0)', async ({
+    page,
+    playwright,
+  }) => {
+    // Zaza plays the trumpet, and has a device that receives notifications.
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    await subscribe(zaza, 'zaza');
+    // An hour after its creation, a part of the song is news.
+    sql(`UPDATE song SET createdAt = UTC_TIMESTAMP() - INTERVAL 2 HOUR WHERE id = ${seven}`);
+    emptyPushes();
+    const part = { name: 'Seven tp.pdf', mimeType: 'application/pdf', buffer: readablePdf() };
+
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${seven}/edit`);
+    const quiet = page.getByRole('switch', { name: 'Ne pas prévenir la fanfare' });
+    await expect(quiet).not.toBeChecked();
+    await page.locator('input[type=file]').setInputFiles([part]);
+    await page.getByText('Ne pas prévenir la fanfare').click();
+    await expect(quiet).toBeChecked();
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(page).toHaveURL(`/songs/${seven}`);
+    expect(sentPushes()).toEqual([]);
+
+    // Opened again, the switch is off: the part is news.
+    await page.goto(`/songs/${seven}/edit`);
+    await expect(quiet).not.toBeChecked();
+    await page.locator('input[type=file]').setInputFiles([part]);
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(page).toHaveURL(`/songs/${seven}`);
+    await expect
+      .poll(() => sentPushes().map((push) => push.payload.title))
+      .toEqual(['La Fanfare des Cuivres Déchaînés – Nouvelle partition pour toi']);
+    await zaza.dispose();
   });
 
   test('a new MuseScore file the app cannot read takes away the MIDI file of the one it replaces', async ({
