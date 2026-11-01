@@ -207,6 +207,19 @@ export class MidiEngine {
     return this.clock();
   }
 
+  /**
+   * Makes the clock and starts the sound, from a gesture of the member,
+   * before play() is called after a wait: the tempo tapped in the Live mode
+   * starts the player on the next 1, outside the gesture (1.1.0).
+   */
+  prime(): void {
+    if (this.disposed) return;
+    unlockSound();
+    void this.clock()
+      .resume()
+      .catch(() => {});
+  }
+
   get isPlaying(): boolean {
     return this.timer !== null;
   }

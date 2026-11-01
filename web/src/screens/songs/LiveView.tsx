@@ -1,88 +1,79 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
 import { Chip } from '../../components/Chip.tsx';
-import { FilterChip } from '../../components/FilterChip.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
+import { Metronome } from '../../components/Metronome.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Pictogram } from '../../components/Pictogram.tsx';
 import { SongPartRow } from '../../components/SongPartRow.tsx';
-import { SongPartTrack } from '../../components/SongPartTrack.tsx';
-import { TextField } from '../../components/TextField.tsx';
+import { SwitchRow } from '../../components/SwitchRow.tsx';
 import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import type { Song } from '../../songs.ts';
+import { ReadingSettings, StartChoice, TempoSheet } from './LiveSheets.tsx';
+import { type Drawn, drawPart, MAX_COLUMN, SCALE } from './liveDrawing.ts';
+import { isMotionReduced, type Scrolling, useLiveSettings } from './liveSettings.ts';
+import { mutedVolumeOf, SilentClock, type Sounds, tempoRange } from './MidiView.tsx';
 import {
-  mutedVolumeOf,
-  SilentClock,
-  type Sounds,
-  TempoAndVolume,
-  tempoRange,
-  useTracks,
-} from './MidiView.tsx';
-import { countedBpm, type MidiSong, readMidi, tickOfPlace, writtenAt } from './midi.ts';
+  countedBpm,
+  type MidiSong,
+  measureAt,
+  measureTicks,
+  readMidi,
+  tickOfPlace,
+  writtenAt,
+} from './midi.ts';
 import { ClockError, MidiEngine } from './midiEngine.ts';
 import { useMidiSettings } from './midiSettings.ts';
 import { usePlayer } from './Player.tsx';
-import { isCompound, partAlone, partsOf, readScore, type Timeline, timelineOf } from './score.ts';
+import { partAlone, partsOf, readScore, type Timeline, timelineOf } from './score.ts';
 import './songs.css';
 
-// Figma: Songs / Song — Live. The part of the member's instrument, drawn for
-// the width of the screen, rising line by line at the tempo: no cursor,
-// because a band never keeps a perfect tempo. The lines already played stand
-// back, and the member drags the score to catch up with the band. A repeat
-// brings the score back down to where it starts.
+// Figma: Songs / Song — Live (sections 5, 14 and 20). The part of the
+// member's instrument, drawn for the width of the screen, moving at the tempo
+// with no cursor, because a band never keeps a perfect tempo. The lines
+// already played stand back, and the member drags the score to catch up with
+// the band. A repeat brings the score back to where it starts.
 //
 // The score is the MusicXML kept with the song (model/songs.md, "Generated
-// files"), drawn by Verovio, which is loaded only here.
+// files"), drawn by Verovio (liveDrawing.ts).
 //
-// The Live mode can also be driven by the MIDI player (issue #10, Songs ›
-// 14): the piano button opens the settings the MIDI mode shares, and the
-// score then follows the position of the player, measure by measure, repeats
-// and jumps included, instead of the clock of the tempo.
+// Three layouts (1.1.0): a phone in portrait reads lines that rise; a phone in
+// landscape reads one line that scrolls to the left, its controls in a bar at
+// the right; from 768 the score is one column at the width of the pane.
+//
+// What moves the score is the clock of the tempo, or the MIDI player when the
+// switch "Jouer avec le MIDI" is on (issues #10 and #76): the score then
+// follows the position of the player, repeats and jumps included, and a
+// playhead shows where it is in the measure.
 
 type TrackName = { name: string; instrumentId: number | null };
 
-// How large the score is drawn, in the unit of Verovio.
-const SCALE = 45;
-// Figma: one line of the score across a phone, two side by side from the
-// tablet, three from the desktop. Each stays as narrow as on a phone, so that
-// it holds the two or three measures a glance takes in.
-const columnsFor = (width: number) => (width >= 1024 ? 3 : width >= 768 ? 2 : 1);
-// Between two rows of lines, in pixels.
-const ROW_GAP = 12;
 // Where the line being played sits in the height of the score: the line
 // before it stays whole above, standing back.
 const READING_LINE = 0.27;
+// In landscape, where the music being played sits: 44 px from the left edge.
+const READING_X = 44;
 // The wheel moves the score one line for this much of a turn, and no faster
 // than this: a trackpad sends dozens of small turns for one gesture.
 const WHEEL_LINE = 60;
 const WHEEL_REST_MS = 180;
-// The lines are laid out again once the width has stopped changing.
+// The lines are laid out again once the size has stopped changing.
 const RESIZE_REST_MS = 150;
+// A press on the score that moves less than this is a tap, not a drag.
+const TAP_SLOP = 6;
 
-// Verovio is one large program: it is started once, the first time a score is drawn.
-type Toolkit = InstanceType<typeof import('verovio/esm').VerovioToolkit>;
-let verovio: Promise<() => Toolkit> | null = null;
-function newToolkit(): Promise<Toolkit> {
-  verovio ??= Promise.all([import('verovio/wasm'), import('verovio/esm')]).then(
-    async ([{ default: createVerovioModule }, { VerovioToolkit }]) => {
-      const module = await createVerovioModule();
-      return () => new VerovioToolkit(module);
-    },
-  );
-  // A failure is not kept: the next opening tries again.
-  verovio.catch(() => {
-    verovio = null;
-  });
-  return verovio.then((create) => create());
-}
-// A member who stops tapping for this long starts counting again.
-const TAP_RESET_MS = 3000;
+/** Where the song is: a place of the played order, and how far into its measure (0 to 1). */
+type Position = { index: number; fraction: number };
+
+/** A phone held sideways: wider than tall, below the size of a tablet. */
+const isLandscapeSize = (width: number, height: number) =>
+  width > height && height < 768 && width < 1024;
 
 type Props = { song: Song; onClose: () => void };
 
@@ -133,6 +124,9 @@ export function LiveView({ song, onClose }: Props) {
       ref={dialog}
       aria-label={t('songs.live.title', { name: song.name })}
       onCancel={(event) => {
+        // The Escape of a sheet open over the score closes the sheet alone:
+        // its event comes up here too.
+        if (event.target !== event.currentTarget) return;
         event.preventDefault();
         onClose();
       }}
@@ -179,6 +173,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   const me = useMe().data;
   const instruments = instrumentsOf(useSections().data);
   const recording = usePlayer();
+  const [reading, setReading] = useLiveSettings(me?.id);
 
   // ---- The part shown: the one of the member's instrument first ----
   const names = parts.map((part) => part.name);
@@ -202,55 +197,78 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     choices.find((choice) => choice.id === chosenPart) ??
     choices.find((choice) => choice.own) ??
     choices[0];
-  const [panel, setPanel] = useState<'parts' | 'start' | 'midi' | null>(null);
+  const [panel, setPanel] = useState<'parts' | 'start' | 'tempo' | 'settings' | null>(null);
 
   // ---- Where the song is ----
   const { measures, played, marks } = timeline;
-  const firstBpm = song.bpm ?? timeline.bpm ?? 120;
-  const [bpm, setBpm] = useState(firstBpm);
-  const [state, setState] = useState<'ready' | 'tapping' | 'playing'>('ready');
+  const [state, setState] = useState<'ready' | 'playing'>('ready');
   // What moves the score while it plays: the clock of the tempo, or the MIDI player.
   const [driver, setDriver] = useState<'clock' | 'midi'>('clock');
+  // "Jouer avec le MIDI": off at each opening (model/songs.md, "Not kept").
+  const [isMidiOn, setMidiOn] = useState(false);
   // The place in the played order: the measure the song is at, or starts from.
   const [at, setAt] = useState(0);
   const atNow = useRef(0);
   atNow.current = at;
-  const origin = useRef({ at: 0, time: 0 });
   const written = played[at] ?? 0;
   const label = measures[written]?.label ?? '1';
   const startMark = marks.find((mark) => mark.measure === written);
+  // The beat of the measure being played, for the visual metronome.
+  const [beat, setBeat] = useState<number | null>(null);
+  // Hidden by the chevron, or by the setting while it plays.
+  const [barsHidden, setBarsHidden] = useState(false);
 
-  // The tempo is counted in the beat of the start; the measures in quarter notes.
-  const secondsOf = useCallback(
-    (index: number) =>
-      ((measures[played[index] ?? 0]?.quarters ?? 4) * 60) / (bpm * timeline.beatQuarters),
-    [measures, played, bpm, timeline.beatQuarters],
+  // ---- The tempo: the band's, else the file's, at each opening ----
+  const fileBpm = midi ? countedBpm(midi) : 120;
+  const scoreBpm = timeline.bpm ?? Math.round(fileBpm);
+  const bandBpm = song.bpm ?? scoreBpm;
+  const [bpm, setBpm] = useState(bandBpm);
+  const bpmNow = useRef(bpm);
+  bpmNow.current = bpm;
+  // With the MIDI the tempo takes the bounds of the player, the band's always within reach.
+  const bounds = isMidiOn
+    ? (({ slowest, fastest }) => ({ min: slowest, max: fastest }))(
+        tempoRange(fileBpm, song.bpm ?? Math.round(fileBpm)),
+      )
+    : { min: 20, max: 400 };
+  const inBounds = (value: number) => Math.min(Math.max(value, bounds.min), bounds.max);
+
+  // How long a place of the played order lasts at a tempo, in seconds. The
+  // tempo is counted in the beat of the start; the measures in quarter notes.
+  const secondsAt = useCallback(
+    (index: number, tempo: number) =>
+      ((measures[played[index] ?? 0]?.quarters ?? 4) * 60) / (tempo * timeline.beatQuarters),
+    [measures, played, timeline.beatQuarters],
   );
+  const origin = useRef({ at: 0, time: 0 });
 
   // ---- The MIDI player, when it drives the score ----
   const engine = useRef<MidiEngine | null>(null);
-  const fileBpm = midi ? countedBpm(midi) : 120;
-  const midiBandBpm = song.bpm ?? Math.round(fileBpm);
-  const [settings, setSettings] = useMidiSettings(song.id, midiBandBpm, midi?.tracks.length ?? 0);
+  const [midiSettings, setMidiSettings] = useMidiSettings(
+    song.id,
+    song.bpm ?? Math.round(fileBpm),
+    midi?.tracks.length ?? 0,
+  );
   const [sounds, setSounds] = useState<Sounds>('waiting');
   // The clock of the device did not start (issue #70).
   const [isSilent, setSilent] = useState(false);
-  // One engine, made when the member first opens the sheet, kept until the
-  // Live mode closes: its sounds load while the member sets the tracks.
+  // One engine, made when the member first turns the switch on, kept until
+  // the Live mode closes.
   const engineFor = (file: MidiSong) => {
     if (engine.current) return engine.current;
     const created = new MidiEngine(file);
+    created.onSounds = setSounds;
     // What was set before, here or in the MIDI mode, from the first note.
-    settings.muted.forEach((isMuted, index) => {
+    midiSettings.muted.forEach((isMuted, index) => {
       created.setMuted(index, isMuted);
     });
-    created.setMutedVolume(mutedVolumeOf(settings.mutedStep));
-    created.setSpeed(settings.bpm / fileBpm);
-    created.onSounds = setSounds;
+    created.setMutedVolume(mutedVolumeOf(midiSettings.mutedStep));
+    created.setSpeed(bpmNow.current / fileBpm);
     created.onEnd = () => {
       setState('ready');
       setDriver('clock');
       setAt(0);
+      setBarsHidden(false);
     };
     engine.current = created;
     return created;
@@ -262,87 +280,119 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     },
     [],
   );
-  // The settings shared with the MIDI mode reach the engine as they change.
+  // The tracks shared with the MIDI mode, and the tempo, reach the engine as they change.
   useEffect(() => {
     const player = engine.current;
     if (!player) return;
-    settings.muted.forEach((isMuted, index) => {
+    midiSettings.muted.forEach((isMuted, index) => {
       player.setMuted(index, isMuted);
     });
-    player.setMutedVolume(mutedVolumeOf(settings.mutedStep));
-    player.setSpeed(settings.bpm / fileBpm);
-  }, [settings, fileBpm]);
+    player.setMutedVolume(mutedVolumeOf(midiSettings.mutedStep));
+  }, [midiSettings]);
+  useEffect(() => {
+    engine.current?.setSpeed(bpm / fileBpm);
+  }, [bpm, fileBpm]);
 
-  const playWithMidi = async () => {
+  const startMidi = async (from: number) => {
     if (!midi) return;
     const player = engineFor(midi);
     recording.pause();
-    player.seek(tickOfPlace(midi, at, played));
+    player.seek(tickOfPlace(midi, from, played));
+    setAt(from);
     setDriver('midi');
     setState('playing');
-    setPanel(null);
+    setBarsHidden(reading.hidesControls);
     setSilent(false);
     try {
       await player.play();
     } catch (error) {
       if (error instanceof ClockError) setSilent(true);
       else setSounds('failed');
-      setPanel('midi');
       setState('ready');
       setDriver('clock');
+      setBarsHidden(false);
     }
   };
-  // The chip of the MIDI player: the player pauses, and the sheet opens again.
-  const pauseMidi = () => {
+
+  const playFrom = (index: number, delayMs = 0) => {
+    recording.pause();
+    origin.current = { at: index, time: performance.now() + delayMs };
+    setAt(index);
+    setDriver('clock');
+    setState('playing');
+    setBarsHidden(reading.hidesControls);
+  };
+  const play = () => {
+    if (isMidiOn) void startMidi(at);
+    else playFrom(at);
+  };
+  const pause = () => {
     engine.current?.pause();
     setState('ready');
     setDriver('clock');
+    setBarsHidden(false);
+    setBeat(null);
   };
 
-  // While the MIDI player drives it, the score follows where the player is.
-  useEffect(() => {
-    if (state !== 'playing' || driver !== 'midi' || !midi) return;
-    let frame = 0;
-    const follow = () => {
-      const player = engine.current;
-      if (player) {
-        const measure = writtenAt(midi, player.position(), played);
-        const from = atNow.current;
-        // The same written measure nearest to where the score is, going on:
-        // inside a repeat this keeps the pass the player is in.
-        const after = played.indexOf(measure, from);
-        const place = after !== -1 ? after : Math.max(0, played.lastIndexOf(measure, from));
-        if (place !== from) setAt(place);
-      }
-      frame = window.requestAnimationFrame(follow);
-    };
-    frame = window.requestAnimationFrame(follow);
-    return () => window.cancelAnimationFrame(frame);
-  }, [state, driver, midi, played]);
+  // Where the clock says the song is.
+  const clockNow = useCallback((): Position => {
+    let index = origin.current.at;
+    let left = (performance.now() - origin.current.time) / 1000;
+    if (left < 0) return { index, fraction: 0 };
+    while (index < played.length && left >= secondsAt(index, bpmNow.current)) {
+      left -= secondsAt(index, bpmNow.current);
+      index += 1;
+    }
+    if (index >= played.length) return { index: played.length, fraction: 0 };
+    return { index, fraction: left / secondsAt(index, bpmNow.current) };
+  }, [played, secondsAt]);
 
-  // While playing, the clock says which measure the song is at.
-  useEffect(() => {
-    if (state !== 'playing' || driver !== 'clock') return;
-    let frame = 0;
-    const follow = () => {
-      let index = origin.current.at;
-      let left = (performance.now() - origin.current.time) / 1000;
-      while (index < played.length && left >= secondsOf(index)) {
-        left -= secondsOf(index);
-        index += 1;
-      }
-      if (index >= played.length) {
-        // The end: back to the start, ready to play again.
-        setState('ready');
-        setAt(0);
-        return;
-      }
-      setAt(index);
-      frame = window.requestAnimationFrame(follow);
-    };
-    frame = window.requestAnimationFrame(follow);
-    return () => window.cancelAnimationFrame(frame);
-  }, [state, driver, played, secondsOf]);
+  // Where the MIDI player is: the same written measure nearest to where the
+  // score is, going on, which keeps the pass of a repeat the player is in.
+  const midiNow = useCallback((): Position => {
+    const player = engine.current;
+    if (!player || !midi) return { index: atNow.current, fraction: 0 };
+    const tick = player.position();
+    const measure = writtenAt(midi, tick, played);
+    const from = atNow.current;
+    const after = played.indexOf(measure, from);
+    const index = after !== -1 ? after : Math.max(0, played.lastIndexOf(measure, from));
+    const { start, end } = measureTicks(midi, measureAt(midi, tick));
+    const fraction = end > start ? Math.min(1, Math.max(0, (tick - start) / (end - start))) : 0;
+    return { index, fraction };
+  }, [midi, played]);
+
+  // A tempo changed while the clock plays goes on from where the song is.
+  const changeBpm = (next: number) => {
+    const value = inBounds(next);
+    if (state === 'playing' && driver === 'clock') {
+      const now = clockNow();
+      origin.current = {
+        at: now.index,
+        time: performance.now() - now.fraction * secondsAt(now.index, value) * 1000,
+      };
+    }
+    bpmNow.current = value;
+    setBpm(value);
+  };
+
+  // Moves to a place of the played order, playing or not. The MIDI player,
+  // when it drives the score, goes there too.
+  const moveTo = (index: number) => {
+    const to = Math.min(Math.max(0, index), Math.max(0, played.length - 1));
+    origin.current = { at: to, time: performance.now() };
+    setAt(to);
+    if (driver === 'midi' && midi) engine.current?.seek(tickOfPlace(midi, to, played));
+  };
+  // The place of a written measure nearest to where the song is: before it
+  // when the member goes back, after it when they go on. Inside a repeat this
+  // keeps the pass the band is in.
+  const placeOf = (measure: number, back: boolean) => {
+    const before = played.lastIndexOf(measure, at);
+    const after = played.indexOf(measure, at);
+    const [first, second] = back ? [before, after] : [after, before];
+    return first !== -1 ? first : Math.max(0, second);
+  };
 
   // The screen stays on while the song plays; the device takes it back after.
   // A browser lets go of it when the app is hidden: it is asked again on return.
@@ -369,55 +419,31 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     };
   }, [state]);
 
-  const playFrom = (index: number, delayMs = 0) => {
-    recording.pause();
-    origin.current = { at: index, time: performance.now() + delayMs };
-    setAt(index);
-    setState('playing');
-  };
-  const pause = () => {
-    if (driver === 'midi') {
-      pauseMidi();
-      return;
-    }
-    setState('ready');
-  };
-  // Moves to a place of the played order, playing or not. The MIDI player,
-  // when it drives the score, goes there too.
-  const moveTo = (index: number) => {
-    const to = Math.min(Math.max(0, index), Math.max(0, played.length - 1));
-    origin.current = { at: to, time: performance.now() };
-    setAt(to);
-    if (driver === 'midi' && midi) engine.current?.seek(tickOfPlace(midi, to, played));
-  };
-  // The place of a written measure nearest to where the song is: before it
-  // when the member goes back, after it when they go on. Inside a repeat this
-  // keeps the pass the band is in.
-  const placeOf = (measure: number, back: boolean) => {
-    const before = played.lastIndexOf(measure, at);
-    const after = played.indexOf(measure, at);
-    const [first, second] = back ? [before, after] : [after, before];
-    return first !== -1 ? first : Math.max(0, second);
-  };
-
   // ---- The drawing ----
   const viewport = useRef<HTMLElement>(null);
+  // The drawing, and what moves it: the drawing and the playhead move together.
   const sheet = useRef<HTMLDivElement>(null);
+  const mover = useRef<HTMLDivElement>(null);
+  const playhead = useRef<HTMLDivElement>(null);
   const [drawing, setDrawing] = useState<'drawing' | 'drawn' | 'failed'>('drawing');
-  // For each line of the score: where it is, and the written measures it holds.
-  const [lines, setLines] = useState<{ top: number; height: number; measures: number[] }[]>([]);
-  const [width, setWidth] = useState(0);
-  const columns = columnsFor(width);
+  const [drawn, setDrawn] = useState<Drawn>({ lines: [], boxes: [] });
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  const isLandscape = isLandscapeSize(window.innerWidth, window.innerHeight);
+  const [layout, setLayout] = useState<'lines' | 'ribbon'>(isLandscape ? 'ribbon' : 'lines');
   const topBar = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
     let rest = 0;
-    setWidth(element.clientWidth);
+    const measure = () => {
+      setSize({ width: element.clientWidth, height: element.clientHeight });
+      setLayout(isLandscapeSize(window.innerWidth, window.innerHeight) ? 'ribbon' : 'lines');
+    };
+    measure();
     const observer = new ResizeObserver(() => {
       window.clearTimeout(rest);
-      rest = window.setTimeout(() => setWidth(element.clientWidth), RESIZE_REST_MS);
+      rest = window.setTimeout(measure, RESIZE_REST_MS);
     });
     observer.observe(element);
     return () => {
@@ -431,119 +457,195 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     topBar.current?.querySelector('button')?.focus();
   }, []);
 
+  const isRibbon = layout === 'ribbon';
   const partId = shown?.id;
   useEffect(() => {
-    if (!partId || width === 0) return;
+    if (!partId || size.width === 0 || !sheet.current) return;
     let isCurrent = true;
     setDrawing('drawing');
-    (async () => {
-      const toolkit = await newToolkit();
-      let svg = '';
-      try {
-        const scale = SCALE;
-        toolkit.setOptions({
-          // A score and nothing else: Verovio reads other formats too.
-          inputFrom: 'musicxml',
-          scale,
-          pageWidth: Math.round((width * 100) / scale / columns),
-          // One page as tall as the score: the screen does the scrolling.
-          pageHeight: 60000,
-          adjustPageHeight: true,
-          breaks: 'auto',
-          header: 'none',
-          footer: 'none',
-          pageMarginTop: 60,
-          pageMarginBottom: 60,
-          pageMarginLeft: 60,
-          pageMarginRight: 30,
-          spacingSystem: 4,
-          spacingStaff: 4,
-          justifyVertically: false,
-          // The number of every measure, as on the screens of Figma.
-          mnumInterval: 1,
-        });
-        // A score too long for one page would be cut: said, not shown in part.
-        if (toolkit.loadData(partAlone(score, partId)) && toolkit.getPageCount() === 1) {
-          svg = toolkit.renderToSVG(1);
+    drawPart(
+      sheet.current,
+      partAlone(score, partId),
+      {
+        width: Math.min(size.width, MAX_COLUMN),
+        scale: Math.round(((SCALE * reading.size) / 100) * (isRibbon ? 1.5 : 1)),
+        isRibbon,
+      },
+      measures.length,
+    )
+      .then((done) => {
+        if (!isCurrent) return;
+        if (!done) {
+          setDrawing('failed');
+          return;
         }
-      } finally {
-        toolkit.destroy();
-      }
-      if (!isCurrent || !sheet.current) return;
-      if (svg === '') {
-        setDrawing('failed');
-        return;
-      }
-      sheet.current.replaceChildren(safeDrawing(svg));
-      keepMarksInside(sheet.current);
-
-      // The lines as they were laid out for this width, each with its
-      // measures; from the tablet they are put side by side, row after row.
-      const base = sheet.current.getBoundingClientRect();
-      const systems = [...sheet.current.querySelectorAll<SVGGraphicsElement>('g.system')];
-      const drawn = sheet.current.querySelectorAll('g.measure').length;
-      const boxes = systems.map((system) => system.getBoundingClientRect());
-      const rows: { top: number; height: number; measures: number[] }[] = [];
-      let measure = 0;
-      let rowTop = (boxes[0]?.top ?? base.top) - base.top;
-      systems.forEach((system, index) => {
-        const box = boxes[index] as DOMRect;
-        const column = index % columns;
-        if (column === 0 && index > 0) {
-          rowTop += (rows[rows.length - 1]?.height ?? 0) + ROW_GAP;
-        }
-        if (column === 0) rows.push({ top: rowTop, height: 0, measures: [] });
-        const row = rows[rows.length - 1];
-        if (!row) return;
-        row.height = Math.max(row.height, box.height);
-
-        if (columns > 1) {
-          // From pixels of the screen to the units the drawing is written in.
-          const unit = system.getBBox().width / Math.max(1, box.width);
-          const right = (column * width) / columns;
-          const down = rowTop - (box.top - base.top);
-          system.setAttribute('transform', `translate(${right * unit}, ${down * unit})`);
-        }
-        // Should the drawing hold another number of measures than the score,
-        // each line takes its share of them.
-        const count = system.querySelectorAll('g.measure').length;
-        const from = Math.round((measure * measures.length) / Math.max(1, drawn));
-        measure += count;
-        const to = Math.round((measure * measures.length) / Math.max(1, drawn));
-        for (let held = from; held < Math.max(to, from + 1); held++) row.measures.push(held);
-      });
-      setLines(rows);
-      setDrawing('drawn');
-    })().catch(() => isCurrent && setDrawing('failed'));
+        setDrawn(done);
+        setDrawing('drawn');
+      })
+      .catch(() => isCurrent && setDrawing('failed'));
     return () => {
       isCurrent = false;
     };
-  }, [score, partId, width, columns, measures.length]);
+  }, [score, partId, size.width, isRibbon, reading.size, measures.length]);
 
-  const currentIndex = lines.findIndex((line) => line.measures.includes(written));
-  const currentLine = currentIndex === -1 ? 0 : currentIndex;
+  const { lines, boxes } = drawn;
+  const lineAt = useCallback(
+    (index: number) => boxes[played[Math.min(index, played.length - 1)] ?? 0]?.line ?? 0,
+    [boxes, played],
+  );
+  const currentLine = lineAt(at);
 
-  // The score is moved so that the line being played sits at the reading
-  // line; a drag adds to it until the member lets go.
-  const [dragged, setDragged] = useState(0);
-  const anchor = (viewport.current?.clientHeight ?? 0) * READING_LINE;
-  const offset = anchor - (lines[currentLine]?.top ?? 0) + dragged;
+  // Less motion: the quick jump, with no transition (base.css stops it).
+  const scrolling: Scrolling = isMotionReduced() ? 'quickJump' : reading.scrolling;
+
+  // How far the drawing is moved: the line being played at the reading line
+  // (or, in landscape, the music being played at the reading position), plus
+  // a drag until the member lets go.
+  const dragged = useRef(0);
+  const offsetFor = useCallback(
+    (now: Position) => {
+      const box = boxes[played[Math.min(now.index, played.length - 1)] ?? 0];
+      const fraction = isMotionReduced() ? 0 : now.fraction;
+      if (isRibbon) {
+        const x = box ? box.left + (box.right - box.left) * fraction : 0;
+        return READING_X - x + dragged.current;
+      }
+      const anchor = (viewport.current?.clientHeight ?? 0) * READING_LINE;
+      const line = lineAt(now.index);
+      let top = lines[line]?.top ?? 0;
+      if (scrolling === 'slowJump') {
+        // The move starts one beat before the line ends.
+        const quarters = measures[played[now.index] ?? 0]?.quarters ?? 4;
+        if (fraction + timeline.beatQuarters / quarters >= 1) {
+          top = lines[lineAt(now.index + 1)]?.top ?? top;
+        }
+      } else if (scrolling === 'continuous') {
+        // Between the start of this line and the start of the next one, as the
+        // measures of the line are played.
+        let start = now.index;
+        while (
+          start > 0 &&
+          lineAt(start - 1) === line &&
+          (played[start - 1] ?? 0) < (played[start] ?? 0)
+        ) {
+          start -= 1;
+        }
+        let end = now.index;
+        while (
+          end + 1 < played.length &&
+          lineAt(end + 1) === line &&
+          (played[end + 1] ?? 0) > (played[end] ?? 0)
+        ) {
+          end += 1;
+        }
+        const next = lines[end + 1 < played.length ? lineAt(end + 1) : line]?.top ?? top;
+        // A repeat goes back up at once: only going down is spread out.
+        if (next > top) top += (next - top) * ((now.index - start + fraction) / (end - start + 1));
+      }
+      return anchor - top + dragged.current;
+    },
+    [boxes, played, isRibbon, lineAt, lines, scrolling, measures, timeline.beatQuarters],
+  );
+
+  // Writes where the drawing is, and the playhead of the MIDI player.
+  const place = useCallback(
+    (now: Position, isMidi: boolean) => {
+      const element = mover.current;
+      if (!element) return;
+      const offset = offsetFor(now);
+      element.style.transform = isRibbon ? `translateX(${offset}px)` : `translateY(${offset}px)`;
+      const head = playhead.current;
+      if (!head) return;
+      const box = boxes[played[Math.min(now.index, played.length - 1)] ?? 0];
+      const line = box ? lines[box.line] : undefined;
+      head.hidden = !isMidi || isRibbon || !box || !line;
+      if (head.hidden || !box || !line) return;
+      head.style.transform = `translateX(${box.left + (box.right - box.left) * now.fraction}px)`;
+      head.style.top = `${line.top}px`;
+      head.style.height = `${line.height}px`;
+    },
+    [offsetFor, isRibbon, boxes, lines, played],
+  );
+
+  // While it plays, every frame: where the song is, the measure, the beat.
+  useEffect(() => {
+    if (state !== 'playing') return;
+    let frame = 0;
+    const follow = () => {
+      const now = driver === 'midi' ? midiNow() : clockNow();
+      if (now.index >= played.length) {
+        // The end: back to the start, ready to play again.
+        setState('ready');
+        setAt(0);
+        setBarsHidden(false);
+        setBeat(null);
+        return;
+      }
+      if (now.index !== atNow.current) {
+        atNow.current = now.index;
+        setAt(now.index);
+      }
+      const quarters = measures[played[now.index] ?? 0]?.quarters ?? 4;
+      const beats = Math.max(1, Math.round(quarters / timeline.beatQuarters));
+      setBeat(Math.min(beats - 1, Math.floor(now.fraction * beats)));
+      place(now, driver === 'midi');
+      frame = window.requestAnimationFrame(follow);
+    };
+    frame = window.requestAnimationFrame(follow);
+    return () => window.cancelAnimationFrame(frame);
+  }, [state, driver, midiNow, clockNow, played, measures, timeline.beatQuarters, place]);
+
+  // Not playing: the drawing stands at the place the song starts from.
+  useLayoutEffect(() => {
+    if (state !== 'playing') place({ index: at, fraction: 0 }, false);
+  }, [state, at, place]);
 
   // The lines already played stand back.
   // biome-ignore lint/correctness/useExhaustiveDependencies: marked again when the lines are drawn again, for another part or another width
   useEffect(() => {
     sheet.current?.querySelectorAll('g.system').forEach((system, index) => {
-      // Every line of a row already played, when lines sit side by side.
-      const row = Math.floor(index / columns);
-      system.toggleAttribute('data-played', state === 'playing' && row < currentLine);
+      system.toggleAttribute(
+        'data-played',
+        state === 'playing' && !isRibbon && index < currentLine,
+      );
     });
-  }, [currentLine, state, lines]);
+  }, [currentLine, state, lines, isRibbon]);
 
-  // Letting go of the score: the line now at the reading line is the one the
-  // band is at.
+  // ---- Moving the score by hand ----
+  const drag = useRef<{ from: number; moved: number } | null>(null);
+  const moveNow = () =>
+    place(
+      state === 'playing'
+        ? driver === 'midi'
+          ? midiNow()
+          : clockNow()
+        : { index: at, fraction: 0 },
+      driver === 'midi',
+    );
+  // Letting go of the score: the line (or, in landscape, the measure) now at
+  // the reading place is the one the band is at.
   const settle = (moved: number) => {
-    setDragged(0);
-    if (lines.length === 0 || moved === 0) return;
+    dragged.current = 0;
+    if (moved === 0 || lines.length === 0) {
+      moveNow();
+      return;
+    }
+    if (isRibbon) {
+      const box = boxes[written];
+      const wanted = (box?.left ?? 0) - moved;
+      let nearest = written;
+      boxes.forEach((other, measure) => {
+        if (
+          other &&
+          Math.abs(other.left - wanted) < Math.abs((boxes[nearest]?.left ?? 0) - wanted)
+        ) {
+          nearest = measure;
+        }
+      });
+      if (nearest !== written) moveTo(placeOf(nearest, nearest < written));
+      else moveNow();
+      return;
+    }
     const wanted = (lines[currentLine]?.top ?? 0) - moved;
     let nearest = 0;
     lines.forEach((line, index) => {
@@ -552,281 +654,318 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       }
     });
     const first = lines[nearest]?.measures[0];
-    if (nearest !== currentLine && first !== undefined) {
+    if (nearest !== currentLine && first !== undefined)
       moveTo(placeOf(first, nearest < currentLine));
-    }
+    else moveNow();
   };
-  const drag = useRef<{ from: number; moved: number } | null>(null);
-  const moveLines = (by: number) => {
+  const moveBy = (by: number) => {
+    if (isRibbon) {
+      moveTo(at + by);
+      return;
+    }
     const first = lines[Math.min(Math.max(0, currentLine + by), lines.length - 1)]?.measures[0];
     if (first !== undefined) moveTo(placeOf(first, by < 0));
   };
   const wheel = useRef({ turned: 0, movedAt: 0 });
-  const turn = (deltaY: number) => {
+  const turn = (delta: number) => {
     const now = performance.now();
-    wheel.current.turned += deltaY;
+    wheel.current.turned += delta;
     if (Math.abs(wheel.current.turned) < WHEEL_LINE) return;
     const by = wheel.current.turned > 0 ? 1 : -1;
     wheel.current.turned = 0;
     if (now - wheel.current.movedAt < WHEEL_REST_MS) return;
     wheel.current.movedAt = now;
-    moveLines(by);
+    moveBy(by);
   };
 
-  // ---- Giving the tempo by tapping ----
-  const { signature } = timeline;
-  // One measure of taps; two at least, to hear a tempo.
-  const tapsNeeded = Math.max(2, signature.beats);
-  const [taps, setTaps] = useState<number[]>([]);
-  // What the taps say so far, in counted beats a minute.
-  const tappedBpm = (() => {
-    if (taps.length < 2) return null;
-    const first = taps[0] ?? 0;
-    const last = taps[taps.length - 1] ?? 0;
-    const perTap = 60000 / ((last - first) / (taps.length - 1));
-    // In compound time the taps are eighths: three to a beat.
-    return Math.round(isCompound(signature) ? perTap / 3 : perTap);
-  })();
-  const tap = () => {
-    const now = performance.now();
-    const last = taps[taps.length - 1];
-    const next = last !== undefined && now - last > TAP_RESET_MS ? [now] : [...taps, now];
-    if (next.length < tapsNeeded) {
-      setTaps(next);
-      return;
+  // ---- The tempo tapped in its sheet ----
+  const tapped = (tempo: number, waitMs: number) => {
+    const value = inBounds(tempo);
+    bpmNow.current = value;
+    setBpm(value);
+    setPanel(null);
+    // The reading starts on the next 1, at that tempo.
+    if (isMidiOn) {
+      engine.current?.pause();
+      window.setTimeout(() => void startMidi(atNow.current), waitMs);
+    } else {
+      playFrom(at, waitMs);
     }
-    // The measure is counted: the song starts on the next 1, at that tempo.
-    const interval = (now - (next[0] ?? now)) / (next.length - 1);
-    const perTap = 60000 / interval;
-    setTaps([]);
-    // Two taps at the same instant say no tempo: the member starts again.
-    if (!Number.isFinite(perTap)) return;
-    setBpm(Math.max(20, Math.min(400, Math.round(isCompound(signature) ? perTap / 3 : perTap))));
-    playFrom(at, interval);
   };
 
   if (!shown) return null;
-  const isTapping = state === 'tapping';
+  const isPlaying = state === 'playing';
+  const isReady = drawing === 'drawn';
+  const hasMidiFile = midi !== null;
+  const showsBars = !(isPlaying && barsHidden);
+  const tickNow = () => {
+    if (!midi) return 0;
+    const player = engine.current;
+    return player?.isPlaying ? player.position() : tickOfPlace(midi, at, played);
+  };
+  const countedBeats = Math.max(
+    1,
+    Math.round((measures[written]?.quarters ?? 4) / timeline.beatQuarters),
+  );
+  const metronome = reading.hasMetronome && isPlaying && (
+    <div className="songs-liveMetronome">
+      <Metronome beats={countedBeats} current={beat} />
+    </div>
+  );
+  const settingsButton = (
+    <IconButton
+      kind="glass"
+      icon="Settings"
+      label={t('songs.live.settings.title')}
+      aria-haspopup="dialog"
+      onClick={() => setPanel('settings')}
+    />
+  );
 
   return (
-    <>
-      <header className="songs-liveTop" ref={topBar}>
-        <IconButton kind="glass" icon="Close" label={t('songs.live.close')} onClick={onClose} />
-        <div className="songs-liveTitle">
-          <h1 className="textHeading">{song.name}</h1>
-          <p className="textCaption songs-muted">{t('songs.live.mode')}</p>
-        </div>
-        <button
-          type="button"
-          className="songs-livePart textLabel"
-          aria-haspopup="dialog"
-          aria-label={t('songs.live.choosePart', { name: shown.name })}
-          onClick={() => setPanel('parts')}
-        >
-          <Pictogram name={shown.pictogram} size={16} />
-          <span>{shown.name}</span>
-        </button>
-      </header>
+    <div
+      className="songs-liveScreen"
+      data-layout={layout}
+      data-bars={showsBars ? 'shown' : 'hidden'}
+    >
+      {showsBars ? (
+        <header className="songs-liveTop" ref={topBar}>
+          <IconButton kind="glass" icon="Close" label={t('songs.live.close')} onClick={onClose} />
+          <div className="songs-liveTitle">
+            <h1 className="textHeading">{song.name}</h1>
+            <p className="textCaption songs-muted">{t('songs.live.mode')}</p>
+          </div>
+          {isRibbon && metronome}
+          {isRibbon && isPlaying && driver === 'midi' && (
+            <MidiChip
+              bpm={bpm}
+              tracks={midiSettings.muted.filter((isMuted) => !isMuted).length}
+              onPress={() => setPanel('settings')}
+            />
+          )}
+          {isPlaying && settingsButton}
+          <button
+            type="button"
+            className="songs-livePart textLabel"
+            aria-haspopup="dialog"
+            aria-label={t('songs.live.choosePart', { name: shown.name })}
+            onClick={() => setPanel('parts')}
+          >
+            <Pictogram name={shown.pictogram} size={16} />
+            <span>{shown.name}</span>
+          </button>
+        </header>
+      ) : (
+        isRibbon && <div className="songs-liveTop">{metronome}</div>
+      )}
+      {!isRibbon && metronome}
 
-      {/* The score stays in place while the tempo is given: it is drawn once
-          for its width, and the taps are counted over it. */}
       <div className="songs-liveBody">
         <section
           className="songs-liveScore"
           ref={viewport}
-          // The score is moved with the arrow keys, as it is dragged with a finger.
-          tabIndex={isTapping ? -1 : 0}
-          inert={isTapping}
-          aria-label={t('songs.live.score', { name: shown.name })}
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: the score is moved with the arrow keys, as it is dragged with a finger
+          tabIndex={0}
+          aria-label={t(isRibbon ? 'songs.live.scoreSideways' : 'songs.live.score', {
+            name: shown.name,
+          })}
           aria-busy={drawing === 'drawing'}
           onPointerDown={(event) => {
-            drag.current = { from: event.clientY, moved: 0 };
+            drag.current = { from: isRibbon ? event.clientX : event.clientY, moved: 0 };
             event.currentTarget.setPointerCapture(event.pointerId);
+            mover.current?.setAttribute('data-dragging', 'true');
           }}
           onPointerMove={(event) => {
             if (!drag.current) return;
-            drag.current.moved = event.clientY - drag.current.from;
-            setDragged(drag.current.moved);
+            drag.current.moved = (isRibbon ? event.clientX : event.clientY) - drag.current.from;
+            dragged.current = drag.current.moved;
+            if (state !== 'playing') moveNow();
           }}
           onPointerUp={() => {
-            settle(drag.current?.moved ?? 0);
+            const moved = drag.current?.moved ?? 0;
             drag.current = null;
+            mover.current?.removeAttribute('data-dragging');
+            // A tap on the score shows the bars again.
+            if (Math.abs(moved) < TAP_SLOP) {
+              dragged.current = 0;
+              if (!showsBars) setBarsHidden(false);
+              return;
+            }
+            settle(moved);
           }}
           onPointerCancel={() => {
-            setDragged(0);
+            dragged.current = 0;
             drag.current = null;
+            mover.current?.removeAttribute('data-dragging');
+            moveNow();
           }}
-          onWheel={(event) => turn(event.deltaY)}
+          onWheel={(event) => turn(isRibbon ? event.deltaX || event.deltaY : event.deltaY)}
           onKeyDown={(event) => {
-            if (event.key === 'ArrowDown') moveLines(1);
-            if (event.key === 'ArrowUp') moveLines(-1);
+            if (event.key === (isRibbon ? 'ArrowRight' : 'ArrowDown')) moveBy(1);
+            if (event.key === (isRibbon ? 'ArrowLeft' : 'ArrowUp')) moveBy(-1);
           }}
         >
           {drawing === 'failed' && <Message kind="danger">{t('songs.live.error')}</Message>}
           <div
-            className="songs-liveSheet"
-            ref={sheet}
-            data-dragging={dragged !== 0}
-            style={{ transform: `translateY(${offset}px)` }}
+            className="songs-liveMover"
+            ref={mover}
+            data-scrolling={isRibbon ? 'continuous' : scrolling}
             aria-hidden="true"
-          />
+          >
+            <div className="songs-liveSheet" ref={sheet} />
+            {/* Where the MIDI player is, inside the measure (1.1.0). */}
+            <div className="songs-livePlayhead" ref={playhead} hidden />
+          </div>
+          {isRibbon && (
+            <div
+              className="songs-liveReadingPlace"
+              data-midi={driver === 'midi' && isPlaying}
+              aria-hidden="true"
+            />
+          )}
         </section>
 
-        <div className="songs-liveControls" inert={isTapping}>
-          {state === 'playing' ? (
-            <>
-              <p className="songs-liveHint textCaption">{t('songs.live.dragHint')}</p>
-              {driver === 'midi' && (
-                <button
-                  type="button"
-                  className="songs-liveMidiChip"
-                  aria-haspopup="dialog"
-                  aria-describedby="songs-liveMidiChipDoes"
-                  onClick={() => {
-                    pauseMidi();
-                    setPanel('midi');
-                  }}
-                >
-                  <Chip kind="accent" icon="Piano">
-                    {t('songs.live.midi.following', {
-                      bpm: settings.bpm,
-                      count: settings.muted.filter((isMuted) => !isMuted).length,
-                    })}
-                  </Chip>
-                  <span className="visuallyHidden" id="songs-liveMidiChipDoes">
-                    {t('songs.live.midi.chipDoes')}
-                  </span>
-                </button>
-              )}
-              <div className="songs-liveBar">
-                {/* Not announced at each measure: a screen reader would never stop. */}
-                <p className="songs-liveTile" data-tile="measure">
-                  <span className="textMicro songs-muted">{t('songs.live.measure')}</span>
-                  <span className="textTitle">{label}</span>
-                </p>
-                <button
-                  type="button"
-                  className="songs-audioPlay"
-                  aria-label={t('songs.player.pause')}
-                  onClick={pause}
-                >
-                  <Icon name="Pause" size={32} />
-                </button>
-                <p className="songs-liveTile" data-tile="tempo">
-                  <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>
-                  <span className="textTitle">{driver === 'midi' ? settings.bpm : bpm}</span>
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="songs-liveStart"
-                aria-haspopup="dialog"
-                onClick={() => setPanel('start')}
-              >
-                <Icon name="Flag" size={20} />
-                <span className="songs-liveStartTexts">
-                  <span className="textMicro songs-muted">{t('songs.live.startsAt')}</span>
-                  <span className="textLabel">
-                    {startMark
-                      ? t('songs.live.measureAndMark', { measure: label, mark: startMark.name })
-                      : t('songs.live.measureNumber', { measure: label })}
-                  </span>
-                </span>
-                <Icon name="ChevronDown" size={20} />
-              </button>
-              <IconButton
-                kind="glass"
-                icon="Piano"
-                label={t('songs.live.midi.open')}
-                aria-haspopup="dialog"
-                aria-describedby={
-                  !midi && (song.midi === null || midiFailed) ? 'songs-liveNoMidi' : undefined
-                }
-                disabled={!midi || drawing !== 'drawn'}
-                onClick={() => {
-                  if (!midi) return;
-                  engineFor(midi);
-                  setPanel('midi');
-                }}
+        {showsBars ? (
+          <div className="songs-liveControlsWrap">
+            {isPlaying && driver === 'midi' && !isRibbon && (
+              <MidiChip
+                bpm={bpm}
+                tracks={midiSettings.muted.filter((isMuted) => !isMuted).length}
+                onPress={() => setPanel('settings')}
               />
-              {!midi && (song.midi === null || midiFailed) && (
-                <p className="songs-liveNoMidi textCaption songs-muted" id="songs-liveNoMidi">
-                  {t(midiFailed ? 'songs.live.midi.failed' : 'songs.live.midi.none')}
+            )}
+            <div className="songs-liveControls">
+              {isPlaying ? (
+                <>
+                  {!isRibbon && (
+                    <div className="songs-liveHintRow">
+                      <p className="songs-liveHint textCaption">{t('songs.live.dragHint')}</p>
+                      <IconButton
+                        kind="plain"
+                        icon="ChevronDown"
+                        label={t('songs.live.hideBars')}
+                        onClick={() => setBarsHidden(true)}
+                      />
+                    </div>
+                  )}
+                  <div className="songs-liveBar">
+                    {/* Not announced at each measure: a screen reader would never stop. */}
+                    <p className="songs-liveTile" data-tile="measure">
+                      <span className="textMicro songs-muted">{t('songs.live.measure')}</span>
+                      <span className="textTitle">{label}</span>
+                    </p>
+                    <button
+                      type="button"
+                      className="songs-audioPlay"
+                      aria-label={t('songs.player.pause')}
+                      onClick={pause}
+                    >
+                      <Icon name="Pause" size={32} />
+                    </button>
+                    <TempoTile bpm={bpm} onPress={() => setPanel('tempo')} />
+                  </div>
+                  {isRibbon && (
+                    <IconButton
+                      kind="plain"
+                      icon="ChevronRight"
+                      label={t('songs.live.hideBars')}
+                      onClick={() => setBarsHidden(true)}
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="songs-liveStart"
+                    aria-haspopup="dialog"
+                    onClick={() => setPanel('start')}
+                  >
+                    <Icon name="Flag" size={20} />
+                    <span className="songs-liveStartTexts">
+                      <span className="textMicro songs-muted">{t('songs.live.startsAt')}</span>
+                      <span className="textLabel">
+                        {startMark
+                          ? t('songs.live.measureAndMark', { measure: label, mark: startMark.name })
+                          : t('songs.live.measureNumber', { measure: label })}
+                      </span>
+                    </span>
+                    <Icon name="ChevronDown" size={20} />
+                  </button>
+                  {!isRibbon && (
+                    <SwitchRow
+                      label={t('songs.live.midi.switch')}
+                      description={
+                        hasMidiFile
+                          ? t('songs.live.midi.switchHint')
+                          : t(midiFailed ? 'songs.live.midi.failed' : 'songs.live.midi.none')
+                      }
+                      checked={isMidiOn}
+                      disabled={!hasMidiFile}
+                      onChange={(isOn) => {
+                        setMidiOn(isOn);
+                        if (!isOn || !midi) return;
+                        // Within the bounds of the player; its sounds start loading now.
+                        const { slowest, fastest } = tempoRange(
+                          fileBpm,
+                          song.bpm ?? Math.round(fileBpm),
+                        );
+                        changeBpm(Math.min(Math.max(bpm, slowest), fastest));
+                        engineFor(midi).prime();
+                      }}
+                    />
+                  )}
+                  {isMidiOn && sounds === 'failed' && (
+                    <Message kind="danger">{t('songs.midi.soundsError')}</Message>
+                  )}
+                  {isMidiOn && isSilent && <SilentClock onRetry={play} />}
+                  <div className="songs-liveBar">
+                    <TempoTile
+                      bpm={bpm}
+                      withUnit
+                      disabled={!isReady}
+                      onPress={() => setPanel('tempo')}
+                    />
+                    <button
+                      type="button"
+                      className="songs-audioPlay"
+                      aria-label={t('songs.player.play')}
+                      disabled={!isReady || (isMidiOn && sounds === 'failed')}
+                      onClick={play}
+                    >
+                      <Icon name="Play" size={32} />
+                    </button>
+                    <button
+                      type="button"
+                      className="songs-liveTile"
+                      aria-haspopup="dialog"
+                      data-tile="settings"
+                      onClick={() => setPanel('settings')}
+                    >
+                      <Icon name="Settings" size={24} />
+                      <span className="textMicro">{t('songs.live.settingsOpen')}</span>
+                    </button>
+                  </div>
+                </>
+              )}
+              {isMidiOn && sounds === 'loading' && (isPlaying || engine.current) && (
+                <p role="status" className="textCaption songs-muted songs-liveSounds">
+                  {t('songs.midi.soundsLoading')}
                 </p>
               )}
-              <div className="songs-liveBar">
-                <p className="songs-liveTile" data-tile="tempo">
-                  <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>
-                  <span className="textTitle">{bpm}</span>
-                  <span className="textMicro songs-muted">{t('songs.midi.bpmUnit')}</span>
-                </p>
-                <button
-                  type="button"
-                  className="songs-audioPlay"
-                  aria-label={t('songs.player.play')}
-                  disabled={drawing !== 'drawn'}
-                  onClick={() => playFrom(at)}
-                >
-                  <Icon name="Play" size={32} />
-                </button>
-                <button
-                  type="button"
-                  className="songs-liveTile"
-                  disabled={drawing !== 'drawn'}
-                  onClick={() => {
-                    setTaps([]);
-                    setState('tapping');
-                  }}
-                >
-                  <Icon name="Timer" size={20} />
-                  <span className="textMicro">{t('songs.live.giveTempo')}</span>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {isTapping && (
-          <div className="songs-liveTapping">
-            <button type="button" className="songs-liveTap" onClick={tap}>
-              <span className="textTitle">{t('songs.live.tapTitle')}</span>
-              {isCompound(signature) && (
-                <span className="songs-muted">{t('songs.live.tapEighths')}</span>
-              )}
-              <span className="songs-liveTapCount textDisplay" aria-hidden="true">
-                {taps.length === 0 ? '' : taps.length}
-              </span>
-              <span className="songs-liveTapDots" aria-hidden="true">
-                {Array.from({ length: tapsNeeded }, (_, index) => (
-                  <span
-                    // biome-ignore lint/suspicious/noArrayIndexKey: the dots of a measure never change places
-                    key={index}
-                    className="songs-liveTapDot"
-                    data-done={index < taps.length}
-                  />
-                ))}
-              </span>
-            </button>
-            {/* Beside the button, not in it: said when it changes, not as its name. */}
-            <p className="songs-liveTapSaid" role="status">
-              {tappedBpm === null
-                ? t('songs.live.tapStart', { count: tapsNeeded })
-                : t('songs.live.tapSoFar', { bpm: tappedBpm, count: tapsNeeded - taps.length })}
-            </p>
-            <div className="songs-liveCancel">
-              <Button
-                kind="secondary"
-                onClick={() => {
-                  setTaps([]);
-                  setState('ready');
-                }}
-              >
-                {t('songs.live.cancel')}
-              </Button>
             </div>
+          </div>
+        ) : (
+          // The bars hidden: a handle shows them again.
+          <div className="songs-liveHandleWrap">
+            <button type="button" className="songs-liveHandle" onClick={() => setBarsHidden(false)}>
+              <span className="textMicro songs-muted">{t('songs.live.measure')}</span>
+              <span className="textHeading">{label}</span>
+              <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>
+              <span className="textHeading">{bpm}</span>
+              <Icon name="ChevronUp" size={24} />
+              <span className="visuallyHidden">{t('songs.live.showBars')}</span>
+            </button>
           </div>
         )}
       </div>
@@ -853,27 +992,6 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       </Panel>
 
       <Panel
-        open={panel === 'midi'}
-        onClose={() => setPanel(null)}
-        title={t('songs.live.midi.title')}
-      >
-        {panel === 'midi' && midi && (
-          <MidiChoice
-            midi={midi}
-            settings={settings}
-            onChange={setSettings}
-            bandBpm={midiBandBpm}
-            fileBpm={fileBpm}
-            measure={label}
-            total={measures.length}
-            sounds={sounds}
-            isSilent={isSilent}
-            onPlay={playWithMidi}
-          />
-        )}
-      </Panel>
-
-      <Panel
         open={panel === 'start'}
         onClose={() => setPanel(null)}
         title={t('songs.live.startTitle')}
@@ -889,285 +1007,91 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
           />
         )}
       </Panel>
-    </>
-  );
-}
 
-type MidiChoiceProps = {
-  midi: MidiSong;
-  settings: ReturnType<typeof useMidiSettings>[0];
-  onChange: ReturnType<typeof useMidiSettings>[1];
-  bandBpm: number;
-  fileBpm: number;
-  /** The measure the score starts from, as it is written: "33". */
-  measure: string;
-  total: number;
-  sounds: Sounds;
-  isSilent: boolean;
-  onPlay: () => void;
-};
+      <Panel
+        open={panel === 'tempo'}
+        onClose={() => setPanel(null)}
+        title={t('songs.live.tempo.title')}
+      >
+        {panel === 'tempo' && (
+          <TempoSheet
+            bpm={bpm}
+            bandBpm={bandBpm}
+            fileBpm={scoreBpm}
+            signature={timeline.signature}
+            onBpm={changeBpm}
+            onFirstTap={() => {
+              if (isMidiOn && midi) engineFor(midi).prime();
+            }}
+            onTapped={tapped}
+          />
+        )}
+      </Panel>
 
-// Figma: Songs / Song — Live, the MIDI sheet (Songs › 14). The settings of
-// the MIDI mode, shared with it: the tracks and their mute, one line each
-// (no lane of notes here, owner, 2026-10-16), the tempo, the volume of the cut
-// tracks; the loop is not offered. Its button starts the player from the
-// measure chosen.
-function MidiChoice(props: MidiChoiceProps) {
-  const { midi, settings, onChange, bandBpm, fileBpm, measure, total, sounds, isSilent, onPlay } =
-    props;
-  const { t } = useTranslation();
-  const { tracks } = useTracks(midi);
-  const { slowest, fastest } = tempoRange(fileBpm, bandBpm);
-  const hasMuted = settings.muted.some(Boolean);
-
-  return (
-    <div className="songs-panel songs-liveMidi">
-      <p className="songs-muted">{t('songs.live.midi.lead')}</p>
-      {sounds === 'failed' && <Message kind="danger">{t('songs.midi.soundsError')}</Message>}
-      {isSilent && <SilentClock onRetry={onPlay} />}
-      <section className="songs-midiTracks" aria-label={t('songs.midi.tracks')}>
-        <div className="songs-midiHeading">
-          <span className="textLabel songs-muted">
-            {t('songs.midi.measure', { measure, total })}
-          </span>
-          {hasMuted && (
-            <button
-              type="button"
-              className="songs-textButton textLabel"
-              onClick={() => onChange({ muted: settings.muted.map(() => false) })}
-            >
-              {t('songs.midi.unmuteAll')}
-            </button>
-          )}
-        </div>
-        <ul className="songs-liveMidiTracks">
-          {tracks.map(({ name, pictogram, own }, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: two tracks may carry the same name
-            <li key={index}>
-              <SongPartTrack
-                name={name}
-                pictogram={pictogram}
-                own={own}
-                muted={settings.muted[index]}
-                onToggleMute={() =>
-                  onChange({
-                    muted: settings.muted.map((value, at) => (at === index ? !value : value)),
-                  })
-                }
-                ownLabel={t('songs.midi.ownTrack')}
-                muteLabel={t('songs.midi.mute', { name })}
-              />
-            </li>
-          ))}
-        </ul>
-      </section>
-      <TempoAndVolume
-        bandBpm={bandBpm}
-        bpm={settings.bpm}
-        onBpm={(bpm) => onChange({ bpm: Math.min(Math.max(bpm, slowest), fastest) })}
-        mutedStep={settings.mutedStep}
-        onMutedStep={(mutedStep) => onChange({ mutedStep })}
-      />
-      <Button icon="Piano" disabled={sounds === 'failed'} onClick={onPlay}>
-        {t('songs.live.midi.play')}
-      </Button>
-      {sounds === 'loading' && (
-        <p role="status" className="textCaption songs-muted">
-          {t('songs.midi.soundsLoading')}
-        </p>
-      )}
+      <Panel
+        open={panel === 'settings'}
+        onClose={() => setPanel(null)}
+        title={t('songs.live.settings.title')}
+      >
+        {panel === 'settings' && (
+          <ReadingSettings
+            settings={reading}
+            onChange={setReading}
+            midi={midi}
+            midiSettings={midiSettings}
+            onMidiChange={setMidiSettings}
+            tickNow={tickNow}
+          />
+        )}
+      </Panel>
     </div>
   );
 }
 
-type StartChoiceProps = {
-  timeline: Timeline;
-  /** The written measure the song would start from now. */
-  current: number;
-  onStart: (measure: number) => void;
+type TempoTileProps = {
+  bpm: number;
+  /** "bpm" under the number, when the song is ready to start. */
+  withUnit?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
 };
 
-// Figma: Songs / Song — Live, choosing where to start. The number of the
-// measure is typed, or adjusted; the rehearsal marks of the score are offered
-// when it has some.
-function StartChoice({ timeline, current, onStart }: StartChoiceProps) {
+/** Figma: the Tempo tile, a button that opens the Tempo sheet (1.1.0, issue #74). */
+function TempoTile({ bpm, withUnit, disabled, onPress }: TempoTileProps) {
   const { t } = useTranslation();
-  const { measures, marks } = timeline;
-  const [typed, setTyped] = useState(measures[current]?.label ?? '1');
-  const found = measures.findIndex((measure) => measure.label === typed.trim());
-  const step = (by: number) => {
-    const to = Math.min(Math.max(0, (found === -1 ? current : found) + by), measures.length - 1);
-    setTyped(measures[to]?.label ?? typed);
-  };
-  const places = [{ name: t('songs.live.beginning'), measure: 0 }, ...marks];
-
   return (
-    <form
-      className="songs-panel"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (found !== -1) onStart(found);
-      }}
+    <button
+      type="button"
+      className="songs-liveTile"
+      data-tile="tempo"
+      aria-haspopup="dialog"
+      disabled={disabled}
+      onClick={onPress}
     >
-      <div className="songs-liveMeasure">
-        <TextField
-          label={t('songs.live.measure')}
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-          inputMode="numeric"
-          error={
-            found === -1 ? t('songs.live.noSuchMeasure', { count: measures.length }) : undefined
-          }
-        />
-        <IconButton
-          kind="control"
-          icon="Minus"
-          label={t('songs.live.measureBefore')}
-          onClick={() => step(-1)}
-        />
-        <IconButton
-          kind="control"
-          icon="Plus"
-          label={t('songs.live.measureAfter')}
-          onClick={() => step(1)}
-        />
-      </div>
-      {marks.length > 0 && (
-        <>
-          <h3 className="textLabel">{t('songs.live.marks')}</h3>
-          <div className="songs-liveMarks">
-            {places.map((place) => (
-              <FilterChip
-                key={`${place.measure}-${place.name}`}
-                pressed={found === place.measure}
-                onChange={() => setTyped(measures[place.measure]?.label ?? '1')}
-              >
-                {t('songs.live.markAt', {
-                  mark: place.name,
-                  measure: measures[place.measure]?.label ?? '1',
-                })}
-              </FilterChip>
-            ))}
-          </div>
-        </>
-      )}
-      <Button type="submit" disabled={found === -1}>
-        {found === -1
-          ? t('songs.live.startChoose')
-          : t('songs.live.startAt', { measure: measures[found]?.label })}
-      </Button>
-    </form>
+      <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>
+      <span className="textTitle">{bpm}</span>
+      {withUnit && <span className="textMicro songs-muted">{t('songs.midi.bpmUnit')}</span>}
+    </button>
   );
 }
 
-// What a drawing of a score is made of. Anything else has no place in it.
-const DRAWN = new Set([
-  'svg',
-  'g',
-  'defs',
-  'symbol',
-  'use',
-  'path',
-  'rect',
-  'ellipse',
-  'circle',
-  'line',
-  'polyline',
-  'polygon',
-  'text',
-  'tspan',
-  'title',
-  'desc',
-]);
-const DRAWN_ATTRIBUTES = new Set([
-  'id',
-  'class',
-  'd',
-  'x',
-  'y',
-  'x1',
-  'y1',
-  'x2',
-  'y2',
-  'cx',
-  'cy',
-  'r',
-  'rx',
-  'ry',
-  'dx',
-  'dy',
-  'width',
-  'height',
-  'points',
-  'transform',
-  'viewBox',
-  'overflow',
-  'version',
-  'fill',
-  'fill-opacity',
-  'fill-rule',
-  'stroke',
-  'stroke-width',
-  'stroke-opacity',
-  'stroke-linecap',
-  'stroke-linejoin',
-  'stroke-dasharray',
-  'opacity',
-  'color',
-  'font-family',
-  'font-size',
-  'font-style',
-  'font-weight',
-  'text-anchor',
-  'text-decoration',
-  'xml:space',
-  'data-id',
-]);
-
-/**
- * The drawing of Verovio as elements of the page. It is built from a file a
- * member sent, so nothing is trusted: only the shapes and the texts of a
- * drawing are kept, with the attributes that draw them. No style, no link out
- * of the drawing, nothing that runs.
- */
-function safeDrawing(svg: string): Node {
-  const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
-  const SVG = 'http://www.w3.org/2000/svg';
-  for (const element of [...parsed.querySelectorAll('*')]) {
-    if (element.namespaceURI !== SVG || !DRAWN.has(element.localName)) {
-      element.remove();
-      continue;
-    }
-    for (const attribute of [...element.attributes]) {
-      const isOwnLink =
-        (attribute.name === 'href' || attribute.name === 'xlink:href') &&
-        element.localName === 'use' &&
-        attribute.value.startsWith('#');
-      if (!isOwnLink && !DRAWN_ATTRIBUTES.has(attribute.name)) {
-        element.removeAttribute(attribute.name);
-      }
-    }
-  }
-  return document.importNode(parsed.documentElement, true);
-}
-
-// A rehearsal mark is centred on the start of its measure: at the start or
-// at the end of a line it would be cut by the edge of the screen. It is moved
-// just enough to be read whole.
-function keepMarksInside(sheet: HTMLElement) {
-  // The page Verovio drew: one column of the screen from the tablet.
-  const edge = (sheet.querySelector('svg') ?? sheet).getBoundingClientRect();
-  const margin = 8;
-  for (const mark of sheet.querySelectorAll<SVGGraphicsElement>('g.reh')) {
-    const box = mark.getBoundingClientRect();
-    const drawn = mark.getBBox();
-    if (box.width === 0 || drawn.width === 0) continue;
-    const overLeft = edge.left + margin - box.left;
-    const overRight = box.right - (edge.right - margin);
-    const move = overLeft > 0 ? overLeft : overRight > 0 ? -overRight : 0;
-    // From pixels of the screen to the units the drawing is written in.
-    if (move !== 0) {
-      mark.setAttribute('transform', `translate(${(move * drawn.width) / box.width}, 0)`);
-    }
-  }
+/** Figma: the chip "Suit le MIDI" above the controls; it opens the reading settings. */
+function MidiChip({ bpm, tracks, onPress }: { bpm: number; tracks: number; onPress: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      className="songs-liveMidiChip"
+      aria-haspopup="dialog"
+      aria-describedby="songs-liveMidiChipDoes"
+      onClick={onPress}
+    >
+      <Chip kind="accent" icon="Piano">
+        {t('songs.live.midi.following', { bpm, count: tracks })}
+      </Chip>
+      <span className="visuallyHidden" id="songs-liveMidiChipDoes">
+        {t('songs.live.midi.chipDoes')}
+      </span>
+    </button>
+  );
 }

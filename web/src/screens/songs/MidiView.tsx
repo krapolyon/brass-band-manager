@@ -148,7 +148,7 @@ type TempoAndVolumeProps = {
   onMutedStep: (step: number) => void;
 };
 
-/** Figma: the tempo and the volume of the cut tracks, in the MIDI mode and in its sheet of the Live mode. */
+/** Figma: the tempo and the volume of the cut tracks, in the MIDI mode. */
 export function TempoAndVolume({
   bandBpm,
   bpm,
@@ -157,55 +157,81 @@ export function TempoAndVolume({
   onMutedStep,
 }: TempoAndVolumeProps) {
   const { t } = useTranslation();
-  const sliderLabel = useId();
-  const mutedPercent = t('songs.midi.percent', { value: mutedStep * 5 });
   return (
     <>
-      <div className="songs-midiTempo">
-        <span className="songs-midiTempoTexts">
-          <span className="textLabel">{t('songs.midi.tempo')}</span>
-          <span className="textCaption songs-muted">
-            {t('songs.midi.bandTempo', { bpm: bandBpm })}
-          </span>
-        </span>
-        <IconButton
-          kind="control"
-          icon="Minus"
-          label={t('songs.midi.slower')}
-          onClick={() => onBpm(bpm - BPM_STEP)}
-        />
-        <output className="songs-midiTempoValue" aria-label={t('songs.midi.bpm', { bpm })}>
-          <span className="textHeading">{bpm}</span>
-          <span className="textMicro songs-muted">{t('songs.midi.bpmUnit')}</span>
-        </output>
-        <IconButton
-          kind="control"
-          icon="Plus"
-          label={t('songs.midi.faster')}
-          onClick={() => onBpm(bpm + BPM_STEP)}
-        />
-      </div>
-
-      <div className="songs-midiVolume">
-        <div className="songs-midiVolumeLabel">
-          <span id={sliderLabel} className="textLabel">
-            {t('songs.midi.mutedVolume')}
-          </span>
-          <span className="textLabel songs-accent">{mutedPercent}</span>
-        </div>
-        <Slider
-          steps={MUTED_STEPS}
-          step={mutedStep}
-          onChange={onMutedStep}
-          labelledBy={sliderLabel}
-          valueText={mutedPercent}
-        />
-        <div className="songs-midiVolumeLabel textCaption songs-muted">
-          <span>{t('songs.midi.silent')}</span>
-          <span>{t('songs.midi.percent', { value: (MUTED_STEPS - 1) * 5 })}</span>
-        </div>
-      </div>
+      <TempoSetting
+        label={t('songs.midi.tempo')}
+        hint={t('songs.midi.bandTempo', { bpm: bandBpm })}
+        bpm={bpm}
+        onBpm={onBpm}
+      />
+      <MutedVolume step={mutedStep} onStep={onMutedStep} />
     </>
+  );
+}
+
+type TempoSettingProps = {
+  label: string;
+  hint: string;
+  bpm: number;
+  /** Given the tempo asked, one step away; whoever owns it keeps it within its bounds. */
+  onBpm: (bpm: number) => void;
+};
+
+/** Figma: the tempo set with − and +, by 4: in the MIDI mode, and in the Tempo sheet of the Live mode. */
+export function TempoSetting({ label, hint, bpm, onBpm }: TempoSettingProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="songs-midiTempo">
+      <span className="songs-midiTempoTexts">
+        <span className="textLabel">{label}</span>
+        <span className="textCaption songs-muted">{hint}</span>
+      </span>
+      <IconButton
+        kind="control"
+        icon="Minus"
+        label={t('songs.midi.slower')}
+        onClick={() => onBpm(bpm - BPM_STEP)}
+      />
+      <output className="songs-midiTempoValue" aria-label={t('songs.midi.bpm', { bpm })}>
+        <span className="textHeading">{bpm}</span>
+        <span className="textMicro songs-muted">{t('songs.midi.bpmUnit')}</span>
+      </output>
+      <IconButton
+        kind="control"
+        icon="Plus"
+        label={t('songs.midi.faster')}
+        onClick={() => onBpm(bpm + BPM_STEP)}
+      />
+    </div>
+  );
+}
+
+/** Figma: the volume of the cut tracks, in the MIDI mode and in the reading settings of the Live mode. */
+export function MutedVolume({ step, onStep }: { step: number; onStep: (step: number) => void }) {
+  const { t } = useTranslation();
+  const sliderLabel = useId();
+  const mutedPercent = t('songs.midi.percent', { value: step * 5 });
+  return (
+    <div className="songs-midiVolume">
+      <div className="songs-midiVolumeLabel">
+        <span id={sliderLabel} className="textLabel">
+          {t('songs.midi.mutedVolume')}
+        </span>
+        <span className="textLabel songs-accent">{mutedPercent}</span>
+      </div>
+      <Slider
+        steps={MUTED_STEPS}
+        step={step}
+        onChange={onStep}
+        labelledBy={sliderLabel}
+        valueText={mutedPercent}
+      />
+      <div className="songs-midiVolumeLabel textCaption songs-muted">
+        <span>{t('songs.midi.silent')}</span>
+        <span>{t('songs.midi.percent', { value: (MUTED_STEPS - 1) * 5 })}</span>
+      </div>
+    </div>
   );
 }
 
@@ -602,7 +628,12 @@ function LoopChoice({ total, marks, range, isLooping, onLoop, onStop }: LoopChoi
 
 // Draws the notes of a track around a tick: each a rounded bar, as long as
 // the note lasts, placed by its pitch. The colours are those of the screen.
-function drawLane(canvas: HTMLCanvasElement, song: MidiSong, track: MidiTrack, tick: number) {
+export function drawLane(
+  canvas: HTMLCanvasElement,
+  song: MidiSong,
+  track: MidiTrack,
+  tick: number,
+) {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   if (width === 0 || height === 0) return;

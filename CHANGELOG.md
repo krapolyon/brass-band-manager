@@ -9,6 +9,14 @@ What changes in the app, version after version. This file is written by
 
 - Sending an invitation again confirms it, and shows the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email.
 - When editing a song, “Ne pas prévenir la fanfare” saves its files without any notification, for a technical correction.
+- On a phone held sideways, the Live mode shows the score as one line that scrolls to the left, the controls at the right.
+- Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing.
+
+### Changed
+
+- On a tablet or a computer, the Live mode shows the score as one column at the width of the screen, never in two or three columns side by side.
+- The tempo of the Live mode is set in one place: a tap on the tempo opens a sheet to set it with − and +, or to tap it.
+- Playing the Live mode with the MIDI is a switch beside Play; the tracks of the MIDI are set in the new reading settings, and a line shows where the MIDI is in the measure.
 
 ### Fixed
 
