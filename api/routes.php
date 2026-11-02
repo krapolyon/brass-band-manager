@@ -325,7 +325,7 @@ return function (App $app, Connection $database, array $config): void {
         // 3. One's own record or one's own gig, or a permission
         // ---------------------------------------------------------------
         $selfOrManager = new RequireSelfOrPermission(Permission::MANAGE_MEMBERS);
-        $group->put('/api/members/{id:[0-9]+}', new UpdateMemberAction($database, $members, $record))
+        $group->put('/api/members/{id:[0-9]+}', new UpdateMemberAction($database, $members, $record, $links, $invitations))
             ->add($selfOrManager);
         $group->put('/api/members/{id:[0-9]+}/photo', new UpdatePhotoAction($members, $photos, removes: false))
             ->add($selfOrManager);
