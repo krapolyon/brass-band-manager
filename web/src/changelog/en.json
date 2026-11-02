@@ -66,6 +66,14 @@
       {
         "kind": "changed",
         "text": "The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses."
+      },
+      {
+        "kind": "fixed",
+        "text": "In the Live mode, the score no longer stands still while it plays after the phone turned or a sheet closed."
+      },
+      {
+        "kind": "fixed",
+        "text": "On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too."
       }
     ]
   },

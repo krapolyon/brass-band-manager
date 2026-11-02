@@ -29,6 +29,8 @@ What changes in the app, version after version. This file is written by
 - In the list of songs, the filters “Proposés” and “Abandonnés” show those songs alone, one filter at a time.
 - In the Live mode with the MIDI, the line that shows where the MIDI is moves smoothly, on the note being heard, even with a Bluetooth headset.
 - The beat being played of the visual metronome no longer pushes the others aside.
+- In the Live mode, the score no longer stands still while it plays after the phone turned or a sheet closed.
+- On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too.
 
 ## 1.0.0 — 2026-10-24
 

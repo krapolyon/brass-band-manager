@@ -1490,6 +1490,23 @@ test.describe('the Live mode', () => {
     await expect(metronome).not.toBeChecked();
   });
 
+  test('the score goes on when the browser stops giving frames while it plays', async ({
+    page,
+  }) => {
+    await withScore(page, 'repeat');
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(measure(page)).toContainText('1');
+    // As a phone does at times after it turned or a sheet closed: no frame any more.
+    await page.evaluate(() => {
+      window.requestAnimationFrame = () => 0;
+    });
+    await expect(measure(page)).toContainText('3', { timeout: 10_000 });
+  });
+
   test('with less motion, the scrolling is the quick jump whatever was chosen', async ({
     page,
   }) => {
@@ -1586,6 +1603,19 @@ test.describe('the Live mode', () => {
     const score = await page.locator('.songs-liveScore').boundingBox();
     const controls = await page.locator('.songs-liveControls').boundingBox();
     expect((controls?.x ?? 0) >= (score?.x ?? 0) + (score?.width ?? 0) - 1).toBe(true);
+    // The tiles and Play sit inside the outline of the bar, beside the notch
+    // of a phone too (its safe area, as an iPhone gives it in landscape).
+    await page.addStyleTag({
+      content: '.songs-liveControlsWrap { padding-right: 47px !important; }',
+    });
+    const inside = await page.locator('.songs-liveControls').evaluate((bar) => {
+      const outline = bar.getBoundingClientRect();
+      return [...bar.querySelectorAll('.songs-liveTile, .songs-audioPlay')].every((tile) => {
+        const box = tile.getBoundingClientRect();
+        return box.left >= outline.left && box.right <= outline.right;
+      });
+    });
+    expect(inside).toBe(true);
     // Ready: the start measure and the MIDI switch in a row under the top bar,
     // the switch without its description; nothing stands back yet.
     const startRow = page.locator('.songs-liveStartRow');

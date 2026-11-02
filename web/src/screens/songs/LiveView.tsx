@@ -67,6 +67,8 @@ const WHEEL_REST_MS = 180;
 const RESIZE_REST_MS = 150;
 // A press on the score that moves less than this is a tap, not a drag.
 const TAP_SLOP = 6;
+// Without a frame for this long, while it plays, a timer moves the score (ms).
+const RELAY_MS = 250;
 
 /** Where the song is: a place of the played order, and how far into its measure (0 to 1). */
 type Position = { index: number; fraction: number };
@@ -585,10 +587,16 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   useEffect(() => {
     if (state !== 'playing') return;
     let frame = 0;
+    let isOver = false;
+    let followedAt = performance.now();
     const follow = () => {
+      if (isOver) return;
+      followedAt = performance.now();
+      window.cancelAnimationFrame(frame);
       const now = driver === 'midi' ? midiNow() : clockNow();
       if (now.index >= played.length) {
         // The end: back to the start, ready to play again.
+        isOver = true;
         setState('ready');
         setAt(0);
         setBarsHidden(false);
@@ -606,7 +614,18 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       frame = window.requestAnimationFrame(follow);
     };
     frame = window.requestAnimationFrame(follow);
-    return () => window.cancelAnimationFrame(frame);
+    // A browser can stop asking for the frames of a page that still shows (seen
+    // on a phone after it turned, or after a sheet closed): the score would
+    // stand still while it plays. A slower beat then takes over until the
+    // frames come back.
+    const relay = window.setInterval(() => {
+      if (performance.now() - followedAt > RELAY_MS) follow();
+    }, RELAY_MS / 2);
+    return () => {
+      isOver = true;
+      window.cancelAnimationFrame(frame);
+      window.clearInterval(relay);
+    };
   }, [state, driver, midiNow, clockNow, played, measures, timeline.beatQuarters, place]);
 
   // Not playing: the drawing stands at the place the song starts from.

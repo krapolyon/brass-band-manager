@@ -1217,7 +1217,8 @@ button.songs-liveTile:disabled,
    left, the controls in a vertical glass bar at the right, under the thumb ---- */
 .songs-liveScreen[data-layout="ribbon"] {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 7rem;
+  /* The bar at the right takes its own width, plus the safe area of the phone. */
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto minmax(0, 1fr);
 }
 
@@ -1287,7 +1288,9 @@ button.songs-liveTile:disabled,
   flex: 1;
   align-items: center;
   gap: var(--spaceXxl);
-  padding: var(--spaceSm);
+  /* Figma: 92 wide, the tiles of 76 inside, whatever the safe area beside it. */
+  width: calc(4.75rem + 2 * var(--spaceXs));
+  padding: var(--spaceSm) var(--spaceXs);
 }
 
 .songs-liveScreen[data-layout="ribbon"] .songs-liveBar {
