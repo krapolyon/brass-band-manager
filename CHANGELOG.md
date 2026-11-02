@@ -7,7 +7,7 @@ What changes in the app, version after version. This file is written by
 
 ### Added
 
-- Sending an invitation again confirms it, and shows the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email.
+- Sending an invitation again shows a confirmation toast, and the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email.
 - When editing a song, “Ne pas prévenir la fanfare” saves its files without any notification, for a technical correction.
 - On a phone held sideways, the Live mode shows the score as one line that scrolls to the left, the controls at the right.
 - Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing.
@@ -20,9 +20,9 @@ What changes in the app, version after version. This file is written by
 
 ### Fixed
 
-- A MuseScore file edited by a script plays every instrument at its pitch in the MIDI player (“8 bit”).
-- The tempo of a song is the one where its music starts, even when its first measure is silent: the MIDI player and the Live mode no longer play it too fast.
-- Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.
+- Fixed the wrong key of a MuseScore file edited by a script (e.g. “8 bit”).
+- When the first measure has no tempo, the tempo of a song is the one where the music starts; the MIDI player and the Live mode no longer play it too fast.
+- A MuseScore file can be changed without sending any notification.
 - The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network.
 - The record of an invited member can be edited, its email included; a changed email cancels the former invitation link and sends a new one to the new address.
 - In the list of songs, the filters “Proposés” and “Abandonnés” show those songs alone, one filter at a time.

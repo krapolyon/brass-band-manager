@@ -1561,8 +1561,6 @@
       "title": "Gérer les morceaux",
       "subtitle_one": "1 morceau. Les moyennes viennent des fanfarons qui ont répondu.",
       "subtitle_other": "{{count}} morceaux. Les moyennes viennent des fanfarons qui ont répondu.",
-      "subtitleProposed_other": "{{count}} morceaux, dont {{proposed}} proposés. Les moyennes viennent des fanfarons qui ont répondu.",
-      "subtitleProposed_one": "1 morceau, dont {{proposed}} proposés. Les moyennes viennent des fanfarons qui ont répondu.",
       "column": {
         "name": "Morceau",
         "status": "Statut",

@@ -31,8 +31,8 @@ export function ManageSongsScreen() {
   const songs = useSongs();
   const instrumentCount = instrumentsOf(useSections().data).length;
   const isDesktop = useIsDesktop();
-  const [withProposed, setProposed] = useState(false);
-  const [withAbandoned, setAbandoned] = useState(false);
+  // A filter shows its songs alone, and one at a time, as in the list (1.1.0, owner).
+  const [only, setOnly] = useState<'PROPOSED' | 'ABANDONED' | null>(null);
   const [sort, setSort] = useState<{ column: SongSortColumn; descending: boolean }>({
     column: 'name',
     descending: false,
@@ -41,11 +41,8 @@ export function ManageSongsScreen() {
   if (me && !me.permissions.includes('manageSongs')) return <Navigate to="/songs" replace />;
 
   const all = songs.data ?? [];
-  const shown = all.filter(
-    (song) =>
-      isPlayed(song.status) ||
-      (withProposed && song.status === 'PROPOSED') ||
-      (withAbandoned && song.status === 'ABANDONED'),
+  const shown = all.filter((song) =>
+    only === null ? isPlayed(song.status) : song.status === only,
   );
   // A song nobody answered for, or without a version, goes last whatever the direction.
   const sortValue = (song: SongSummary): string | number | null => {
@@ -80,7 +77,6 @@ export function ManageSongsScreen() {
     return (sort.descending ? -order : order) || a.name.localeCompare(b.name, i18n.language);
   });
 
-  const proposed = shown.filter((song) => song.status === 'PROPOSED').length;
   const ratingText = (level: LevelAverage) =>
     level.average === null
       ? t('songs.manage.noAnswer')
@@ -95,13 +91,7 @@ export function ManageSongsScreen() {
       back="/songs"
       backLabel={t('nav.songs')}
       title={t('songs.manage.title')}
-      subtitle={
-        songs.isSuccess
-          ? proposed > 0
-            ? t('songs.manage.subtitleProposed', { count: shown.length, proposed })
-            : t('songs.manage.subtitle', { count: shown.length })
-          : undefined
-      }
+      subtitle={songs.isSuccess ? t('songs.manage.subtitle', { count: shown.length }) : undefined}
       action={
         <Button size="small" icon="Plus" onClick={() => navigate('/songs/new')}>
           {t('songs.list.add')}
@@ -109,10 +99,16 @@ export function ManageSongsScreen() {
       }
       toolbar={
         <>
-          <FilterChip pressed={withProposed} onChange={setProposed}>
+          <FilterChip
+            pressed={only === 'PROPOSED'}
+            onChange={(isOn) => setOnly(isOn ? 'PROPOSED' : null)}
+          >
             {t('songs.list.filterProposed')}
           </FilterChip>
-          <FilterChip pressed={withAbandoned} onChange={setAbandoned}>
+          <FilterChip
+            pressed={only === 'ABANDONED'}
+            onChange={(isOn) => setOnly(isOn ? 'ABANDONED' : null)}
+          >
             {t('songs.list.filterAbandoned')}
           </FilterChip>
         </>

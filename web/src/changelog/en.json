@@ -5,15 +5,15 @@
     "changes": [
       {
         "kind": "fixed",
-        "text": "A MuseScore file edited by a script plays every instrument at its pitch in the MIDI player (“8 bit”)."
+        "text": "Fixed the wrong key of a MuseScore file edited by a script (e.g. “8 bit”)."
       },
       {
         "kind": "fixed",
-        "text": "The tempo of a song is the one where its music starts, even when its first measure is silent: the MIDI player and the Live mode no longer play it too fast."
+        "text": "When the first measure has no tempo, the tempo of a song is the one where the music starts; the MIDI player and the Live mode no longer play it too fast."
       },
       {
         "kind": "fixed",
-        "text": "Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI."
+        "text": "A MuseScore file can be changed without sending any notification."
       },
       {
         "kind": "fixed",
@@ -29,7 +29,7 @@
       },
       {
         "kind": "added",
-        "text": "Sending an invitation again confirms it, and shows the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email."
+        "text": "Sending an invitation again shows a confirmation toast, and the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email."
       },
       {
         "kind": "added",

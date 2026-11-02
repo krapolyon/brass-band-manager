@@ -2237,8 +2237,19 @@ test.describe('on a desktop', () => {
     await expect(line('Crazy')).toContainText('pas de réponse');
     await expect(line('Toxic')).toContainText('Montage en cours');
 
-    await page.getByRole('button', { name: 'Proposés' }).click();
-    await expect(page.getByText('4 morceaux, dont 1 proposés.')).toBeVisible();
+    // A filter shows its songs alone, and one at a time, as in the list (1.1.0).
+    const proposed = page.getByRole('button', { name: 'Proposés' });
+    const abandoned = page.getByRole('button', { name: 'Abandonnés' });
+    await proposed.click();
+    await expect(page.getByText('1 morceau. Les moyennes')).toBeVisible();
+    await expect(table.getByRole('row')).toHaveCount(2);
+    await expect(line('Le Bal masqué')).toBeVisible();
+    await abandoned.click();
+    await expect(proposed).toHaveAttribute('aria-pressed', 'false');
+    await expect(table.getByRole('row')).toHaveCount(2);
+    await expect(line('Rasputin')).toBeVisible();
+    await abandoned.click();
+    await expect(table.getByRole('row')).toHaveCount(4);
 
     const header = table.getByRole('columnheader', { name: 'Maîtrise' });
     await expect(table.getByRole('columnheader', { name: 'Morceau' })).toHaveAttribute(
