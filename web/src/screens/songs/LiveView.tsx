@@ -71,9 +71,12 @@ const TAP_SLOP = 6;
 /** Where the song is: a place of the played order, and how far into its measure (0 to 1). */
 type Position = { index: number; fraction: number };
 
-/** A phone held sideways: wider than tall, below the size of a tablet. */
+/**
+ * A phone held sideways: wider than tall, and short. A phone in landscape is
+ * at most about 430 px tall; a window of a laptop is rarely less than 600.
+ */
 const isLandscapeSize = (width: number, height: number) =>
-  width > height && height < 768 && width < 1024;
+  width > height && height < 600 && width < 1024;
 
 type Props = { song: Song; onClose: () => void };
 
@@ -273,8 +276,13 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     engine.current = created;
     return created;
   };
+  // The start of the MIDI on the next 1, after a tapped tempo: cancelled by
+  // anything that starts, stops or leaves before it comes.
+  const nextOne = useRef(0);
+  const cancelNextOne = () => window.clearTimeout(nextOne.current);
   useEffect(
     () => () => {
+      window.clearTimeout(nextOne.current);
       engine.current?.dispose();
       engine.current = null;
     },
@@ -323,10 +331,12 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     setBarsHidden(reading.hidesControls);
   };
   const play = () => {
+    cancelNextOne();
     if (isMidiOn) void startMidi(at);
     else playFrom(at);
   };
   const pause = () => {
+    cancelNextOne();
     engine.current?.pause();
     setState('ready');
     setDriver('clock');
@@ -365,7 +375,8 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   // A tempo changed while the clock plays goes on from where the song is.
   const changeBpm = (next: number) => {
     const value = inBounds(next);
-    if (state === 'playing' && driver === 'clock') {
+    // During the count-in of a tapped tempo the song has not started: it still starts on the next 1.
+    if (state === 'playing' && driver === 'clock' && origin.current.time <= performance.now()) {
       const now = clockNow();
       origin.current = {
         at: now.index,
@@ -687,22 +698,37 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     // The reading starts on the next 1, at that tempo.
     if (isMidiOn) {
       engine.current?.pause();
-      window.setTimeout(() => void startMidi(atNow.current), waitMs);
+      cancelNextOne();
+      nextOne.current = window.setTimeout(() => void startMidi(atNow.current), waitMs);
     } else {
       playFrom(at, waitMs);
     }
   };
 
+  // Hiding or showing the bars takes away the button that had the focus: the
+  // focus goes to the handle, or back to the pause button, when it was lost.
+  const showsBars = !(state === 'playing' && barsHidden);
+  const handle = useRef<HTMLButtonElement>(null);
+  const pauseButton = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const focused = document.activeElement;
+    const isLost =
+      focused === null || focused === document.body || focused?.classList.contains('songs-live');
+    if (!isLost) return;
+    (showsBars ? pauseButton.current : handle.current)?.focus();
+  }, [showsBars]);
+
+  // Where the song is, in ticks of the MIDI file: the lanes of the reading settings follow it.
+  const tickNow = useCallback(() => {
+    if (!midi) return 0;
+    const player = engine.current;
+    return player?.isPlaying ? player.position() : tickOfPlace(midi, atNow.current, played);
+  }, [midi, played]);
+
   if (!shown) return null;
   const isPlaying = state === 'playing';
   const isReady = drawing === 'drawn';
   const hasMidiFile = midi !== null;
-  const showsBars = !(isPlaying && barsHidden);
-  const tickNow = () => {
-    if (!midi) return 0;
-    const player = engine.current;
-    return player?.isPlaying ? player.position() : tickOfPlace(midi, at, played);
-  };
   const countedBeats = Math.max(
     1,
     Math.round((measures[written]?.quarters ?? 4) / timeline.beatQuarters),
@@ -857,6 +883,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
                     <button
                       type="button"
                       className="songs-audioPlay"
+                      ref={pauseButton}
                       aria-label={t('songs.player.pause')}
                       onClick={pause}
                     >
@@ -958,7 +985,12 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
         ) : (
           // The bars hidden: a handle shows them again.
           <div className="songs-liveHandleWrap">
-            <button type="button" className="songs-liveHandle" onClick={() => setBarsHidden(false)}>
+            <button
+              type="button"
+              className="songs-liveHandle"
+              ref={handle}
+              onClick={() => setBarsHidden(false)}
+            >
               <span className="textMicro songs-muted">{t('songs.live.measure')}</span>
               <span className="textHeading">{label}</span>
               <span className="textMicro songs-muted">{t('songs.midi.tempo')}</span>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // The reading settings of the Live mode (model/songs.md, "The reading
 // settings", 1.1.0): kept in the storage of the browser, for the member
@@ -53,6 +53,8 @@ export function useLiveSettings(
   memberId: number | undefined,
 ): [LiveSettings, (changes: Partial<LiveSettings>) => void] {
   const [settings, setSettings] = useState(() => read(memberId));
+  // The member may be known only after the mode opened.
+  useEffect(() => setSettings(read(memberId)), [memberId]);
   const change = (changes: Partial<LiveSettings>) => {
     const next = { ...settings, ...changes };
     setSettings(next);

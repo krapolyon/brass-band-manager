@@ -112,14 +112,16 @@ export async function unzipped(
  * <tpc> first; a script that edits the files may not. Plain text, as
  * withWrittenKeys().
  */
-export const TPC2_FIRST = /<tpc2>-?\d+<\/tpc2>\s*<tpc>/;
+export const TPC2_FIRST = /<Note>(?:(?!<\/Note>)[\s\S])*?<tpc2>(?:(?!<\/Note>)[\s\S])*?<tpc>/;
 
 export function withTpcInOrder(mscx: string): string {
   return mscx.replace(/<Note>[\s\S]*?<\/Note>/g, (note) => {
-    const found = /(\s*)(<tpc2>-?\d+<\/tpc2>)([\s\S]*?)(<tpc>-?\d+<\/tpc>)/.exec(note);
-    if (!found) return note;
-    const [whole, space, second, between, first] = found;
-    return note.replace(whole, `${space}${first}${between}${second}`);
+    // A function, not a string: a "$" in the text of a note is kept as it is.
+    return note.replace(
+      /(\s*)(<tpc2>-?\d+<\/tpc2>)([\s\S]*?)(<tpc>-?\d+<\/tpc>)/,
+      (_, space: string, second: string, between: string, first: string) =>
+        `${space}${first}${between}${second}`,
+    );
   });
 }
 

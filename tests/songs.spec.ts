@@ -1447,14 +1447,17 @@ test.describe('the Live mode', () => {
       timeout: 30_000,
     });
     await page.getByRole('button', { name: 'Lire', exact: true }).click();
-    await page.getByRole('button', { name: 'Masquer les contrôles' }).click();
+    // From the keyboard: the focus follows, to the handle and back to the pause button.
+    await page.getByRole('button', { name: 'Masquer les contrôles' }).focus();
+    await page.keyboard.press('Enter');
     const handle = page.getByRole('button', { name: /Afficher les contrôles/ });
+    await expect(handle).toBeFocused();
     await expect(handle).toContainText('Mesure');
     await expect(handle).toContainText('40');
     await expect(page.getByRole('button', { name: 'Mettre en pause' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Quitter le mode live' })).toHaveCount(0);
-    await handle.click();
-    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeFocused();
 
     // The setting hides them when a reading starts; a tap on the score shows them.
     await page.getByRole('button', { name: 'Réglages de lecture' }).click();

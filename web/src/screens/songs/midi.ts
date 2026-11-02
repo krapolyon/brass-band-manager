@@ -267,6 +267,7 @@ function startQuarters(song: MidiSong): number {
   let first = Number.POSITIVE_INFINITY;
   for (const track of song.tracks) first = Math.min(first, track.notes[0]?.tick ?? first);
   let quarters = song.tempos[0]?.bpm ?? DEFAULT_BPM;
+  if (!Number.isFinite(first)) return quarters;
   for (const tempo of song.tempos) {
     if (tempo.tick > first) break;
     quarters = tempo.bpm;
