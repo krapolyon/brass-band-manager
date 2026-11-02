@@ -692,7 +692,7 @@
       "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
       "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter.",
       "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer.",
-      "emailChanged": "L’invitation est partie à l’ancienne adresse. Renvoie-la à {{email}}."
+      "emailChanged": "L’ancien lien d’invitation ne marche plus. Copie un nouveau lien et envoie-le à {{email}}."
     },
     "leave": {
       "title": "Marquer {{nickname}} comme parti ?",

@@ -236,33 +236,38 @@ test.describe('an invitation', () => {
     expect(await receivedMails(0)).toEqual([]);
   });
 
-  test('is edited like a current member; a changed email offers to send the invitation again (#72)', async ({
+  test('is edited like a current member; a changed email cancels the link and sends a new one (#72)', async ({
     page,
   }) => {
     await openList(page, 'momo@example.org', memberPassword);
     await record(page, 'Kiki');
+    const linkOf = () =>
+      sql(
+        `SELECT CONCAT(id, ':', tokenHash) FROM memberPasswordLink WHERE memberId = ${memberId('Kiki')}`,
+      );
+    // Sent a minute ago: within the 5 minutes between two emails.
+    await page.getByRole('button', { name: /Renvoyer l’invitation/ }).click();
+    await page
+      .getByRole('dialog', { name: 'Invitation envoyée' })
+      .getByRole('button', { name: 'Fermer' })
+      .click();
+    const former = linkOf();
+    expect(former).not.toBe('');
     const email = page.getByLabel('Adresse email');
     await expect(email).toHaveValue('kiki@example.org');
     await email.fill('kiki.bis@example.org');
     await emptyMailbox();
     await page.getByRole('button', { name: 'Enregistrer' }).click();
 
-    // Saved; the invitation went to the former address: sending it again is offered.
-    await expect(
-      page.getByText(
-        'L’invitation est partie à l’ancienne adresse. Renvoie-la à kiki.bis@example.org.',
-      ),
-    ).toBeVisible();
-    expect(sql("SELECT COUNT(*) FROM member WHERE nickname = 'Kiki' AND status = 'INVITED'")).toBe(
-      '1',
-    );
-    await page
-      .locator('.members-emailChanged')
-      .getByRole('button', { name: 'Renvoyer l’invitation' })
-      .click();
+    // Saved; the former link went to the former address: it is cancelled, and
+    // a new invitation leaves for the new one, within the 5 minutes too.
     await expect(page.getByRole('dialog', { name: 'Invitation envoyée' })).toContainText(
       'kiki.bis@example.org',
     );
+    expect(sql("SELECT COUNT(*) FROM member WHERE nickname = 'Kiki' AND status = 'INVITED'")).toBe(
+      '1',
+    );
+    expect(linkOf()).not.toBe(former);
     expect((await receivedMails(1))[0]?.to).toBe('kiki.bis@example.org');
   });
 });
@@ -300,6 +305,30 @@ test.describe('an invitation without a mail server', () => {
     await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
     await panel.getByRole('button', { name: 'Fermer' }).click();
     await expect(page.getByText(/Le lien d’invitation marche jusqu’au \d+ \S+/)).toBeVisible();
+  });
+
+  test('a changed email cancels the link, and a new one is offered (#72)', async ({ page }) => {
+    await signIn(page);
+    await record(page, 'Kiki');
+    await page.getByRole('button', { name: /Copier un lien d’invitation/ }).click();
+    await page
+      .getByRole('dialog', { name: 'Invitation prête' })
+      .getByRole('button', { name: 'Fermer' })
+      .click();
+    await page.getByLabel('Adresse email').fill('kiki.ter@example.org');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+    const changed = page.locator('.members-emailChanged');
+    await expect(changed).toContainText(
+      'L’ancien lien d’invitation ne marche plus. Copie un nouveau lien et envoie-le à kiki.ter@example.org.',
+    );
+    expect(
+      sql(`SELECT COUNT(*) FROM memberPasswordLink WHERE memberId = ${memberId('Kiki')}`),
+    ).toBe('0');
+    await changed.getByRole('button', { name: 'Copier un lien d’invitation' }).click();
+    await expect(
+      page.getByRole('dialog', { name: 'Invitation prête' }).getByLabel('Lien d’invitation'),
+    ).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
   });
 });
 

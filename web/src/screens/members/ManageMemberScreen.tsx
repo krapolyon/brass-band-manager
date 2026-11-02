@@ -99,8 +99,9 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
   const [held, setHeld] = useState<string[]>(member.roles);
   const [wasSent, setSent] = useState(false);
   const [isLeaving, setLeaving] = useState(false);
-  // The email of an invited member was changed: their invitation went to the
-  // former address, and sending it again is offered (#72).
+  // The email of an invited member was changed without a mail server: their
+  // link was cancelled, and a new one is offered (#72). With a mail server, the
+  // new invitation has left and its panel says so.
   const [isEmailChanged, setEmailChanged] = useState(false);
 
   const status = displayStatus(member);
@@ -191,13 +192,23 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
       if (canManageRoles && changed) {
         await api(`/api/members/${member.id}/roles`, { method: 'PUT', body: { roles: held } });
       }
-      await saveMember(member.id, draft, photo, bandCountry);
+      return saveMember(member.id, draft, photo, bandCountry);
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
       const isNewAddress =
         draft.email.trim().toLowerCase() !== (member.email ?? '').trim().toLowerCase();
-      if (member.status === 'INVITED' && byEmail && isNewAddress) setEmailChanged(true);
-      else navigate('/members/manage');
+      if (saved.passwordLinkToken) {
+        setLink({
+          token: saved.passwordLinkToken,
+          nickname: saved.nickname,
+          isInvitation: true,
+          sentTo: saved.email,
+        });
+      } else if (member.status === 'INVITED' && isNewAddress) {
+        setEmailChanged(true);
+      } else {
+        navigate('/members/manage');
+      }
     },
     // Whatever happened, the list is asked again: a save can stop halfway.
     onSettled: () => Promise.all([refresh(), mine()]),
@@ -279,8 +290,12 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
             <Message kind="warning">
               {t('manage.member.emailChanged', { email: member.email })}
             </Message>
-            <Button kind="secondary" onClick={() => resend.mutate()} disabled={isBusy || !mayAct}>
-              {t('manage.actions.resend')}
+            <Button
+              kind="secondary"
+              onClick={() => createLink.mutate()}
+              disabled={isBusy || !mayAct}
+            >
+              {t('manage.actions.newLink')}
             </Button>
           </div>
         )}
