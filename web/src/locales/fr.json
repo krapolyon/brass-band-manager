@@ -653,8 +653,8 @@
       "leave": "Marquer comme parti",
       "leaveDetail": "Coupe son accès, efface ses coordonnées",
       "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
-      "newLink": "Créer un nouveau lien",
-      "newLinkDetail": "L’ancien ne marchera plus",
+      "newLink": "Copier un lien d’invitation",
+      "newLinkDetail": "Sans e-mail, à lui envoyer toi-même ; l’ancien ne marchera plus",
       "resend": "Renvoyer l’invitation",
       "resendDetail": "Un nouveau lien part à {{email}} ; l’ancien ne marchera plus",
       "cancelInvitation": "Annuler l’invitation",
@@ -691,7 +691,8 @@
       "notFound": "Cette fiche n’existe pas, ou plus.",
       "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
       "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter.",
-      "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer."
+      "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer.",
+      "emailChanged": "L’ancien lien d’invitation ne marche plus. Copie un nouveau lien et envoie-le à {{email}}."
     },
     "leave": {
       "title": "Marquer {{nickname}} comme parti ?",
@@ -1200,12 +1201,11 @@
       "choosePart": "Changer de partition : {{name}}",
       "title": "Mode live : {{name}}",
       "score": "Partition de {{name}}. Flèches haut et bas pour te recaler.",
-      "dragHint": "Décalé ? Fais glisser la partition pour te recaler.",
+      "dragHint": "Décalé ? Fais glisser la partition.",
       "measure": "Mesure",
       "startsAt": "On démarre à",
       "measureNumber": "Mesure {{measure}}",
       "measureAndMark": "Mesure {{measure}} · {{mark}}",
-      "giveTempo": "Donner le tempo",
       "startTitle": "On démarre où ?",
       "marks": "Repères de la partition",
       "beginning": "Début",
@@ -1216,23 +1216,48 @@
       "noSuchMeasure_other": "La partition a {{count}} mesures : tape le numéro de l’une d’elles.",
       "startAt": "Démarrer à la mesure {{measure}}",
       "startChoose": "Démarrer",
-      "tapTitle": "Tape le tempo",
       "tapEighths": "À la croche",
       "tapStart_one": "Tape une fois, et ça part sur le 1 suivant.",
       "tapStart_other": "Tape {{count}} fois, et ça part sur le 1 suivant.",
       "tapSoFar_one": "{{bpm}} bpm pour l’instant. Encore un temps, et ça part sur le 1 suivant.",
       "tapSoFar_other": "{{bpm}} bpm pour l’instant. Encore {{count}} temps, et ça part sur le 1 suivant.",
-      "cancel": "Annuler",
       "midi": {
-        "open": "Lire avec le MIDI",
-        "title": "Lire avec le MIDI",
-        "lead": "La partition suit le lecteur, reprises et codas comprises. Les réglages sont ceux du mode MIDI.",
-        "play": "Lire avec le MIDI",
         "none": "Pas de fichier MIDI pour ce morceau.",
         "following_one": "Suit le MIDI · {{bpm}} · {{count}} piste",
         "following_other": "Suit le MIDI · {{bpm}} · {{count}} pistes",
-        "chipDoes": "Met le lecteur en pause et ouvre ses réglages.",
-        "failed": "Le fichier MIDI de ce morceau ne se lit pas."
+        "chipDoes": "Ouvre les réglages de lecture, où se règlent les pistes.",
+        "failed": "Le fichier MIDI de ce morceau ne se lit pas.",
+        "switch": "Jouer avec le MIDI",
+        "switchHint": "Au tempo choisi, masque les pistes dans les réglages."
+      },
+      "scoreSideways": "Partition de {{name}}, sur une ligne. Flèches gauche et droite pour te recaler.",
+      "hideBars": "Masquer les contrôles",
+      "showBars": "Afficher les contrôles",
+      "settingsOpen": "Réglages",
+      "settings": {
+        "title": "Réglages de lecture",
+        "scrolling": "Défilement",
+        "continuous": "Continu",
+        "quickJump": "Saut rapide",
+        "slowJump": "Saut lent",
+        "scrollingHint": "La ligne jouée reste à la même hauteur. Avec « Moins d’animations », c’est le saut rapide.",
+        "size": "Taille de la partition",
+        "sizeHint": "Plus petite, plus de mesures par ligne.",
+        "metronome": "Métronome visuel",
+        "metronomeHint": "Les temps sous le titre, le premier marqué d’un trait.",
+        "hideControls": "Masquer les contrôles en lecture",
+        "hideControlsHint": "Un tap sur la partition les réaffiche.",
+        "kept": "Gardés sur cet appareil, pour toi.",
+        "tracks": "Pistes du MIDI",
+        "tracksHint": "Coupe les pistes que tu ne veux pas entendre."
+      },
+      "tempo": {
+        "title": "Tempo",
+        "set": "Régler",
+        "setHint": "Celui de la fanfare : {{band}}. La partition dit {{file}}.",
+        "orTap": "Ou tape-le",
+        "tap": "Taper le tempo",
+        "tapHint": "La lecture part sur le 1 suivant. Tempo détecté : {{bpm}}."
       }
     },
     "midi": {
@@ -1277,7 +1302,9 @@
       "loopStop": "Arrêter la boucle",
       "loopMarksRule": "Cocher un repère plus loin coche ceux d’entre les deux : la boucle va du premier au dernier.",
       "loopHintWithMarks_one": "Le morceau a 1 mesure ; sans repère, seules les mesures se choisissent.",
-      "loopHintWithMarks_other": "Le morceau a {{count}} mesures ; sans repère, seules les mesures se choisissent."
+      "loopHintWithMarks_other": "Le morceau a {{count}} mesures ; sans repère, seules les mesures se choisissent.",
+      "retry": "Réessayer",
+      "clockError": "Le son ne démarre pas sur cet appareil."
     },
     "song": {
       "more": "Plus d’actions",
@@ -1447,7 +1474,9 @@
       "deleteNote": "Pour un morceau créé par erreur : ses fichiers et les niveaux des fanfarons partent avec. Pour ne plus le jouer, passe-le plutôt en « Abandonné ».",
       "noRightTitle": "Pas par ici",
       "noRight": "Modifier un morceau, c’est pour celles et ceux qui gèrent les morceaux. Tu penses devoir y être ? Vois ça avec un admin.",
-      "backToSong": "Retour au morceau"
+      "backToSong": "Retour au morceau",
+      "quiet": "Ne pas prévenir la fanfare",
+      "quietHint": "Pour une correction technique : les fichiers envoyés avec ce formulaire ne déclenchent aucune notification."
     },
     "import": {
       "step1": "Étape 1 sur 2 · les fichiers",
@@ -1532,8 +1561,6 @@
       "title": "Gérer les morceaux",
       "subtitle_one": "1 morceau. Les moyennes viennent des fanfarons qui ont répondu.",
       "subtitle_other": "{{count}} morceaux. Les moyennes viennent des fanfarons qui ont répondu.",
-      "subtitleProposed_other": "{{count}} morceaux, dont {{proposed}} proposés. Les moyennes viennent des fanfarons qui ont répondu.",
-      "subtitleProposed_one": "1 morceau, dont {{proposed}} proposés. Les moyennes viennent des fanfarons qui ont répondu.",
       "column": {
         "name": "Morceau",
         "status": "Statut",

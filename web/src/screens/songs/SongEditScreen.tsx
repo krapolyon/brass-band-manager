@@ -9,6 +9,7 @@ import { DropZone } from '../../components/DropZone.tsx';
 import { Message } from '../../components/Message.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
+import { SwitchRow } from '../../components/SwitchRow.tsx';
 import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { type Song, useSong } from '../../songs.ts';
@@ -73,6 +74,8 @@ export function SongEditScreen() {
   const [state, setState] = useState<'idle' | 'saving' | 'failed'>('idle');
   const [refused, setRefused] = useState<string[]>([]);
   const [isDeleting, setDeleting] = useState(false);
+  // "Ne pas prévenir la fanfare": the files of this save notify nobody.
+  const [isQuiet, setQuiet] = useState(false);
 
   // The form starts from the record as it is saved.
   useEffect(() => {
@@ -157,7 +160,7 @@ export function SongEditScreen() {
     setState('saving');
     try {
       await api<Song>(`/api/songs/${songId}`, { method: 'PUT', body: recordOf(draft) });
-      const { failures, scoreNotRead } = await sendFiles(songId, pending);
+      const { failures, scoreNotRead } = await sendFiles(songId, pending, undefined, isQuiet);
       await queryClient.invalidateQueries({ queryKey: ['songs'] });
       if (failures.length > 0 || scoreNotRead) {
         // The record is saved; what did not leave stays listed, with why.
@@ -283,6 +286,14 @@ export function SongEditScreen() {
                       </ul>
                     </section>
                   )}
+                  {/* Off each time the form opens; stored nowhere (model/songs.md, "A quiet change"). */}
+                  <SwitchRow
+                    label={t('songs.edit.quiet')}
+                    description={t('songs.edit.quietHint')}
+                    checked={isQuiet}
+                    onChange={setQuiet}
+                    disabled={state === 'saving'}
+                  />
                 </Sheet>
               }
             />

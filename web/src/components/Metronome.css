@@ -1,0 +1,32 @@
+.Metronome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spaceSm);
+  height: var(--spaceSm);
+}
+
+.Metronome-beat {
+  width: var(--spaceXs);
+  height: var(--spaceXs);
+  border-radius: var(--radiusFull);
+  background: var(--textMuted);
+  opacity: var(--fadeMid);
+  transition:
+    width 0.08s ease,
+    height 0.08s ease;
+}
+
+.Metronome-beat[data-kind="first"] {
+  width: var(--spaceLg);
+}
+
+.Metronome-beat[data-state="now"] {
+  height: var(--spaceSm);
+  background: var(--accent);
+  opacity: 1;
+}
+
+.Metronome-beat[data-kind="other"][data-state="now"] {
+  width: var(--spaceSm);
+}

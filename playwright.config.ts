@@ -30,7 +30,7 @@ export default defineConfig({
   projects: [
     // The API alone, without a browser.
     { name: 'api', testMatch: 'api/**/*.spec.ts' },
-    // The screens, on phone-sized viewports only: the phone is the main use.
+    // The screens, on phone-sized viewports: the phone is the main use.
     {
       name: 'android',
       testIgnore: 'api/**',
@@ -40,6 +40,19 @@ export default defineConfig({
       name: 'iphone',
       testIgnore: 'api/**',
       use: { ...devices['iPhone 14'], storageState: guideOffered },
+    },
+    // A computer, for what differs there: the sound of the MIDI player
+    // (issue #70), which only a computer showed silent.
+    {
+      name: 'desktop',
+      testMatch: 'songs.spec.ts',
+      grep: /the MIDI player/,
+      grepInvert: /the Live mode/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        storageState: guideOffered,
+      },
     },
   ],
 });

@@ -19,11 +19,22 @@ const SAMPLES = '/soundfonts/FluidR3_GM';
 // MIDI file back. So, from the press on "Lire":
 //   - the category is asked for (navigator.audioSession, Safari 16.4 on);
 //   - on an older iPhone, a silent <audio> plays once, which does the same;
-//   - a clock that does not run shortly after resume() is replaced by a new
-//     one, with the same instruments (their files come from the cache).
+//   - a clock that iOS left "interrupted" is replaced by a new one, with the
+//     same instruments (their files come from the cache).
+//
+// A computer (issue #70). The clock is made at the first press, inside the
+// gesture of the member, and resume() is waited for as long as the device
+// takes: a Bluetooth headset, Windows or Safari may need more than a second.
+// Until 1.1.0 the clock was made when the mode opened, given half a second,
+// then replaced by one made after a wait, outside the gesture, which Safari
+// keeps silent. A clock that has not started after WAKE_MS is said as such
+// (ClockError), never as a failure of the network.
 
-/** How long a clock is given to run again after resume(). */
-const WAKE_MS = 500;
+/** How long a clock is given to start before the member is told it does not. */
+const WAKE_MS = 8000;
+
+/** The sound of the device does not start: not a matter of network. */
+export class ClockError extends Error {}
 
 type AudioSession = { type: string };
 
@@ -114,8 +125,9 @@ const EVERY_MS = 40;
 const FADE_SECONDS = 0.03;
 
 export class MidiEngine {
-  private context: AudioContext;
-  private voices: Voice[];
+  // Made at the first press on play (see above); null until then.
+  private context: AudioContext | null = null;
+  private voices: Voice[] = [];
   private readonly end: number;
   private stretches: Stretch[] = [];
   private timer: number | null = null;
@@ -127,17 +139,25 @@ export class MidiEngine {
   // The member asked to play, and the sounds are not there yet.
   private wanted = false;
   private disposed = false;
-  /** Resolves once every instrument has its samples. */
-  loaded: Promise<void>;
+  // Resolves once every instrument has its samples; they load from the first press.
+  private loaded: Promise<void> = Promise.resolve();
+  /** Told when the samples start loading, and when they are there or failed. */
+  onSounds: (state: 'loading' | 'ready' | 'failed') => void = () => {};
   /** Called when the song reaches its end. */
   onEnd: () => void = () => {};
 
   constructor(private readonly song: MidiSong) {
     this.end = song.measures[song.measures.length - 1] ?? 0;
     this.muted = song.tracks.map(() => false);
+  }
+
+  /** The clock and its instruments, made at the first press. */
+  private clock(): AudioContext {
+    if (this.context) return this.context;
     this.context = new AudioContext();
     this.voices = this.voicesOn(this.context);
     this.loaded = this.loadingOf(this.voices);
+    return this.context;
   }
 
   /** The instruments of the tracks, on a clock. */
@@ -157,32 +177,47 @@ export class MidiEngine {
   }
 
   private loadingOf(voices: Voice[]): Promise<void> {
+    this.onSounds('loading');
     const loading = Promise.all(voices.map((voice) => voice.instrument.load)).then(() => {});
-    // Nobody may be waiting for it: a failure is then told by play().
-    loading.catch(() => {});
+    loading.then(
+      () => !this.disposed && this.onSounds('ready'),
+      () => !this.disposed && this.onSounds('failed'),
+    );
     return loading;
   }
 
-  /** Makes the clock run; false when it still does not, a moment later. */
-  private async wake(): Promise<boolean> {
-    // Read each time: the state changes while resume() is waited for.
-    const isRunning = () => this.context.state === 'running';
-    if (isRunning()) return true;
+  // Read each time: the state changes while resume() is waited for. iOS adds
+  // "interrupted" to the states the types know.
+  private stateOf = (context: AudioContext): string => context.state;
+
+  /** Makes the clock run, waiting as long as the device takes, up to WAKE_MS. */
+  private async wake(context: AudioContext): Promise<void> {
+    if (this.stateOf(context) === 'running') return;
     await Promise.race([
-      this.context.resume().catch(() => {}),
+      context.resume().catch(() => {}),
       new Promise((resolve) => window.setTimeout(resolve, WAKE_MS)),
     ]);
-    return isRunning();
   }
 
   /** A new clock, with the same instruments, in place of one iOS left interrupted. */
-  private replaceClock(): void {
-    if (this.disposed) return;
+  private replaceClock(): AudioContext {
     for (const voice of this.voices) voice.instrument.dispose();
-    void this.context.close().catch(() => {});
-    this.context = new AudioContext();
-    this.voices = this.voicesOn(this.context);
-    this.loaded = this.loadingOf(this.voices);
+    void this.context?.close().catch(() => {});
+    this.context = null;
+    return this.clock();
+  }
+
+  /**
+   * Makes the clock and starts the sound, from a gesture of the member,
+   * before play() is called after a wait: the tempo tapped in the Live mode
+   * starts the player on the next 1, outside the gesture (1.1.0).
+   */
+  prime(): void {
+    if (this.disposed) return;
+    unlockSound();
+    void this.clock()
+      .resume()
+      .catch(() => {});
   }
 
   get isPlaying(): boolean {
@@ -191,7 +226,7 @@ export class MidiEngine {
 
   /** Where the song is, in ticks. */
   position(): number {
-    if (!this.isPlaying) return this.pausedAt;
+    if (!this.isPlaying || !this.context) return this.pausedAt;
     const now = this.context.currentTime;
     // The last stretch that has started: a loop is handed over ahead of time.
     let current = this.stretches[0];
@@ -218,17 +253,19 @@ export class MidiEngine {
     // A browser lets sound start only from a gesture of the member: this is
     // it. What needs the gesture is done before anything is waited for.
     unlockSound();
-    const isAwake = await this.wake();
+    let context = this.clock();
+    await this.wake(context);
     // Meanwhile the member may have paused, or left: nothing to rebuild.
     if (!this.wanted || this.disposed) return;
-    if (!isAwake) {
-      this.replaceClock();
-      // The new clock gets a moment too; a clock that still does not run is
-      // said as a failure, never left as a silent "playing".
-      if (!(await this.wake())) {
-        if (this.disposed) return;
-        throw new Error('The sound of the device does not start');
-      }
+    if (this.stateOf(context) === 'interrupted') {
+      context = this.replaceClock();
+      await this.wake(context);
+      if (!this.wanted || this.disposed) return;
+    }
+    // Said as such, never left as a silent "playing".
+    if (this.stateOf(context) !== 'running') {
+      this.wanted = false;
+      throw new ClockError('The sound of the device does not start');
     }
     await this.loaded;
     // Meanwhile the member may have paused, pressed again, or left.
@@ -295,14 +332,14 @@ export class MidiEngine {
 
   private applyVolume(index: number): void {
     const gain = this.voices[index]?.volume.gain;
-    if (!gain) return;
+    if (!gain || !this.context) return;
     const to = this.muted[index] ? this.mutedVolume : 1;
     gain.cancelScheduledValues(this.context.currentTime);
     gain.setTargetAtTime(to, this.context.currentTime, FADE_SECONDS);
   }
 
   private startFrom(tick: number): void {
-    if (this.disposed) return;
+    if (this.disposed || !this.context) return;
     if (this.timer !== null) window.clearInterval(this.timer);
     this.stretches = [{ tick, time: this.context.currentTime + 0.05 }];
     for (const voice of this.voices) {
@@ -322,6 +359,7 @@ export class MidiEngine {
 
   // Hands to the audio clock the notes that start in the next moments.
   private handOver(): void {
+    if (!this.context) return;
     const until = this.context.currentTime + AHEAD_SECONDS;
 
     for (let rounds = 0; rounds < 8; rounds++) {
@@ -375,6 +413,6 @@ export class MidiEngine {
     this.wanted = false;
     this.halt();
     for (const voice of this.voices) voice.instrument.dispose();
-    void this.context.close();
+    void this.context?.close().catch(() => {});
   }
 }

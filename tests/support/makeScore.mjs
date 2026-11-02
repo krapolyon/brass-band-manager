@@ -36,7 +36,9 @@ const keyOf = (id) => (!hasKeys ? 0 : id === 'P1' ? 2 : id === 'P2' ? -3 : 0);
 const transposeOf = (id) =>
   hasKeys && id === 'P1'
     ? '<transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose>'
-    : '';
+    : process.argv[2] === 'tpc2First' && id === 'P2'
+      ? '<transpose><diatonic>-8</diatonic><chromatic>-14</chromatic></transpose>'
+      : '';
 const withConcertKeys = (mscx) =>
   Buffer.from(
     Buffer.from(mscx)
@@ -51,6 +53,29 @@ const withLastEid = (mscx) =>
   Buffer.from(
     Buffer.from(mscx).toString('utf8').replace('<Score>', '<LastEID>1</LastEID>\n  <Score>'),
   );
+
+// "tpc2First" as the first argument: the second staff is a "Sax Ténor", in
+// B flat, and every note writes <tpc2> before <tpc>, as a script that edits
+// the files of a band did (issue #71).
+const hasTpc2First = process.argv[2] === 'tpc2First';
+const withTpc2First = (mscx) =>
+  Buffer.from(
+    Buffer.from(mscx)
+      .toString('utf8')
+      .replace(/(<tpc>-?\d+<\/tpc>)(\s*)(<tpc2>-?\d+<\/tpc2>)/g, '$3$2$1'),
+  );
+
+// "lateTempo" as the first argument: the first measure is silent in every
+// part, and the tempo, 148, is written on the second (issue #71).
+const hasLateTempo = process.argv[2] === 'lateTempo';
+const tempoOf = (measure) =>
+  hasLateTempo
+    ? measure === 1
+      ? '<direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>148</per-minute></metronome></direction-type><sound tempo="148"/></direction>'
+      : ''
+    : measure === 0
+      ? '<direction><sound tempo="120"/></direction>'
+      : '';
 
 // A zip archive of one file, not compressed.
 function zipOf(name, data) {
@@ -82,16 +107,20 @@ const part = (id, octave) =>
       (measure) =>
         `<measure number="${measure + 1}">${repeatOf(measure)[0]}${
           measure === 0
-            ? `<attributes><divisions>1</divisions><key><fifths>${keyOf(id)}</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef>${transposeOf(id)}</attributes><direction><sound tempo="120"/></direction>`
+            ? `<attributes><divisions>1</divisions><key><fifths>${keyOf(id)}</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef>${transposeOf(id)}</attributes>`
             : measure === 2 && id === 'P1'
               ? '<direction placement="above"><direction-type><rehearsal>Refrain</rehearsal></direction-type></direction>'
               : ''
-        }${[0, 1, 2, 3]
-          .map(
-            (beat) =>
-              `<note><pitch><step>${scale[(measure * 4 + beat) % 8]}</step><octave>${octave}</octave></pitch><duration>1</duration><type>quarter</type></note>`,
-          )
-          .join('')}${repeatOf(measure)[1]}</measure>`,
+        }${tempoOf(measure)}${
+          hasLateTempo && measure === 0
+            ? '<note><rest/><duration>4</duration><type>whole</type></note>'
+            : [0, 1, 2, 3]
+                .map(
+                  (beat) =>
+                    `<note><pitch><step>${scale[(measure * 4 + beat) % 8]}</step><octave>${octave}</octave></pitch><duration>1</duration><type>quarter</type></note>`,
+                )
+                .join('')
+        }${repeatOf(measure)[1]}</measure>`,
     )
     .join('')}</part>`;
 // A staff of rests only, four whole measures.
@@ -111,9 +140,9 @@ const scorePart = (id, name, channel, program) =>
 const musicXml = `<?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="3.1"><part-list>
 ${scorePart('P1', 'Trompette', 1, 57)}
-${scorePart('P2', 'Tuba', 2, 59)}
+${scorePart('P2', hasTpc2First ? 'Sax Ténor' : 'Tuba', 2, hasTpc2First ? 66 : 59)}
 ${hasHiddenPart ? `${scorePart('P3', 'Cornet', 3, 57)}${scorePart('P4', 'Clairon', 4, 57)}` : ''}
-</part-list>${part('P1', 4)}${part('P2', 2)}${hasHiddenPart ? `${part('P3', 5)}${emptyPart('P4')}` : ''}</score-partwise>`;
+</part-list>${part('P1', 4)}${part('P2', hasTpc2First ? 4 : 2)}${hasHiddenPart ? `${part('P3', 5)}${emptyPart('P4')}` : ''}</score-partwise>`;
 
 // The third part hidden, as MuseScore writes an instrument unticked.
 const withHiddenThirdPart = (mscx) => {
@@ -135,5 +164,7 @@ const file =
       ? zipOf('score.mscx', withHiddenThirdPart(await score.saveMsc('mscx')))
       : hasKeys
         ? zipOf('score.mscx', withConcertKeys(await score.saveMsc('mscx')))
-        : await score.saveMsc('mscz');
+        : hasTpc2First
+          ? zipOf('score.mscx', withTpc2First(await score.saveMsc('mscx')))
+          : await score.saveMsc('mscz');
 process.stdout.write(Buffer.from(file).toString('base64'), () => process.exit(0));

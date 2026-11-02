@@ -258,11 +258,29 @@ export function tickAt(song: MidiSong, seconds: number): number {
 }
 
 /**
+ * The tempo of the file, in quarter notes per minute: the one in force at the
+ * first note of any track (model/songs.md, "The tempo of a file"). MuseScore
+ * writes its default 120 at the start when the tempo mark is not on the first
+ * measure: a silent first measure, a count-in (issue #71).
+ */
+function startQuarters(song: MidiSong): number {
+  let first = Number.POSITIVE_INFINITY;
+  for (const track of song.tracks) first = Math.min(first, track.notes[0]?.tick ?? first);
+  let quarters = song.tempos[0]?.bpm ?? DEFAULT_BPM;
+  if (!Number.isFinite(first)) return quarters;
+  for (const tempo of song.tempos) {
+    if (tempo.tick > first) break;
+    quarters = tempo.bpm;
+  }
+  return quarters;
+}
+
+/**
  * The beats per minute a musician counts at the start of the song: the beat
  * of the time signature, a dotted quarter in 6/8 (model/songs.md, `bpm`).
  */
 export function countedBpm(song: MidiSong): number {
-  const quarters = song.tempos[0]?.bpm ?? DEFAULT_BPM;
+  const quarters = startQuarters(song);
   const { numerator, denominator } = song.signature;
   const isCompound = denominator === 8 && numerator % 3 === 0 && numerator > 3;
   return isCompound ? (quarters * 2) / 3 : quarters;

@@ -41,7 +41,8 @@ export function StatusChip({ song }: { song: SongSummary }) {
 // Figma: Songs / List (rows and grid), and from the desktop width the list
 // beside the song. The songs the band plays or is learning, by name; the
 // proposed and the abandoned ones behind two filters, off when the screen
-// opens (model/songs.md, "Display").
+// opens. A filter shows its songs alone, and one at a time (1.1.0, owner;
+// model/songs.md, "Display").
 export function SongsScreen() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -50,8 +51,7 @@ export function SongsScreen() {
   const songs = useSongs();
   const isDesktop = useIsDesktop();
   const [search, setSearch] = useState('');
-  const [withProposed, setProposed] = useState(false);
-  const [withAbandoned, setAbandoned] = useState(false);
+  const [only, setOnly] = useState<'PROPOSED' | 'ABANDONED' | null>(null);
   const [view, setView] = useState(() => kept('songs.view', 'rows'));
   const [isDownloading, setDownloading] = useState(false);
 
@@ -59,12 +59,7 @@ export function SongsScreen() {
   const all = songs.data ?? [];
   const words = plain(search.trim());
   const shown = all
-    .filter(
-      (song) =>
-        isPlayed(song.status) ||
-        (withProposed && song.status === 'PROPOSED') ||
-        (withAbandoned && song.status === 'ABANDONED'),
-    )
+    .filter((song) => (only === null ? isPlayed(song.status) : song.status === only))
     .filter(
       (song) =>
         words === '' ||
@@ -228,10 +223,16 @@ export function SongsScreen() {
               <>
                 {searchField}
                 <div className="songs-filters">
-                  <FilterChip pressed={withProposed} onChange={setProposed}>
+                  <FilterChip
+                    pressed={only === 'PROPOSED'}
+                    onChange={(isOn) => setOnly(isOn ? 'PROPOSED' : null)}
+                  >
                     {t('songs.list.filterProposed')}
                   </FilterChip>
-                  <FilterChip pressed={withAbandoned} onChange={setAbandoned}>
+                  <FilterChip
+                    pressed={only === 'ABANDONED'}
+                    onChange={(isOn) => setOnly(isOn ? 'ABANDONED' : null)}
+                  >
                     {t('songs.list.filterAbandoned')}
                   </FilterChip>
                   {/* The button shows the icon of the other view. Beside a song, the list is always rows. */}

@@ -20,7 +20,9 @@ use Psr\Http\Message\ServerRequestInterface;
 // Refused without a mail server (emailUnavailable), for a member who is not
 // invited (notInvited), and within 5 minutes of the previous email
 // (emailedRecently): nothing changes then, the former link included. The
-// token is never in the answer: the email carries it.
+// token is in the answer, this once and never again, as at the creation
+// (issue #73, 1.1.0): whoever invites can pass it on by another means when
+// the email does not arrive.
 final class SendInvitationAction
 {
     public function __construct(
@@ -55,6 +57,9 @@ final class SendInvitationAction
         });
         $this->invitations->sendLater([(int) $arguments['id'] => $token]);
 
-        return Json::write($response, $this->members->oneVisibleTo($me, (int) $arguments['id']));
+        return Json::write(
+            $response,
+            [...$this->members->oneVisibleTo($me, (int) $arguments['id']), 'passwordLinkToken' => $token, 'invitationEmailed' => true],
+        );
     }
 }

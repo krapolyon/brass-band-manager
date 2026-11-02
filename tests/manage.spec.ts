@@ -199,17 +199,24 @@ test.describe('an invitation', () => {
   }) => {
     await signIn(page);
     await record(page, 'Kiki');
-    // The link of Kiki has expired: no record form, a status that says so.
+    // The link of Kiki has expired: a status that says so.
     await expect(page.getByText('Invitation expirée')).toBeVisible();
     await expect(page.getByText('Le lien d’invitation ne marche plus')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Enregistrer' })).toHaveCount(0);
 
     await emptyMailbox();
     await page.getByRole('button', { name: /Renvoyer l’invitation/ }).click();
+    // The new link is shown once, as at the creation (#73).
+    const panel = page.getByRole('dialog', { name: 'Invitation envoyée' });
+    await expect(panel).toContainText('Kiki la reçoit à kiki@example.org');
+    await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
+    const token = (await panel.getByLabel('Lien d’invitation').inputValue()).split('#')[1];
+    await panel.getByRole('button', { name: 'Fermer' }).click();
     await expect(
       page.getByText(/Invitation envoyée le \d+ \S+\. Le lien marche jusqu’au \d+ \S+/),
     ).toBeVisible();
-    expect((await receivedMails(1))[0]?.to).toBe('kiki@example.org');
+    const [mail] = await receivedMails(1);
+    expect(mail?.to).toBe('kiki@example.org');
+    expect(mail?.text).toContain(`/invitation#${token}`);
     // Not again within 5 minutes: the screen says so.
     await page.getByRole('button', { name: /Renvoyer l’invitation/ }).click();
     await expect(page.getByText('Une invitation vient de partir.', { exact: false })).toBeVisible();
@@ -217,6 +224,51 @@ test.describe('an invitation', () => {
     await page.getByRole('button', { name: /Annuler l’invitation/ }).click();
     await expect(page).toHaveURL('/members/manage');
     expect(sql("SELECT COUNT(*) FROM member WHERE nickname = 'Kiki'")).toBe('0');
+  });
+
+  test('a link without email can be copied with a mail server too (#73)', async ({ page }) => {
+    await signIn(page);
+    await record(page, 'Kiki');
+    await emptyMailbox();
+    await page.getByRole('button', { name: /Copier un lien d’invitation/ }).click();
+    const panel = page.getByRole('dialog', { name: 'Invitation prête' });
+    await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
+    expect(await receivedMails(0)).toEqual([]);
+  });
+
+  test('is edited like a current member; a changed email cancels the link and sends a new one (#72)', async ({
+    page,
+  }) => {
+    await openList(page, 'momo@example.org', memberPassword);
+    await record(page, 'Kiki');
+    const linkOf = () =>
+      sql(
+        `SELECT CONCAT(id, ':', tokenHash) FROM memberPasswordLink WHERE memberId = ${memberId('Kiki')}`,
+      );
+    // Sent a minute ago: within the 5 minutes between two emails.
+    await page.getByRole('button', { name: /Renvoyer l’invitation/ }).click();
+    await page
+      .getByRole('dialog', { name: 'Invitation envoyée' })
+      .getByRole('button', { name: 'Fermer' })
+      .click();
+    const former = linkOf();
+    expect(former).not.toBe('');
+    const email = page.getByLabel('Adresse email');
+    await expect(email).toHaveValue('kiki@example.org');
+    await email.fill('kiki.bis@example.org');
+    await emptyMailbox();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+    // Saved; the former link went to the former address: it is cancelled, and
+    // a new invitation leaves for the new one, within the 5 minutes too.
+    await expect(page.getByRole('dialog', { name: 'Invitation envoyée' })).toContainText(
+      'kiki.bis@example.org',
+    );
+    expect(sql("SELECT COUNT(*) FROM member WHERE nickname = 'Kiki' AND status = 'INVITED'")).toBe(
+      '1',
+    );
+    expect(linkOf()).not.toBe(former);
+    expect((await receivedMails(1))[0]?.to).toBe('kiki.bis@example.org');
   });
 });
 
@@ -248,11 +300,35 @@ test.describe('an invitation without a mail server', () => {
     await signIn(page);
     await record(page, 'Kiki');
     await expect(page.getByRole('button', { name: /Renvoyer l’invitation/ })).toHaveCount(0);
-    await page.getByRole('button', { name: /Créer un nouveau lien/ }).click();
+    await page.getByRole('button', { name: /Copier un lien d’invitation/ }).click();
     const panel = page.getByRole('dialog', { name: 'Invitation prête' });
     await expect(panel.getByLabel('Lien d’invitation')).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
     await panel.getByRole('button', { name: 'Fermer' }).click();
     await expect(page.getByText(/Le lien d’invitation marche jusqu’au \d+ \S+/)).toBeVisible();
+  });
+
+  test('a changed email cancels the link, and a new one is offered (#72)', async ({ page }) => {
+    await signIn(page);
+    await record(page, 'Kiki');
+    await page.getByRole('button', { name: /Copier un lien d’invitation/ }).click();
+    await page
+      .getByRole('dialog', { name: 'Invitation prête' })
+      .getByRole('button', { name: 'Fermer' })
+      .click();
+    await page.getByLabel('Adresse email').fill('kiki.ter@example.org');
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+    const changed = page.locator('.members-emailChanged');
+    await expect(changed).toContainText(
+      'L’ancien lien d’invitation ne marche plus. Copie un nouveau lien et envoie-le à kiki.ter@example.org.',
+    );
+    expect(
+      sql(`SELECT COUNT(*) FROM memberPasswordLink WHERE memberId = ${memberId('Kiki')}`),
+    ).toBe('0');
+    await changed.getByRole('button', { name: 'Copier un lien d’invitation' }).click();
+    await expect(
+      page.getByRole('dialog', { name: 'Invitation prête' }).getByLabel('Lien d’invitation'),
+    ).toHaveValue(/\/invitation#[0-9a-f]{64}$/);
   });
 });
 

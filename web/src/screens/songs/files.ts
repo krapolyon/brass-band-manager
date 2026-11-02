@@ -279,11 +279,15 @@ type Sending = { dropped: DroppedFile; role: SongFileRole; content: Blob | null 
  * hand, which count only when the engine gives none. Both follow the score:
  * they are not sent when it is refused, and when it cannot be read the ones
  * the song had from an earlier score are removed.
+ *
+ * Quiet: the MuseScore file and the parts notify nobody ("Ne pas prévenir la
+ * fanfare", model/songs.md, "A quiet change"). The other files never notify.
  */
 export async function sendFiles(
   songId: number,
   files: DroppedFile[],
   onProgress: (sent: number, total: number) => void = () => {},
+  isQuiet = false,
 ): Promise<SendResult> {
   const placed = files.filter(isPlaced);
   const score = placed.find((file) => file.role === 'museScore');
@@ -318,7 +322,12 @@ export async function sendFiles(
     try {
       const content =
         produced ?? (role === 'cover' ? await preparedCover(dropped.file) : dropped.file);
-      const song = await sendSongFile(songFileAddress(songId, role, dropped.instrumentId), content);
+      const address = songFileAddress(songId, role, dropped.instrumentId);
+      const notifies = role === 'museScore' || role === 'part';
+      const song = await sendSongFile(
+        isQuiet && notifies ? `${address}?quiet=1` : address,
+        content,
+      );
       if (role === 'museScore') isScoreSaved = true;
       if (role === 'audio') {
         await saveOutline(songId, dropped.file, song.audio?.url ?? '').catch(() => {

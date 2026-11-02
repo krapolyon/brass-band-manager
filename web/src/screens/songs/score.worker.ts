@@ -1,5 +1,5 @@
 import { rehearsalMarks, withMarks, withMeasures, withTrackNames } from './midi.ts';
-import { unzipped, withWrittenKeys } from './score.ts';
+import { TPC2_FIRST, unzipped, withTpcInOrder, withWrittenKeys } from './score.ts';
 
 // Reads a MuseScore file with the MuseScore engine (webmscore) and gives back
 // what the app keeps beside it: the MIDI file, its tracks named after the
@@ -35,7 +35,7 @@ type Engine = {
 };
 
 // The engine of the app is older than the MuseScore the band uses, and reads
-// two things of MuseScore 4 wrongly. Some versions (4.4 for one) write a line,
+// three things of MuseScore 4 wrongly. Some versions (4.4 for one) write a line,
 // <LastEID>, that the engine does not know: it then opens the file as an empty
 // score, with no error. And MuseScore 4 writes the key signatures in a form
 // the engine does not know (<concertKey>): every staff is then drawn in C
@@ -44,6 +44,9 @@ type Engine = {
 // written the older way (withWrittenKeys). Its styles and its separate parts
 // are left behind: neither the MIDI file nor the MusicXML needs them, and the
 // parts are then shown as each instrument reads them, never in concert pitch.
+// The third: a note whose <tpc2> comes before its <tpc> (a file edited by a
+// script) plays at a wrong pitch; the two are put back in order
+// (withTpcInOrder, issue #71).
 const UNKNOWN_LINE = /<LastEID>[^<]*<\/LastEID>\s*/;
 const CONCERT_KEY = /<concertKey>/;
 
@@ -51,8 +54,11 @@ async function whatToLoad(file: Uint8Array): Promise<['mscz' | 'mscx', Uint8Arra
   try {
     const main = await unzipped(file, (name) => !name.includes('/') && name.endsWith('.mscx'));
     const text = new TextDecoder().decode(main);
-    if (!UNKNOWN_LINE.test(text) && !CONCERT_KEY.test(text)) return ['mscz', file];
-    return ['mscx', new TextEncoder().encode(withWrittenKeys(text.replace(UNKNOWN_LINE, '')))];
+    if (!UNKNOWN_LINE.test(text) && !CONCERT_KEY.test(text) && !TPC2_FIRST.test(text)) {
+      return ['mscz', file];
+    }
+    const rewritten = withTpcInOrder(withWrittenKeys(text.replace(UNKNOWN_LINE, '')));
+    return ['mscx', new TextEncoder().encode(rewritten)];
   } catch {
     // Not an archive the app can open by itself: the engine has the last word.
     return ['mscz', file];

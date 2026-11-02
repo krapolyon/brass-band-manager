@@ -99,9 +99,15 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
   const [held, setHeld] = useState<string[]>(member.roles);
   const [wasSent, setSent] = useState(false);
   const [isLeaving, setLeaving] = useState(false);
+  // The email of an invited member was changed without a mail server: their
+  // link was cancelled, and a new one is offered (#72). With a mail server, the
+  // new invitation has left and its panel says so.
+  const [isEmailChanged, setEmailChanged] = useState(false);
 
   const status = displayStatus(member);
   const isCurrent = member.status === 'ACTIVE' || member.status === 'POWER_MEMBER';
+  // An invited member is edited like a current one (#72, model/members.md).
+  const isEditable = isCurrent || member.status === 'INVITED';
   const canManageRoles = me.permissions.includes('manageRoles');
   const mayAct = covers(me, member);
   // The last current admin can neither lose that role nor leave.
@@ -153,9 +159,22 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
     },
   });
   // "Renvoyer l'invitation": a new link by email, the former one stops (#50).
+  // The link is shown once too, as at the creation (#73).
   const resend = useMutation({
-    mutationFn: () => api<Member>(`/api/members/${member.id}/invitation`, { method: 'POST' }),
-    onSuccess: refresh,
+    mutationFn: () =>
+      api<Member & { passwordLinkToken: string }>(`/api/members/${member.id}/invitation`, {
+        method: 'POST',
+      }),
+    onSuccess: async (answer) => {
+      setEmailChanged(false);
+      setLink({
+        token: answer.passwordLinkToken,
+        nickname: member.nickname,
+        isInvitation: true,
+        sentTo: answer.email,
+      });
+      await refresh();
+    },
   });
   const cancelInvitation = useMutation({
     mutationFn: () => api(`/api/members/${member.id}`, { method: 'DELETE' }),
@@ -173,9 +192,24 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
       if (canManageRoles && changed) {
         await api(`/api/members/${member.id}/roles`, { method: 'PUT', body: { roles: held } });
       }
-      await saveMember(member.id, draft, photo, bandCountry);
+      return saveMember(member.id, draft, photo, bandCountry);
     },
-    onSuccess: () => navigate('/members/manage'),
+    onSuccess: (saved) => {
+      const isNewAddress =
+        draft.email.trim().toLowerCase() !== (member.email ?? '').trim().toLowerCase();
+      if (saved.passwordLinkToken) {
+        setLink({
+          token: saved.passwordLinkToken,
+          nickname: saved.nickname,
+          isInvitation: true,
+          sentTo: saved.email,
+        });
+      } else if (member.status === 'INVITED' && isNewAddress) {
+        setEmailChanged(true);
+      } else {
+        navigate('/members/manage');
+      }
+    },
     // Whatever happened, the list is asked again: a save can stop halfway.
     onSettled: () => Promise.all([refresh(), mine()]),
     onError: focusFirstFieldError,
@@ -223,7 +257,7 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
         title={member.nickname}
         subtitle={`${member.firstName} ${member.lastName} · ${instrument?.name ?? ''}`}
         onSubmit={
-          isCurrent
+          isEditable
             ? () => {
                 if (isBusy) return;
                 setSent(true);
@@ -236,7 +270,7 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
             : undefined
         }
         actions={
-          isCurrent && (
+          isEditable && (
             <BottomBar>
               <Button type="submit" disabled={isBusy}>
                 {t('settings.save')}
@@ -251,6 +285,20 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
           </Message>
         )}
         {failureKey && <Message kind="danger">{t(failureKey)}</Message>}
+        {isEmailChanged && (
+          <div className="members-emailChanged">
+            <Message kind="warning">
+              {t('manage.member.emailChanged', { email: member.email })}
+            </Message>
+            <Button
+              kind="secondary"
+              onClick={() => createLink.mutate()}
+              disabled={isBusy || !mayAct}
+            >
+              {t('manage.actions.newLink')}
+            </Button>
+          </div>
+        )}
         {errorCount > 0 && (
           <Message kind="danger">{t('member.errors.beforeSaving', { count: errorCount })}</Message>
         )}
@@ -317,24 +365,25 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
             )}
             {member.status === 'INVITED' && (
               <>
-                {byEmail ? (
+                {byEmail && (
                   <NavRow
-                    icon="Link"
+                    icon="Send"
                     label={t('manage.actions.resend')}
                     detail={reserved ?? t('manage.actions.resendDetail', { email: member.email })}
                     onClick={() => resend.mutate()}
                     disabled={isBusy || !mayAct}
-                  />
-                ) : (
-                  <NavRow
-                    icon="Link"
-                    label={t('manage.actions.newLink')}
-                    detail={reserved ?? t('manage.actions.newLinkDetail')}
-                    onClick={() => createLink.mutate()}
-                    disabled={isBusy || !mayAct}
                     opensPanel
                   />
                 )}
+                {/* A link without email, with a mail server too (#73). */}
+                <NavRow
+                  icon="Link"
+                  label={t('manage.actions.newLink')}
+                  detail={reserved ?? t('manage.actions.newLinkDetail')}
+                  onClick={() => createLink.mutate()}
+                  disabled={isBusy || !mayAct}
+                  opensPanel
+                />
                 <NavRow
                   icon="Trash"
                   tone={mayAct ? 'danger' : 'default'}
@@ -388,7 +437,7 @@ function Record({ me, member, all, onLink: setLink }: RecordProps) {
           </Sheet>
         )}
 
-        {isCurrent && (
+        {isEditable && (
           <MemberRecordFields
             voice="other"
             emailLocked={mayAct ? undefined : t('manage.member.emailReserved')}

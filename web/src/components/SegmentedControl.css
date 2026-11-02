@@ -1,7 +1,5 @@
 .SegmentedControl {
   display: flex;
-  /* At a large text size the values go one under the other. */
-  flex-wrap: wrap;
   gap: var(--spaceXxs);
   padding: var(--spaceXxs);
   border-radius: var(--radiusLg);
@@ -11,7 +9,10 @@
 .SegmentedControl label {
   position: relative;
   display: flex;
-  flex: 1;
+  /* The values share the width, whatever their length; at a large text size
+     a label wraps inside its segment rather than being cut (1.1.0). */
+  flex: 1 1 0;
+  min-width: 0;
   align-items: center;
   justify-content: center;
   min-height: var(--controlHeightSm);
@@ -37,6 +38,7 @@
 
 .SegmentedControl span {
   position: relative;
+  overflow-wrap: break-word;
   pointer-events: none;
 }
 

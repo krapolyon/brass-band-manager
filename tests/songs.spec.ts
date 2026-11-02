@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { parseMidi } from 'midi-file';
 import { textSizeOfDevice } from './support/accessibility.ts';
 import { emptyDatabase, sql } from './support/database.ts';
 import {
@@ -12,6 +13,7 @@ import {
   server,
   tagApp,
 } from './support/discord.ts';
+import { emptyPushes, sentPushes, subscribe } from './support/push.ts';
 import { addMember, admin, deviceOf, install, memberPassword } from './support/scenario.ts';
 import {
   addSong,
@@ -95,7 +97,7 @@ const noOverflow = async (page: Page) =>
   ).toBeLessThanOrEqual(0);
 
 test.describe('the list of songs', () => {
-  test('shows what the band plays or is learning, by name; the proposed and abandoned ones behind two filters', async ({
+  test('shows what the band plays or is learning, by name; the proposed or the abandoned ones behind two filters', async ({
     page,
   }) => {
     await asMember(page, 'Zaza');
@@ -115,13 +117,16 @@ test.describe('the list of songs', () => {
     // Both filters are off when the screen opens.
     const proposed = page.getByRole('button', { name: 'Proposés' });
     await expect(proposed).toHaveAttribute('aria-pressed', 'false');
+    // A filter shows its songs alone, and one at a time (1.1.0).
     await proposed.click();
-    await expect
-      .poll(() => names(page))
-      .toEqual(['Crazy', 'Le Bal masqué', 'Seven Nation', 'Toxic']);
-    await page.getByRole('button', { name: 'Abandonnés' }).click();
-    await expect(rows(page)).toHaveCount(5);
+    await expect.poll(() => names(page)).toEqual(['Le Bal masqué']);
+    const abandoned = page.getByRole('button', { name: 'Abandonnés' });
+    await abandoned.click();
+    await expect.poll(() => names(page)).toEqual(['Rasputin']);
+    await expect(proposed).toHaveAttribute('aria-pressed', 'false');
     await expect(rows(page).filter({ hasText: 'Rasputin' })).toContainText('Abandonné');
+    await abandoned.click();
+    await expect.poll(() => names(page)).toEqual(['Crazy', 'Seven Nation', 'Toxic']);
   });
 
   test('the search reads the name, the original title and the artist, without regard to accents', async ({
@@ -558,7 +563,8 @@ test.describe('the MIDI player', () => {
     await page.getByLabel('Titre original').fill('Hey Ya!');
     await page.getByLabel('Interprète original').fill('OutKast');
     await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
-    await expect(page.getByRole('heading', { name: 'Hey Ya', level: 1 })).toBeVisible({
+    // The title of the song: level 1 on a phone, 2 beside the list on a computer.
+    await expect(page.getByRole('heading', { name: 'Hey Ya', exact: true })).toBeVisible({
       timeout: 30_000,
     });
     void playwright;
@@ -662,11 +668,146 @@ test.describe('the MIDI player', () => {
     await page.getByLabel('Titre original').fill('Sledge');
     await page.getByLabel('Interprète original').fill('Dance with the Dead');
     await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
-    await expect(page.getByRole('heading', { name: 'Sledge', level: 1 })).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Sledge', exact: true })).toBeVisible({
       timeout: 30_000,
     });
     await openMidi(page);
     await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+  });
+
+  test('a device whose sound takes more than a second to start plays all the same (#70)', async ({
+    page,
+    playwright,
+  }) => {
+    // A Bluetooth headset, Windows or Safari: resume() answers after 1.5 s.
+    await page.addInitScript(() => {
+      const resume = AudioContext.prototype.resume;
+      AudioContext.prototype.resume = function (this: AudioContext) {
+        return new Promise<void>((done) => setTimeout(done, 1500)).then(() => resume.call(this));
+      };
+    });
+    await withScore(playwright, page);
+    await openMidi(page);
+    await expect(page.getByText('Mesure 1 sur 4')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/ne se chargent pas|ne démarre pas/)).toHaveCount(0);
+  });
+
+  test('a device whose sound never starts is told so, not blamed on the network, and can try again (#70)', async ({
+    page,
+    playwright,
+  }) => {
+    await page.addInitScript(() => {
+      (window as unknown as { isStuck: boolean }).isStuck = true;
+      const resume = AudioContext.prototype.resume;
+      AudioContext.prototype.resume = function (this: AudioContext) {
+        if ((window as unknown as { isStuck: boolean }).isStuck) {
+          return new Promise<void>(() => {});
+        }
+        return resume.call(this);
+      };
+      // The clock stays suspended while it is stuck.
+      const state = Object.getOwnPropertyDescriptor(BaseAudioContext.prototype, 'state');
+      Object.defineProperty(BaseAudioContext.prototype, 'state', {
+        get(this: BaseAudioContext) {
+          return (window as unknown as { isStuck: boolean }).isStuck
+            ? 'suspended'
+            : state?.get?.call(this);
+        },
+      });
+    });
+    await withScore(playwright, page);
+    await openMidi(page);
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+
+    await expect(page.getByText('Le son ne démarre pas sur cet appareil.')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(
+      page.getByText('Les sons des instruments ne se chargent pas.', { exact: false }),
+    ).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled();
+
+    // The device lets the sound start now: "Réessayer" plays.
+    await page.evaluate(() => {
+      (window as unknown as { isStuck: boolean }).isStuck = false;
+    });
+    await page.getByRole('button', { name: 'Réessayer' }).click();
+    await expect(page.getByText('Mesure 2 sur 4')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Le son ne démarre pas sur cet appareil.')).toHaveCount(0);
+  });
+
+  test('a file whose notes write <tpc2> before <tpc> plays every staff at its pitch (#71)', async ({
+    page,
+  }) => {
+    // "Sax Ténor", in B flat, reads a scale from C: it sounds a ninth lower,
+    // from B flat. The engine of the app put it a tone off before 1.1.0.
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: 'Djidji.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore('tpc2First'),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('Djidji');
+    await page.getByLabel('Interprète original').fill('Les Inconnus');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: 'Djidji', exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const id = sql("SELECT id FROM song WHERE name = 'Djidji'");
+    const answer = await page.request.get(`/api/songs/${id}/midi`);
+    expect(answer.status()).toBe(200);
+    const played = parseMidi(await answer.body()).tracks.map((events) =>
+      events.flatMap((event) =>
+        event.type === 'noteOn' && event.velocity > 0 ? [event.noteNumber] : [],
+      ),
+    );
+    const scale = [46, 48, 50, 51, 53, 55, 57, 46];
+    expect(played.filter((notes) => notes.length > 0)).toEqual([
+      [60, 62, 64, 65, 67, 69, 71, 60, 60, 62, 64, 65, 67, 69, 71, 60],
+      [...scale, ...scale],
+    ]);
+  });
+
+  test('the tempo of the file is the one at its first note, not the 120 of a silent first measure (#71)', async ({
+    page,
+  }) => {
+    // The first measure rests, the tempo mark (148) is on the second: the
+    // MIDI file says 120 at its start, then 148 where the music starts.
+    await asMember(page, 'Sisi');
+    await page.goto('/songs/new');
+    await page.locator('input[type=file]').setInputFiles([
+      {
+        name: '8 bit.mscz',
+        mimeType: 'application/octet-stream',
+        buffer: readableScore('lateTempo'),
+      },
+    ]);
+    await page.getByRole('button', { name: 'Continuer' }).click();
+    await page.getByLabel('Titre original').fill('8 bit');
+    await page.getByLabel('Interprète original').fill('Daft Punk');
+    await page.getByRole('button', { name: 'Enregistrer le morceau' }).click();
+    await expect(page.getByRole('heading', { name: '8 bit', exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await openMidi(page);
+    await expect(page.getByText('Celui de la fanfare\u00a0: 148')).toBeVisible();
+    await expect(page.getByLabel('148 battements par minute')).toBeVisible();
+
+    // The Live mode reads the tempo of the score by the same rule.
+    await page
+      .getByRole('group', { name: 'Modes du morceau' })
+      .getByRole('button', { name: 'Live' })
+      .click();
+    await expect(page.locator('[data-tile="tempo"]')).toContainText('148', { timeout: 30_000 });
   });
 
   test('a part hidden in MuseScore, and a staff without any note, are not shown (#35)', async ({
@@ -1006,9 +1147,7 @@ test.describe('the Live mode', () => {
     // Playing: a measure of four beats at 120 lasts two seconds.
     await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(measure(page)).toContainText('3');
-    await expect(
-      page.getByText('Décalé ? Fais glisser la partition pour te recaler.'),
-    ).toBeVisible();
+    await expect(page.getByText('Décalé ? Fais glisser la partition.')).toBeVisible();
     await expect(measure(page)).toContainText('4', { timeout: 4000 });
     // The end of the score: ready again, from its start.
     await expect(page.getByRole('button', { name: /On démarre à/ })).toContainText('Mesure 1', {
@@ -1084,7 +1223,7 @@ test.describe('the Live mode', () => {
     expect(seen).toEqual(['1', '2', '1', '2', '3', '4']);
   });
 
-  test('driven by the MIDI player: the settings of the MIDI mode, then the score follows the player through the repeat (#10)', async ({
+  test('with “Jouer avec le MIDI”, the score follows the player through the repeat; its tracks are set in the reading settings (#10, #76)', async ({
     page,
   }) => {
     // The first two measures are played twice: 1 2 1 2 3 4.
@@ -1092,7 +1231,7 @@ test.describe('the Live mode', () => {
     sql("UPDATE song SET bpm = 240 WHERE name = 'Hey Ya'");
     await page.reload();
 
-    // A track cut in the MIDI mode is cut in the sheet of the Live mode: one state.
+    // A track cut in the MIDI mode is cut in the Live mode: one state.
     await page
       .getByRole('group', { name: 'Modes du morceau' })
       .getByRole('button', { name: 'MIDI' })
@@ -1102,22 +1241,24 @@ test.describe('the Live mode', () => {
     await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
       timeout: 30_000,
     });
-
-    await page.getByRole('button', { name: 'Lire avec le MIDI' }).click();
-    const sheet = page.getByRole('dialog', { name: 'Lire avec le MIDI' });
-    await expect(
-      sheet.getByText('La partition suit le lecteur, reprises et codas comprises.'),
-    ).toBeVisible();
-    await expect(sheet.getByRole('button', { name: 'Couper Souba', pressed: true })).toBeVisible();
-    // The tempo of the band, shared with the MIDI mode; the loop is not offered.
-    await expect(sheet.getByLabel('240 battements par minute')).toBeVisible();
-    await expect(sheet.getByText('En boucle')).toHaveCount(0);
+    // No piano button any more: a switch, off at each opening.
+    await expect(page.getByRole('button', { name: 'Lire avec le MIDI' })).toHaveCount(0);
+    const midiSwitch = page.getByRole('switch', { name: 'Jouer avec le MIDI' });
+    await expect(midiSwitch).not.toBeChecked();
+    await expect(midiSwitch).toHaveAccessibleDescription(
+      'Au tempo choisi, masque les pistes dans les réglages.',
+    );
+    await page.getByText('Jouer avec le MIDI').click();
+    await expect(midiSwitch).toBeChecked();
+    // The tempo of the band.
+    await expect(page.locator('[data-tile="tempo"]')).toContainText('240');
 
     const seen: string[] = [];
-    await sheet.getByRole('button', { name: 'Lire avec le MIDI' }).click();
-    await expect(sheet).toBeHidden();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     const chip = page.getByRole('button', { name: 'Suit le MIDI · 240 · 1 piste' });
     await expect(chip).toBeVisible({ timeout: 30_000 });
+    // Where the player is: the playhead, only when the MIDI drives.
+    await expect(page.locator('.songs-livePlayhead')).toBeVisible();
     const tile = page.locator('[data-tile="measure"] .textTitle');
     for (let look = 0; look < 120 && (await tile.count()) > 0; look++) {
       const now = await tile.textContent().catch(() => null);
@@ -1125,27 +1266,42 @@ test.describe('the Live mode', () => {
       await page.waitForTimeout(100);
     }
     expect(seen).toEqual(['1', '2', '1', '2', '3', '4']);
-    // The end of the song: ready again.
+    // The end of the song: ready again, the switch still on.
     await expect(page.getByRole('button', { name: /On démarre à/ })).toBeVisible();
+    await expect(midiSwitch).toBeChecked();
 
-    // The chip pauses the player and opens the sheet again.
-    await page.getByRole('button', { name: 'Lire avec le MIDI' }).click();
-    await sheet.getByRole('button', { name: 'Lire avec le MIDI' }).click();
+    // The chip opens the reading settings, where the tracks are set; the loop is not offered.
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await page.getByRole('button', { name: /Suit le MIDI/ }).click();
-    await expect(sheet).toBeVisible();
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    await expect(settings.getByText('Pistes du MIDI')).toBeVisible();
+    await expect(
+      settings.getByRole('button', { name: 'Couper Souba', pressed: true }),
+    ).toBeVisible();
+    await expect(settings.getByText('Volume des pistes coupées')).toBeVisible();
+    await expect(settings.getByText('En boucle')).toHaveCount(0);
+
+    // Opened again, the switch is off.
+    await settings.getByRole('button', { name: 'Fermer' }).click();
+    await page.getByRole('button', { name: 'Quitter le mode live' }).click();
+    await openLive(page);
+    await expect(page.getByRole('switch', { name: 'Jouer avec le MIDI' })).not.toBeChecked();
   });
 
-  test('a song without a MIDI file shows the piano button disabled, with the reason', async ({
+  test('a song without a MIDI file shows the switch disabled, with the reason, and no tracks in the settings', async ({
     page,
   }) => {
     await withScore(page);
     sql("UPDATE song SET midiPath = NULL WHERE name = 'Hey Ya'");
     await page.reload();
     await openLive(page);
-    const piano = page.getByRole('button', { name: 'Lire avec le MIDI' });
-    await expect(piano).toBeDisabled();
-    await expect(piano).toHaveAccessibleDescription('Pas de fichier MIDI pour ce morceau.');
-    await expect(page.getByText('Pas de fichier MIDI pour ce morceau.')).toBeVisible();
+    const midiSwitch = page.getByRole('switch', { name: 'Jouer avec le MIDI' });
+    await expect(midiSwitch).toBeDisabled();
+    await expect(midiSwitch).toHaveAccessibleDescription('Pas de fichier MIDI pour ce morceau.');
+    await page.getByRole('button', { name: 'Réglages' }).click();
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    await expect(settings.getByText('Métronome visuel')).toBeVisible();
+    await expect(settings.getByText('Pistes du MIDI')).toHaveCount(0);
   });
 
   test('the part shown first is the one of the member’s instrument, wherever it is in the score', async ({
@@ -1183,7 +1339,7 @@ test.describe('the Live mode', () => {
     await expect(page.getByRole('group', { name: 'Modes du morceau' })).toBeVisible();
   });
 
-  test('the tempo is given by tapping one measure: the song starts on the next beat, at that tempo', async ({
+  test('the tempo is set in one sheet: − / + by 4, or one measure tapped, and the song starts on the next 1 (#74)', async ({
     page,
   }) => {
     await withScore(page);
@@ -1191,30 +1347,202 @@ test.describe('the Live mode', () => {
     await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
       timeout: 30_000,
     });
-    await page.getByRole('button', { name: 'Donner le tempo' }).click();
+    await expect(page.getByRole('button', { name: 'Donner le tempo' })).toHaveCount(0);
+    await page.locator('[data-tile="tempo"]').click();
+    const sheet = page.getByRole('dialog', { name: 'Tempo' });
+    await expect(sheet.getByText('Celui de la fanfare : 120. La partition dit 120.')).toBeVisible();
+    await sheet.getByRole('button', { name: 'Accélérer' }).click();
+    await expect(sheet.getByLabel('124 battements par minute')).toBeVisible();
+    await expect(page.locator('[data-tile="tempo"]')).toContainText('124');
 
-    const zone = page.getByRole('button', { name: /Tape le tempo/ });
-    await expect(page.getByText('Tape 4 fois, et ça part sur le 1 suivant.')).toBeVisible();
+    const zone = sheet.getByRole('button', { name: 'Taper le tempo' });
+    await expect(sheet.getByText('Tape 4 fois, et ça part sur le 1 suivant.')).toBeVisible();
     // Four taps, half a second apart: 120 to the minute, give or take.
     for (let beat = 0; beat < 3; beat++) {
       await zone.click();
       await page.waitForTimeout(480);
     }
-    await expect(page.getByText(/bpm pour l’instant\. Encore un temps/)).toBeVisible();
+    await expect(sheet.getByText(/La lecture part sur le 1 suivant\. Tempo détecté/)).toBeVisible();
     await zone.click();
 
+    // The sheet closes, and the song starts.
+    await expect(sheet).toBeHidden();
     await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeVisible();
     // The score is still there once the tempo is given.
     await expect(page.locator('.songs-liveSheet g.measure')).toHaveCount(4);
     const tempo = Number(await page.locator('[data-tile="tempo"] .textTitle').textContent());
     expect(tempo).toBeGreaterThan(95);
     expect(tempo).toBeLessThan(135);
+  });
 
-    // Cancelling gives the tempo up and changes nothing.
+  test('the reading settings are kept on the device, for the member, and never sent to the server (#76, #77)', async ({
+    page,
+  }) => {
+    const sent: string[] = [];
+    page.on('request', (request) => {
+      if (request.method() !== 'GET') sent.push(request.postData() ?? '');
+    });
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const sisi = sql("SELECT id FROM member WHERE nickname = 'Sisi'");
+
+    await page.getByRole('button', { name: 'Réglages' }).click();
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    await expect(settings.getByRole('radio', { name: 'Saut rapide' })).toBeChecked();
+    await settings.getByRole('radio', { name: 'Continu' }).check();
+    await settings.getByRole('button', { name: '10 % de moins' }).click();
+    await settings.getByText('Métronome visuel').click();
+    await expect(settings.getByText('Gardés sur cet appareil, pour toi.')).toBeVisible();
+    await settings.getByRole('button', { name: 'Fermer' }).click();
+
+    // Playing: the metronome counts the four beats, the first a bar; the score moves all the time.
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.locator('.Metronome-beat')).toHaveCount(4);
+    await expect(page.locator('.Metronome-beat[data-state="now"]')).toHaveCount(1);
+    await expect(page.locator('.songs-liveMover')).toHaveAttribute('data-scrolling', 'continuous');
     await page.getByRole('button', { name: 'Mettre en pause' }).click();
-    await page.getByRole('button', { name: 'Donner le tempo' }).click();
-    await page.getByRole('button', { name: 'Annuler' }).click();
-    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeVisible();
+
+    // Kept: opened again, on this device.
+    await page.getByRole('button', { name: 'Quitter le mode live' }).click();
+    await openLive(page);
+    await page.getByRole('button', { name: 'Réglages' }).click();
+    await expect(settings.getByRole('radio', { name: 'Continu' })).toBeChecked();
+    await expect(settings.getByRole('spinbutton', { name: 'Taille de la partition' })).toHaveValue(
+      '90',
+    );
+    expect(
+      JSON.parse(
+        (await page.evaluate((key) => localStorage.getItem(key), `liveReading:${sisi}`)) ?? '{}',
+      ),
+    ).toEqual({ scrolling: 'continuous', size: 90, hasMetronome: true, hidesControls: false });
+    expect(sent.join()).not.toMatch(/continuous|hasMetronome/);
+  });
+
+  test('with less motion, the scrolling is the quick jump whatever was chosen', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Réglages' }).click();
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    await settings.getByRole('radio', { name: 'Saut lent' }).click();
+    await expect(settings.getByRole('radio', { name: 'Saut rapide' })).toBeChecked();
+    await settings.getByRole('button', { name: 'Fermer' }).click();
+    await expect(page.locator('.songs-liveMover')).toHaveAttribute('data-scrolling', 'quickJump');
+  });
+
+  test('the controls hide by the chevron or by the setting, and a tap on the handle or the score shows them', async ({
+    page,
+  }) => {
+    sql("UPDATE song SET bpm = 40 WHERE name = 'Hey Ya'");
+    await withScore(page);
+    sql("UPDATE song SET bpm = 40 WHERE name = 'Hey Ya'");
+    await page.reload();
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    // From the keyboard: the focus follows, to the handle and back to the pause button.
+    await page.getByRole('button', { name: 'Masquer les contrôles' }).focus();
+    await page.keyboard.press('Enter');
+    const handle = page.getByRole('button', { name: /Afficher les contrôles/ });
+    await expect(handle).toBeFocused();
+    await expect(handle).toContainText('Mesure');
+    await expect(handle).toContainText('40');
+    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Quitter le mode live' })).toHaveCount(0);
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeFocused();
+
+    // The setting hides them when a reading starts; a tap on the score shows them.
+    await page.getByRole('button', { name: 'Réglages de lecture' }).click();
+    await page.getByText('Masquer les contrôles en lecture').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Fermer' }).click();
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(handle).toBeVisible();
+    await page.locator('.songs-liveScore').click();
+    await expect(page.getByRole('button', { name: 'Mettre en pause' })).toBeVisible();
+  });
+
+  test('at the largest text size, the reading settings cut no label and leave nothing out of the screen', async ({
+    page,
+  }) => {
+    await textSizeOfDevice(page, 200);
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Réglages' }).click();
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    await expect(settings.getByText('Pistes du MIDI')).toBeVisible();
+    // Each segment of "Défilement" shows its whole label, inside its own width.
+    const cut = await settings
+      .locator('.SegmentedControl span')
+      .evaluateAll(
+        (labels) =>
+          labels.filter((label) => label.scrollWidth > (label.parentElement?.clientWidth ?? 0) + 1)
+            .length,
+      );
+    expect(cut).toBe(0);
+    await settings.getByRole('button', { name: 'Couper Souba' }).click();
+    await expect(settings.getByRole('button', { name: 'Tout réactiver' })).toBeVisible();
+    const overflow = await settings.evaluate((sheet) => sheet.scrollWidth - sheet.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test('a phone in landscape reads one line, its controls at the right; from 768 one column, never lines side by side (#69, #75)', async ({
+    page,
+  }) => {
+    await withScore(page);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const screen = page.locator('.songs-liveScreen');
+    await expect(screen).toHaveAttribute('data-layout', 'ribbon');
+    await expect(page.locator('.songs-liveSheet g.system')).toHaveCount(1);
+    await expect(page.locator('.songs-liveSheet g.measure')).toHaveCount(4);
+    // The controls are a bar at the right of the score.
+    const score = await page.locator('.songs-liveScore').boundingBox();
+    const controls = await page.locator('.songs-liveControls').boundingBox();
+    expect((controls?.x ?? 0) >= (score?.x ?? 0) + (score?.width ?? 0) - 1).toBe(true);
+    // Ready: the start measure and the MIDI switch in a row under the top bar,
+    // the switch without its description; nothing stands back yet.
+    const startRow = page.locator('.songs-liveStartRow');
+    await expect(startRow.getByRole('button', { name: /On démarre à/ })).toBeVisible();
+    await expect(startRow.getByRole('switch', { name: 'Jouer avec le MIDI' })).toBeVisible();
+    await expect(startRow.locator('.SwitchRow-description')).toHaveCount(0);
+    await expect(page.locator('.songs-liveReadingPlace')).toHaveCount(0);
+    await expect(
+      page.locator('.songs-liveControls').getByRole('button', { name: 'Réglages' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.locator('.songs-liveStartRow')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Masquer les contrôles' })).toBeVisible();
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+
+    // A tablet: one column, its lines one under the other.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await expect(screen).toHaveAttribute('data-layout', 'lines');
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled();
+    const lefts = await page
+      .locator('.songs-liveSheet g.system')
+      .evaluateAll((systems) =>
+        systems.map((system) => Math.round(system.getBoundingClientRect().left)),
+      );
+    expect(new Set(lefts).size).toBe(1);
+    await noOverflow(page);
   });
 });
 
@@ -1639,6 +1967,41 @@ test.describe('who manages songs', () => {
     await sisi.dispose();
   });
 
+  test('“Ne pas prévenir la fanfare”: the files of that save notify nobody; the switch is off again next time (1.1.0)', async ({
+    page,
+    playwright,
+  }) => {
+    // Zaza plays the trumpet, and has a device that receives notifications.
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    await subscribe(zaza, 'zaza');
+    // An hour after its creation, a part of the song is news.
+    sql(`UPDATE song SET createdAt = UTC_TIMESTAMP() - INTERVAL 2 HOUR WHERE id = ${seven}`);
+    emptyPushes();
+    const part = { name: 'Seven tp.pdf', mimeType: 'application/pdf', buffer: readablePdf() };
+
+    await asMember(page, 'Sisi');
+    await page.goto(`/songs/${seven}/edit`);
+    const quiet = page.getByRole('switch', { name: 'Ne pas prévenir la fanfare' });
+    await expect(quiet).not.toBeChecked();
+    await page.locator('input[type=file]').setInputFiles([part]);
+    await page.getByText('Ne pas prévenir la fanfare').click();
+    await expect(quiet).toBeChecked();
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(page).toHaveURL(`/songs/${seven}`);
+    expect(sentPushes()).toEqual([]);
+
+    // Opened again, the switch is off: the part is news.
+    await page.goto(`/songs/${seven}/edit`);
+    await expect(quiet).not.toBeChecked();
+    await page.locator('input[type=file]').setInputFiles([part]);
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(page).toHaveURL(`/songs/${seven}`);
+    await expect
+      .poll(() => sentPushes().map((push) => push.payload.title))
+      .toEqual(['La Fanfare des Cuivres Déchaînés – Nouvelle partition pour toi']);
+    await zaza.dispose();
+  });
+
   test('a new MuseScore file the app cannot read takes away the MIDI file of the one it replaces', async ({
     page,
   }) => {
@@ -1874,8 +2237,19 @@ test.describe('on a desktop', () => {
     await expect(line('Crazy')).toContainText('pas de réponse');
     await expect(line('Toxic')).toContainText('Montage en cours');
 
-    await page.getByRole('button', { name: 'Proposés' }).click();
-    await expect(page.getByText('4 morceaux, dont 1 proposés.')).toBeVisible();
+    // A filter shows its songs alone, and one at a time, as in the list (1.1.0).
+    const proposed = page.getByRole('button', { name: 'Proposés' });
+    const abandoned = page.getByRole('button', { name: 'Abandonnés' });
+    await proposed.click();
+    await expect(page.getByText('1 morceau. Les moyennes')).toBeVisible();
+    await expect(table.getByRole('row')).toHaveCount(2);
+    await expect(line('Le Bal masqué')).toBeVisible();
+    await abandoned.click();
+    await expect(proposed).toHaveAttribute('aria-pressed', 'false');
+    await expect(table.getByRole('row')).toHaveCount(2);
+    await expect(line('Rasputin')).toBeVisible();
+    await abandoned.click();
+    await expect(table.getByRole('row')).toHaveCount(4);
 
     const header = table.getByRole('columnheader', { name: 'Maîtrise' });
     await expect(table.getByRole('columnheader', { name: 'Morceau' })).toHaveAttribute(
