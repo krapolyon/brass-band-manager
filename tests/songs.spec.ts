@@ -97,7 +97,7 @@ const noOverflow = async (page: Page) =>
   ).toBeLessThanOrEqual(0);
 
 test.describe('the list of songs', () => {
-  test('shows what the band plays or is learning, by name; the proposed and abandoned ones behind two filters', async ({
+  test('shows what the band plays or is learning, by name; the proposed or the abandoned ones behind two filters', async ({
     page,
   }) => {
     await asMember(page, 'Zaza');
@@ -117,13 +117,16 @@ test.describe('the list of songs', () => {
     // Both filters are off when the screen opens.
     const proposed = page.getByRole('button', { name: 'Proposés' });
     await expect(proposed).toHaveAttribute('aria-pressed', 'false');
+    // A filter shows its songs alone, and one at a time (1.1.0).
     await proposed.click();
-    await expect
-      .poll(() => names(page))
-      .toEqual(['Crazy', 'Le Bal masqué', 'Seven Nation', 'Toxic']);
-    await page.getByRole('button', { name: 'Abandonnés' }).click();
-    await expect(rows(page)).toHaveCount(5);
+    await expect.poll(() => names(page)).toEqual(['Le Bal masqué']);
+    const abandoned = page.getByRole('button', { name: 'Abandonnés' });
+    await abandoned.click();
+    await expect.poll(() => names(page)).toEqual(['Rasputin']);
+    await expect(proposed).toHaveAttribute('aria-pressed', 'false');
     await expect(rows(page).filter({ hasText: 'Rasputin' })).toContainText('Abandonné');
+    await abandoned.click();
+    await expect.poll(() => names(page)).toEqual(['Crazy', 'Seven Nation', 'Toxic']);
   });
 
   test('the search reads the name, the original title and the artist, without regard to accents', async ({

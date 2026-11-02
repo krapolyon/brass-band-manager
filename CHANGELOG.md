@@ -24,7 +24,8 @@ What changes in the app, version after version. This file is written by
 - The tempo of a song is the one where its music starts, even when its first measure is silent: the MIDI player and the Live mode no longer play it too fast.
 - Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.
 - The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network.
-- The record of an invited member can be edited, its email included; a changed email offers to send the invitation again to the new address.
+- The record of an invited member can be edited, its email included; a changed email cancels the former invitation link and sends a new one to the new address.
+- In the list of songs, the filters “Proposés” and “Abandonnés” show those songs alone, one filter at a time.
 
 ## 1.0.0 — 2026-10-24
 
