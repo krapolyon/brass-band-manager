@@ -748,6 +748,56 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     />
   );
 
+  const startButton = (
+    <button
+      type="button"
+      className="songs-liveStart"
+      aria-haspopup="dialog"
+      onClick={() => setPanel('start')}
+    >
+      <Icon name="Flag" size={20} />
+      <span className="songs-liveStartTexts">
+        <span className="textMicro songs-muted">{t('songs.live.startsAt')}</span>
+        <span className="textLabel">
+          {startMark
+            ? t('songs.live.measureAndMark', { measure: label, mark: startMark.name })
+            : t('songs.live.measureNumber', { measure: label })}
+        </span>
+      </span>
+      <Icon name="ChevronDown" size={20} />
+    </button>
+  );
+  const midiSwitch = (
+    <SwitchRow
+      label={t('songs.live.midi.switch')}
+      // Too long in landscape: the label alone there (Figma).
+      showDescription={!isRibbon}
+      description={
+        hasMidiFile
+          ? t('songs.live.midi.switchHint')
+          : t(midiFailed ? 'songs.live.midi.failed' : 'songs.live.midi.none')
+      }
+      checked={isMidiOn}
+      disabled={!hasMidiFile}
+      onChange={(isOn) => {
+        setMidiOn(isOn);
+        if (!isOn || !midi) return;
+        // Within the bounds of the player; its sounds start loading now.
+        const { slowest, fastest } = tempoRange(fileBpm, song.bpm ?? Math.round(fileBpm));
+        changeBpm(Math.min(Math.max(bpm, slowest), fastest));
+        engineFor(midi).prime();
+      }}
+    />
+  );
+  const midiNotes = (
+    <>
+      {isMidiOn && sounds === 'failed' && (
+        <Message kind="danger">{t('songs.midi.soundsError')}</Message>
+      )}
+      {isMidiOn && isSilent && <SilentClock onRetry={play} />}
+    </>
+  );
+
   return (
     <div
       className="songs-liveScreen"
@@ -785,6 +835,14 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
         isRibbon && <div className="songs-liveTop">{metronome}</div>
       )}
       {!isRibbon && metronome}
+      {/* Ready, in landscape: where it starts and the MIDI, in a glass row under the top bar. */}
+      {isRibbon && !isPlaying && showsBars && (
+        <div className="songs-liveStartRow">
+          {startButton}
+          {midiSwitch}
+          {midiNotes}
+        </div>
+      )}
 
       <div className="songs-liveBody">
         <section
@@ -842,7 +900,8 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
             {/* Where the MIDI player is, inside the measure (1.1.0). */}
             <div className="songs-livePlayhead" ref={playhead} hidden />
           </div>
-          {isRibbon && (
+          {/* Nothing stands back before the reading starts. */}
+          {isRibbon && isPlaying && (
             <div
               className="songs-liveReadingPlace"
               data-midi={driver === 'midi' && isPlaying}
@@ -902,50 +961,13 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    className="songs-liveStart"
-                    aria-haspopup="dialog"
-                    onClick={() => setPanel('start')}
-                  >
-                    <Icon name="Flag" size={20} />
-                    <span className="songs-liveStartTexts">
-                      <span className="textMicro songs-muted">{t('songs.live.startsAt')}</span>
-                      <span className="textLabel">
-                        {startMark
-                          ? t('songs.live.measureAndMark', { measure: label, mark: startMark.name })
-                          : t('songs.live.measureNumber', { measure: label })}
-                      </span>
-                    </span>
-                    <Icon name="ChevronDown" size={20} />
-                  </button>
                   {!isRibbon && (
-                    <SwitchRow
-                      label={t('songs.live.midi.switch')}
-                      description={
-                        hasMidiFile
-                          ? t('songs.live.midi.switchHint')
-                          : t(midiFailed ? 'songs.live.midi.failed' : 'songs.live.midi.none')
-                      }
-                      checked={isMidiOn}
-                      disabled={!hasMidiFile}
-                      onChange={(isOn) => {
-                        setMidiOn(isOn);
-                        if (!isOn || !midi) return;
-                        // Within the bounds of the player; its sounds start loading now.
-                        const { slowest, fastest } = tempoRange(
-                          fileBpm,
-                          song.bpm ?? Math.round(fileBpm),
-                        );
-                        changeBpm(Math.min(Math.max(bpm, slowest), fastest));
-                        engineFor(midi).prime();
-                      }}
-                    />
+                    <>
+                      {startButton}
+                      {midiSwitch}
+                      {midiNotes}
+                    </>
                   )}
-                  {isMidiOn && sounds === 'failed' && (
-                    <Message kind="danger">{t('songs.midi.soundsError')}</Message>
-                  )}
-                  {isMidiOn && isSilent && <SilentClock onRetry={play} />}
                   <div className="songs-liveBar">
                     <TempoTile
                       bpm={bpm}

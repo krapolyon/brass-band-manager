@@ -1517,7 +1517,18 @@ test.describe('the Live mode', () => {
     const score = await page.locator('.songs-liveScore').boundingBox();
     const controls = await page.locator('.songs-liveControls').boundingBox();
     expect((controls?.x ?? 0) >= (score?.x ?? 0) + (score?.width ?? 0) - 1).toBe(true);
+    // Ready: the start measure and the MIDI switch in a row under the top bar,
+    // the switch without its description; nothing stands back yet.
+    const startRow = page.locator('.songs-liveStartRow');
+    await expect(startRow.getByRole('button', { name: /On démarre à/ })).toBeVisible();
+    await expect(startRow.getByRole('switch', { name: 'Jouer avec le MIDI' })).toBeVisible();
+    await expect(startRow.locator('.SwitchRow-description')).toHaveCount(0);
+    await expect(page.locator('.songs-liveReadingPlace')).toHaveCount(0);
+    await expect(
+      page.locator('.songs-liveControls').getByRole('button', { name: 'Réglages' }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.locator('.songs-liveStartRow')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Masquer les contrôles' })).toBeVisible();
     await page.getByRole('button', { name: 'Mettre en pause' }).click();
 

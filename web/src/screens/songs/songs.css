@@ -1308,16 +1308,37 @@ button.songs-liveTile:disabled,
   height: 4.25rem;
 }
 
-/* Ready, in landscape: where it starts, compact, above the bar. */
-.songs-liveScreen[data-layout="ribbon"] .songs-liveStart {
-  width: 4.75rem;
-  padding: var(--spaceXs);
-  border-radius: var(--radiusMd);
+/* Ready, in landscape: the start measure and the MIDI switch in a glass row
+   under the top bar, over the top of the line. */
+.songs-liveStartRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spaceSm) var(--spaceMd);
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  z-index: 1;
+  margin: var(--spaceXxs) var(--spaceSm) 0 max(var(--spaceLg), env(safe-area-inset-left));
+  padding: var(--spaceSm) var(--spaceMd);
+  border: var(--borderWidth) solid var(--glassBorder);
+  border-radius: var(--radiusLg);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
-.songs-liveScreen[data-layout="ribbon"] .songs-liveStart > .Icon,
-.songs-liveScreen[data-layout="ribbon"] .songs-liveStartTexts > .textMicro {
-  display: none;
+.songs-liveStartRow > .songs-liveStart {
+  flex: 1 1 12rem;
+  align-self: stretch;
+}
+
+.songs-liveStartRow > .SwitchRow {
+  flex: 0 1 15rem;
+}
+
+.songs-liveStartRow > :not(.songs-liveStart, .SwitchRow) {
+  flex-basis: 100%;
 }
 
 .songs-liveScreen[data-layout="ribbon"] .songs-liveHandleWrap {

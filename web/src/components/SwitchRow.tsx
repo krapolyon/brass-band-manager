@@ -6,6 +6,8 @@ type Props = {
   label: string;
   /** Figma: "Description" and "Show description". */
   description?: string;
+  /** Off: the description is not shown, and screen readers still hear it. */
+  showDescription?: boolean;
   checked: boolean;
   onChange: (checked: boolean) => void;
   /** The choice is kept but cannot be changed here; the screen says why. */
@@ -15,7 +17,14 @@ type Props = {
 // Figma: SwitchRow. An option that is on or off and applies at once: one
 // control, with its label and its description tied to it. The whole row is
 // the touch target.
-export function SwitchRow({ label, description, checked, onChange, disabled }: Props) {
+export function SwitchRow({
+  label,
+  description,
+  showDescription = true,
+  checked,
+  onChange,
+  disabled,
+}: Props) {
   const id = useId();
   const descriptionId = useId();
 
@@ -24,7 +33,10 @@ export function SwitchRow({ label, description, checked, onChange, disabled }: P
       <span className="SwitchRow-texts">
         <span className="textBodyStrong">{label}</span>
         {description && (
-          <span className="SwitchRow-description textCaption" id={descriptionId}>
+          <span
+            className={showDescription ? 'SwitchRow-description textCaption' : 'visuallyHidden'}
+            id={descriptionId}
+          >
             {description}
           </span>
         )}
