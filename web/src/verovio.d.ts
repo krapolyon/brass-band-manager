@@ -12,6 +12,13 @@ declare module 'verovio/esm' {
     loadData(data: string): boolean;
     getPageCount(): number;
     renderToSVG(page: number): string;
+    /** When each note and rest starts, in quarter notes, and each measure. */
+    renderToTimemap(options: Record<string, boolean>): {
+      qstamp: number;
+      on?: string[];
+      restsOn?: string[];
+      measureOn?: string;
+    }[];
     destroy(): void;
   }
 }

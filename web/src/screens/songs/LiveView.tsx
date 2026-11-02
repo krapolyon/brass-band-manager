@@ -16,7 +16,7 @@ import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import type { Song } from '../../songs.ts';
 import { ReadingSettings, StartChoice, TempoSheet } from './LiveSheets.tsx';
-import { type Drawn, drawPart, MAX_COLUMN, SCALE } from './liveDrawing.ts';
+import { type Drawn, drawPart, MAX_COLUMN, SCALE, xAt } from './liveDrawing.ts';
 import { isMotionReduced, type Scrolling, useLiveSettings } from './liveSettings.ts';
 import { mutedVolumeOf, SilentClock, type Sounds, tempoRange } from './MidiView.tsx';
 import {
@@ -362,7 +362,8 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   const midiNow = useCallback((): Position => {
     const player = engine.current;
     if (!player || !midi) return { index: atNow.current, fraction: 0 };
-    const tick = player.position();
+    // What is heard, not what the clock computes ahead of the speakers.
+    const tick = player.heardPosition();
     const measure = writtenAt(midi, tick, played);
     const from = atNow.current;
     const after = played.indexOf(measure, from);
@@ -567,15 +568,17 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       element.style.transform = isRibbon ? `translateX(${offset}px)` : `translateY(${offset}px)`;
       const head = playhead.current;
       if (!head) return;
-      const box = boxes[played[Math.min(now.index, played.length - 1)] ?? 0];
+      const written = played[Math.min(now.index, played.length - 1)] ?? 0;
+      const box = boxes[written];
       const line = box ? lines[box.line] : undefined;
       head.hidden = !isMidi || isRibbon || !box || !line;
       if (head.hidden || !box || !line) return;
-      head.style.transform = `translateX(${box.left + (box.right - box.left) * now.fraction}px)`;
+      const quarters = measures[written]?.quarters ?? 4;
+      head.style.transform = `translateX(${xAt(box, now.fraction, quarters)}px)`;
       head.style.top = `${line.top}px`;
       head.style.height = `${line.height}px`;
     },
-    [offsetFor, isRibbon, boxes, lines, played],
+    [offsetFor, isRibbon, boxes, lines, played, measures],
   );
 
   // While it plays, every frame: where the song is, the measure, the beat.
@@ -733,7 +736,9 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     1,
     Math.round((measures[written]?.quarters ?? 4) / timeline.beatQuarters),
   );
-  const metronome = reading.hasMetronome && isPlaying && (
+  // The metronome the member has not chosen follows the MIDI: on with it, off without.
+  const hasMetronome = reading.hasMetronome ?? isMidiOn;
+  const metronome = hasMetronome && isPlaying && (
     <div className="songs-liveMetronome">
       <Metronome beats={countedBeats} current={beat} />
     </div>
@@ -1089,7 +1094,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       >
         {panel === 'settings' && (
           <ReadingSettings
-            settings={reading}
+            settings={{ ...reading, hasMetronome }}
             onChange={setReading}
             midi={midi}
             midiSettings={midiSettings}

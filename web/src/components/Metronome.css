@@ -12,9 +12,9 @@
   border-radius: var(--radiusFull);
   background: var(--textMuted);
   opacity: var(--fadeMid);
-  transition:
-    width 0.08s ease,
-    height 0.08s ease;
+  /* The beat being played grows by a transform: its place is kept, and the
+     other beats never move to make room for it. */
+  transition: transform 0.08s ease;
 }
 
 .Metronome-beat[data-kind="first"] {
@@ -22,11 +22,11 @@
 }
 
 .Metronome-beat[data-state="now"] {
-  height: var(--spaceSm);
+  transform: scaleY(1.5);
   background: var(--accent);
   opacity: 1;
 }
 
 .Metronome-beat[data-kind="other"][data-state="now"] {
-  width: var(--spaceSm);
+  transform: scale(1.5);
 }

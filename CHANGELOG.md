@@ -17,6 +17,7 @@ What changes in the app, version after version. This file is written by
 - On a tablet or a computer, the Live mode shows the score as one column at the width of the screen, never in two or three columns side by side.
 - The tempo of the Live mode is set in one place: a tap on the tempo opens a sheet to set it with − and +, or to tap it.
 - Playing the Live mode with the MIDI is a switch beside Play; the tracks of the MIDI are set in the new reading settings, and a line shows where the MIDI is in the measure.
+- The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses.
 
 ### Fixed
 
@@ -26,6 +27,8 @@ What changes in the app, version after version. This file is written by
 - The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network.
 - The record of an invited member can be edited, its email included; a changed email cancels the former invitation link and sends a new one to the new address.
 - In the list of songs, the filters “Proposés” and “Abandonnés” show those songs alone, one filter at a time.
+- In the Live mode with the MIDI, the line that shows where the MIDI is moves smoothly, on the note being heard, even with a Bluetooth headset.
+- The beat being played of the visual metronome no longer pushes the others aside.
 
 ## 1.0.0 — 2026-10-24
 

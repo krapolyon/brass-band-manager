@@ -54,6 +54,18 @@
       {
         "kind": "added",
         "text": "Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing."
+      },
+      {
+        "kind": "fixed",
+        "text": "In the Live mode with the MIDI, the line that shows where the MIDI is moves smoothly, on the note being heard, even with a Bluetooth headset."
+      },
+      {
+        "kind": "fixed",
+        "text": "The beat being played of the visual metronome no longer pushes the others aside."
+      },
+      {
+        "kind": "changed",
+        "text": "The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses."
       }
     ]
   },

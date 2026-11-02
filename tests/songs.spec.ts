@@ -1421,6 +1421,75 @@ test.describe('the Live mode', () => {
     expect(sent.join()).not.toMatch(/continuous|hasMetronome/);
   });
 
+  test('the visual metronome follows the MIDI switch until the member chooses, its beats keep their places, and the playhead crosses the notes', async ({
+    page,
+  }) => {
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    const metronome = settings.getByRole('switch', { name: 'Métronome visuel' });
+    const openSettings = () => page.getByRole('button', { name: 'Réglages' }).click();
+    const close = () => settings.getByRole('button', { name: 'Fermer' }).click();
+
+    // Without the MIDI: off.
+    await openSettings();
+    await expect(metronome).not.toBeChecked();
+    await close();
+
+    // With the MIDI: on, and shown while it plays.
+    await page.getByText('Jouer avec le MIDI').click();
+    await openSettings();
+    await expect(metronome).toBeChecked();
+    await close();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^Suit le MIDI/ })).toBeVisible({
+      timeout: 30_000,
+    });
+    const beats = page.locator('.Metronome-beat');
+    await expect(beats).toHaveCount(4);
+    // The beat being played grows in its place: the others never move.
+    await expect(page.locator('.songs-livePlayhead')).toHaveAttribute('style', /translateX/);
+    const places = new Set<string>();
+    for (let sample = 0; sample < 12; sample++) {
+      // The playhead crosses the notes, never the clef or the space before the first one.
+      const { head, firstNote } = await page.evaluate(() => {
+        const sheet = document.querySelector('.songs-liveSheet') as HTMLElement;
+        const measure = Number(
+          document.querySelector('[data-tile="measure"] .textTitle')?.textContent,
+        );
+        const note = sheet.querySelectorAll('g.measure')[measure - 1]?.querySelector('.notehead');
+        const transform = (document.querySelector('.songs-livePlayhead') as HTMLElement).style
+          .transform;
+        return {
+          head: Number(/translateX\(([-\d.]+)px\)/.exec(transform)?.[1]),
+          firstNote: (note?.getBoundingClientRect().left ?? 0) - sheet.getBoundingClientRect().left,
+        };
+      });
+      expect(head).toBeGreaterThanOrEqual(firstNote - 1);
+      places.add(
+        JSON.stringify(
+          await beats.evaluateAll((all) =>
+            all.map((beat) => Math.round((beat as HTMLElement).offsetLeft)),
+          ),
+        ),
+      );
+      await page.waitForTimeout(100);
+    }
+    expect(places.size).toBe(1);
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+
+    // Chosen by the member: kept, whatever the switch.
+    await openSettings();
+    await settings.getByText('Métronome visuel').click();
+    await close();
+    await page.getByText('Jouer avec le MIDI').click();
+    await openSettings();
+    await expect(metronome).not.toBeChecked();
+  });
+
   test('with less motion, the scrolling is the quick jump whatever was chosen', async ({
     page,
   }) => {
