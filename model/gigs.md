@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.13 — 2026-11-03 · DRAFT, to validate by the owner · Model: `gigs.dbml` v1.12 · The coordinates of a gig are found from its address when none are typed, so that its map shows (`hasFoundCoordinates`); the address leaves to a geocoding service, from the server only
 > v1.12 — 2026-10-24 · Validated by the owner, for 1.0.0 · No change to the tables · A wrong calendar address is answered at once, no longer after a second (issue #51)
 > v1.11 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · The setlist generator asks for a length, 45 minutes by default (Band v1.12), instead of a number of songs; the length of a setlist is shown above its songs in the editor, and in its card when it is read (issue #60)
 > v1.10 — 2026-10-24 · Validated by the owner, for 0.3.2 · No change to the tables · A gig shows the messages of its Discord channel that tag the app (issue #45); the song picker of a setlist filters "Pas joués" and the moods (issue #52)
@@ -39,6 +40,7 @@ A concert the band is asked to play, from the first contact to the day itself. I
 | `postalCode` | Postal code | Code postal | No | 69001 | 5 characters | Can be filled without the street |
 | `city` | City | Ville | No | Lyon | Up to 30 characters | Can be filled without the street |
 | `latitude`, `longitude` | GPS coordinates | Coordonnées GPS | No | 45.767300, 4.834400 | 6 decimals | Both or neither. Typed or pasted as one text, "45.7673, 4.8344". Latitude from -90 to 90, longitude from -180 to 180 |
+| `hasFoundCoordinates` | — | — | — | true | — | Never typed: true when `latitude` and `longitude` were found from the address by the app, false when someone typed them. Found coordinates follow the address; typed ones are never replaced |
 | `notes` | Information | Infos diverses | No | Parking behind the town hall, meal provided | A few lines | Free text |
 | `discordChannelId` | Discord channel | Salon Discord | No | 1203984756120394875 | 17 to 20 digits | Digits only. Unique: one channel per gig. Typed as the link of the channel or its identifier, as for a song. Shown as a card at the end of the gig: the messages of the channel that tag the app, then a button that opens the channel in Discord (see "Discord on a gig") |
 | `remindedAt` | Last reminder | Dernière relance | — | 2026-11-20 18:00 | — | Never typed: set when a reminder is sent |
@@ -90,6 +92,9 @@ A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the l
   - The device that saved the answer or the status does not receive it.
 - **Automatic reminders.** Two per gig, each a number of days before `startsOn`, sent from a given hour on that day to the same members as the button. They concern the gigs in `PROPOSED` and `ACCEPTED`. None is sent on a day a reminder was already sent for the gig, by the button or by the app: `remindedAt` says so. A gig created after the day of a reminder does not get it. The two numbers of days and the hour are settings of the band; an empty number of days means that this reminder is not sent. The hour is read on the clock of the server, which is set to the time zone of the band.
 
+- **Coordinates found from the address** (DRAFT, asked by the owner on 2026-11-02, so that the map of a gig shows with its address alone). When a gig is saved with an address (a street, or a postal code and a city) and without coordinates typed, the server asks a geocoding service where that address is and saves the point it answers in `latitude` and `longitude`, with `hasFoundCoordinates` true. When the address of such a gig changes, or is emptied, its found coordinates are asked again, or emptied. Coordinates typed in the form always win and are never replaced; emptying them gives the address back the say. The search sends the street, the postal code, the city and the country of the band, nothing else: never the name of the gig, its notes or anyone's name. It is made by the server, never by the device of a member, once per save that needs it, and the save never waits for it to succeed: an address the service does not find, or a service that does not answer, leaves the gig without coordinates, and without map, until its next save. TODO: the gigs already saved with an address and no coordinates: found at their next save only (proposal), or once for every gig to come.
+- **The geocoding service** is a setting of the server, beside the tiles of the map: Nominatim, the service of OpenStreetMap, by default; empty, no address is searched. Nominatim asks at most one search per second and a name that tells which app asks: one band saves far fewer gigs than that. TODO: say it in the form (a hint under "Coordonnées GPS" when they were found, "Trouvées depuis l'adresse") — to be drawn in Figma first.
+
 ### Relations
 - Organisers (`gigOrganizer`): none or several members, current when they are added. A member who leaves the band is taken off the gigs that are not over yet, and stays organiser of those already played, shown by nickname.
 - Slots (`gigSlot`): one at least, created with the gig.
@@ -107,7 +112,7 @@ A gig in `DRAFT` whose date has passed is deleted by whoever manages gigs: the l
 The right of an organiser depends on the gig, not on a role: the shared layer checks "manages gigs, or organises this gig" in one place, used by every action on a gig.
 
 ### Personal data
-- `streetAddress`, `postalCode`, `city`, `latitude`, `longitude`: the address of a person when the gig is at someone's home. Purpose: getting to the gig. Seen by every current member, like the rest of the gig.
+- `streetAddress`, `postalCode`, `city`, `latitude`, `longitude`: the address of a person when the gig is at someone's home. Purpose: getting to the gig. Seen by every current member, like the rest of the gig. When the coordinates are found from the address, the address is sent to the geocoding service of the server (Nominatim, run by the OpenStreetMap Foundation, by default): an address alone, with no name, no gig and no member, at each save that needs it. The service keeps what its own privacy policy says; a band that does not want it empties the setting.
 - `notes`: free text. The form asks not to write the phone or the email of the client in it.
 - The client has no field of their own in the first version: they come with the quotes.
 
@@ -272,6 +277,9 @@ Changed with this domain:
 - **Overview** (v0.7) and **scoping**: slots without dates, no stops, costumes, setlists tied to a gig and built in the first version, at the end of this domain.
 
 ## 7. Open questions
+1. Coordinates found from the address (v1.13, DRAFT): gigs already saved, found at their next save only, or once for every gig to come? Proposal: at their next save only.
+2. Does the form say that the coordinates were found ("Trouvées depuis l'adresse" under the field)? Proposal: yes, drawn in Figma first.
+3. Nominatim by default, or no geocoding until the admin of an instance sets a service? Proposal: Nominatim by default, as for the tiles of the map.
 
 For later: the generator could also aim at a length ("45 minutes") rather than a number of songs.
 
