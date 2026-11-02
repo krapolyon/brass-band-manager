@@ -13,7 +13,7 @@
       },
       {
         "kind": "fixed",
-        "text": "A MuseScore file can be changed without sending any notification."
+        "text": "Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI."
       },
       {
         "kind": "fixed",
@@ -29,7 +29,7 @@
       },
       {
         "kind": "added",
-        "text": "Sending an invitation again shows a confirmation toast, and the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email."
+        "text": "Sending an invitation again shows a confirmation panel, and the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email."
       },
       {
         "kind": "added",
