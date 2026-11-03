@@ -428,7 +428,11 @@ test.describe('coordinates found from the address', () => {
     });
     expect(created.status()).toBe(201);
     const gig = await created.json();
-    expect(gig).toMatchObject({ latitude: 45.764043, longitude: 4.835694 });
+    expect(gig).toMatchObject({
+      latitude: 45.764043,
+      longitude: 4.835694,
+      hasFoundCoordinates: true,
+    });
     expect(gig.mapTilesUrl).not.toBeNull();
     expect(found(gig.id)).toBe('45.764043 4.835694 1');
 
@@ -498,7 +502,12 @@ test.describe('coordinates found from the address', () => {
     const created = await gigi.post('/api/gigs', { data: gigRecord({ city: 'Nulle-Part' }) });
     expect(created.status()).toBe(201);
     const gig = await created.json();
-    expect(gig).toMatchObject({ latitude: null, longitude: null, mapTilesUrl: null });
+    expect(gig).toMatchObject({
+      latitude: null,
+      longitude: null,
+      mapTilesUrl: null,
+      hasFoundCoordinates: false,
+    });
     expect(geocodingAsked()).toHaveLength(1);
   });
 

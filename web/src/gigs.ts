@@ -79,6 +79,8 @@ export type Gig = Omit<GigSummary, 'slots'> & {
   streetAddress: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** The coordinates were found from the address by the server, not typed (1.1.0). */
+  hasFoundCoordinates: boolean;
   /** Where the map of the meeting point reads its tiles; null when the gig shows no map. */
   mapTilesUrl: string | null;
   notes: string | null;

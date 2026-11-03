@@ -18,7 +18,7 @@
     "The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses.": "Le métronome visuel est activé par défaut quand le mode live joue avec le MIDI, et désactivé sinon, tant que le fanfaron n’a pas choisi.",
     "In the Live mode, the score no longer stands still while it plays after the phone turned or a sheet closed.": "En mode live, la partition ne reste plus figée pendant la lecture après avoir tourné le téléphone ou fermé un volet.",
     "On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too.": "Sur un téléphone en paysage, la barre du mode live est assez large pour ses tuiles, à côté de l’encoche aussi.",
-    "A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), and coordinates typed by hand still win.": "Un plan qui a une adresse sans coordonnées GPS affiche sa carte : le serveur trouve où est l’adresse (OpenStreetMap), et des coordonnées saisies à la main restent prioritaires."
+    "A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), the form says so under the field, and coordinates typed by hand still win.": "Un plan qui a une adresse sans coordonnées GPS affiche sa carte : le serveur trouve où est l’adresse (OpenStreetMap), le formulaire l’indique sous le champ, et des coordonnées saisies à la main restent prioritaires."
   },
   "1.0.0": {
     "Security fixes following the pentest.": "Correctifs de sécurité suite au pentest.",

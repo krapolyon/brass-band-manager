@@ -77,7 +77,7 @@
       },
       {
         "kind": "added",
-        "text": "A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), and coordinates typed by hand still win."
+        "text": "A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), the form says so under the field, and coordinates typed by hand still win."
       }
     ]
   },

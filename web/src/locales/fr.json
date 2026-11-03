@@ -1957,6 +1957,7 @@
       "city": "Ville",
       "coordinates": "Coordonnées GPS",
       "coordinatesHint": "Pour un lieu difficile à trouver : colle-les depuis ton app de cartes.",
+      "coordinatesFound": "Trouvées depuis l’adresse.",
       "slots": "Présences",
       "slotsLead": "Un plan d’une soirée garde une seule présence, sans nom. Sur plusieurs jours, découpe-le : les fanfarons répondent pour chacune.",
       "onlySlot": "Une seule présence, sans nom",
