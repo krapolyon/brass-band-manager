@@ -74,6 +74,10 @@
       {
         "kind": "fixed",
         "text": "On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too."
+      },
+      {
+        "kind": "added",
+        "text": "A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), and coordinates typed by hand still win."
       }
     ]
   },

@@ -90,6 +90,14 @@ return [
     // sends the address of the member's device to that server.
     // 'mapTilesUrl' => 'https://vector.openstreetmap.org/shortbread_v1/tilejson.json',
 
+    // Where the address of a gig is, when no coordinates are typed, so that
+    // its map shows: the search address of a Nominatim service. Left out, it
+    // is the one of the OpenStreetMap Foundation, whose policy the app follows
+    // (it says which app asks, one search per save at most). '' searches
+    // nothing. Saving a gig with an address and no coordinates sends that
+    // address, and nothing else, to that server.
+    // 'geocoding' => ['url' => 'https://nominatim.openstreetmap.org/search'],
+
     // The bot of the band, which reads the Discord channels of songs to show
     // the messages that tag the section of each member (docs/discord-bot.md
     // says how to create it). The token is a password: it stays here, never

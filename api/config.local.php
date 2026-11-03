@@ -67,6 +67,10 @@ return [
     'discord' => getenv('BRASS_BAND_DISCORD_ANSWERS')
         ? ['botToken' => 'test-only', 'answersFrom' => getenv('BRASS_BAND_DISCORD_ANSWERS')]
         : ['botToken' => ''],
+    // Where the address of a gig is (Gigs\Geocoder): Nominatim on the local
+    // stack, as on a host; the test servers read the answer from a file the
+    // tests write (docker-compose.yml, tests/support/geocoding.ts).
+    ...(getenv('BRASS_BAND_GEOCODING_ANSWERS') ? ['geocoding' => ['answersFrom' => getenv('BRASS_BAND_GEOCODING_ANSWERS')]] : []),
     'session' => [
         // The local stack has no HTTPS, and a browser refuses a secure cookie without it.
         'secureCookie' => false,

@@ -1,5 +1,5 @@
 // Domain: Gigs
-// v1.12 — 2026-11-03 — DRAFT, to validate: gig.hasFoundCoordinates, the coordinates found from the address by a geocoding service when none are typed, so that the map shows (dictionary v1.13)
+// v1.12 — 2026-11-03 — validated, for 1.1.0 (migration 019): gig.hasFoundCoordinates, the coordinates found from the address by a geocoding service when none are typed, so that the map shows (dictionary v1.13)
 // v1.11 — 2026-10-24 — validated, for 0.4.0, no change to the tables: the setlist generator asks for a length, 45 minutes by default (band.setlistTargetMinutes), instead of a number of songs; the length of a setlist is shown above its songs (issue #60)
 // v1.10 — 2026-10-24 — validated, for 0.3.2, no change to the tables: a gig shows the Discord messages that tag the app (issue #45); the song picker of a setlist filters the songs not played in the gig yet and by mood (issue #52) (dictionary)
 // v1.9 — 2026-10-23 — validated, for 0.3.1, no change to the tables: the setlist generator places songs by their possible positions and favours Chill near the start, Teuf near the end (issue #47) (dictionary)
@@ -52,7 +52,7 @@ Table gig {
   city varchar
   latitude decimal [note: 'Exact point of the meeting, in decimal degrees, for instance 45.767300. For a place that is hard to find. Filled with longitude or not at all. 🔒 Personal data when the gig is at someone\'s home, as the address.']
   longitude decimal [note: 'In decimal degrees, for instance 4.834400. Filled with latitude or not at all.']
-  hasFoundCoordinates boolean [not null, default: false, note: 'True when latitude and longitude were found from the address by the app (a geocoding service, from the server), false when typed. Found ones follow the address; typed ones are never replaced. TODO: validated by the owner']
+  hasFoundCoordinates boolean [not null, default: false, note: 'True when latitude and longitude were found from the address by the app (a geocoding service, from the server), false when typed. Found ones follow the address; typed ones are never replaced.']
   notes text [note: 'Anything else members need to know, as free text over several lines. No contact details of the client: they have no field in the first version.']
   discordChannelId varchar [unique, note: 'Identifier of the Discord channel where the band discusses this gig: digits only. Empty for a band without Discord. Read by the app from the link of the channel, pasted by whoever may edit the gig. Every member who sees the gig sees it as a link that opens the channel in Discord.']
   remindedAt timestamp [note: 'Last time the members who have not answered were reminded, by the app or by the button. Empty when they never were. No automatic reminder is sent on a day one was already sent.']

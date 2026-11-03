@@ -44,6 +44,9 @@ services:
       # Discord is a folder of answers the tests write (tests/support/discord.ts):
       # nothing is asked of Discord.
       BRASS_BAND_DISCORD_ANSWERS: /var/www/storage/discordAnswers
+      # The geocoding of the address of a gig is a file of answer the tests
+      # write (tests/support/geocoding.ts): nothing is asked of Nominatim.
+      BRASS_BAND_GEOCODING_ANSWERS: /var/www/storage/geocodingAnswers
     depends_on:
       db:
         condition: service_healthy
@@ -69,6 +72,7 @@ services:
       BRASS_BAND_DATABASE: brassBandTest
       BRASS_BAND_APP_URL: http://localhost:8082
       BRASS_BAND_NO_MAIL: "1"
+      BRASS_BAND_GEOCODING_ANSWERS: /var/www/storage/geocodingAnswers
       # The same file as the test server: what an instance without email sends.
       BRASS_BAND_PUSH_LOG: /var/www/storage/pushLog.jsonl
     depends_on:
@@ -91,6 +95,7 @@ services:
       BRASS_BAND_APP_URL: http://localhost:8083
       BRASS_BAND_PUSH_LOG: /var/www/storage/pushLog.jsonl
       BRASS_BAND_ALLOWED_RECIPIENTS: zaza@example.org
+      BRASS_BAND_GEOCODING_ANSWERS: /var/www/storage/geocodingAnswers
     depends_on:
       db:
         condition: service_healthy

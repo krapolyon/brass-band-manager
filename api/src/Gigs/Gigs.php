@@ -26,7 +26,7 @@ final class Gigs
     // The columns are listed one by one on purpose: a column added to the
     // table is never sent by accident.
     private const COLUMNS = 'g.id, g.name, g.status, g.startsOn, g.endsOn, g.meetingTime, g.placeName, g.placeUrl,
-        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
+        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.hasFoundCoordinates, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
 
     private readonly Setlists $setlists;
 
