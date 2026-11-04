@@ -20,13 +20,15 @@ use Slim\Psr7\Stream;
 //   kind=audio       the recordings
 //   kind=midi        the MIDI files
 //   kind=museScore   the MuseScore files
+//   kind=allParts    every part of one song, one PDF per instrument (1.1.0):
+//                    asked from the song, so one song id only
 //
 // The archive is built on demand in the temporary folder of the server and
 // kept nowhere. The files are stored in it as they are: a PDF, an mp3 or a
 // MuseScore file is already compressed.
 final class DownloadArchiveAction
 {
-    private const KINDS = ['parts', 'audio', 'midi', 'museScore'];
+    private const KINDS = ['parts', 'audio', 'midi', 'museScore', 'allParts'];
     private const MAX_SONGS = 500;
     // More than a repertoire of fifty songs with a recording each: above it,
     // the request is not one the screen makes.
@@ -48,6 +50,9 @@ final class DownloadArchiveAction
             throw new ApiError(422, 'invalidInput');
         }
         $songIds = array_slice(array_map(intval(...), explode(',', $list)), 0, self::MAX_SONGS);
+        if ($kind === 'allParts' && count($songIds) !== 1) {
+            throw new ApiError(422, 'invalidInput');
+        }
 
         $found = $this->found($kind, $songIds, $this->songs->instrumentOf(CurrentMember::of($request)));
         if ($found === [] || !class_exists(\ZipArchive::class)) {
@@ -113,6 +118,15 @@ final class DownloadArchiveAction
                  WHERE p.instrumentId = ? AND p.songId IN (?) ORDER BY s.name',
                 [$instrumentId, $songIds],
                 [1 => ArrayParameterType::INTEGER],
+            );
+        } elseif ($kind === 'allParts') {
+            $rows = $this->database->fetchAllAssociative(
+                'SELECT s.name, i.name AS instrument, p.pdfPath AS path
+                 FROM songPart p JOIN song s ON s.id = p.songId
+                 JOIN instrument i ON i.id = p.instrumentId JOIN section sec ON sec.id = i.sectionId
+                 WHERE p.songId IN (?) ORDER BY sec.position, i.position, i.name',
+                [$songIds],
+                [ArrayParameterType::INTEGER],
             );
         } else {
             $column = SongFiles::COLUMNS[$kind];
