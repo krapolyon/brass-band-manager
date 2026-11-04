@@ -476,7 +476,7 @@ The app sends the link of a forgotten password ([ForgotPasswordAction](../api/sr
 |---|---|---|
 | `GET /api/songs`, `GET /api/songs/{id}` | Signed in | Every song, whatever its status. The list gives the weight of each file and the averages of the band; one song also gives its files, its parts and the levels of the member who asks |
 | `GET /api/songs/{id}/cover`, `/clipThumbnail`, `/audio`, `/midi`, `/museScore`, `/parts/{instrumentId}` | Signed in | A file. With `?download`, saved under a readable name |
-| `GET /api/songs/archive?kind=...&songs=1,2` | Signed in | "Download everything": a `.zip` of the parts of the member's instrument, the recordings, the MIDI or the MuseScore files of the songs given |
+| `GET /api/songs/archive?kind=...&songs=1,2` | Signed in | "Download everything": a `.zip` of the parts of the member's instrument, the recordings, the MIDI or the MuseScore files of the songs given; `kind=allParts` (1.1.0), every part of one song, one PDF per instrument in the order of the band, asked from the song (a second song id is refused) |
 | `PUT /api/songs/{id}/levels` | Oneself | The two levels the member gives the song, dated today (`ratedOn`, by the clock of the band). The address names no member: nobody sets the levels of someone else. "Toujours d'accord" sends the same levels again (0.3.2, #44) |
 | `POST /api/songs`, `PUT /api/songs/{id}` | `MANAGE_SONGS` | Creates a song; saves its whole record |
 | `PUT /api/songs/{id}/status`, `DELETE /api/songs/{id}` | `MANAGE_SONGS` | Sets the status; deletes the song with its files, its parts and its levels |

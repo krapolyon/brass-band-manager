@@ -1290,7 +1290,45 @@ test.describe('downloading everything', () => {
     }
   });
 
+  test('every part of one song: one PDF per instrument, in the order of the band (1.1.0)', async ({
+    playwright,
+  }) => {
+    const [crazy, toxic] = [addSong('Crazy'), addSong('Toxic')];
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    const names = ['Souba', 'Trompette', 'Sax Ténor'];
+    for (const name of names) {
+      await sendFile(sisi, `/api/songs/${crazy}/parts/${instrumentId(name)}`, pdf);
+    }
+    await sendFile(sisi, `/api/songs/${toxic}/parts/${instrumentId('Souba')}`, pdf);
+
+    // Zaza plays the trumpet: every part all the same, not hers alone.
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const answer = await zaza.get(`/api/songs/archive?kind=allParts&songs=${crazy}`);
+    expect(answer.status()).toBe(200);
+    expect(answer.headers()['content-type']).toBe('application/zip');
+    const archive = (await answer.body()).toString('latin1');
+    const order = sql(
+      `SELECT i.name FROM instrument i JOIN section s ON s.id = i.sectionId
+       WHERE i.name IN ('Souba', 'Trompette', 'Sax Ténor') ORDER BY s.position, i.position, i.name`,
+    ).split('\n');
+    const places = order.map((name) =>
+      archive.indexOf(Buffer.from(`Crazy - ${name}.pdf`).toString('latin1')),
+    );
+    expect(places.every((place) => place >= 0)).toBe(true);
+    expect([...places].sort((a, b) => a - b)).toEqual(places);
+    expect(archive).not.toContain('Toxic');
+
+    // A song without a part: nothing to download.
+    const empty = addSong('Hey Ya');
+    expect((await zaza.get(`/api/songs/archive?kind=allParts&songs=${empty}`)).status()).toBe(404);
+    // Asked from one song: two are refused.
+    expect(
+      (await zaza.get(`/api/songs/archive?kind=allParts&songs=${crazy},${toxic}`)).status(),
+    ).toBe(422);
+  });
+
   test('the archive is for members only', async ({ request }) => {
     expect((await request.get('/api/songs/archive?kind=audio&songs=1')).status()).toBe(401);
+    expect((await request.get('/api/songs/archive?kind=allParts&songs=1')).status()).toBe(401);
   });
 });

@@ -526,6 +526,31 @@ test.describe('a song', () => {
     await expect(page).toHaveURL(`/songs/${seven}`);
   });
 
+  test('every part of a song in one archive, offered only when the song has a part (1.1.0)', async ({
+    page,
+  }) => {
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    await page.getByRole('button', { name: 'Plus d’actions' }).click();
+    const panel = page.getByRole('dialog', { name: 'Seven Nation' });
+    const rows = panel.getByRole('link');
+    const all = panel.getByRole('link', { name: /Toutes les partitions/ });
+    // After "Ma partition", with the count and the weight of the parts.
+    await expect(rows.nth(1)).toHaveText(/Toutes les partitions/);
+    await expect(all).toContainText(/2 PDF · \d/);
+    await expect(all).toHaveAttribute('href', `/api/songs/archive?kind=allParts&songs=${seven}`);
+    const download = page.waitForEvent('download');
+    await all.click();
+    expect((await download).suggestedFilename()).toBe('Partitions - Seven Nation.zip');
+
+    // A song without a part: no row.
+    sql(`DELETE FROM songPart WHERE songId = ${seven}`);
+    await page.goto(`/songs/${seven}`);
+    await page.getByRole('button', { name: 'Plus d’actions' }).click();
+    await expect(page.getByRole('dialog', { name: 'Seven Nation' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Toutes les partitions/ })).toHaveCount(0);
+  });
+
   test('the list and a song hold at a text size of 200 %, without scrolling sideways', async ({
     page,
   }) => {

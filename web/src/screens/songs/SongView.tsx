@@ -31,7 +31,7 @@ import {
 } from '../../songs.ts';
 import { keep, kept, useIsTablet } from './device.ts';
 import { saveOutline } from './files.ts';
-import { average, duration as clock, day } from './format.ts';
+import { average, duration as clock, day, weight } from './format.ts';
 import { PdfView } from './PdfView.tsx';
 import { usePlayer } from './Player.tsx';
 import './songs.css';
@@ -307,7 +307,7 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
 
       <Panel open={panel === 'more'} onClose={() => setPanel(null)} title={data.name}>
         <div className="songs-panel">
-          {(ownPart || data.audio || data.museScore || data.midi) && (
+          {(data.parts.length > 0 || data.audio || data.museScore || data.midi) && (
             <section className="songs-panelGroup">
               <h3 className="textLabel songs-muted">{t('songs.song.download')}</h3>
               {ownPart && (
@@ -316,6 +316,24 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
                   label={t('songs.song.ownPart')}
                   detail={t('songs.song.ownPartDetail', { instrument: ownInstrument?.name ?? '' })}
                   href={downloadAddress(ownPart)}
+                  chevron={false}
+                />
+              )}
+              {data.parts.length > 0 && (
+                // Every part of the song in one archive (1.1.0), built by the
+                // server like "Tout télécharger" of the list.
+                <NavRow
+                  icon="Download"
+                  label={t('songs.song.allParts')}
+                  detail={t('songs.song.allPartsDetail', {
+                    count: data.parts.length,
+                    size: weight(
+                      data.parts.reduce((sum, part) => sum + part.size, 0),
+                      i18n.language,
+                    ),
+                  })}
+                  href={`/api/songs/archive?kind=allParts&songs=${data.id}`}
+                  download={`${t('songs.download.archive.allParts', { song: data.name })}.zip`}
                   chevron={false}
                 />
               )}

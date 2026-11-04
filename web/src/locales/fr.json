@@ -1177,7 +1177,8 @@
         "parts": "Partitions - {{instrument}}",
         "audio": "Enregistrements",
         "midi": "Fichiers MIDI",
-        "museScore": "Fichiers MuseScore"
+        "museScore": "Fichiers MuseScore",
+        "allParts": "Partitions - {{song}}"
       }
     },
     "player": {
@@ -1361,6 +1362,9 @@
       "download": "Télécharger",
       "ownPart": "Ma partition",
       "ownPartDetail": "{{instrument}} · PDF",
+      "allParts": "Toutes les partitions",
+      "allPartsDetail_one": "1 PDF · {{size}}",
+      "allPartsDetail_other": "{{count}} PDF · {{size}}",
       "audio": "Enregistrement",
       "museScore": "Fichier MuseScore",
       "museScoreDetail": "Pour imprimer le conducteur",

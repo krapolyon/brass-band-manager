@@ -12,6 +12,7 @@ What changes in the app, version after version. This file is written by
 - On a phone held sideways, the Live mode shows the score as one line that scrolls to the left, the controls at the right.
 - Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing.
 - A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), the form says so under the field, and coordinates typed by hand still win.
+- From a song, “Toutes les partitions” downloads every part in one .zip.
 
 ### Changed
 
