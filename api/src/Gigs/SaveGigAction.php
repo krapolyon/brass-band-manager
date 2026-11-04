@@ -20,11 +20,17 @@ use Psr\Http\Message\ServerRequestInterface;
 //
 // A gig is created in DRAFT with one slot, without a name. Its status and its
 // slots have their own addresses.
+//
+// Coordinates not typed are found from the address (1.1.0; model/gigs.md,
+// "Coordinates found from the address"), before the save and outside its
+// transaction: the search can take a few seconds, and its failure saves the
+// gig without coordinates.
 final class SaveGigAction
 {
     public function __construct(
         private readonly Connection $database,
         private readonly Gigs $gigs,
+        private readonly Geocoder $geocoder,
     ) {
         $this->record = new GigRecord($database, $gigs);
     }
@@ -39,11 +45,9 @@ final class SaveGigAction
         $me = CurrentMember::of($request);
         $gigId = isset($arguments['id']) ? (int) $arguments['id'] : null;
         $isNew = $gigId === null;
-        if ($gigId !== null) {
-            $this->gigs->row($gigId);
-        }
+        $before = $gigId === null ? null : $this->gigs->row($gigId);
         $input = Input::from($request, GigInput::class);
-        $record = $this->record->check($input, $gigId);
+        $record = $this->coordinatesOf($this->record->check($input, $gigId), $before);
         $organizerIds = array_values(array_unique($input->organizerIds));
         $costumeIds = array_values(array_unique($input->costumeIds));
 
@@ -78,8 +82,42 @@ final class SaveGigAction
         return Json::write($response, $this->gigs->one($me, $gigId), $isNew ? 201 : 200);
     }
 
+    /**
+     * The record with its coordinates and hasFoundCoordinates: typed ones are
+     * kept; found ones follow the address; none typed are searched.
+     *
+     * @param array<string, mixed> $record
+     * @param array<string, mixed>|null $before
+     *
+     * @return array<string, mixed>
+     */
+    private function coordinatesOf(array $record, ?array $before): array
+    {
+        $place = static fn (array $gig): array => [$gig['streetAddress'], $gig['postalCode'], $gig['city']];
+        $point = static fn (array $gig): array => [
+            $gig['latitude'] === null ? null : round((float) $gig['latitude'], 6),
+            $gig['longitude'] === null ? null : round((float) $gig['longitude'], 6),
+        ];
+        $wasFound = $before !== null && (bool) $before['hasFoundCoordinates'];
+        $isSentBack = $wasFound && $point($record) === $point($before);
+        // Typed: coordinates that are not the found ones sent back by the form.
+        if ($record['latitude'] !== null && !$isSentBack) {
+            return [...$record, 'hasFoundCoordinates' => 0];
+        }
+        // Found, and the address has not changed: they stay.
+        if ($isSentBack && $place($record) === $place($before)) {
+            return [...$record, 'hasFoundCoordinates' => 1];
+        }
+        $country = (string) $this->database->fetchOne('SELECT defaultCountryCode FROM band WHERE id = 1');
+        $found = $this->geocoder->locate($record['streetAddress'], $record['postalCode'], $record['city'], $country);
 
-
+        return [
+            ...$record,
+            'latitude' => $found['latitude'] ?? null,
+            'longitude' => $found['longitude'] ?? null,
+            'hasFoundCoordinates' => (int) ($found !== null),
+        ];
+    }
 
     /**
      * @param list<int> $memberIds
