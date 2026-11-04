@@ -1421,6 +1421,92 @@ test.describe('the Live mode', () => {
     expect(sent.join()).not.toMatch(/continuous|hasMetronome/);
   });
 
+  test('the visual metronome follows the MIDI switch until the member chooses, its beats keep their places, and the playhead crosses the notes', async ({
+    page,
+  }) => {
+    await withScore(page);
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const settings = page.getByRole('dialog', { name: 'Réglages de lecture' });
+    const metronome = settings.getByRole('switch', { name: 'Métronome visuel' });
+    const openSettings = () => page.getByRole('button', { name: 'Réglages' }).click();
+    const close = () => settings.getByRole('button', { name: 'Fermer' }).click();
+
+    // Without the MIDI: off.
+    await openSettings();
+    await expect(metronome).not.toBeChecked();
+    await close();
+
+    // With the MIDI: on, and shown while it plays.
+    await page.getByText('Jouer avec le MIDI').click();
+    await openSettings();
+    await expect(metronome).toBeChecked();
+    await close();
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(page.getByRole('button', { name: /^Suit le MIDI/ })).toBeVisible({
+      timeout: 30_000,
+    });
+    const beats = page.locator('.Metronome-beat');
+    await expect(beats).toHaveCount(4);
+    // The beat being played grows in its place: the others never move.
+    await expect(page.locator('.songs-livePlayhead')).toHaveAttribute('style', /translateX/);
+    const places = new Set<string>();
+    for (let sample = 0; sample < 12; sample++) {
+      // The playhead crosses the notes, never the clef or the space before the first one.
+      const { head, firstNote } = await page.evaluate(() => {
+        const sheet = document.querySelector('.songs-liveSheet') as HTMLElement;
+        const measure = Number(
+          document.querySelector('[data-tile="measure"] .textTitle')?.textContent,
+        );
+        const note = sheet.querySelectorAll('g.measure')[measure - 1]?.querySelector('.notehead');
+        const transform = (document.querySelector('.songs-livePlayhead') as HTMLElement).style
+          .transform;
+        return {
+          head: Number(/translateX\(([-\d.]+)px\)/.exec(transform)?.[1]),
+          firstNote: (note?.getBoundingClientRect().left ?? 0) - sheet.getBoundingClientRect().left,
+        };
+      });
+      expect(head).toBeGreaterThanOrEqual(firstNote - 1);
+      places.add(
+        JSON.stringify(
+          await beats.evaluateAll((all) =>
+            all.map((beat) => Math.round((beat as HTMLElement).offsetLeft)),
+          ),
+        ),
+      );
+      await page.waitForTimeout(100);
+    }
+    expect(places.size).toBe(1);
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+
+    // Chosen by the member: kept, whatever the switch.
+    await openSettings();
+    await settings.getByText('Métronome visuel').click();
+    await close();
+    await page.getByText('Jouer avec le MIDI').click();
+    await openSettings();
+    await expect(metronome).not.toBeChecked();
+  });
+
+  test('the score goes on when the browser stops giving frames while it plays', async ({
+    page,
+  }) => {
+    await withScore(page, 'repeat');
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Lire', exact: true }).click();
+    await expect(measure(page)).toContainText('1');
+    // As a phone does at times after it turned or a sheet closed: no frame any more.
+    await page.evaluate(() => {
+      window.requestAnimationFrame = () => 0;
+    });
+    await expect(measure(page)).toContainText('3', { timeout: 10_000 });
+  });
+
   test('with less motion, the scrolling is the quick jump whatever was chosen', async ({
     page,
   }) => {
@@ -1517,6 +1603,19 @@ test.describe('the Live mode', () => {
     const score = await page.locator('.songs-liveScore').boundingBox();
     const controls = await page.locator('.songs-liveControls').boundingBox();
     expect((controls?.x ?? 0) >= (score?.x ?? 0) + (score?.width ?? 0) - 1).toBe(true);
+    // The tiles and Play sit inside the outline of the bar, beside the notch
+    // of a phone too (its safe area, as an iPhone gives it in landscape).
+    await page.addStyleTag({
+      content: '.songs-liveControlsWrap { padding-right: 47px !important; }',
+    });
+    const inside = await page.locator('.songs-liveControls').evaluate((bar) => {
+      const outline = bar.getBoundingClientRect();
+      return [...bar.querySelectorAll('.songs-liveTile, .songs-audioPlay')].every((tile) => {
+        const box = tile.getBoundingClientRect();
+        return box.left >= outline.left && box.right <= outline.right;
+      });
+    });
+    expect(inside).toBe(true);
     // Ready: the start measure and the MIDI switch in a row under the top bar,
     // the switch without its description; nothing stands back yet.
     const startRow = page.locator('.songs-liveStartRow');

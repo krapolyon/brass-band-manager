@@ -16,7 +16,7 @@ import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import type { Song } from '../../songs.ts';
 import { ReadingSettings, StartChoice, TempoSheet } from './LiveSheets.tsx';
-import { type Drawn, drawPart, MAX_COLUMN, SCALE } from './liveDrawing.ts';
+import { type Drawn, drawPart, MAX_COLUMN, SCALE, xAt } from './liveDrawing.ts';
 import { isMotionReduced, type Scrolling, useLiveSettings } from './liveSettings.ts';
 import { mutedVolumeOf, SilentClock, type Sounds, tempoRange } from './MidiView.tsx';
 import {
@@ -67,6 +67,8 @@ const WHEEL_REST_MS = 180;
 const RESIZE_REST_MS = 150;
 // A press on the score that moves less than this is a tap, not a drag.
 const TAP_SLOP = 6;
+// Without a frame for this long, while it plays, a timer moves the score (ms).
+const RELAY_MS = 250;
 
 /** Where the song is: a place of the played order, and how far into its measure (0 to 1). */
 type Position = { index: number; fraction: number };
@@ -362,7 +364,8 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   const midiNow = useCallback((): Position => {
     const player = engine.current;
     if (!player || !midi) return { index: atNow.current, fraction: 0 };
-    const tick = player.position();
+    // What is heard, not what the clock computes ahead of the speakers.
+    const tick = player.heardPosition();
     const measure = writtenAt(midi, tick, played);
     const from = atNow.current;
     const after = played.indexOf(measure, from);
@@ -567,25 +570,33 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       element.style.transform = isRibbon ? `translateX(${offset}px)` : `translateY(${offset}px)`;
       const head = playhead.current;
       if (!head) return;
-      const box = boxes[played[Math.min(now.index, played.length - 1)] ?? 0];
+      const written = played[Math.min(now.index, played.length - 1)] ?? 0;
+      const box = boxes[written];
       const line = box ? lines[box.line] : undefined;
       head.hidden = !isMidi || isRibbon || !box || !line;
       if (head.hidden || !box || !line) return;
-      head.style.transform = `translateX(${box.left + (box.right - box.left) * now.fraction}px)`;
+      const quarters = measures[written]?.quarters ?? 4;
+      head.style.transform = `translateX(${xAt(box, now.fraction, quarters)}px)`;
       head.style.top = `${line.top}px`;
       head.style.height = `${line.height}px`;
     },
-    [offsetFor, isRibbon, boxes, lines, played],
+    [offsetFor, isRibbon, boxes, lines, played, measures],
   );
 
   // While it plays, every frame: where the song is, the measure, the beat.
   useEffect(() => {
     if (state !== 'playing') return;
     let frame = 0;
+    let isOver = false;
+    let followedAt = performance.now();
     const follow = () => {
+      if (isOver) return;
+      followedAt = performance.now();
+      window.cancelAnimationFrame(frame);
       const now = driver === 'midi' ? midiNow() : clockNow();
       if (now.index >= played.length) {
         // The end: back to the start, ready to play again.
+        isOver = true;
         setState('ready');
         setAt(0);
         setBarsHidden(false);
@@ -603,7 +614,18 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       frame = window.requestAnimationFrame(follow);
     };
     frame = window.requestAnimationFrame(follow);
-    return () => window.cancelAnimationFrame(frame);
+    // A browser can stop asking for the frames of a page that still shows (seen
+    // on a phone after it turned, or after a sheet closed): the score would
+    // stand still while it plays. A slower beat then takes over until the
+    // frames come back.
+    const relay = window.setInterval(() => {
+      if (performance.now() - followedAt > RELAY_MS) follow();
+    }, RELAY_MS / 2);
+    return () => {
+      isOver = true;
+      window.cancelAnimationFrame(frame);
+      window.clearInterval(relay);
+    };
   }, [state, driver, midiNow, clockNow, played, measures, timeline.beatQuarters, place]);
 
   // Not playing: the drawing stands at the place the song starts from.
@@ -733,7 +755,9 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     1,
     Math.round((measures[written]?.quarters ?? 4) / timeline.beatQuarters),
   );
-  const metronome = reading.hasMetronome && isPlaying && (
+  // The metronome the member has not chosen follows the MIDI: on with it, off without.
+  const hasMetronome = reading.hasMetronome ?? isMidiOn;
+  const metronome = hasMetronome && isPlaying && (
     <div className="songs-liveMetronome">
       <Metronome beats={countedBeats} current={beat} />
     </div>
@@ -1089,7 +1113,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       >
         {panel === 'settings' && (
           <ReadingSettings
-            settings={reading}
+            settings={{ ...reading, hasMetronome }}
             onChange={setReading}
             midi={midi}
             midiSettings={midiSettings}

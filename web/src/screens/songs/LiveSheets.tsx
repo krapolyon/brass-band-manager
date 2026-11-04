@@ -252,7 +252,7 @@ export function ReadingSettings(props: ReadingSettingsProps) {
       <SwitchRow
         label={t('songs.live.settings.metronome')}
         description={t('songs.live.settings.metronomeHint')}
-        checked={settings.hasMetronome}
+        checked={settings.hasMetronome ?? false}
         onChange={(hasMetronome) => onChange({ hasMetronome })}
       />
       <SwitchRow

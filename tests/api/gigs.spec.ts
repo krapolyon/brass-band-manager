@@ -1,5 +1,6 @@
 import { type APIRequestContext, expect, test } from '@playwright/test';
 import { emptyDatabase, sql } from '../support/database.ts';
+import { emptyGeocoding, geocodingAnswers, geocodingAsked } from '../support/geocoding.ts';
 import { png } from '../support/images.ts';
 import { addMember, admin, deviceOf, install, memberId } from '../support/scenario.ts';
 import { emptyStorage, storedFiles } from '../support/storage.ts';
@@ -399,6 +400,122 @@ test.describe('the record of a gig', () => {
     expect(sql('SELECT COUNT(*) FROM gigOrganizer')).toBe('0');
     expect(sql('SELECT name FROM costume')).toBe('Jungle');
     expect((await gigi.delete('/api/gigs/9999')).status()).toBe(404);
+  });
+});
+
+// model/gigs.md, "Coordinates found from the address" (1.1.0).
+test.describe('coordinates found from the address', () => {
+  test.beforeEach(() => emptyGeocoding());
+  test.afterEach(() => emptyGeocoding());
+  const found = (gigId: number) =>
+    sql(
+      `SELECT CONCAT(latitude, ' ', longitude, ' ', hasFoundCoordinates) FROM gig WHERE id = ${gigId}`,
+    );
+
+  test('none typed: the address alone is searched, and the point saved as found', async ({
+    playwright,
+  }) => {
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    geocodingAnswers('45.7640433', '4.8356944');
+    const created = await gigi.post('/api/gigs', {
+      data: gigRecord({
+        placeName: 'Chez Martine',
+        streetAddress: '34 rue de Sèze\nLa porte bleue, au fond de la cour',
+        postalCode: '69006',
+        city: 'Lyon',
+        notes: 'Appeler Martine en arrivant',
+      }),
+    });
+    expect(created.status()).toBe(201);
+    const gig = await created.json();
+    expect(gig).toMatchObject({
+      latitude: 45.764043,
+      longitude: 4.835694,
+      hasFoundCoordinates: true,
+    });
+    expect(gig.mapTilesUrl).not.toBeNull();
+    expect(found(gig.id)).toBe('45.764043 4.835694 1');
+
+    // Asked once, of the address only: its first line, the postal code, the city, the country.
+    const asked = geocodingAsked();
+    expect(asked).toHaveLength(1);
+    expect(asked[0]?.get('q')).toBe('34 rue de Sèze, 69006 Lyon');
+    expect(asked[0]?.get('countrycodes')).toBe('fr');
+    expect([...(asked[0]?.keys() ?? [])].sort()).toEqual(['countrycodes', 'format', 'limit', 'q']);
+  });
+
+  test('typed coordinates win and are never replaced', async ({ playwright }) => {
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    geocodingAnswers('45.7640433', '4.8356944');
+    const created = await gigi.post('/api/gigs', {
+      data: gigRecord({ city: 'Lyon', latitude: 45.7673, longitude: 4.8344 }),
+    });
+    const gigId = (await created.json()).id;
+    expect(found(gigId)).toBe('45.767300 4.834400 0');
+    await gigi.put(`/api/gigs/${gigId}`, {
+      data: gigRecord({ city: 'Villeurbanne', latitude: 45.7673, longitude: 4.8344 }),
+    });
+    expect(found(gigId)).toBe('45.767300 4.834400 0');
+    expect(geocodingAsked()).toEqual([]);
+  });
+
+  test('found coordinates follow the address; emptied by hand, they are searched again', async ({
+    playwright,
+  }) => {
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    geocodingAnswers('45.7640433', '4.8356944');
+    const gigId = (
+      await (await gigi.post('/api/gigs', { data: gigRecord({ city: 'Lyon' }) })).json()
+    ).id;
+
+    // Sent back by the form, the address unchanged: kept, nothing asked.
+    await gigi.put(`/api/gigs/${gigId}`, {
+      data: gigRecord({ city: 'Lyon', latitude: 45.764043, longitude: 4.835694, notes: 'Repas' }),
+    });
+    expect(geocodingAsked()).toHaveLength(1);
+    expect(found(gigId)).toBe('45.764043 4.835694 1');
+
+    // Another address, the former point sent back: searched again.
+    geocodingAnswers('45.7718', '4.8902');
+    await gigi.put(`/api/gigs/${gigId}`, {
+      data: gigRecord({ city: 'Villeurbanne', latitude: 45.764043, longitude: 4.835694 }),
+    });
+    expect(geocodingAsked()).toHaveLength(2);
+    expect(found(gigId)).toBe('45.771800 4.890200 1');
+
+    // Emptied in the form: the address has the say again.
+    await gigi.put(`/api/gigs/${gigId}`, { data: gigRecord({ city: 'Villeurbanne' }) });
+    expect(geocodingAsked()).toHaveLength(3);
+    expect(found(gigId)).toBe('45.771800 4.890200 1');
+
+    // The address taken away: no point any more.
+    await gigi.put(`/api/gigs/${gigId}`, { data: gigRecord() });
+    expect(
+      sql(`SELECT CONCAT_WS(' ', latitude, hasFoundCoordinates) FROM gig WHERE id = ${gigId}`),
+    ).toBe('0');
+  });
+
+  test('an address the service does not find saves the gig without coordinates', async ({
+    playwright,
+  }) => {
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    const created = await gigi.post('/api/gigs', { data: gigRecord({ city: 'Nulle-Part' }) });
+    expect(created.status()).toBe(201);
+    const gig = await created.json();
+    expect(gig).toMatchObject({
+      latitude: null,
+      longitude: null,
+      mapTilesUrl: null,
+      hasFoundCoordinates: false,
+    });
+    expect(geocodingAsked()).toHaveLength(1);
+  });
+
+  test('a gig without an address asks nothing', async ({ playwright }) => {
+    const gigi = await deviceOf(playwright, email('Gigi'));
+    geocodingAnswers('45.7640433', '4.8356944');
+    await gigi.post('/api/gigs', { data: gigRecord({ placeName: 'Place des Terreaux' }) });
+    expect(geocodingAsked()).toEqual([]);
   });
 });
 

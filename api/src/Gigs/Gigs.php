@@ -26,7 +26,7 @@ final class Gigs
     // The columns are listed one by one on purpose: a column added to the
     // table is never sent by accident.
     private const COLUMNS = 'g.id, g.name, g.status, g.startsOn, g.endsOn, g.meetingTime, g.placeName, g.placeUrl,
-        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
+        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.hasFoundCoordinates, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
 
     private readonly Setlists $setlists;
 
@@ -174,6 +174,8 @@ final class Gigs
             'streetAddress' => $gig['streetAddress'],
             'latitude' => $gig['latitude'] === null ? null : (float) $gig['latitude'],
             'longitude' => $gig['longitude'] === null ? null : (float) $gig['longitude'],
+            // Found from the address by the server, not typed (1.1.0): the form says so.
+            'hasFoundCoordinates' => (bool) $gig['hasFoundCoordinates'],
             // The map of the meeting point: only a gig that has coordinates has one.
             'mapTilesUrl' => $gig['latitude'] === null || $gig['longitude'] === null || $this->mapTilesUrl === '' ? null : $this->mapTilesUrl,
             'notes' => $gig['notes'],

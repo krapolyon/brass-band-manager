@@ -152,6 +152,14 @@ export function GigFormScreen() {
     if (existing.data && draft === null) setDraft(draftOf(existing.data));
   }, [existing.data, draft]);
 
+  // Coordinates the server found from the address (1.1.0): said under the
+  // field while they are the ones it found. Edited, they become typed ones.
+  const foundCoordinates = existing.data?.hasFoundCoordinates
+    ? draftOf(existing.data).coordinates
+    : null;
+  const isFound =
+    draft !== null && foundCoordinates !== null && draft.coordinates === foundCoordinates;
+
   const isNew = gigId === null;
   const targetId = gigId ?? createdId;
   const isCreating = targetId === null;
@@ -458,7 +466,8 @@ export function GigFormScreen() {
           </div>
           <TextField
             label={t('gigs.form.coordinates')}
-            hint={t('gigs.form.coordinatesHint')}
+            hint={t(isFound ? 'gigs.form.coordinatesFound' : 'gigs.form.coordinatesHint')}
+            hintTone={isFound ? 'success' : undefined}
             error={errors.coordinates}
             value={draft.coordinates}
             onChange={(event) => set('coordinates', event.target.value)}

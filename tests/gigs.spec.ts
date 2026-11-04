@@ -622,6 +622,41 @@ test.describe('who may edit a gig', () => {
     expect(sql('SELECT name FROM gigSlot')).toBe('Vendredi soir');
     expect(sql('SELECT COUNT(*) FROM gigSlotAttendance')).toBe('0');
   });
+
+  test('coordinates found from the address are said under their field until they are edited (1.1.0)', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Fête des Lumières', { startsOn: day(40), city: 'Lyon' });
+    sql(
+      `UPDATE gig SET latitude = 45.7673, longitude = 4.8344, hasFoundCoordinates = TRUE WHERE id = ${gigId}`,
+    );
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/edit`);
+
+    const field = page.getByLabel('Coordonnées GPS');
+    await expect(field).toHaveValue('45.7673, 4.8344');
+    // Said in words, with the check: never the colour alone; and read with the field.
+    await expect(field).toHaveAccessibleDescription('Trouvées depuis l’adresse.');
+
+    await field.fill('45.7674, 4.8344');
+    await expect(field).toHaveAccessibleDescription(
+      'Pour un lieu difficile à trouver : colle-les depuis ton app de cartes.',
+    );
+    await field.fill('45.7673, 4.8344');
+    await expect(field).toHaveAccessibleDescription('Trouvées depuis l’adresse.');
+
+    // Edited and saved, they are typed ones: the hint does not come back.
+    await field.fill('45.7674, 4.8344');
+    await page.getByRole('button', { name: 'Enregistrer le plan' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Fête des Lumières' })).toBeVisible();
+    expect(sql(`SELECT latitude, hasFoundCoordinates FROM gig WHERE id = ${gigId}`)).toBe(
+      '45.767400\t0',
+    );
+    await page.goto(`/gigs/${gigId}/edit`);
+    await expect(page.getByLabel('Coordonnées GPS')).toHaveAccessibleDescription(
+      'Pour un lieu difficile à trouver : colle-les depuis ton app de cartes.',
+    );
+  });
 });
 
 test.describe('the band settings', () => {

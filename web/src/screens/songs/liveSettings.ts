@@ -12,7 +12,8 @@ export type LiveSettings = {
   scrolling: Scrolling;
   /** The size of the score, in percent of the size drawn on a phone: 50 to 150, by 10. */
   size: number;
-  hasMetronome: boolean;
+  /** Null until the member chooses: it then follows the switch "Jouer avec le MIDI". */
+  hasMetronome: boolean | null;
   hidesControls: boolean;
 };
 
@@ -23,7 +24,7 @@ export const SIZE_STEP = 10;
 const DEFAULTS: LiveSettings = {
   scrolling: 'quickJump',
   size: 100,
-  hasMetronome: false,
+  hasMetronome: null,
   hidesControls: false,
 };
 
@@ -40,7 +41,7 @@ function read(memberId: number | undefined): LiveSettings {
         ? (kept.scrolling as Scrolling)
         : DEFAULTS.scrolling,
       size: size >= SIZE_MIN && size <= SIZE_MAX && size % SIZE_STEP === 0 ? size : DEFAULTS.size,
-      hasMetronome: kept.hasMetronome === true,
+      hasMetronome: typeof kept.hasMetronome === 'boolean' ? kept.hasMetronome : null,
       hidesControls: kept.hidesControls === true,
     };
   } catch {

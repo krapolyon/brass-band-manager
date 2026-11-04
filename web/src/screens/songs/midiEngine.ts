@@ -227,7 +227,28 @@ export class MidiEngine {
   /** Where the song is, in ticks. */
   position(): number {
     if (!this.isPlaying || !this.context) return this.pausedAt;
-    const now = this.context.currentTime;
+    return this.tickAtTime(this.context.currentTime);
+  }
+
+  /**
+   * Where the sound being heard is, for what is drawn (1.1.0): the audio clock
+   * runs ahead of the speakers by the delay of the output (a few ms on a
+   * computer, up to 300 on a Bluetooth headset), and moves by steps. The
+   * browser says which time of the clock leaves the speakers at which instant
+   * of the page: from there the time goes on smoothly.
+   */
+  heardPosition(): number {
+    if (!this.isPlaying || !this.context) return this.pausedAt;
+    const context = this.context;
+    const stamp = context.getOutputTimestamp?.();
+    const heard =
+      stamp?.contextTime !== undefined && stamp.performanceTime
+        ? stamp.contextTime + (performance.now() - stamp.performanceTime) / 1000
+        : context.currentTime - (context.outputLatency || context.baseLatency || 0);
+    return this.tickAtTime(Math.min(context.currentTime, heard));
+  }
+
+  private tickAtTime(now: number): number {
     // The last stretch that has started: a loop is handed over ahead of time.
     let current = this.stretches[0];
     for (const stretch of this.stretches) {

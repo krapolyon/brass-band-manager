@@ -44,6 +44,7 @@ use BrassBand\Discord\Discord;
 use BrassBand\Gigs\AnswerAction;
 use BrassBand\Gigs\ChangeGigStatusAction;
 use BrassBand\Gigs\CostumePictures;
+use BrassBand\Gigs\Geocoder;
 use BrassBand\Gigs\Costumes;
 use BrassBand\Gigs\DeleteCostumeAction;
 use BrassBand\Gigs\DeleteGigAction;
@@ -156,7 +157,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, encryptionKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
+ * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, encryptionKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, geocoding?: array{url?: string, answersFrom?: string}, discord?: array{botToken?: string, answersFrom?: string}} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -192,6 +193,8 @@ return function (App $app, Connection $database, array $config): void {
     $songPush = new SongPush($database, $push);
     // The bot of the band, which reads Discord (docs/discord-bot.md).
     $discord = Discord::from($config);
+    // Where the address of a gig is, when no coordinates are typed.
+    $geocoder = Geocoder::from($config);
     // Export, import and reprise of the data (model/export-import.md): the
     // folder "import" beside storage/, where a large zip arrives by FTP.
     $transferFolder = new TransferFolder($config['importFolder'] ?? dirname($config['storageFolder']) . '/import');
@@ -260,6 +263,7 @@ return function (App $app, Connection $database, array $config): void {
         $migrations,
         $currentPassword,
         $discord,
+        $geocoder,
         $transferFolder,
         $transfers,
         $mailer,
@@ -334,7 +338,7 @@ return function (App $app, Connection $database, array $config): void {
 
         // A gig is edited by whoever manages gigs and by its organisers.
         $editGig = new RequireGigEditor($gigs);
-        $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs, $geocoder))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs, $setlists, $gigPush))->add($editGig);
         $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
@@ -423,7 +427,7 @@ return function (App $app, Connection $database, array $config): void {
         // Creating a gig and deleting a draft are for who manages gigs: an
         // organiser edits the gig they were given, nothing more.
         $manageGigs = new RequirePermission(Permission::MANAGE_GIGS);
-        $group->post('/api/gigs', new SaveGigAction($database, $gigs))->add($manageGigs);
+        $group->post('/api/gigs', new SaveGigAction($database, $gigs, $geocoder))->add($manageGigs);
         $group->delete('/api/gigs/{id:[0-9]+}', new DeleteGigAction($database, $gigs))->add($manageGigs);
 
         // Setlists are written and played live by who manages setlists.
