@@ -371,6 +371,46 @@ test.describe('a song', () => {
     await expect(page.getByRole('button', { name: 'Quitter le plein écran' })).toBeHidden();
   });
 
+  test('PDF: a browser without the JavaScript of 2025 gets the legacy build of pdf.js, and the pages all the same (1.1.0)', async ({
+    page,
+  }) => {
+    // What an iPhone under iOS 17 or 18 lacks: the modern build would fail.
+    await page.addInitScript(() => {
+      // biome-ignore lint/suspicious/noExplicitAny: removing what the type declares
+      delete (Map.prototype as any).getOrInsertComputed;
+      // biome-ignore lint/suspicious/noExplicitAny: removing what the type declares
+      delete (Math as any).sumPrecise;
+    });
+    // The two builds have files of the same name: the legacy one carries
+    // core-js, the stand-ins of the recent functions.
+    const workers: string[] = [];
+    page.on('response', async (response) => {
+      if (/\/assets\/pdf\.worker\.min-[^/]*\.mjs$/.test(new URL(response.url()).pathname)) {
+        workers.push((await response.text()).includes('core-js') ? 'legacy' : 'modern');
+      }
+    });
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}?mode=pdf`);
+
+    await expect(page.getByRole('img', { name: 'Page 1 de la partition' }).first()).toBeVisible();
+    await expect.poll(() => workers).toEqual(['legacy']);
+  });
+
+  test('PDF: a browser of today gets the modern build of pdf.js (1.1.0)', async ({ page }) => {
+    const workers: string[] = [];
+    page.on('response', async (response) => {
+      if (/\/assets\/pdf\.worker\.min-[^/]*\.mjs$/.test(new URL(response.url()).pathname)) {
+        workers.push((await response.text()).includes('core-js') ? 'legacy' : 'modern');
+      }
+    });
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}?mode=pdf`);
+
+    await expect(page.getByRole('img', { name: 'Page 1 de la partition' }).first()).toBeVisible();
+    // Playwright's browsers are recent: they have every function the modern build uses.
+    await expect.poll(() => workers).toEqual(['modern']);
+  });
+
   test('Clip: nothing is asked of YouTube before the member presses play', async ({ page }) => {
     const asked: string[] = [];
     page.on('request', (request) => asked.push(new URL(request.url()).hostname));

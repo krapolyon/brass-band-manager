@@ -1,4 +1,5 @@
 // Domain: Gigs
+// v1.13 — 2026-11-05 — validated, for 1.1.0, no change to the tables: a POWER_MEMBER who has not answered is left out of the list of who comes and of its counts, except for who may note the answers of others, who finds them folded at the end (dictionary v1.14)
 // v1.12 — 2026-11-03 — validated, for 1.1.0 (migration 019): gig.hasFoundCoordinates, the coordinates found from the address by a geocoding service when none are typed, so that the map shows (dictionary v1.13)
 // v1.11 — 2026-10-24 — validated, for 0.4.0, no change to the tables: the setlist generator asks for a length, 45 minutes by default (band.setlistTargetMinutes), instead of a number of songs; the length of a setlist is shown above its songs (issue #60)
 // v1.10 — 2026-10-24 — validated, for 0.3.2, no change to the tables: a gig shows the Discord messages that tag the app (issue #45); the song picker of a setlist filters the songs not played in the gig yet and by mood (issue #52) (dictionary)

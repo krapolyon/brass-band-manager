@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.14 — 2026-11-05 · Validated by the owner, for 1.1.0 · No change to the tables · A `POWER_MEMBER` who has not answered is not waited for: left out of the list of who comes and of its counts, except for who may note the answers of others, who finds them folded at the end
 > v1.13 — 2026-11-03 · Validated by the owner, for 1.1.0 · Model: `gigs.dbml` v1.12 · Migration: `019_gigFoundCoordinates.sql` · The coordinates of a gig are found from its address when none are typed, so that its map shows (`hasFoundCoordinates`); the address leaves to a geocoding service, from the server only
 > v1.12 — 2026-10-24 · Validated by the owner, for 1.0.0 · No change to the tables · A wrong calendar address is answered at once, no longer after a second (issue #51)
 > v1.11 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · The setlist generator asks for a length, 45 minutes by default (Band v1.12), instead of a number of songs; the length of a setlist is shown above its songs in the editor, and in its card when it is read (issue #60)
@@ -145,6 +146,7 @@ The answer labels in French are "Oui", "Non", "Peut-être" and "Si besoin". No a
 - A member answers for a gig in `PROPOSED`, `ACCEPTED` or `CONFIRMED`, until the gig is past. They can change their answer as often as they want, and not go back to no answer.
 - Current members answer (`ACTIVE` and `POWER_MEMBER`). Both count for playability.
 - Reminders go to `ACTIVE` members who have not answered, never to `POWER_MEMBER` ones.
+- Nothing is waited for from a `POWER_MEMBER` (1.1.0): one who has not answered a slot is left out of the list of who comes and of every count of the slot (the answers, the share bar, "N n'ont pas répondu", "N oui sur M"). Who may note the answers of others on the slot (an organiser, `GIG_MANAGER`, `ADMIN`, while the gig is open) still finds them, after the sections, in a group "Power members" folded until it is opened, so as to note an answer given by word of mouth. Once they have answered, they are listed and counted like anyone.
 
 ### Access rights
 | Who | View | Answer | Edit the slot |

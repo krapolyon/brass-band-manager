@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
+import { loadPdfjs } from './pdfjs.ts';
 import './songs.css';
 
 type PagesProps = { url: string };
@@ -34,11 +35,7 @@ function PdfPages({ url }: PagesProps) {
     setState('loading');
 
     (async () => {
-      const [pdfjs, worker] = await Promise.all([
-        import('pdfjs-dist'),
-        import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
-      ]);
-      pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+      const pdfjs = await loadPdfjs();
       const loading = pdfjs.getDocument({ url });
       const document = await loading.promise;
       const canvases: HTMLCanvasElement[] = [];

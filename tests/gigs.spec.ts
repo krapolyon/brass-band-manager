@@ -552,6 +552,30 @@ test.describe('who may edit a gig', () => {
     await expect(page.getByText('Tu brasses ce plan')).toHaveCount(0);
   });
 
+  test('a power member who has not answered is not waited for: in no list and no count, until they answer (1.1.0)', async ({
+    page,
+  }) => {
+    addMember({ nickname: 'Tonton', status: 'POWER_MEMBER' });
+    addMember({ nickname: 'Pépé', status: 'POWER_MEMBER' });
+    const { gigId, slotId } = addGig('Carnaval', { startsOn: day(12) });
+    answerOf('Pépé', slotId, 'YES');
+    await asMember(page, 'Zaza');
+
+    // Six members are waited for: the five active ones and Pépé, who answered.
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByText('1 oui sur 6')).toBeVisible();
+    await page.goto(`/gigs/${gigId}/answers`);
+    await expect(page.getByText('Pépé')).toBeVisible();
+    await expect(page.getByText('Riton')).toBeVisible();
+    await expect(page.getByText('Tonton')).toHaveCount(0);
+
+    answerOf('Tonton', slotId, 'MAYBE');
+    await page.reload();
+    await expect(page.getByText('Tonton')).toBeVisible();
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByText('1 oui sur 7')).toBeVisible();
+  });
+
   test('a member without the right gets neither the form nor a refusal that looks like a bug', async ({
     page,
   }) => {
