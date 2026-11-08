@@ -1,4 +1,5 @@
 // Domain: Songs
+// v1.12 — 2026-11-07 — for 1.1.0, no change to the tables: the parts of the secondary instrument of a member are theirs too (dictionary v1.12)
 // v1.11 — 2026-11-01 — for 1.1.0, to validate: no change to the tables; the tempo of a file is the one at its first note, the reading mode reworked, its settings kept on the device (dictionary v1.11)
 // v1.10 — 2026-10-24 — validated, for 0.3.2: memberSong.ratedOn, the day a member last set or confirmed their levels, to ask again after a year (issue #44); the mood MEDIUM is labelled Normal; migration 016
 // v1.9 — 2026-10-23 — validated, for 0.3.1 (issue #47): the mood of a song (mood) and the places a set can give it (songPosition) replace its categories (setCategory, songOtherCategory) and isNeverFirst; the copyright of a song (copyright)

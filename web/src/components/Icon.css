@@ -19,3 +19,7 @@
   width: calc(var(--iconSize) * 32 / 24);
   height: calc(var(--iconSize) * 32 / 24);
 }
+.Icon[data-size="40"] {
+  width: calc(var(--iconSize) * 40 / 24);
+  height: calc(var(--iconSize) * 40 / 24);
+}

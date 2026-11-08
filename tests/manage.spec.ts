@@ -87,7 +87,7 @@ test.describe('the list', () => {
     await expect(nicknames(page)).toHaveText(['Kiki']);
 
     await choice('Tous').click();
-    await page.getByRole('switch', { name: 'Afficher les anciens' }).check();
+    await page.getByRole('switch', { name: 'Afficher les départs' }).check();
     await expect(nicknames(page)).toHaveText([
       'Bouboule',
       'Jibé',
@@ -97,7 +97,7 @@ test.describe('the list', () => {
       'Zaza',
     ]);
     await expect(rows(page).filter({ hasText: 'Bouboule' })).toContainText('Parti');
-    await expect(page.getByText('1 invitation en attente, 1 ancien.')).toBeVisible();
+    await expect(page.getByText('1 invitation en attente, 1 départ.')).toBeVisible();
   });
 
   test('a choice nobody matches says so', async ({ page }) => {
@@ -112,7 +112,7 @@ test.describe('the list', () => {
   test('on a desktop it is a table, the status in its own column', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await openList(page);
-    await page.getByRole('switch', { name: 'Afficher les anciens' }).check();
+    await page.getByRole('switch', { name: 'Afficher les départs' }).check();
 
     const table = page.getByRole('table', { name: 'Gérer les fanfarons' });
     await expect(table.getByRole('columnheader')).toHaveText([
@@ -136,7 +136,7 @@ test.describe('the list', () => {
 
     // The whole line opens the record (Figma, Member/TableRow), its end included.
     await page.goBack();
-    await page.getByRole('switch', { name: 'Afficher les anciens' }).check();
+    await page.getByRole('switch', { name: 'Afficher les départs' }).check();
     const end = await line('Jibé').boundingBox();
     await line('Jibé').click({ position: { x: (end?.width ?? 0) - 20, y: 32 } });
     await expect(title(page)).toHaveText('Jibé');
@@ -170,7 +170,7 @@ test.describe('an invitation', () => {
 
     const panel = page.getByRole('dialog', { name: 'Invitation envoyée' });
     await expect(panel).toContainText('Riton la reçoit à riton@example.org');
-    await expect(panel).toContainText('Pas reçue ? Envoie-lui ce lien toi-même.');
+    await expect(panel).toContainText('Pas reçue ? Envoie ce lien toi-même.');
     const link = await panel.getByLabel('Lien d’invitation').inputValue();
     const [mail] = await receivedMails(1);
     expect(mail?.to).toBe('riton@example.org');
@@ -378,21 +378,47 @@ test.describe('the record of a member', () => {
     await expect(panel).toContainText('Zaza');
   });
 
+  test('the record of a member offers a secondary instrument, never "Peut répondre pour moi" (1.1.0)', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await record(page, 'Zaza');
+    await expect(
+      page.getByText(
+        'Facultatif. Un second instrument, pour venir à un plan dans un autre pupitre.',
+      ),
+    ).toBeVisible();
+    await expect(page.getByText('Peut répondre pour moi')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Instrument secondaire Aucun' }).click();
+    await page
+      .getByRole('dialog', { name: 'Instrument secondaire' })
+      .getByRole('button', { name: 'Souba' })
+      .click();
+    await page.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect
+      .poll(() =>
+        sql(
+          `SELECT i.name FROM member m JOIN instrument i ON i.id = m.secondaryInstrumentId WHERE m.nickname = 'Zaza'`,
+        ),
+      )
+      .toBe('Souba');
+  });
+
   test('marking a member as gone asks first, then cuts their access and erases their details', async ({
     page,
   }) => {
     sql("UPDATE member SET mobilePhone = '+33612345678' WHERE nickname = 'Tonton'");
     await signIn(page);
     await record(page, 'Tonton');
-    await page.getByRole('button', { name: /Marquer comme parti/ }).click();
-    const confirm = page.getByRole('dialog', { name: 'Marquer Tonton comme parti ?' });
+    await page.getByRole('button', { name: /Noter le départ/ }).click();
+    const confirm = page.getByRole('dialog', { name: 'Noter le départ de Tonton ?' });
     await expect(confirm).toContainText('Son accès est coupé tout de suite.');
 
     await confirm.getByRole('button', { name: 'Annuler' }).click();
     expect(status('Tonton')).toBe('POWER_MEMBER');
 
-    await page.getByRole('button', { name: /Marquer comme parti/ }).click();
-    await confirm.getByRole('button', { name: 'Marquer comme parti' }).click();
+    await page.getByRole('button', { name: /Noter le départ/ }).click();
+    await confirm.getByRole('button', { name: 'Noter le départ' }).click();
     await expect(page.getByText('Coordonnées, photo et rôles effacés à son départ')).toBeVisible();
     expect(sql("SELECT status, mobilePhone IS NULL FROM member WHERE nickname = 'Tonton'")).toBe(
       'LEFT\t1',
@@ -418,14 +444,14 @@ test.describe('the record of a member', () => {
     await signIn(page);
     await record(page, 'Jibé');
 
-    await expect(page.getByText('Jibé est le dernier admin.')).toBeVisible();
-    const leave = page.getByRole('button', { name: /Marquer comme parti/ });
+    await expect(page.getByText('Jibé a le seul compte admin.')).toBeVisible();
+    const leave = page.getByRole('button', { name: /Noter le départ/ });
     await expect(leave).toBeDisabled();
-    await expect(leave).toContainText('Impossible tant qu’il est le seul admin');
+    await expect(leave).toContainText('Impossible : c’est le seul compte admin');
 
     // The role itself cannot be unticked: its line says why, with no box.
     await expect(
-      page.getByText('Dernier admin\u00a0: ce rôle ne peut pas lui être retiré'),
+      page.getByText('Seul compte admin\u00a0: ce rôle ne peut pas être retiré'),
     ).toBeVisible();
     await expect(page.getByLabel('Admin', { exact: true })).toHaveCount(0);
     await expect(page.getByLabel('Gère les plans')).toBeVisible();
@@ -438,7 +464,7 @@ test.describe('the record of a member', () => {
     for (const name of [
       /Passer en power member/,
       /Créer un lien de mot de passe/,
-      /Marquer comme parti/,
+      /Noter le départ/,
     ]) {
       const action = page.getByRole('button', { name });
       await expect(action).toBeDisabled();

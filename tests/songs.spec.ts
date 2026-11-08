@@ -73,6 +73,15 @@ test.beforeEach(async ({ playwright, baseURL }) => {
   await sisi.dispose();
 });
 
+// The browser of the iPhone project can share files: its download rows
+// would go through the share sheet (1.1.0). They stay links in these tests;
+// the share sheet has its own test, which gives the page one again.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    delete (Navigator.prototype as { share?: unknown }).share;
+  });
+});
+
 const email = (nickname: string) => `${nickname.toLowerCase()}@example.org`;
 
 async function signIn(page: Page, who = admin.email, password = admin.password) {
@@ -409,6 +418,143 @@ test.describe('a song', () => {
     await expect(page.getByRole('img', { name: 'Page 1 de la partition' }).first()).toBeVisible();
     // Playwright's browsers are recent: they have every function the modern build uses.
     await expect.poll(() => workers).toEqual(['modern']);
+  });
+
+  test('a device older than the app says so in the PDF, MIDI and Live modes, and offers the part (1.1.0)', async ({
+    page,
+  }) => {
+    // What Safari before 16.4 lacks: look-behind in a regular expression.
+    await page.addInitScript(() => {
+      const Original = RegExp;
+      const Older = function (this: unknown, pattern: string | RegExp, flags?: string) {
+        if (String(pattern).includes('(?<=')) throw new SyntaxError('Invalid regular expression');
+        return new Original(pattern, flags);
+      } as unknown as RegExpConstructor;
+      Object.defineProperty(Older, 'prototype', { value: Original.prototype });
+      window.RegExp = Older;
+    });
+    const files: string[] = [];
+    page.on('request', (request) => files.push(new URL(request.url()).pathname));
+    await asMember(page, 'Zaza');
+
+    await page.goto(`/songs/${seven}?mode=pdf`);
+    await expect(
+      page.getByRole('heading', { name: 'Ton appareil a de la bouteille' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Il est un peu ancien pour afficher la partition dans l’app.', {
+        exact: false,
+      }),
+    ).toBeVisible();
+    // The part bar stays; the reader is not even loaded.
+    await expect(page.getByRole('button', { name: 'Choisir une autre partition' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Page 1 de la partition' })).toHaveCount(0);
+    expect(files.some((file) => file.includes('pdf.worker'))).toBe(false);
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Télécharger la partition' }).click();
+    expect((await download).url()).toMatch(/\/parts\//);
+
+    await page.goto(`/songs/${seven}?mode=midi`);
+    await expect(
+      page.getByText('Il est un peu ancien pour le lecteur MIDI.', { exact: false }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Fichier MIDI' })).toBeVisible();
+  });
+
+  test('a recent device is never told it is too old (1.1.0)', async ({ page }) => {
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}?mode=pdf`);
+    await expect(page.getByRole('img', { name: 'Page 1 de la partition' }).first()).toBeVisible();
+    await expect(page.getByText('Ton appareil a de la bouteille')).toHaveCount(0);
+  });
+
+  test('the parts of the secondary instrument are the member’s too (1.1.0)', async ({ page }) => {
+    sql(
+      `UPDATE member SET secondaryInstrumentId = ${instrumentId('Sax Ténor')} WHERE nickname = 'Zaza'`,
+    );
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    await page.getByRole('button', { name: 'Plus d’actions' }).click();
+    const panel = page.getByRole('dialog', { name: 'Seven Nation' });
+    await expect(panel.getByRole('link', { name: /Ma partition/ })).toHaveText([
+      /Trompette · PDF/,
+      /Sax Ténor · PDF/,
+    ]);
+    await page.keyboard.press('Escape');
+
+    // The reading opens the part of her instrument; the other comes right after it.
+    await page.goto(`/songs/${seven}?mode=pdf`);
+    const picker = page.getByRole('button', { name: 'Choisir une autre partition' });
+    await expect(picker).toHaveText('Trompette');
+    await picker.click();
+    await expect(
+      page.getByRole('dialog', { name: 'Partitions' }).locator('.SongPartRow, .ListRow'),
+    ).toHaveText([/Trompette/, /Sax Ténor/, /Sax Alto/, /Souba/]);
+  });
+
+  test('on an iPhone a file goes through the share sheet: prepared, ready, or failed (1.1.0)', async ({
+    page,
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'iphone', 'The share sheet of iOS');
+    await page.addInitScript(() => {
+      const shared: string[] = [];
+      (window as unknown as { shared: string[] }).shared = shared;
+      // The share sheet: it opens only right after a touch, as iOS does.
+      let touchedAt = 0;
+      window.addEventListener(
+        'pointerdown',
+        () => {
+          touchedAt = Date.now();
+        },
+        true,
+      );
+      Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: async (data: { files: File[] }) => {
+          if (Date.now() - touchedAt > 1000) {
+            throw new DOMException('Not allowed', 'NotAllowedError');
+          }
+          shared.push(data.files[0]?.name ?? '');
+        },
+      });
+    });
+    await asMember(page, 'Zaza');
+    await page.goto(`/songs/${seven}`);
+    await page.getByRole('button', { name: 'Plus d’actions' }).click();
+    const panel = page.getByRole('dialog', { name: 'Seven Nation' });
+    await expect(
+      panel.getByText('Sur iPhone et iPad, le fichier s’enregistre', { exact: false }),
+    ).toBeVisible();
+
+    // Quick: the sheet opens at once.
+    await panel.getByRole('button', { name: /Ma partition/ }).click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { shared: string[] }).shared))
+      .toEqual([expect.stringMatching(/Trompette\.pdf$/)]);
+
+    // Slow: the row prepares, then says it is ready, and the next touch shares.
+    await page.route(/\/midi\?/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await route.continue();
+    });
+    const midiRow = panel.getByRole('button', { name: /Fichier MIDI/ });
+    await midiRow.click();
+    await expect(midiRow).toContainText('Préparation…');
+    await expect(midiRow).toHaveAttribute('aria-busy', 'true');
+    await expect(midiRow).toContainText('Touche pour l’enregistrer');
+    await expect(midiRow).toContainText('Prêt');
+    await midiRow.click();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { shared: string[] }).shared.length))
+      .toBe(2);
+    await expect(midiRow).not.toContainText('Prêt');
+
+    // Failed: said on the row, and a touch tries again.
+    await page.route(/\/museScore\?/, (route) => route.fulfill({ status: 500, body: '' }));
+    const scoreRow = panel.getByRole('button', { name: /Fichier MuseScore/ });
+    await scoreRow.click();
+    await expect(scoreRow).toContainText('Le téléchargement a échoué. Touche pour réessayer.');
   });
 
   test('Clip: nothing is asked of YouTube before the member presses play', async ({ page }) => {

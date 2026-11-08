@@ -406,6 +406,23 @@ test.describe('songs', () => {
     expect(sentPushes()).toEqual([]);
   });
 
+  test('a part reaches who holds its instrument as secondary instrument too (1.1.0)', async ({
+    playwright,
+  }) => {
+    const sonia = await deviceOf(playwright, email('Sonia'));
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    await subscribe(jibe, 'jibe');
+    const songId = addSong('Rasputin');
+    sql(`UPDATE song SET createdAt = UTC_TIMESTAMP() - INTERVAL 2 HOUR WHERE id = ${songId}`);
+    const trumpet = Number(sql("SELECT id FROM instrument WHERE name = 'Trompette'"));
+    // Jibé plays the sax, and fills in at the trumpet.
+    sql(`UPDATE member SET secondaryInstrumentId = ${trumpet} WHERE id = ${memberId('Jibé')}`);
+
+    emptyPushes();
+    await sendFile(sonia, `/api/songs/${songId}/parts/${trumpet}`, pdf);
+    expect(received()).toContain(`jibe: ${band} – Nouvelle partition pour toi`);
+  });
+
   test('a quiet change notifies nobody: neither the MuseScore file nor a part; creating still does (1.1.0)', async ({
     playwright,
   }) => {

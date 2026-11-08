@@ -109,6 +109,40 @@ test.describe('the profile', () => {
     await expect(page.getByLabel('Téléphone mobile')).toHaveValue('06 12 34 56 78');
   });
 
+  test('a member chooses a secondary instrument and who may answer for them; the directory shows neither (1.1.0)', async ({
+    page,
+  }) => {
+    await signIn(page);
+    await page.goto('/settings/profile');
+
+    // "Aucun" and "Personne" until chosen.
+    await page.getByRole('button', { name: 'Instrument secondaire Aucun' }).click();
+    const instruments = page.getByRole('dialog', { name: 'Instrument secondaire' });
+    // Not the instrument she plays.
+    await expect(instruments.getByRole('button', { name: 'Trompette' })).toHaveCount(0);
+    await instruments.getByRole('button', { name: 'Souba' }).click();
+    await expect(page.getByRole('button', { name: 'Instrument secondaire Souba' })).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: 'Présences' })).toBeVisible();
+    await page.getByRole('button', { name: 'Peut répondre pour moi Personne' }).click();
+    const people = page.getByRole('dialog', { name: 'Peut répondre pour moi' });
+    // The current members but her; not the invited Kiki.
+    await expect(people.getByRole('button', { name: 'Zaza' })).toHaveCount(0);
+    await expect(people.getByRole('button', { name: 'Kiki' })).toHaveCount(0);
+    await people.getByRole('button', { name: 'Momo' }).click();
+    await save(page).click();
+
+    await expect(page).toHaveURL('/settings');
+    expect(
+      sql(
+        `SELECT i.name, m.proxyMemberId = ${memberId('Momo')} FROM member m JOIN instrument i ON i.id = m.secondaryInstrumentId WHERE m.id = ${memberId('Zaza')}`,
+      ),
+    ).toBe('Souba\t1');
+    // Opened again, the profile shows both.
+    await page.goto('/settings/profile');
+    await expect(page.getByRole('button', { name: 'Peut répondre pour moi Momo' })).toBeVisible();
+  });
+
   test('a phone number stays what it is when the country of the address changes', async ({
     page,
   }) => {

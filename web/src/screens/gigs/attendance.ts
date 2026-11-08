@@ -13,6 +13,8 @@ export type Attendee = {
   photoUrl: string | null;
   /** Null: no answer yet. */
   answer: AttendanceAnswer | null;
+  /** The instrument the member said they come with (1.1.0); null: their own. */
+  declaredInstrumentId: number | null;
 };
 
 export type SectionAttendance = { section: Section; attendees: Attendee[]; yesCount: number };
@@ -55,13 +57,19 @@ export function attendanceOf(
   const answers = new Map(slot.answers.map((answer) => [answer.memberId, answer]));
 
   const all = current.map((member) => {
-    const instrument = instruments.find((one) => one.id === member.instrumentId);
+    // With the instrument they said they come with, for this gig (1.1.0):
+    // listed in its section, with its name and nothing more.
+    const given = answers.get(member.id);
+    const instrument = instruments.find(
+      (one) => one.id === (given?.instrumentId ?? member.instrumentId),
+    );
     return {
       memberId: member.id,
       nickname: member.nickname,
       instrument: instrument?.name ?? '',
       photoUrl: member.photoUrl,
-      answer: answers.get(member.id)?.answer ?? null,
+      answer: given?.answer ?? null,
+      declaredInstrumentId: given?.instrumentId ?? null,
       sectionId: instrument?.sectionId ?? 0,
       isWaitedFor: member.status === 'ACTIVE' || answers.has(member.id),
     };
@@ -78,6 +86,7 @@ export function attendanceOf(
         instrument: '',
         photoUrl: null,
         answer: answer.answer,
+        declaredInstrumentId: answer.instrumentId,
         sectionId: answer.sectionId,
       });
     }

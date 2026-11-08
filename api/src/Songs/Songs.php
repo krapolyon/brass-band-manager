@@ -53,10 +53,11 @@ final class Songs
         $songs = $this->database->fetchAllAssociative(
             'SELECT ' . self::COLUMNS . ', a.masteryAverage, a.masteryCount, a.enjoymentAverage, a.enjoymentCount,
                 (SELECT COUNT(*) FROM songPart p WHERE p.songId = s.id) AS partCount,
-                (SELECT p.pdfPath FROM songPart p WHERE p.songId = s.id AND p.instrumentId = ?) AS ownPartPath
+                (SELECT p.pdfPath FROM songPart p WHERE p.songId = s.id AND p.instrumentId = ?) AS ownPartPath,
+                (SELECT p.pdfPath FROM songPart p WHERE p.songId = s.id AND p.instrumentId = ?) AS secondaryPartPath
              FROM song s LEFT JOIN (' . self::AVERAGES . ') a ON a.songId = s.id
              ORDER BY s.name',
-            [$this->instrumentOf($viewer)],
+            [$this->instrumentOf($viewer), $this->secondaryInstrumentOf($viewer) ?? 0],
         );
 
         $attributes = $this->attributes(array_map(fn (array $song) => (int) $song['id'], $songs));
@@ -75,10 +76,11 @@ final class Songs
         $song = $this->database->fetchAssociative(
             'SELECT ' . self::COLUMNS . ', a.masteryAverage, a.masteryCount, a.enjoymentAverage, a.enjoymentCount,
                 (SELECT COUNT(*) FROM songPart p WHERE p.songId = s.id) AS partCount,
-                (SELECT p.pdfPath FROM songPart p WHERE p.songId = s.id AND p.instrumentId = ?) AS ownPartPath
+                (SELECT p.pdfPath FROM songPart p WHERE p.songId = s.id AND p.instrumentId = ?) AS ownPartPath,
+                (SELECT p.pdfPath FROM songPart p WHERE p.songId = s.id AND p.instrumentId = ?) AS secondaryPartPath
              FROM song s LEFT JOIN (' . self::AVERAGES . ') a ON a.songId = s.id
              WHERE s.id = ?',
-            [$instrumentId, $songId],
+            [$instrumentId, $this->secondaryInstrumentOf($viewer) ?? 0, $songId],
         );
         if ($song === false) {
             throw new ApiError(404, 'notFound');
@@ -163,6 +165,27 @@ final class Songs
         return (int) $this->database->fetchOne('SELECT instrumentId FROM member WHERE id = ?', [$member->id]);
     }
 
+    // The second instrument of the member (1.1.0): its parts are theirs too
+    // (model/songs.md, "The parts of the secondary instrument"). Null: none.
+    public function secondaryInstrumentOf(CurrentMember $member): ?int
+    {
+        $id = $this->database->fetchOne('SELECT secondaryInstrumentId FROM member WHERE id = ?', [$member->id]);
+
+        return $id === null || $id === false ? null : (int) $id;
+    }
+
+    /**
+     * The instruments whose parts are the member's: their own, then their secondary one.
+     *
+     * @return list<int>
+     */
+    public function ownInstrumentsOf(CurrentMember $member): array
+    {
+        $secondary = $this->secondaryInstrumentOf($member);
+
+        return $secondary === null ? [$this->instrumentOf($member)] : [$this->instrumentOf($member), $secondary];
+    }
+
     // The name a file of a song is offered under when it is downloaded:
     // "Seven Nation - Sax Alto.pdf". Built from the names of the song and of
     // the instrument, which are content: nothing here is a sentence.
@@ -245,7 +268,10 @@ final class Songs
             // "download everything" adds up. ownPart is the part of the
             // instrument of the member who asks.
             'fileSizes' => [
-                'ownPart' => $size($song['ownPartPath']),
+                // With the part of the secondary instrument (1.1.0): both are the member's.
+                'ownPart' => $size($song['ownPartPath']) === null && $size($song['secondaryPartPath']) === null
+                    ? null
+                    : (int) $size($song['ownPartPath']) + (int) $size($song['secondaryPartPath']),
                 'audio' => $size($song['audioPath']),
                 'midi' => $size($song['midiPath']),
                 'museScore' => $size($song['museScorePath']),

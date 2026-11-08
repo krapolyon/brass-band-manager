@@ -82,6 +82,34 @@
       {
         "kind": "added",
         "text": "From a song, “Toutes les partitions” downloads every part in one .zip."
+      },
+      {
+        "kind": "fixed",
+        "text": "Scores show on browsers a year or two old (iOS 17 and 18 among them): they get a version of the PDF reader written for them."
+      },
+      {
+        "kind": "fixed",
+        "text": "On iPhone and iPad, downloading a file goes through the share sheet (“Enregistrer dans Fichiers”, AirDrop…) instead of opening it in the app with no way back."
+      },
+      {
+        "kind": "changed",
+        "text": "On a device older than the app (before iOS 16.4), the PDF, MIDI and Live modes say so and offer to download the part, instead of blaming the network."
+      },
+      {
+        "kind": "changed",
+        "text": "A power member who has not answered is no longer waited for: left out of the list of who comes and of its counts; who notes the answers finds them in a folded group at the end."
+      },
+      {
+        "kind": "added",
+        "text": "A member can hold a secondary instrument and say which one they bring to a gig; the gig counts them in that section."
+      },
+      {
+        "kind": "added",
+        "text": "A member can let one other member answer gigs for them (“Peut répondre pour moi”)."
+      },
+      {
+        "kind": "changed",
+        "text": "The interface no longer speaks of a member in the masculine."
       }
     ]
   },

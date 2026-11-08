@@ -41,7 +41,7 @@
         },
         "member": {
           "label": "3. Ton compte",
-          "detail": "Tu seras le premier fanfaron de l’app, et son admin."
+          "detail": "Tu ouvres l’app : tu en seras l’admin."
         }
       },
       "key": {
@@ -127,7 +127,7 @@
     },
     "member": {
       "title": "Et toi, t’es qui ?",
-      "lead": "Tu es le premier fanfaron de l’app, et son admin : c’est toi qui inviteras les autres.",
+      "lead": "Tu ouvres l’app et tu en es l’admin : c’est toi qui inviteras les autres.",
       "inTheBand": "Dans la fanfare",
       "toSignIn": "Pour te connecter",
       "firstName": {
@@ -168,7 +168,7 @@
     "done": {
       "chip": "Installation terminée",
       "title": "C’est installé.",
-      "lead": "L’app est prête et tu es connecté. Il ne manque plus que les autres.",
+      "lead": "L’app est prête et ta session est ouverte. Il ne manque plus que les autres.",
       "bandDetail": "Le nom et le logo se changent dans les réglages.",
       "sections": "{{sections}}, {{instruments}}",
       "sectionsDetail": "À compléter quand tu veux dans les réglages.",
@@ -275,7 +275,7 @@
       "hint": {
         "self": "JPEG, PNG ou WebP. Elle est recadrée en carré.",
         "other": "JPEG, PNG ou WebP. Elle est recadrée en carré.",
-        "invited": "Ajoutée par la personne qui t’a invité. Change-la ou retire-la si tu préfères.",
+        "invited": "Ajoutée avec ton invitation. Change-la ou retire-la si tu préfères.",
         "invite": "Facultatif. La personne pourra la changer ou la retirer."
       }
     },
@@ -357,7 +357,13 @@
       "mobilePhone": {
         "invalid": "Ce numéro n’a pas l’air complet. Pour un numéro étranger, commence par + et l’indicatif du pays."
       },
-      "tooLong": "Ce texte est trop long."
+      "tooLong": "Ce texte est trop long.",
+      "secondaryInstrument": {
+        "invalid": "Cet instrument n’est plus dans la fanfare : choisis-en un autre."
+      },
+      "proxy": {
+        "invalid": "Cette personne n’est plus dans la fanfare : choisis-en une autre."
+      }
     },
     "status": {
       "INVITED": "Invité",
@@ -365,11 +371,20 @@
       "POWER_MEMBER": "Power member",
       "LEFT": "Parti",
       "EXPIRED": "Invitation expirée"
+    },
+    "form": {
+      "secondaryInstrument": "Instrument secondaire",
+      "secondaryInstrumentNone": "Aucun",
+      "secondaryInstrumentHint": "Facultatif. Tu choisis avec lequel tu viens quand tu réponds à un plan.",
+      "presences": "Présences",
+      "proxy": "Peut répondre pour moi",
+      "proxyNone": "Personne",
+      "proxyHint": "Facultatif. Cette personne note tes réponses aux plans à ta place, comme si tu les donnais. Personne d’autre ne le voit."
     }
   },
   "onboarding": {
     "title": "Bienvenue, {{nickname}} !",
-    "lead": "On a rempli ce qu’on savait de toi. Vérifie, corrige, complète : seuls les fanfarons connectés voient ces infos.",
+    "lead": "On a rempli ce qu’on savait de toi. Vérifie, corrige, complète : ces infos ne se voient qu’une fois dans l’app.",
     "continue": "Continuer",
     "password": {
       "title": "Plus qu’un mot de passe",
@@ -603,8 +618,8 @@
       "powerMembers_other": ", dont {{count}} power members",
       "invited_one": "1 invitation en attente",
       "invited_other": "{{count}} invitations en attente",
-      "former_one": "1 ancien",
-      "former_other": "{{count}} anciens"
+      "former_one": "1 départ",
+      "former_other": "{{count}} départs"
     },
     "filter": {
       "label": "Qui afficher",
@@ -612,7 +627,7 @@
       "powerMembers": "Power members",
       "invited": "Invités"
     },
-    "showFormer": "Afficher les anciens",
+    "showFormer": "Afficher les départs",
     "empty": {
       "all": {
         "title": "Personne pour l’instant.",
@@ -650,11 +665,11 @@
       "toActiveDetail": "Reprend les rappels pour les plans",
       "passwordLink": "Créer un lien de mot de passe",
       "passwordLinkDetail": "Si le sien est perdu",
-      "leave": "Marquer comme parti",
+      "leave": "Noter le départ",
       "leaveDetail": "Coupe son accès, efface ses coordonnées",
-      "leaveLastAdmin": "Impossible tant qu’il est le seul admin",
+      "leaveLastAdmin": "Impossible : c’est le seul compte admin",
       "newLink": "Copier un lien d’invitation",
-      "newLinkDetail": "Sans e-mail, à lui envoyer toi-même ; l’ancien ne marchera plus",
+      "newLinkDetail": "Sans e-mail, à envoyer toi-même ; l’ancien ne marchera plus",
       "resend": "Renvoyer l’invitation",
       "resendDetail": "Un nouveau lien part à {{email}} ; l’ancien ne marchera plus",
       "cancelInvitation": "Annuler l’invitation",
@@ -685,17 +700,18 @@
       }
     },
     "member": {
-      "lastAdmin": "{{nickname}} est le dernier admin. Nomme quelqu’un d’autre avant de lui retirer ce rôle ou de le marquer comme parti.",
+      "lastAdmin": "{{nickname}} a le seul compte admin. Nomme quelqu’un d’autre avant de retirer ce rôle ou de noter le départ.",
       "lastAdminRefused": "Il faut toujours un admin. Nomme quelqu’un d’autre avant de retirer ce rôle.",
       "reserved": "Réservé aux admins : ce fanfaron a plus de droits que toi.",
       "notFound": "Cette fiche n’existe pas, ou plus.",
-      "lastAdminRole": "Dernier admin : ce rôle ne peut pas lui être retiré",
+      "lastAdminRole": "Seul compte admin : ce rôle ne peut pas être retiré",
       "emailReserved": "Réservé aux admins : c’est son identifiant pour se connecter.",
       "emailedRecently": "Une invitation vient de partir. Attends 5 minutes avant de la renvoyer.",
-      "emailChanged": "L’ancien lien d’invitation ne marche plus. Copie un nouveau lien et envoie-le à {{email}}."
+      "emailChanged": "L’ancien lien d’invitation ne marche plus. Copie un nouveau lien et envoie-le à {{email}}.",
+      "secondaryInstrumentHint": "Facultatif. Un second instrument, pour venir à un plan dans un autre pupitre."
     },
     "leave": {
-      "title": "Marquer {{nickname}} comme parti ?",
+      "title": "Noter le départ de {{nickname}} ?",
       "text": "Son accès est coupé tout de suite. Son téléphone, son adresse, sa photo et ses rôles sont effacés. Son nom et ses réponses aux plans passés restent, et une nouvelle invitation reste possible."
     },
     "invite": {
@@ -718,11 +734,11 @@
         "title": "Invitation envoyée",
         "text": "{{nickname}} la reçoit à {{email}}, avec un lien qui marche une fois, pendant 7 jours.",
         "label": "Lien d’invitation",
-        "once": "Pas reçue ? Envoie-lui ce lien toi-même. On ne te le montrera plus."
+        "once": "Pas reçue ? Envoie ce lien toi-même. On ne te le montrera plus."
       },
       "password": {
         "title": "Lien prêt",
-        "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours, et lui permet de choisir un nouveau mot de passe.",
+        "text": "Envoie ce lien à {{nickname}} par le moyen que tu veux. Il marche une fois, pendant 7 jours, et sert à choisir un nouveau mot de passe.",
         "label": "Lien de mot de passe"
       }
     },
@@ -744,9 +760,9 @@
       "lead": "Le nom, le logo, la couleur et la langue de votre app. Le nom et le logo se voient avant même la connexion.",
       "nameAndLogo": "Nom, logo et icône",
       "logoHint": "PNG, SVG, JPEG ou WebP, 2 Mo maximum.",
-      "accentNote": "Celle de la fanfare. Chaque fanfaron peut en choisir une autre pour lui, dans ses réglages.",
+      "accentNote": "Celle de la fanfare. Chaque fanfaron peut en choisir une autre dans ses réglages.",
       "language": "Langue par défaut",
-      "languageNote": "Celle des nouveaux fanfarons. Chacun peut changer la sienne.",
+      "languageNote": "Celle des fanfarons qui arrivent. Chaque fanfaron peut changer la sienne.",
       "logoRefused": "Ce logo a été refusé. Le reste est enregistré : choisis une autre image.",
       "appIcon": "Icône de l’app",
       "appIconHint": "Carrée, PNG, JPEG ou WebP, 512 px de côté au moins. Sans icône, l’app la fabrique à partir du logo.",
@@ -772,8 +788,8 @@
       "moveNote_other": "Le changer de pupitre emmène ses {{count}} fanfarons avec lui.",
       "instrumentInUse_one": "1 fanfaron en joue. Change son instrument avant de le retirer.",
       "instrumentInUse_other": "{{count}} fanfarons en jouent. Change leur instrument avant de le retirer.",
-      "instrumentHeld_one": "Plus personne n’en joue, mais la fiche d’un invité ou d’un ancien fanfaron le porte encore. Il ne peut pas être retiré.",
-      "instrumentHeld_other": "Plus personne n’en joue, mais les fiches de {{count}} invités ou anciens fanfarons le portent encore. Il ne peut pas être retiré.",
+      "instrumentHeld_one": "Plus personne n’en joue, mais une fiche (invitation en cours ou départ) le porte encore. Il ne peut pas être retiré.",
+      "instrumentHeld_other": "Plus personne n’en joue, mais {{count}} fiches (invitations en cours ou départs) le portent encore. Il ne peut pas être retiré.",
       "sectionNotEmpty": "{{name}} a encore {{instruments}} et {{players}}. Déplace ou retire ses instruments d’abord.",
       "pictogram": {
         "label": "Pictogramme",
@@ -847,7 +863,7 @@
       "detailOne_one": "Rappel {{count}} jour avant, {{gap}} s entre deux morceaux",
       "detailOne_other": "Rappel {{count}} jours avant, {{gap}} s entre deux morceaux",
       "detailNone": "Aucun rappel, {{gap}} s entre deux morceaux",
-      "lead": "Les rappels de ceux qui n’ont pas répondu, et ce qui sert à compter et proposer une setlist.",
+      "lead": "Les rappels de celles et ceux qui n’ont pas répondu, et ce qui sert à compter et proposer une setlist.",
       "notYet": "Cette installation n’envoie pas encore de notifications : ces réglages sont gardés pour le jour où elle le fera.",
       "first": "Première relance",
       "second": "Seconde relance",
@@ -990,16 +1006,16 @@
       },
       "read": {
         "notInFile": "Pas dans ce fichier",
-        "new_one": "{{count}} nouveau",
-        "new_other": "{{count}} nouveaux",
+        "new_one": "{{count}} à créer",
+        "new_other": "{{count}} à créer",
         "updated_one": "{{count}} mis à jour",
         "updated_other": "{{count}} mis à jour",
         "invitationsTitle": "Invitations",
         "invitations": "Envoyer les invitations par e-mail",
-        "invitationsReprise_one": "Au fanfaron du fichier, toi mis à part : il reçoit son lien pour choisir son mot de passe, valable 7 jours. Coupe-le pour une installation de test.",
-        "invitationsReprise_other": "Aux {{count}} fanfarons du fichier, toi mis à part : chacun reçoit son lien pour choisir son mot de passe, valable 7 jours. Coupe-le pour une installation de test.",
-        "invitationsExport_one": "Au fanfaron du fichier qui n’a pas encore de mot de passe : il reçoit son lien, valable 7 jours. Coupe-le pour une installation de test.",
-        "invitationsExport_other": "Aux {{count}} fanfarons du fichier qui n’ont pas encore de mot de passe : chacun reçoit son lien, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsReprise_one": "Au fanfaron du fichier, toi mis à part : ce compte reçoit son lien pour choisir son mot de passe, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsReprise_other": "Aux {{count}} fanfarons du fichier, toi mis à part : chaque compte reçoit son lien pour choisir son mot de passe, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsExport_one": "Au fanfaron du fichier qui n’a pas encore de mot de passe : ce compte reçoit son lien, valable 7 jours. Coupe-le pour une installation de test.",
+        "invitationsExport_other": "Aux {{count}} fanfarons du fichier qui n’ont pas encore de mot de passe : chaque compte reçoit son lien, valable 7 jours. Coupe-le pour une installation de test.",
         "passwordLead": "L’import change les données de la fanfare : on te redemande ton mot de passe.",
         "loading": "Chargement…",
         "export": {
@@ -1013,7 +1029,7 @@
           "gigs_one": "{{count}} plan",
           "gigs_other": "{{count}} plans",
           "note": "Les plans viennent avec les fanfarons et la config : on ne peut pas les importer seuls. Ajoute et met à jour, ne supprime rien. Chacun garde son mot de passe. Ton compte doit être admin dans le fichier, sinon l’import est refusé : tu te reconnectes ensuite avec ton mot de passe.",
-          "signedOut": "Ce qui est coché sera mis à jour, sans retour en arrière. Tu seras déconnecté : reconnecte-toi avec ton mot de passe.",
+          "signedOut": "Ce qui est coché sera mis à jour, sans retour en arrière. Ta session sera fermée : reconnecte-toi avec ton mot de passe.",
           "ticked_one": "{{count}} partie cochée",
           "ticked_other": "{{count}} parties cochées",
           "submit": "Importer"
@@ -1179,7 +1195,12 @@
         "midi": "Fichiers MIDI",
         "museScore": "Fichiers MuseScore",
         "allParts": "Partitions - {{song}}"
-      }
+      },
+      "preparing": "Préparation…",
+      "ready": "Prêt",
+      "readyDetail": "Touche pour l’enregistrer",
+      "failed": "Le téléchargement a échoué. Touche pour réessayer.",
+      "iosNote": "Sur iPhone et iPad, le fichier s’enregistre par la feuille de partage (« Enregistrer dans Fichiers », AirDrop…). Un gros fichier se prépare d’abord : touche la ligne une seconde fois quand elle dit « Prêt »."
     },
     "player": {
       "play": "Lire",
@@ -1389,7 +1410,12 @@
       },
       "mood": "Ambiance",
       "positions": "Positions",
-      "copyright": "Droits d’auteur"
+      "copyright": "Droits d’auteur",
+      "tooOldTitle": "Ton appareil a de la bouteille",
+      "tooOldPdf": "Il est un peu ancien pour afficher la partition dans l’app. Pas grave : télécharge-la, elle s’ouvre à côté.",
+      "tooOldMidi": "Il est un peu ancien pour le lecteur MIDI. Pas grave : la partition, elle, se télécharge et s’ouvre à côté.",
+      "tooOldLive": "Il est un peu ancien pour le mode live. Pas grave : la partition se télécharge et s’ouvre à côté.",
+      "downloadPart": "Télécharger la partition"
     },
     "delete": {
       "title": "Supprimer {{name}} ?",
@@ -1745,7 +1771,8 @@
       "none": "Pas répondu",
       "yesOf": "Oui à {{yes}} sur {{count}}",
       "label": "Ta réponse",
-      "labelFor": "Ta réponse pour {{slot}}"
+      "labelFor": "Ta réponse pour {{slot}}",
+      "instrument": "Tu viens avec"
     },
     "time": {
       "sharp": "{{hours}} h",
@@ -1831,7 +1858,7 @@
       "copyAddress": "Copier l’adresse",
       "addressCopied": "Adresse copiée.",
       "placeLink": "Voir le lieu",
-      "draft": "Brouillon : seuls les brasseurs et ceux qui gèrent les plans le voient. Personne ne répond encore.",
+      "draft": "Brouillon : seuls les brasseurs et celles et ceux qui gèrent les plans le voient. Personne ne répond encore.",
       "propose": "Proposer à la fanfare",
       "deleteDraft": "Supprimer le brouillon",
       "outdated": "La date de ce brouillon est passée : supprime-le, ou change sa date.",
@@ -1893,12 +1920,15 @@
       "detailSubtitle": "{{gig}}, {{date}}.",
       "detailSubtitleEditor": "{{gig}}, {{date}}. Tu brasses ce plan : touche un fanfaron pour noter sa réponse.",
       "answerOf": "Réponse de {{nickname}}",
-      "answerFor": "{{nickname}} t’a donné sa réponse ? Note-la pour lui. Elle compte tout de suite, comme s’il l’avait donnée.",
+      "answerFor": "{{nickname}} t’a donné sa réponse ? Note-la ici : elle compte tout de suite, comme si {{nickname}} l’avait donnée.",
       "currentAnswer": "Sa réponse actuelle : {{answer}}.",
-      "noCurrentAnswer": "Il n’a pas encore répondu.",
+      "noCurrentAnswer": "Pas encore de réponse.",
       "noteAnswer": "Noter la réponse de {{nickname}}, {{answer}}",
       "slots": "Présence",
-      "detailSubtitleManager": "{{gig}}, {{date}}. Touche un fanfaron pour noter sa réponse."
+      "detailSubtitleManager": "{{gig}}, {{date}}. Touche un fanfaron pour noter sa réponse.",
+      "powerMembers": "Power members",
+      "powerMembersCount": "· {{count}}",
+      "powerMembersHint": "Personne ne les attend : touche l’un d’eux pour noter sa réponse."
     },
     "statusPanel": {
       "title": "Statut du plan",
@@ -1938,7 +1968,7 @@
     },
     "form": {
       "newTitle": "Nouveau plan",
-      "newLead": "Il démarre en brouillon : seuls les brasseurs et ceux qui gèrent les plans le voient.",
+      "newLead": "Il démarre en brouillon : seuls les brasseurs et celles et ceux qui gèrent les plans le voient.",
       "editTitle": "Modifier le plan",
       "editLead": "Ce que tu changes ici se voit tout de suite dans le plan.",
       "theGig": "Le plan",
@@ -2029,13 +2059,13 @@
           "otherServer": "Ce salon est sur un autre serveur Discord que celui de la fanfare."
         },
         "organizerIds": {
-          "invalid": "Un brasseur n’est plus dans la fanfare : retire-le."
+          "invalid": "Un brasseur n’est plus dans la fanfare : retire cette personne."
         },
         "costumeIds": {
           "invalid": "Un déguiz n’existe plus : recharge la page."
         }
       },
-      "noRight": "Créer ou modifier un plan, c’est pour ceux qui gèrent les plans et pour ses brasseurs. Tu penses devoir y être ? Vois ça avec un admin.",
+      "noRight": "Créer ou modifier un plan, c’est pour celles et ceux qui gèrent les plans et pour ses brasseurs. Tu penses devoir y être ? Vois ça avec un admin.",
       "notesAndDiscord": "Infos diverses et Discord",
       "discord": "Lien du salon Discord",
       "discordHint": "Dans Discord : « Copier le lien du salon ». Chacun l’ouvre depuis le plan. Facultatif."
@@ -2070,6 +2100,14 @@
       "validate_one": "Valider le brasseur",
       "validate_other": "Valider les {{count}} brasseurs",
       "nobody": "Aucun fanfaron à ce nom."
+    },
+    "answerFor": {
+      "instrument": "Vient avec",
+      "current": "Sa réponse actuelle : {{answer}}, en {{instrument}}."
+    },
+    "proxy": {
+      "title": "Réponse de {{nickname}}",
+      "unanswered": "{{nickname}} n’a pas encore répondu. Tu peux répondre à sa place."
     }
   },
   "channelChoice": {

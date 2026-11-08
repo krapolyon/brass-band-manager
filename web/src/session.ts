@@ -19,6 +19,10 @@ export type Me = Omit<Appearance, 'textSizePercent'> & {
   addressInstructions: string | null;
   photoUrl: string | null;
   instrumentId: number;
+  /** A second instrument, brought to a gig when the member says so (1.1.0). */
+  secondaryInstrumentId: number | null;
+  /** The member who may answer gigs for this one, "Peut répondre pour moi" (1.1.0). */
+  proxyMemberId: number | null;
   status: 'ACTIVE' | 'POWER_MEMBER';
   language: string;
   roles: string[];

@@ -131,10 +131,13 @@ final class Exporter
     {
         $rows = [];
         $names = [];
+        $emails = $this->personal->emailsById();
         foreach ($this->database->fetchAllAssociative(
             'SELECT m.id, m.nickname, m.firstName, m.lastName, m.email, m.mobilePhone, m.streetAddress, m.postalCode, m.city,
-                    m.countryCode, m.addressInstructions, m.photoPath, i.name AS instrument, m.passwordHash, m.status, m.language
-             FROM member m JOIN instrument i ON i.id = m.instrumentId ORDER BY m.nickname',
+                    m.countryCode, m.addressInstructions, m.photoPath, i.name AS instrument, m.passwordHash, m.status, m.language,
+                    second.name AS secondaryInstrument, m.proxyMemberId
+             FROM member m JOIN instrument i ON i.id = m.instrumentId
+             LEFT JOIN instrument second ON second.id = m.secondaryInstrumentId ORDER BY m.nickname',
         ) as $row) {
             $row = $this->personal->opened($row);
             $photo = null;
@@ -150,6 +153,10 @@ final class Exporter
                 'firstName' => $row['firstName'],
                 'lastName' => $row['lastName'],
                 'instrument' => $row['instrument'],
+                // 1.1.0: a second instrument, and who answers gigs for the
+                // member, by email like every reference to a member.
+                'secondaryInstrument' => $row['secondaryInstrument'],
+                'proxyMemberEmail' => $row['proxyMemberId'] === null ? null : ($emails[(int) $row['proxyMemberId']] ?? null),
                 'status' => $row['status'],
                 'roles' => $this->database->fetchFirstColumn('SELECT role FROM memberRole WHERE memberId = ? ORDER BY role', [$row['id']]),
                 'passwordHash' => $row['passwordHash'],
@@ -269,7 +276,7 @@ final class Exporter
                     'name' => $slot['name'],
                     'note' => $slot['note'],
                     'costume' => $slot['costume'],
-                    'answers' => array_map(fn (array $answer) => ['memberEmail' => $emails[(int) $answer['memberId']], 'answer' => $answer['answer']], $this->database->fetchAllAssociative('SELECT memberId, answer FROM gigSlotAttendance WHERE gigSlotId = ?', [$slot['id']])),
+                    'answers' => array_map(fn (array $answer) => ['memberEmail' => $emails[(int) $answer['memberId']], 'answer' => $answer['answer'], 'instrument' => $answer['instrument']], $this->database->fetchAllAssociative('SELECT a.memberId, a.answer, i.name AS instrument FROM gigSlotAttendance a LEFT JOIN instrument i ON i.id = a.instrumentId WHERE a.gigSlotId = ?', [$slot['id']])),
                 ];
             }
             $setlists = [];

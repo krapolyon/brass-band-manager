@@ -56,6 +56,7 @@ use BrassBand\Gigs\ListCostumesAction;
 use BrassBand\Gigs\ListGigsAction;
 use BrassBand\Gigs\RemindGigAction;
 use BrassBand\Gigs\Reminders;
+use BrassBand\Gigs\RequireAnswerer;
 use BrassBand\Gigs\RequireGigEditor;
 use BrassBand\Gigs\SaveCostumeAction;
 use BrassBand\Gigs\SaveGigAction;
@@ -100,6 +101,7 @@ use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\RequireSelfOrPermission;
 use BrassBand\Access\SignInFailures;
 use BrassBand\Access\UpdatePreferencesAction;
+use BrassBand\Access\UpdateProxyAction;
 use BrassBand\Access\UsePasswordLinkAction;
 use BrassBand\Members\ChangeStatusAction;
 use BrassBand\Members\CreateMemberAction;
@@ -274,6 +276,7 @@ return function (App $app, Connection $database, array $config): void {
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
+        $group->put('/api/me/proxy', new UpdateProxyAction($database, $profile));
         // What the member wants to be told of, on every device that receives.
         $notifications = new NotificationsAction($database);
         $group->get('/api/me/notifications', $notifications);
@@ -345,9 +348,10 @@ return function (App $app, Connection $database, array $config): void {
         $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
         // "Relancer": a notification to who has not answered for the gig.
         $group->post('/api/gigs/{id:[0-9]+}/reminder', new RemindGigAction($database, $gigs, new Reminders($database, $push)))->add($editGig);
-        // The answer of a member who told them.
+        // The answer of a member who told them; also noted by the member they
+        // designated to answer for them (1.1.0).
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, $gigPush, forAnother: true))
-            ->add($editGig);
+            ->add(new RequireAnswerer($gigs));
 
         // ---------------------------------------------------------------
         // 4. Permission

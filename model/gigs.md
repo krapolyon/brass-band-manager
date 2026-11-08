@@ -1,5 +1,6 @@
 # Business dictionary — Gigs domain
 
+> v1.15 — 2026-11-07 · For 1.1.0, decided by the owner · Model: `gigs.dbml` v1.14 · Migration: `020_secondaryInstrumentAndProxy.sql` · A member comes with their secondary instrument when they say so, and is counted in its section (`gigSlotAttendance.instrumentId`); the member designated by another member answers for them
 > v1.14 — 2026-11-05 · Validated by the owner, for 1.1.0 · No change to the tables · A `POWER_MEMBER` who has not answered is not waited for: left out of the list of who comes and of its counts, except for who may note the answers of others, who finds them folded at the end
 > v1.13 — 2026-11-03 · Validated by the owner, for 1.1.0 · Model: `gigs.dbml` v1.12 · Migration: `019_gigFoundCoordinates.sql` · The coordinates of a gig are found from its address when none are typed, so that its map shows (`hasFoundCoordinates`); the address leaves to a geocoding service, from the server only
 > v1.12 — 2026-10-24 · Validated by the owner, for 1.0.0 · No change to the tables · A wrong calendar address is answered at once, no longer after a second (issue #51)
@@ -138,6 +139,7 @@ A moment of a gig for which members say whether they come: a roll call. In the F
 | `note` | Note | Note | No | Parade, we walk for two hours | 1 to 3 lines | |
 | `costumeId` | Costume | Déguiz | No | Paillettes | — | One of the costumes of the gig |
 | `answer` | Answer | Réponse | — | `IF_NEEDED` | — | One of the four values; no row means no answer |
+| `instrumentId` | Instrument | Tu viens avec | No | Souba | — | Empty: the instrument of the member. Otherwise their secondary instrument (Members domain), as declared with the answer |
 
 The answer labels in French are "Oui", "Non", "Peut-être" and "Si besoin". No answer is shown as such, never as a no.
 
@@ -147,6 +149,10 @@ The answer labels in French are "Oui", "Non", "Peut-être" and "Si besoin". No a
 - Current members answer (`ACTIVE` and `POWER_MEMBER`). Both count for playability.
 - Reminders go to `ACTIVE` members who have not answered, never to `POWER_MEMBER` ones.
 - Nothing is waited for from a `POWER_MEMBER` (1.1.0): one who has not answered a slot is left out of the list of who comes and of every count of the slot (the answers, the share bar, "N n'ont pas répondu", "N oui sur M"). Who may note the answers of others on the slot (an organiser, `GIG_MANAGER`, `ADMIN`, while the gig is open) still finds them, after the sections, in a group "Power members" folded until it is opened, so as to note an answer given by word of mouth. Once they have answered, they are listed and counted like anyone.
+- **Coming with the other instrument** (1.1.0, decided on 2026-11-07). A member who holds a secondary instrument (Members domain) says, with their answer, which instrument they come with. Nobody is asked: the answer is given as before, and under it, for that member only, a control with the two instruments appears, their instrument chosen by default; one tap switches to the other. It is shown with the answers `YES`, `MAYBE` and `IF_NEEDED`, not with `NO`, and not before the member has answered. One choice per gig: the control is shown once, and applies to every slot the member answered in the gig; the value is stored on each answer (`gigSlotAttendance.instrumentId`), empty when it is the instrument of the member. Whoever answers for the member chooses it the same way, in the sheet "Réponse de …". A member without a secondary instrument never sees the control.
+- **What the declared instrument changes.** For that gig, "Qui vient" lists the member in the section of the declared instrument, with the declared instrument as detail and nothing more (the band knows who usually plays what); the playability of the slot counts them in that section and in no other; "ton pupitre", the mark of the section of the signed-in member, and "What my answer changes" follow the declared instrument. No new message tells what switching instrument would change (owner, 2026-11-07). Everything else (the directory, the counts of the band, the parts) follows the instrument of the member.
+- **The server checks it.** An `instrumentId` that is neither the instrument nor the secondary instrument of the member when the answer is saved is refused (400). An answer whose instrument is no longer one of the member's two (the secondary was changed later) keeps its value: the gig shows what was declared; the member's next answer corrects it.
+- **Answering for the member who designated me** (1.1.0, decided on 2026-11-07). The member designated by another member (`member.proxyMemberId`, Members domain) answers for that member on every gig they both see, as an organiser does for a member who told them: the answer counts at once, as if the member had given it. The screen of a gig shows the answer of the designated member under their own, in a second card "Réponse de {nickname}", with the same choices, the same control of instrument when that member holds a secondary instrument, and the same messages ("What my answer changes" speaks of that member). In "Qui vient", the designated member touches the member who designated them to open the sheet "Réponse de …", as an organiser does; they touch nobody else. Nothing else: no reminder to the designated member, no notification, no mark in the list of gigs.
 
 ### Access rights
 | Who | View | Answer | Edit the slot |
@@ -154,9 +160,11 @@ The answer labels in French are "Oui", "Non", "Peut-être" and "Si besoin". No a
 | Any signed-in member | Every answer of every current member, for the gigs they see | For themselves | No |
 | An organiser of the gig | The same | For themselves, and for another member who told them, on this gig | Yes, on this gig |
 | `GIG_MANAGER`, `ADMIN` | The same | For themselves, and for another member who told them | Yes |
+| The member designated by another member (`proxyMemberId`) | The same | For themselves, and for the member who designated them, on every gig | No |
 
 ### Personal data
 - `answer`: purpose, knowing whether the band can play and who comes. Seen by every current member. Kept when the member leaves, so that past gigs keep who played; the member is then shown by nickname only.
+- `instrumentId` of an answer: purpose, knowing in which section the member plays this gig. Seen with the answer. Kept with it.
 
 ## 3. Costume (`costume`)
 

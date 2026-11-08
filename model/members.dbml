@@ -1,4 +1,5 @@
 // Domain: Members
+// v1.32 — 2026-11-07 — for 1.1.0, decided by the owner: member.secondaryInstrumentId, a second instrument the member can bring to a gig; member.proxyMemberId, the one member who may answer gigs for this member ("Peut répondre pour moi"); migration 020 (dictionary v1.34)
 // v1.31 — 2026-11-02 — for 1.1.0, decided by the owner: no change to the tables; a changed email of an invited member cancels their link (dictionary v1.33)
 // v1.30 — 2026-11-01 — for 1.1.0, to validate: no change to the tables; sending an invitation again shows the link, an invited member is edited like a current one (dictionary v1.32)
 // v1.29 — 2026-10-25 — for 1.0.0, after the review: requestLimit counts wrong secrets only, an IPv6 visitor by its first 64 bits; its rows are deleted at the next check after their window (dictionary v1.31)
@@ -103,6 +104,8 @@ Table member {
   addressInstructions varchar [note: '🔒 Personal data — purpose: directory of the band. How to get in: door code, floor, where to park. Encrypted in the database (see the dictionary, "Encryption").']
   photoPath varchar [note: '🔒 Personal data — purpose: recognising each other in the band. File of the profile photo, relative to the storage folder of the app; the file is on the disk, not in the database. Empty when the member has no photo. Erased when the member leaves.']
   instrumentId integer [not null, ref: > instrument.id, note: 'The instrument the member plays, which gives their section. One per member.']
+  secondaryInstrumentId integer [ref: > instrument.id, note: 'A second instrument the member can bring to a gig. Empty for most members. Never the same as instrumentId. Does not change the section of the member.']
+  proxyMemberId integer [ref: > member.id, note: '🔒 Personal data — purpose: letting one other member answer gigs for this member ("Peut répondre pour moi"). Chosen by the member alone. Empty for most members.']
   passwordHash varchar [note: 'Result of PHP password_hash(). Required when the status is ACTIVE or POWER_MEMBER, empty while it is INVITED. Never sent to the front.']
   failedSignInCount integer [not null, default: 0, note: 'Wrong passwords in a row. Back to 0 after a successful sign-in.']
   signInLockedUntil timestamp [note: 'Set after too many wrong passwords in a row: no sign-in is accepted before this instant. Empty otherwise.']

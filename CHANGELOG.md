@@ -13,6 +13,8 @@ What changes in the app, version after version. This file is written by
 - Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing.
 - A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), the form says so under the field, and coordinates typed by hand still win.
 - From a song, “Toutes les partitions” downloads every part in one .zip.
+- A member can hold a secondary instrument and say which one they bring to a gig; the gig counts them in that section.
+- A member can let one other member answer gigs for them (“Peut répondre pour moi”).
 
 ### Changed
 
@@ -20,6 +22,9 @@ What changes in the app, version after version. This file is written by
 - The tempo of the Live mode is set in one place: a tap on the tempo opens a sheet to set it with − and +, or to tap it.
 - Playing the Live mode with the MIDI is a switch beside Play; the tracks of the MIDI are set in the new reading settings, and a line shows where the MIDI is in the measure.
 - The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses.
+- On a device older than the app (before iOS 16.4), the PDF, MIDI and Live modes say so and offer to download the part, instead of blaming the network.
+- A power member who has not answered is no longer waited for: left out of the list of who comes and of its counts; who notes the answers finds them in a folded group at the end.
+- The interface no longer speaks of a member in the masculine.
 
 ### Fixed
 
@@ -33,6 +38,8 @@ What changes in the app, version after version. This file is written by
 - The beat being played of the visual metronome no longer pushes the others aside.
 - In the Live mode, the score no longer stands still while it plays after the phone turned or a sheet closed.
 - On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too.
+- Scores show on browsers a year or two old (iOS 17 and 18 among them): they get a version of the PDF reader written for them.
+- On iPhone and iPad, downloading a file goes through the share sheet (“Enregistrer dans Fichiers”, AirDrop…) instead of opening it in the app with no way back.
 
 ## 1.0.0 — 2026-10-24
 

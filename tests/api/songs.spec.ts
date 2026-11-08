@@ -1290,6 +1290,32 @@ test.describe('downloading everything', () => {
     }
   });
 
+  test('"Toutes mes partitions" holds the parts of the secondary instrument too (1.1.0)', async ({
+    playwright,
+  }) => {
+    const crazy = addSong('Crazy');
+    const sisi = await deviceOf(playwright, email('Sisi'));
+    for (const name of ['Trompette', 'Souba', 'Sax Ténor']) {
+      await sendFile(sisi, `/api/songs/${crazy}/parts/${instrumentId(name)}`, pdf);
+    }
+    sql(
+      `UPDATE member SET secondaryInstrumentId = ${instrumentId('Souba')} WHERE id = ${memberId('Zaza')}`,
+    );
+    const zaza = await deviceOf(playwright, email('Zaza'));
+
+    const archive = (
+      await (await zaza.get(`/api/songs/archive?kind=parts&songs=${crazy}`)).body()
+    ).toString('latin1');
+    expect(archive).toContain('Crazy - Trompette.pdf');
+    expect(archive).toContain('Crazy - Souba.pdf');
+    expect(archive).not.toContain('Sax');
+    // The list counts both in what "Toutes mes partitions" weighs.
+    const listed = (await (await zaza.get('/api/songs')).json()).find(
+      (song: { id: number }) => song.id === crazy,
+    );
+    expect(listed.fileSizes.ownPart).toBe(pdf.length * 2);
+  });
+
   test('every part of one song: one PDF per instrument, in the order of the band (1.1.0)', async ({
     playwright,
   }) => {

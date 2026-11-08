@@ -1509,3 +1509,126 @@ test.describe('Discord and setlists (0.3.0)', () => {
     });
   });
 });
+
+// 1.1.0: coming with the secondary instrument, and answering for the member
+// who designated me. model/gigs.md v1.15, entry 2, "Rules" and "Access rights".
+test.describe('the instrument a member comes with, and who answers for whom (1.1.0)', () => {
+  const instrument = (name: string) =>
+    Number(sql(`SELECT id FROM instrument WHERE name = '${name}'`));
+  const ownInstrument = (nickname: string) =>
+    Number(sql(`SELECT instrumentId FROM member WHERE id = ${memberId(nickname)}`));
+
+  test('a member comes with their secondary instrument: counted in its section, the gig confirmed when it was the last one missing', async ({
+    playwright,
+  }) => {
+    // Jibé alone plays the sax and has not answered: the sax is missing.
+    const sax = ownInstrument('Jibé');
+    sql(`UPDATE member SET secondaryInstrumentId = ${sax} WHERE id = ${memberId('Zaza')}`);
+    const { gigId, slotId } = addGig('Carnaval', 'ACCEPTED');
+    answerOf('Lulu', slotId, 'YES');
+    const zaza = await deviceOf(playwright, email('Zaza'));
+
+    // Neither the instrument of another, nor any instrument of hers but the two.
+    const refused = await zaza.put(`/api/gigs/${gigId}/slots/${slotId}/answer`, {
+      data: { answer: 'YES', instrumentId: instrument('Souba') },
+    });
+    expect(refused.status()).toBe(400);
+    expect(sql(`SELECT COUNT(*) FROM gigSlotAttendance WHERE memberId = ${memberId('Zaza')}`)).toBe(
+      '0',
+    );
+
+    const own = await zaza.put(`/api/gigs/${gigId}/slots/${slotId}/answer`, {
+      data: { answer: 'YES', instrumentId: ownInstrument('Zaza') },
+    });
+    // Her own instrument is written as none.
+    expect(
+      sql(
+        `SELECT COALESCE(instrumentId, '-') FROM gigSlotAttendance WHERE memberId = ${memberId('Zaza')}`,
+      ),
+    ).toBe('-');
+    expect((await own.json()).slots[0].isPlayable).toBe(false);
+
+    const withSax = await zaza.put(`/api/gigs/${gigId}/slots/${slotId}/answer`, {
+      data: { answer: 'YES', instrumentId: sax },
+    });
+    const gig = await withSax.json();
+    expect(gig.status).toBe('CONFIRMED');
+    expect(gig.slots[0].isPlayable).toBe(true);
+    const hers = gig.slots[0].answers.find(
+      (one: { memberId: number }) => one.memberId === memberId('Zaza'),
+    );
+    const saxSection = Number(sql(`SELECT sectionId FROM instrument WHERE id = ${sax}`));
+    expect(hers).toMatchObject({ instrumentId: sax, sectionId: saxSection });
+  });
+
+  test('one instrument for the gig: it is written on every slot the member answered', async ({
+    playwright,
+  }) => {
+    const sax = ownInstrument('Jibé');
+    sql(`UPDATE member SET secondaryInstrumentId = ${sax} WHERE id = ${memberId('Zaza')}`);
+    const { gigId, slotId } = addGig('Fête des Lumières');
+    const second = Number(
+      sql(
+        `INSERT INTO gigSlot (gigId, position, name) VALUES (${gigId}, 2, 'Dimanche'); SELECT LAST_INSERT_ID();`,
+      ),
+    );
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    await answer(zaza, gigId, slotId, 'NO');
+    await zaza.put(`/api/gigs/${gigId}/slots/${second}/answer`, {
+      data: { answer: 'YES', instrumentId: sax },
+    });
+    expect(
+      sql(
+        `SELECT COALESCE(instrumentId, '-') FROM gigSlotAttendance WHERE memberId = ${memberId('Zaza')} ORDER BY gigSlotId`,
+      ),
+    ).toBe(`${sax}\n${sax}`);
+  });
+
+  test('the member designated by another answers for them, and for nobody else', async ({
+    playwright,
+  }) => {
+    sql(`UPDATE member SET proxyMemberId = ${memberId('Lulu')} WHERE id = ${memberId('Zaza')}`);
+    const { gigId, slotId } = addGig('Carnaval');
+    const lulu = await deviceOf(playwright, email('Lulu'));
+
+    // Lulu finds Zaza on the gig, and only on her own copy of it.
+    const seen = await (await lulu.get(`/api/gigs/${gigId}`)).json();
+    expect(seen.proxyFor).toEqual([
+      {
+        id: memberId('Zaza'),
+        nickname: 'Zaza',
+        instrumentId: ownInstrument('Zaza'),
+        secondaryInstrumentId: null,
+      },
+    ]);
+    const popo = await deviceOf(playwright, email('Popo'));
+    expect((await (await popo.get(`/api/gigs/${gigId}`)).json()).proxyFor).toEqual([]);
+
+    const noted = await lulu.put(`/api/gigs/${gigId}/slots/${slotId}/answers/${memberId('Zaza')}`, {
+      data: { answer: 'MAYBE' },
+    });
+    expect(noted.status()).toBe(200);
+    expect(
+      sql(
+        `SELECT answer, updatedByMemberId FROM gigSlotAttendance WHERE memberId = ${memberId('Zaza')}`,
+      ),
+    ).toBe(`MAYBE\t${memberId('Lulu')}`);
+
+    // Nobody else designated Lulu; nor did Zaza designate Popo.
+    for (const [device, nickname] of [
+      [lulu, 'Gigi'],
+      [popo, 'Zaza'],
+    ] as const) {
+      const refused = await device.put(
+        `/api/gigs/${gigId}/slots/${slotId}/answers/${memberId(nickname)}`,
+        {
+          data: { answer: 'YES' },
+        },
+      );
+      expect(refused.status(), nickname).toBe(403);
+    }
+    expect(sql(`SELECT COUNT(*) FROM gigSlotAttendance WHERE memberId = ${memberId('Gigi')}`)).toBe(
+      '0',
+    );
+  });
+});

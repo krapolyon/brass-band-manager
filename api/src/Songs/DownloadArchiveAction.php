@@ -54,7 +54,7 @@ final class DownloadArchiveAction
             throw new ApiError(422, 'invalidInput');
         }
 
-        $found = $this->found($kind, $songIds, $this->songs->instrumentOf(CurrentMember::of($request)));
+        $found = $this->found($kind, $songIds, $this->songs->ownInstrumentsOf(CurrentMember::of($request)));
         if ($found === [] || !class_exists(\ZipArchive::class)) {
             throw new ApiError(404, 'notFound');
         }
@@ -107,17 +107,18 @@ final class DownloadArchiveAction
      * The files to put in the archive: name in the archive => place on the disk.
      *
      * @param list<int> $songIds
+     * @param list<int> $instrumentIds The instruments of the member, their own first
      * @return array<string, string>
      */
-    private function found(string $kind, array $songIds, int $instrumentId): array
+    private function found(string $kind, array $songIds, array $instrumentIds): array
     {
         if ($kind === 'parts') {
             $rows = $this->database->fetchAllAssociative(
                 'SELECT s.name, i.name AS instrument, p.pdfPath AS path
                  FROM songPart p JOIN song s ON s.id = p.songId JOIN instrument i ON i.id = p.instrumentId
-                 WHERE p.instrumentId = ? AND p.songId IN (?) ORDER BY s.name',
-                [$instrumentId, $songIds],
-                [1 => ArrayParameterType::INTEGER],
+                 WHERE p.instrumentId IN (?) AND p.songId IN (?) ORDER BY s.name, p.instrumentId = ? DESC',
+                [$instrumentIds, $songIds, $instrumentIds[0]],
+                [ArrayParameterType::INTEGER, ArrayParameterType::INTEGER],
             );
         } elseif ($kind === 'allParts') {
             $rows = $this->database->fetchAllAssociative(

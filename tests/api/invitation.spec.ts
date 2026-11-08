@@ -92,6 +92,7 @@ test('the link of an invitation shows the invited member their own record', asyn
     'mobilePhone',
     'nickname',
     'postalCode',
+    'secondaryInstrumentId',
     'streetAddress',
   ]);
 });

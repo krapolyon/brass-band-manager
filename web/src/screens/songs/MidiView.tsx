@@ -110,7 +110,10 @@ export function useTracks(midi: MidiSong) {
       track,
       name: instrument?.name ?? (track.name || t('songs.midi.unnamedTrack', { number: index + 1 })),
       pictogram: instrument?.icon ?? null,
-      own: instrument !== undefined && instrument.id === me?.instrumentId,
+      // Their instrument, or their secondary one (1.1.0): both are theirs.
+      own:
+        instrument !== undefined &&
+        (instrument.id === me?.instrumentId || instrument.id === me?.secondaryInstrumentId),
     };
   });
   return { tracks, placed };

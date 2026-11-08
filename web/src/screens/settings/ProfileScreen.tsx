@@ -2,12 +2,17 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { ApiError } from '../../api.ts';
+import { ApiError, api } from '../../api.ts';
 import { useBand } from '../../band.ts';
 import { BottomBar } from '../../components/BottomBar.tsx';
 import { Button } from '../../components/Button.tsx';
+import { Icon } from '../../components/Icon.tsx';
+import { ListRow } from '../../components/ListRow.tsx';
 import { Message } from '../../components/Message.tsx';
-import { instrumentsOf, useSections } from '../../members.ts';
+import { Panel } from '../../components/Panel.tsx';
+import { Sheet } from '../../components/Sheet.tsx';
+import { PickerField } from '../../components/TextField.tsx';
+import { instrumentsOf, useMembers, useSections } from '../../members.ts';
 import { type Me, useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { MemberRecordFields, type PhotoDraft } from '../members/MemberRecordFields.tsx';
@@ -48,9 +53,22 @@ function ProfileForm({ me }: { me: Me }) {
     isRemoved: false,
   });
   const [wasSent, setSent] = useState(false);
+  // "Peut répondre pour moi" (1.1.0): set by the member alone, through its own address.
+  const [proxyId, setProxyId] = useState(me.proxyMemberId);
+  const [isProxyPickerOpen, setProxyPickerOpen] = useState(false);
+  const others = (useMembers().data ?? []).filter(
+    (member) =>
+      member.id !== me.id && (member.status === 'ACTIVE' || member.status === 'POWER_MEMBER'),
+  );
+  const proxy = others.find((member) => member.id === proxyId);
 
   const save = useMutation({
-    mutationFn: () => saveMember(me.id, draft, photo, bandCountry),
+    mutationFn: async () => {
+      await saveMember(me.id, draft, photo, bandCountry);
+      if (proxyId !== me.proxyMemberId) {
+        await api('/api/me/proxy', { method: 'PUT', body: { proxyMemberId: proxyId } });
+      }
+    },
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['me'] }),
@@ -104,7 +122,46 @@ function ProfileForm({ me }: { me: Me }) {
         instruments={instruments}
         photo={photo}
         onPhoto={setPhoto}
+        afterInTheBand={
+          // Figma: Members, section 18 (1.1.0). Not on the record a member manager edits.
+          <Sheet title={t('member.form.presences')}>
+            <PickerField
+              label={t('member.form.proxy')}
+              hint={t('member.form.proxyHint')}
+              error={refused.proxyMemberId ? t('member.errors.proxy.invalid') : undefined}
+              value={proxy?.nickname ?? t('member.form.proxyNone')}
+              onPick={() => setProxyPickerOpen(true)}
+            />
+          </Sheet>
+        }
       />
+      <Panel
+        open={isProxyPickerOpen}
+        onClose={() => setProxyPickerOpen(false)}
+        title={t('member.form.proxy')}
+      >
+        {[{ id: null, nickname: t('member.form.proxyNone') }, ...others].map((member) => {
+          const isCurrent = member.id === (proxy?.id ?? null);
+          return (
+            <ListRow
+              key={member.id ?? 'none'}
+              label={member.nickname}
+              current={isCurrent}
+              trailing={
+                isCurrent ? (
+                  <span className="ListRow-mark">
+                    <Icon name="Check" />
+                  </span>
+                ) : undefined
+              }
+              onPress={() => {
+                setProxyId(member.id);
+                setProxyPickerOpen(false);
+              }}
+            />
+          );
+        })}
+      </Panel>
     </AppLayout>
   );
 }

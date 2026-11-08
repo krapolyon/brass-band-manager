@@ -393,6 +393,15 @@ final class ExportImport
                 continue;
             }
             $text = fn (string $field) => is_string($member[$field] ?? null) ? $member[$field] : null;
+            // 1.1.0: a second instrument, by its name.
+            $secondaryId = null;
+            if ($text('secondaryInstrument') !== null) {
+                $secondaryId = (int) ($this->database->fetchOne('SELECT id FROM instrument WHERE name = ?', [$text('secondaryInstrument')]) ?: 0);
+                if ($secondaryId === 0) {
+                    $at('secondaryInstrument', 'unknownInstrument', $text('secondaryInstrument'));
+                    continue;
+                }
+            }
             try {
                 $values = $records->check(new MemberInput(
                     nickname: (string) ($member['nickname'] ?? ''),
@@ -406,6 +415,7 @@ final class ExportImport
                     city: $text('city'),
                     countryCode: $text('countryCode'),
                     addressInstructions: $text('addressInstructions'),
+                    secondaryInstrumentId: $secondaryId,
                 ), $id);
             } catch (ApiError $refused) {
                 foreach ($refused->fields as $field => $error) {
@@ -471,6 +481,28 @@ final class ExportImport
                     $this->tokens[$id] = $this->links->create($id, $this->importerId, emailed: true, isInvitation: true);
                 }
             }
+        }
+
+        // Who answers for whom (1.1.0), once every member of the file is here:
+        // a member of the file, or of the installation, never oneself.
+        foreach (self::rows($data, 'member') as $member) {
+            $email = mb_strtolower(trim((string) ($member['email'] ?? '')));
+            $id = $this->memberId($email);
+            if ($id === null) {
+                continue;
+            }
+            $proxyEmail = is_string($member['proxyMemberEmail'] ?? null) ? mb_strtolower(trim($member['proxyMemberEmail'])) : null;
+            $proxyId = $proxyEmail === null ? null : $this->memberId($proxyEmail);
+            // As the profile allows it: an invited or current member.
+            $isAllowed = $proxyId !== null && $proxyId !== $id && $this->database->fetchOne(
+                "SELECT 1 FROM member WHERE id = ? AND status IN ('INVITED', " . AccessRules::SIGN_IN_STATUSES_SQL . ')',
+                [$proxyId],
+            ) !== false;
+            if ($proxyEmail !== null && !$isAllowed) {
+                $this->problems->add($file, null, 'proxyMemberEmail', 'unknownMember', $proxyEmail);
+                continue;
+            }
+            $this->database->update('member', ['proxyMemberId' => $proxyId], ['id' => $id]);
         }
 
         return $count;
@@ -771,7 +803,16 @@ final class ExportImport
                         $at('answers', 'unknownValue', is_string($answer['answer'] ?? null) ? $answer['answer'] : '');
                         continue;
                     }
-                    $this->insert('gigSlotAttendance', ['gigSlotId' => $slotIds[$position], 'memberId' => $memberId, 'answer' => $answer['answer'], 'updatedByMemberId' => $this->importerId], $file, 'answers', (string) ($answer['memberEmail'] ?? ''));
+                    // The instrument the member came with (1.1.0), by its name; none: their own.
+                    $instrumentId = null;
+                    if (is_string($answer['instrument'] ?? null)) {
+                        $instrumentId = (int) ($this->database->fetchOne('SELECT id FROM instrument WHERE name = ?', [$answer['instrument']]) ?: 0);
+                        if ($instrumentId === 0) {
+                            $at('answers', 'unknownInstrument', $answer['instrument']);
+                            continue;
+                        }
+                    }
+                    $this->insert('gigSlotAttendance', ['gigSlotId' => $slotIds[$position], 'memberId' => $memberId, 'answer' => $answer['answer'], 'instrumentId' => $instrumentId, 'updatedByMemberId' => $this->importerId], $file, 'answers', (string) ($answer['memberEmail'] ?? ''));
                 }
             }
             // A gig always has a slot (Gigs domain, "Slots").
