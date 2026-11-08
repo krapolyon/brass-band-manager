@@ -1265,7 +1265,7 @@ button.songs-liveTile:disabled,
   position: absolute;
   inset-block: 0;
   left: 0;
-  width: 2.75rem;
+  /* The width is set by LiveView: half a usual measure of the drawing. */
   background: var(--ground);
   opacity: var(--fadeNear);
   pointer-events: none;

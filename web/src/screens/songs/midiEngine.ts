@@ -122,6 +122,10 @@ export type Loop = { start: number; end: number };
 // time: late enough to follow a change of tempo, early enough never to be late.
 const AHEAD_SECONDS = 0.2;
 const EVERY_MS = 40;
+// What is drawn follows the heard time smoothly (heardPosition): a gap up to
+// this is drawn nearer by this share at each frame; a larger one is taken at once.
+const SMOOTH_GAP_SECONDS = 0.15;
+const SMOOTH_SHARE = 0.1;
 const FADE_SECONDS = 0.03;
 
 export class MidiEngine {
@@ -132,6 +136,8 @@ export class MidiEngine {
   private stretches: Stretch[] = [];
   private timer: number | null = null;
   private pausedAt = 0;
+  // The time heard at the last frame, and when, to smooth what is drawn.
+  private lastHeard: { time: number; at: number } | null = null;
   private speed = 1;
   private loop: Loop | null = null;
   private mutedVolume = 0;
@@ -145,11 +151,34 @@ export class MidiEngine {
   onSounds: (state: 'loading' | 'ready' | 'failed') => void = () => {};
   /** Called when the song reaches its end. */
   onEnd: () => void = () => {};
+  /** Called when the player stops by itself because the page was hidden (leave()). */
+  onStop: () => void = () => {};
 
   constructor(private readonly song: MidiSong) {
     this.end = song.measures[song.measures.length - 1] ?? 0;
     this.muted = song.tracks.map(() => false);
+    document.addEventListener('visibilitychange', this.leave);
   }
+
+  /**
+   * A phone that locks, or an app left, playing or not (1.1.0): the device
+   * suspends the clock, and on return an iPhone may keep it "running" while
+   * its time no longer moves, with no sound and no error. So the player
+   * pauses where the song is heard and lets go of its clock; the next press
+   * on "Lire" makes a new one, inside the gesture, with the same instruments
+   * (their files come from the cache).
+   */
+  private leave = (): void => {
+    if (document.visibilityState !== 'hidden' || this.disposed) return;
+    const wasPlaying = this.isPlaying || this.wanted;
+    this.pause();
+    for (const voice of this.voices) voice.instrument.dispose();
+    this.voices = [];
+    void this.context?.close().catch(() => {});
+    this.context = null;
+    this.loaded = Promise.resolve();
+    if (wasPlaying) this.onStop();
+  };
 
   /** The clock and its instruments, made at the first press. */
   private clock(): AudioContext {
@@ -245,7 +274,30 @@ export class MidiEngine {
       stamp?.contextTime !== undefined && stamp.performanceTime
         ? stamp.contextTime + (performance.now() - stamp.performanceTime) / 1000
         : context.currentTime - (context.outputLatency || context.baseLatency || 0);
-    return this.tickAtTime(Math.min(context.currentTime, heard));
+    // Never ahead of the clock, which stops when the sound stalls.
+    return this.tickAtTime(
+      Math.min(context.currentTime, this.smoothed(Math.min(context.currentTime, heard))),
+    );
+  }
+
+  /**
+   * The time heard, without the steps of the audio clock and of the stamps
+   * of the output, which move the score by small jumps (1.1.0): from one
+   * frame to the next the time goes on by what the page measured, and draws
+   * nearer to what the clock says by a small share. A gap larger than a few
+   * frames (a seek, a stall) is taken as it is.
+   */
+  private smoothed(heard: number): number {
+    const at = performance.now();
+    const last = this.lastHeard;
+    let time = heard;
+    if (last) {
+      const expected = last.time + (at - last.at) / 1000;
+      const gap = heard - expected;
+      if (Math.abs(gap) < SMOOTH_GAP_SECONDS) time = expected + gap * SMOOTH_SHARE;
+    }
+    this.lastHeard = { time, at };
+    return time;
   }
 
   private tickAtTime(now: number): number {
@@ -363,6 +415,7 @@ export class MidiEngine {
     if (this.disposed || !this.context) return;
     if (this.timer !== null) window.clearInterval(this.timer);
     this.stretches = [{ tick, time: this.context.currentTime + 0.05 }];
+    this.lastHeard = null;
     for (const voice of this.voices) {
       voice.next = voice.track.notes.findIndex((note) => note.tick >= tick);
       if (voice.next === -1) voice.next = voice.track.notes.length;
@@ -375,6 +428,7 @@ export class MidiEngine {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     this.stretches = [];
+    this.lastHeard = null;
     for (const voice of this.voices) voice.instrument.stop();
   }
 
@@ -430,6 +484,7 @@ export class MidiEngine {
 
   /** Stops everything and gives the sound back to the device. */
   dispose(): void {
+    document.removeEventListener('visibilitychange', this.leave);
     this.disposed = true;
     this.wanted = false;
     this.halt();
