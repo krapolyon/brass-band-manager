@@ -155,6 +155,7 @@ return array(
     'BrassBand\\Members\\StatusInput' => $baseDir . '/src/Members/StatusInput.php',
     'BrassBand\\Members\\UpdateMemberAction' => $baseDir . '/src/Members/UpdateMemberAction.php',
     'BrassBand\\Members\\UpdatePhotoAction' => $baseDir . '/src/Members/UpdatePhotoAction.php',
+    'BrassBand\\Migrations\\DatabaseBehind' => $baseDir . '/src/Migrations/DatabaseBehind.php',
     'BrassBand\\Migrations\\ListMigrationsAction' => $baseDir . '/src/Migrations/ListMigrationsAction.php',
     'BrassBand\\Migrations\\Migrations' => $baseDir . '/src/Migrations/Migrations.php',
     'BrassBand\\Migrations\\RunMigrationsAction' => $baseDir . '/src/Migrations/RunMigrationsAction.php',

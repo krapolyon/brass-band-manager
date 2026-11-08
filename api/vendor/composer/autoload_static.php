@@ -354,6 +354,7 @@ class ComposerStaticInitc86d8b474eefbd90f89d0ea2201f11ea
         'BrassBand\\Members\\StatusInput' => __DIR__ . '/../..' . '/src/Members/StatusInput.php',
         'BrassBand\\Members\\UpdateMemberAction' => __DIR__ . '/../..' . '/src/Members/UpdateMemberAction.php',
         'BrassBand\\Members\\UpdatePhotoAction' => __DIR__ . '/../..' . '/src/Members/UpdatePhotoAction.php',
+        'BrassBand\\Migrations\\DatabaseBehind' => __DIR__ . '/../..' . '/src/Migrations/DatabaseBehind.php',
         'BrassBand\\Migrations\\ListMigrationsAction' => __DIR__ . '/../..' . '/src/Migrations/ListMigrationsAction.php',
         'BrassBand\\Migrations\\Migrations' => __DIR__ . '/../..' . '/src/Migrations/Migrations.php',
         'BrassBand\\Migrations\\RunMigrationsAction' => __DIR__ . '/../..' . '/src/Migrations/RunMigrationsAction.php',

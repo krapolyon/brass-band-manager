@@ -86,6 +86,7 @@ use BrassBand\Access\ValidateInvitationAction;
 use BrassBand\Access\ForgotPasswordAction;
 use BrassBand\Mail\Mailer;
 use BrassBand\Access\CurrentPassword;
+use BrassBand\Migrations\DatabaseBehind;
 use BrassBand\Migrations\ListMigrationsAction;
 use BrassBand\Migrations\Migrations;
 use BrassBand\Migrations\RunMigrationsAction;
@@ -173,6 +174,7 @@ return function (App $app, Connection $database, array $config): void {
     // (bootstrap.php says where): a file leaves it only through an action.
     $files = new Files($config['storageFolder']);
     $migrations = new Migrations($database, $config['migrationsFolder'], $personal);
+    $databaseBehind = new DatabaseBehind($database, $config['migrationsFolder']);
     $currentPassword = new CurrentPassword($database, $sessions, new SignInFailures($database));
     $logos = new LogoStore($database, $files);
     $mailer = new Mailer($config);
@@ -224,7 +226,7 @@ return function (App $app, Connection $database, array $config): void {
     $app->get('/api/install', new InstallStatusAction($database));
     $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey, $migrations))->add($refusals);
     $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations, $personal))->add($refusals);
-    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal))->add($refusals);
+    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal, $databaseBehind))->add($refusals);
     // Whoever holds a password link is not signed in yet.
     $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer, $personal))->add($emailRequests);
     $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections, $personal))->add($refusals);
