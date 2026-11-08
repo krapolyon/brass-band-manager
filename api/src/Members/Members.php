@@ -22,7 +22,7 @@ final class Members
     // and the preferences are not here, and a column added to the table is
     // never sent by accident.
     private const COLUMNS = 'id, nickname, firstName, lastName, email, mobilePhone, streetAddress,
-        postalCode, city, countryCode, addressInstructions, instrumentId, status, photoPath';
+        postalCode, city, countryCode, addressInstructions, instrumentId, secondaryInstrumentId, status, photoPath';
 
     public function __construct(
         private readonly Connection $database,

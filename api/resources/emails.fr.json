@@ -19,7 +19,7 @@
   "invitation": {
     "subject": "{band} t’attendent dans leur app",
     "title": "Bienvenue, {nickname} !",
-    "lead": "Tu as été invité à rejoindre l’application {band} pour gérer le répertoire et les présences.",
+    "lead": "Voici ton invitation à rejoindre l’application {band}, pour gérer le répertoire et les présences.",
     "lead2": "Pense à vérifier tes informations.",
     "button": "Rejoindre l’application {band}",
     "after": "Le lien marche une fois, pendant 7 jours. Passé ce délai, demande-en un autre."

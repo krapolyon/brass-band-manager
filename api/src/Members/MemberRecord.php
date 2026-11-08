@@ -76,6 +76,7 @@ final class MemberRecord
             'countryCode' => $countryCode === '' ? null : $countryCode,
             'addressInstructions' => $errors->optionalText('addressInstructions', $input->addressInstructions, 500, lines: true),
             'instrumentId' => $input->instrumentId,
+            'secondaryInstrumentId' => $this->secondaryInstrumentOf($input, $memberId, $errors),
         ];
 
         if ((int) $this->database->fetchOne('SELECT COUNT(*) FROM instrument WHERE id = ?', [$input->instrumentId]) === 0) {
@@ -93,6 +94,34 @@ final class MemberRecord
         $errors->throwIfAny();
 
         return $values;
+    }
+
+    // A second instrument, never the same as the instrument (model/members.md,
+    // "A secondary instrument"). A member whose instrument becomes the one
+    // they held as secondary loses the secondary: it is now their instrument.
+    private function secondaryInstrumentOf(MemberInput $input, ?int $memberId, FieldErrors $errors): ?int
+    {
+        $secondary = $input->secondaryInstrumentId;
+        if ($secondary === null) {
+            return null;
+        }
+        if ($secondary === $input->instrumentId) {
+            $before = $memberId === null ? false : $this->database->fetchAssociative(
+                'SELECT instrumentId, secondaryInstrumentId FROM member WHERE id = ?',
+                [$memberId],
+            );
+            if ($before !== false && (int) $before['secondaryInstrumentId'] === $secondary && (int) $before['instrumentId'] !== $secondary) {
+                return null;
+            }
+            $errors->add('secondaryInstrumentId', 'invalid');
+
+            return null;
+        }
+        if ((int) $this->database->fetchOne('SELECT COUNT(*) FROM instrument WHERE id = ?', [$secondary]) === 0) {
+            $errors->add('secondaryInstrumentId', 'invalid');
+        }
+
+        return $secondary;
     }
 
     // Compared through its hash: the email is encrypted. Exact, letter by
