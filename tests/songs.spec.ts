@@ -1718,6 +1718,49 @@ test.describe('the Live mode', () => {
     await expect(measure(page)).toContainText('3', { timeout: 10_000 });
   });
 
+  test('the MIDI pauses when the phone locks or the app is left, playing or not, and plays again on return', async ({
+    page,
+  }) => {
+    await withScore(page, 'repeat');
+    await openLive(page);
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeEnabled({
+      timeout: 30_000,
+    });
+    const visibility = (state: 'hidden' | 'visible') =>
+      page.evaluate((value) => {
+        Object.defineProperty(document, 'visibilityState', { value, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      }, state);
+    const play = async () => {
+      await page.getByRole('button', { name: 'Lire', exact: true }).click();
+      await expect(page.getByRole('button', { name: /^Suit le MIDI/ })).toBeVisible({
+        timeout: 30_000,
+      });
+    };
+    await page.getByText('Jouer avec le MIDI').click();
+    await play();
+    await expect(measure(page)).toContainText('2', { timeout: 10_000 });
+
+    // The phone locks while it plays: paused, at the measure heard.
+    await visibility('hidden');
+    await expect(page.getByRole('button', { name: 'Lire', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'On démarre à Mesure 2' })).toBeVisible();
+    // Back: playing again goes on from there, with a new clock.
+    await visibility('visible');
+    await play();
+    await expect(measure(page)).toContainText('3', { timeout: 10_000 });
+
+    // Locked while paused: playing again on return works too.
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+    await visibility('hidden');
+    await visibility('visible');
+    await play();
+    // The score moves: the clock runs.
+    const before = (await measure(page).textContent()) ?? '';
+    await expect(measure(page)).not.toHaveText(before, { timeout: 10_000 });
+    await page.getByRole('button', { name: 'Mettre en pause' }).click();
+  });
+
   test('with less motion, the scrolling is the quick jump whatever was chosen', async ({
     page,
   }) => {
@@ -1840,6 +1883,39 @@ test.describe('the Live mode', () => {
     await page.getByRole('button', { name: 'Lire', exact: true }).click();
     await expect(page.locator('.songs-liveStartRow')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Masquer les contrôles' })).toBeVisible();
+    // The music being played sits half a measure from the left edge.
+    const { place, half } = await page.evaluate(() => {
+      const widths = [...document.querySelectorAll('.songs-liveSheet g.measure')]
+        .map((measure) => measure.getBoundingClientRect().width)
+        .sort((a, b) => a - b);
+      return {
+        place: (document.querySelector('.songs-liveReadingPlace') as HTMLElement).offsetWidth,
+        half: (widths[Math.floor(widths.length / 2)] ?? 0) / 2,
+      };
+    });
+    expect(place).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(place - Math.max(44, half))).toBeLessThan(8);
+    // The line goes on with no jump, from one measure to the next too: it
+    // never goes back, and its speed stays steady (a frame late only moves
+    // it further, at the same speed).
+    const speeds = await page.evaluate(async () => {
+      const mover = document.querySelector('.songs-liveMover') as HTMLElement;
+      const samples: { x: number; t: number }[] = [];
+      // Long enough to cross a barline or two.
+      for (let frame = 0; frame < 240; frame++) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const x = Number(/translateX\(([-\d.]+)px\)/.exec(mover.style.transform)?.[1]);
+        samples.push({ x, t: performance.now() });
+      }
+      return samples.slice(1).flatMap((sample, index) => {
+        const before = samples[index];
+        const time = before ? sample.t - before.t : 0;
+        return before && time > 0 ? [(sample.x - before.x) / time] : [];
+      });
+    });
+    expect(speeds.every((speed) => speed <= 0.01)).toBe(true);
+    const usualSpeed = [...speeds].sort((a, b) => a - b)[Math.floor(speeds.length / 2)] ?? 0;
+    expect(Math.min(...speeds)).toBeGreaterThan(usualSpeed * 3 - 0.05);
     await page.getByRole('button', { name: 'Mettre en pause' }).click();
 
     // A tablet: one column, its lines one under the other.
