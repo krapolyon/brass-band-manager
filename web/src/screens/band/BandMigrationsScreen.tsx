@@ -14,7 +14,7 @@ import {
   useCanRunMigrations,
   usePendingMigrations,
 } from '../../migrations.ts';
-import { useSetMe } from '../../session.ts';
+import { useMe, useSetMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
 import { PasswordField } from '../access/PasswordField.tsx';
 import { AdminsOnlyScreen } from './BandSettingsScreen.tsx';
@@ -41,6 +41,33 @@ export function PendingMigrationsNotice() {
   );
 }
 
+// Not drawn in Figma, like the screen below. What a member who is not an
+// admin sees while the database is behind the code: nothing of the app works
+// until an admin applies the migrations, so the screen says so and offers to
+// try again (model/band.md, "Updating the database").
+function DatabaseBehindScreen() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  return (
+    <AppLayout
+      current="settings"
+      width="form"
+      title={t('band.migrations.behind.title')}
+      subtitle={t('band.migrations.behind.lead')}
+      actions={
+        <BottomBar>
+          <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['me'] })}>
+            {t('band.migrations.behind.retry')}
+          </Button>
+        </BottomBar>
+      }
+    >
+      {null}
+    </AppLayout>
+  );
+}
+
 // Not drawn in Figma: deduced from the band settings screens, with their
 // components (docs/architecture.md, "Deployment"). Where an admin applies the
 // migrations on a host without a command line: the list of what waits, a
@@ -51,6 +78,9 @@ export function BandMigrationsScreen() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setMe = useSetMe();
+  // No member known: the database is behind (or was, and who is signed in is
+  // asked again).
+  const isBehind = !useMe().data;
   const canRun = useCanRunMigrations();
   const pending = usePendingMigrations();
   const [isConfirming, setConfirming] = useState(false);
@@ -89,7 +119,7 @@ export function BandMigrationsScreen() {
   }, [result]);
 
   if (canRun === null) return null;
-  if (!canRun) return <AdminsOnlyScreen />;
+  if (!canRun) return isBehind ? <DatabaseBehindScreen /> : <AdminsOnlyScreen />;
 
   const names = pending.data ?? [];
   const refused = run.error instanceof ApiError ? run.error : null;

@@ -62,6 +62,10 @@ export function useMe() {
     // Asked again when the app comes back to the foreground: a session ended
     // elsewhere (a departure, "sign out everywhere") is noticed then.
     staleTime: 60_000,
+    // A screen that appears does not ask again after a refusal: while the
+    // database is behind (migrations.ts), each screen would ask, fail, and be
+    // replaced by the loading text, then appear and ask again.
+    retryOnMount: false,
   });
 }
 

@@ -5,8 +5,10 @@ import {
   dropTables,
   forgetLast,
   LAST,
+  PROFILE,
   repairMigrations,
   unapplyLast,
+  unapplyProfile,
 } from '../support/migrations.ts';
 import { addMember, admin, deviceOf, install, installInput, signIn } from '../support/scenario.ts';
 
@@ -278,5 +280,101 @@ test.describe('the members an instance may write to', () => {
     expect(allows("['allowedRecipients' => 'zaza@example.org']", 'zaza@example.org')).toBe('no');
     expect(allows("['allowedRecipients' => ['', 12]]", 'zaza@example.org')).toBe('no');
     expect(allows("['allowedRecipients' => null]", 'zaza@example.org')).toBe('yes');
+  });
+});
+
+// A new version on a database that has not followed it: what says who is
+// signed in fails, and says why, so that the front leads an admin to the
+// migrations (api/src/Migrations/DatabaseBehind.php).
+test.describe('a database behind the code', () => {
+  test('who is signed in is answered "databaseBehind"; the admin still sees and applies the migration', async ({
+    request,
+  }) => {
+    await signIn(request, admin.email, admin.password);
+    unapplyProfile();
+
+    const me = await request.get('/api/me');
+    expect(me.status()).toBe(503);
+    expect(await me.json()).toEqual({ error: 'databaseBehind' });
+    expect(await (await request.get('/api/migrations')).json()).toEqual({ pending: [PROFILE] });
+
+    const response = await request.post('/api/migrations', { data: { password: admin.password } });
+    expect(await response.json()).toEqual({ applied: [PROFILE], failed: null, pending: [] });
+    expect((await request.get('/api/me')).status()).toBe(200);
+  });
+
+  test('signing in opens the session all the same, and says the database is behind', async ({
+    request,
+  }) => {
+    unapplyProfile();
+
+    const response = await signIn(request, admin.email, admin.password);
+
+    expect(response.status()).toBe(503);
+    expect(await response.json()).toEqual({ error: 'databaseBehind' });
+    expect((await request.get('/api/migrations')).status()).toBe(200);
+  });
+
+  test('a wrong password is still refused as such', async ({ request }) => {
+    unapplyProfile();
+
+    const response = await signIn(request, admin.email, 'pas-le-bon-mot-de-passe');
+
+    expect(response.status()).toBe(401);
+    expect(await response.json()).toEqual({ error: 'invalidCredentials' });
+  });
+
+  test('a member who is not an admin is signed in, and still may not see the migrations', async ({
+    request,
+  }) => {
+    const email = addMember({ nickname: 'Lulu', roles: ['MEMBER_MANAGER', 'GIG_MANAGER'] });
+    unapplyProfile();
+
+    expect((await signIn(request, email)).status()).toBe(503);
+    expect((await request.get('/api/migrations')).status()).toBe(403);
+    expect(
+      (
+        await request.post('/api/migrations', { data: { password: 'grosse-caisse-claire-7' } })
+      ).status(),
+    ).toBe(403);
+    expect(sql(`SELECT COUNT(*) FROM schemaMigration WHERE name = '${PROFILE}'`)).toBe('0');
+  });
+
+  test('a visitor is not signed in, and sees no migration', async ({ request }) => {
+    unapplyProfile();
+
+    const me = await request.get('/api/me');
+    expect(me.status()).toBe(401);
+    expect((await request.get('/api/migrations')).status()).toBe(401);
+  });
+
+  test('a member who left is still refused at sign-in, with no session', async ({ request }) => {
+    const email = addMember({ nickname: 'Lulu', status: 'LEFT' });
+    unapplyProfile();
+
+    const response = await signIn(request, email);
+
+    expect(response.status()).toBe(401);
+    expect(response.headers()['set-cookie']).toBeUndefined();
+    expect((await request.get('/api/migrations')).status()).toBe(401);
+  });
+
+  test('with nothing waiting, a column that is missing stays an error of the code', async ({
+    request,
+  }) => {
+    await signIn(request, admin.email, admin.password);
+    // 020 recorded as applied, but one of its columns gone: no migration waits.
+    sql(
+      'ALTER TABLE member DROP FOREIGN KEY memberProxy; ALTER TABLE member DROP COLUMN proxyMemberId',
+    );
+
+    const me = await request.get('/api/me');
+
+    expect(me.status()).toBe(500);
+    expect(await me.json()).toEqual({ error: 'serverError' });
+    // Put back as 020 made it, for repairMigrations.
+    sql(
+      'ALTER TABLE member ADD COLUMN proxyMemberId INT UNSIGNED NULL AFTER secondaryInstrumentId, ADD CONSTRAINT memberProxy FOREIGN KEY (proxyMemberId) REFERENCES member (id) ON DELETE SET NULL',
+    );
   });
 });

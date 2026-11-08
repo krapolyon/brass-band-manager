@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace BrassBand\Http;
 
+use BrassBand\Migrations\DatabaseBehind;
 use CuyZ\Valinor\Mapper\MappingError;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -17,8 +18,10 @@ use Throwable;
 // form {"error": "<key>"}. Registered once, in public/index.php.
 final class ErrorHandler
 {
-    public function __construct(private readonly ResponseFactoryInterface $responses)
-    {
+    public function __construct(
+        private readonly ResponseFactoryInterface $responses,
+        private readonly ?DatabaseBehind $databaseBehind = null,
+    ) {
     }
 
     public function __invoke(ServerRequestInterface $request, Throwable $thrown): ResponseInterface
@@ -58,6 +61,12 @@ final class ErrorHandler
         }
         if ($thrown instanceof HttpException) {
             return Json::write($response, ['error' => 'badRequest'], $thrown->getCode());
+        }
+
+        // The code of a new version, on a database whose migrations wait: said
+        // as such, so that the front leads an admin to apply them.
+        if ($this->databaseBehind?->explains($thrown) === true) {
+            return Json::write($response, ['error' => 'databaseBehind'], 503);
         }
 
         // Anything else was not foreseen. The front learns nothing about the

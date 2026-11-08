@@ -30,6 +30,7 @@ What changes in the app, version after version. This file is written by
 - In the list of songs, the filters “Proposés” and “Abandonnés” show those songs alone, one filter at a time.
 - Scores show on browsers a year or two old (iOS 17 and 18 among them): they get a version of the PDF reader written for them.
 - On iPhone and iPad, downloading a file goes through the share sheet (“Enregistrer dans Fichiers”, AirDrop…) instead of opening it in the app with no way back.
+- After an update of the app, when the database must follow before anything works, the app opens on the update screen instead of an error: the admins apply the update there; the others only have to come back in a moment.
 
 ## 1.0.0 — 2026-10-24
 

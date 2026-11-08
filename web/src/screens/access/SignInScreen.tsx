@@ -1,4 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -10,6 +10,7 @@ import { Message } from '../../components/Message.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { TextField } from '../../components/TextField.tsx';
 import { afterSignIn } from '../../installGuide.ts';
+import { isDatabaseBehind } from '../../migrations.ts';
 import { type Me, useSetMe } from '../../session.ts';
 import { FlowLayout } from '../FlowLayout.tsx';
 import { AccessibilityButton } from './AccessibilityButton.tsx';
@@ -23,6 +24,7 @@ export function SignInScreen() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const setMe = useSetMe();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -31,6 +33,11 @@ export function SignInScreen() {
     onSuccess: (me) => {
       setMe(me);
       navigate(afterSignIn(), { replace: true });
+    },
+    onError: (error) => {
+      // Signed in, but the database waits for its migrations: asking who is
+      // signed in again leads to the screen that applies them (Guards).
+      if (isDatabaseBehind(error)) queryClient.invalidateQueries({ queryKey: ['me'] });
     },
   });
   // Too many refusals from this network (429) reads like a locked sign-in.
@@ -53,7 +60,7 @@ export function SignInScreen() {
         </BottomBar>
       }
     >
-      {signIn.isError && (
+      {signIn.isError && !isDatabaseBehind(signIn.error) && (
         <Message kind="danger">{t(isRefused ? 'signIn.refused' : 'errors.unreachable')}</Message>
       )}
       <Sheet>

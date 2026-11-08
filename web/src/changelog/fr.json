@@ -16,7 +16,8 @@
     "Only the power members who answered show in the attendance, whatever their answer. Who manages gigs finds those who did not answer in a folded group at the end, to keep answering for them.": "Seuls les power members ayant répondu sont visibles dans les présences (quelle que soit leur réponse). Les gestionnaires de plans retrouvent les power members sans réponse dans un groupe replié, à la fin, pour continuer de répondre à leur place.",
     "A member can hold a secondary instrument and say which one they bring to a gig; the gig counts them in that section.": "Un fanfaron peut avoir un instrument secondaire et dire, en répondant à un plan, avec lequel venir ; le plan compte la réponse dans ce pupitre.",
     "A member can let one other member answer gigs for them (“Peut répondre pour moi”).": "Un fanfaron peut laisser une autre personne répondre aux plans à sa place (« Peut répondre pour moi »).",
-    "The texts of the interface were rewritten so as not to show a gender (epicene wording).": "Les textes de l’interface ont été repensés pour ne pas afficher de genre (tournure épicène)."
+    "The texts of the interface were rewritten so as not to show a gender (epicene wording).": "Les textes de l’interface ont été repensés pour ne pas afficher de genre (tournure épicène).",
+    "After an update of the app, when the database must follow before anything works, the app opens on the update screen instead of an error: the admins apply the update there; the others only have to come back in a moment.": "Après une mise à jour de l’app, quand la base de données doit suivre avant que rien ne fonctionne, l’app s’ouvre sur l’écran de mise à jour au lieu d’une erreur : les admins l’appliquent là ; pour les autres, il suffit de revenir dans un moment."
   },
   "1.0.0": {
     "Security fixes following the pentest.": "Correctifs de sécurité suite au pentest.",

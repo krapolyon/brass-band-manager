@@ -70,6 +70,10 @@
       {
         "kind": "changed",
         "text": "The texts of the interface were rewritten so as not to show a gender (epicene wording)."
+      },
+      {
+        "kind": "fixed",
+        "text": "After an update of the app, when the database must follow before anything works, the app opens on the update screen instead of an error: the admins apply the update there; the others only have to come back in a moment."
       }
     ]
   },

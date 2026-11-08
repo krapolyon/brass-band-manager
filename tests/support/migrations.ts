@@ -13,6 +13,23 @@ export function unapplyLast() {
   sql(`ALTER TABLE gig DROP COLUMN proposedAt; DELETE FROM schemaMigration WHERE name = '${LAST}'`);
 }
 
+// A migration that adds columns read to say who is signed in: while it waits,
+// the app cannot start (the database is "behind" the code).
+export const PROFILE = '020_secondaryInstrumentAndProxy.sql';
+
+/** As if the migration of PROFILE had never run: the database is behind the code. */
+export function unapplyProfile() {
+  sql(`
+    ALTER TABLE gigSlotAttendance DROP FOREIGN KEY gigSlotAttendanceInstrument;
+    ALTER TABLE gigSlotAttendance DROP COLUMN instrumentId;
+    ALTER TABLE member DROP CHECK memberSecondaryNotInstrument;
+    ALTER TABLE member DROP FOREIGN KEY memberSecondaryInstrument;
+    ALTER TABLE member DROP FOREIGN KEY memberProxy;
+    ALTER TABLE member DROP COLUMN secondaryInstrumentId, DROP COLUMN proxyMemberId;
+    DELETE FROM schemaMigration WHERE name = '${PROFILE}';
+  `);
+}
+
 /** The record of the last migration is removed, but its change is still there: applying it fails. */
 export function forgetLast() {
   sql(`DELETE FROM schemaMigration WHERE name = '${LAST}'`);
@@ -42,6 +59,13 @@ export function repairMigrations() {
   );
   if (columns === '1') {
     sql(`INSERT IGNORE INTO schemaMigration (name) VALUES ('${LAST}')`);
+  }
+  const profileColumns = sql(
+    `SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'member' AND COLUMN_NAME = 'secondaryInstrumentId'`,
+  );
+  if (profileColumns === '1') {
+    sql(`INSERT IGNORE INTO schemaMigration (name) VALUES ('${PROFILE}')`);
   }
   execFileSync(
     'docker',

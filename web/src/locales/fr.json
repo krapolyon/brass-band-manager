@@ -891,6 +891,11 @@
       "targetHint": "Ce que l’app propose d’abord quand on lui demande une setlist ; on l’ajuste à chaque fois, de 5 en 5 minutes."
     },
     "migrations": {
+      "behind": {
+        "title": "L’app change de version",
+        "lead": "La base de données doit suivre, et seuls les admins de la fanfare peuvent s’en charger. Réessaie dans un moment.",
+        "retry": "Réessayer"
+      },
       "title": "Mise à jour de la base",
       "lead": "Après une nouvelle version de l’app, la base de données doit parfois suivre. Réservé aux admins.",
       "detail_zero": "La base est à jour",
