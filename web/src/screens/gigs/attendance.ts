@@ -13,12 +13,20 @@ export type Attendee = {
   photoUrl: string | null;
   /** Null: no answer yet. */
   answer: AttendanceAnswer | null;
+  /** The instrument the member said they come with (1.1.0); null: their own. */
+  declaredInstrumentId: number | null;
 };
 
 export type SectionAttendance = { section: Section; attendees: Attendee[]; yesCount: number };
 
 export type Attendance = {
   sections: SectionAttendance[];
+  /**
+   * The power members who have not answered (1.1.0, model/gigs.md, "Rules"):
+   * nothing is waited for from them, so they are in no section and no count.
+   * Only who may note the answers of others is shown them.
+   */
+  powerMembersWithoutAnswer: Attendee[];
   /** How many current members there are, and how many of them gave each answer. */
   memberCount: number;
   counts: Record<AttendanceAnswer | 'NONE', number>;
@@ -48,17 +56,28 @@ export function attendanceOf(
   );
   const answers = new Map(slot.answers.map((answer) => [answer.memberId, answer]));
 
-  const attendees: (Attendee & { sectionId: number })[] = current.map((member) => {
-    const instrument = instruments.find((one) => one.id === member.instrumentId);
+  const all = current.map((member) => {
+    // With the instrument they said they come with, for this gig (1.1.0):
+    // listed in its section, with its name and nothing more.
+    const given = answers.get(member.id);
+    const instrument = instruments.find(
+      (one) => one.id === (given?.instrumentId ?? member.instrumentId),
+    );
     return {
       memberId: member.id,
       nickname: member.nickname,
       instrument: instrument?.name ?? '',
       photoUrl: member.photoUrl,
-      answer: answers.get(member.id)?.answer ?? null,
+      answer: given?.answer ?? null,
+      declaredInstrumentId: given?.instrumentId ?? null,
       sectionId: instrument?.sectionId ?? 0,
+      isWaitedFor: member.status === 'ACTIVE' || answers.has(member.id),
     };
   });
+  const attendees: (Attendee & { sectionId: number })[] = all.filter((one) => one.isWaitedFor);
+  const powerMembersWithoutAnswer = all
+    .filter((one) => !one.isWaitedFor)
+    .sort((a, b) => a.nickname.localeCompare(b.nickname, language));
   if (withFormer) {
     for (const answer of slot.answers.filter((one) => !one.isCurrentMember)) {
       attendees.push({
@@ -67,6 +86,7 @@ export function attendanceOf(
         instrument: '',
         photoUrl: null,
         answer: answer.answer,
+        declaredInstrumentId: answer.instrumentId,
         sectionId: answer.sectionId,
       });
     }
@@ -78,6 +98,7 @@ export function attendanceOf(
   return {
     memberCount: attendees.length,
     counts,
+    powerMembersWithoutAnswer,
     // Only the sections someone plays in: an empty section blocks nothing.
     sections: sections
       .map((section) => {

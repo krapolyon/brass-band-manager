@@ -22,8 +22,8 @@ export type IconName = keyof typeof iconPaths;
 
 type Props = {
   name: IconName;
-  /** Figma draws icons at 24 (the default), 20 inside small buttons and messages, 16 beside a caption. */
-  size?: 24 | 20 | 16 | 32;
+  /** Figma draws icons at 24 (the default), 20 inside small buttons and messages, 16 beside a caption; 32 and 40 for an empty or impossible mode. */
+  size?: 24 | 20 | 16 | 32 | 40;
   /** Figma: Style=Filled. The solid drawing, for the current entry of the navigation or a state that is on. */
   filled?: boolean;
 };

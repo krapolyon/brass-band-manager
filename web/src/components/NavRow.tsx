@@ -22,7 +22,7 @@ type Props = {
   onClick?: () => void;
   /** An address outside the app (a phone number, an email): the row is a link. */
   href?: string;
-  /** A state or a small action at the end (Figma: Trailing=Chip, Trailing=Button). */
+  /** A state or a small action at the end (Figma: Trailing=Chip, Trailing=Button); with `onClick`, a state only. */
   trailing?: ReactNode;
   disabled?: boolean;
   /** The action opens a panel: said to screen readers. */
@@ -31,6 +31,8 @@ type Props = {
   chevron?: boolean;
   /** With `href`: the browser saves what the link leads to, under this name. */
   download?: string;
+  /** With `onClick`: the action is under way (a file being prepared, 1.1.0). */
+  busy?: boolean;
 };
 
 // Figma: NavRow. A row that leads somewhere or does one thing. With neither
@@ -50,6 +52,7 @@ export function NavRow({
   opensPanel,
   chevron,
   download,
+  busy,
 }: Props) {
   const content = (
     <>
@@ -87,9 +90,11 @@ export function NavRow({
         // Not the `disabled` attribute: the row would leave the keyboard, and
         // its reason, written in its detail, could not be reached.
         aria-disabled={disabled ? true : undefined}
+        aria-busy={busy ? true : undefined}
         onClick={disabled ? undefined : onClick}
       >
         {content}
+        {trailing}
       </button>
     );
   }

@@ -56,8 +56,9 @@ final class SongPush
             return;
         }
         $players = array_map(fn (mixed $id) => (int) $id, $this->database->fetchFirstColumn(
-            'SELECT id FROM member WHERE instrumentId = ? AND status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')',
-            [$instrumentId],
+            // Who plays it, and who holds it as secondary instrument (1.1.0).
+            'SELECT id FROM member WHERE (instrumentId = ? OR secondaryInstrumentId = ?) AND status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')',
+            [$instrumentId, $instrumentId],
         ));
         $this->send($players, $song, NotificationSetting::SONG_PART, 'songs.push.part', ['instrument' => (string) $instrument], $bySessionId, 'songPart');
     }

@@ -63,6 +63,7 @@ test.describe('who sees whom', () => {
         'photoUrl',
         'postalCode',
         'roles',
+        'secondaryInstrumentId',
         'status',
         'streetAddress',
       ].sort(),
@@ -632,5 +633,152 @@ test.describe('roles', () => {
       ),
     ).toBe('Zaza');
     await jibe.dispose();
+  });
+});
+
+// 1.1.0: a secondary instrument, and the one member who may answer gigs for
+// another ("Peut répondre pour moi"). model/members.md v1.34, "Rules",
+// "Access rights" and "Personal data" of entry 1.
+test.describe('secondary instrument and "Peut répondre pour moi" (1.1.0)', () => {
+  const instrument = (name: string) =>
+    Number(sql(`SELECT id FROM instrument WHERE name = '${name}'`));
+  const own = (nickname: string) =>
+    Number(sql(`SELECT instrumentId FROM member WHERE id = ${memberId(nickname)}`));
+  /** The record of a member as the form sends it, from what the API answers. */
+  async function recordOf(device: Awaited<ReturnType<typeof deviceOf>>, nickname: string) {
+    const member = await (await device.get(`/api/members/${memberId(nickname)}`)).json();
+    return {
+      nickname: member.nickname,
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      instrumentId: member.instrumentId,
+      secondaryInstrumentId: member.secondaryInstrumentId,
+    };
+  }
+
+  test('a member sets a secondary instrument, never their own; it shows in their record, nowhere else changes', async ({
+    playwright,
+  }) => {
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    const mine = await recordOf(zaza, 'Zaza');
+
+    const same = await zaza.put(`/api/members/${memberId('Zaza')}`, {
+      data: { ...mine, secondaryInstrumentId: own('Zaza') },
+    });
+    expect(same.status()).toBe(422);
+    expect((await same.json()).fields).toEqual({ secondaryInstrumentId: 'invalid' });
+    const unknown = await zaza.put(`/api/members/${memberId('Zaza')}`, {
+      data: { ...mine, secondaryInstrumentId: 999999 },
+    });
+    expect(unknown.status()).toBe(422);
+
+    const souba = instrument('Souba');
+    const saved = await zaza.put(`/api/members/${memberId('Zaza')}`, {
+      data: { ...mine, secondaryInstrumentId: souba },
+    });
+    expect(saved.status()).toBe(200);
+    expect((await saved.json()).secondaryInstrumentId).toBe(souba);
+    expect((await (await zaza.get('/api/me')).json()).secondaryInstrumentId).toBe(souba);
+    // The section stays the one of the instrument.
+    expect(own('Zaza')).not.toBe(souba);
+
+    // Choosing it as instrument empties it: it is no longer a second one.
+    const swapped = await zaza.put(`/api/members/${memberId('Zaza')}`, {
+      data: { ...mine, instrumentId: souba, secondaryInstrumentId: souba },
+    });
+    expect(swapped.status()).toBe(200);
+    expect(
+      sql(
+        `SELECT instrumentId = ${souba}, secondaryInstrumentId IS NULL FROM member WHERE id = ${memberId('Zaza')}`,
+      ),
+    ).toBe('1\t1');
+  });
+
+  test('who manages members sets the secondary instrument of a record; an instrument held so cannot be deleted', async ({
+    playwright,
+  }) => {
+    const momo = await deviceOf(playwright, email('Momo'));
+    const souba = instrument('Souba');
+    sql(
+      `UPDATE member SET instrumentId = (SELECT MIN(id) FROM instrument WHERE id <> ${souba}) WHERE instrumentId = ${souba}`,
+    );
+    const zaza = await recordOf(momo, 'Zaza');
+    expect(
+      (
+        await momo.put(`/api/members/${memberId('Zaza')}`, {
+          data: { ...zaza, secondaryInstrumentId: souba },
+        })
+      ).status(),
+    ).toBe(200);
+
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const refused = await jibe.delete(`/api/instruments/${souba}`);
+    expect(refused.status()).toBe(409);
+    const sections = await (await jibe.get('/api/sections')).json();
+    const held = sections
+      .flatMap(
+        (section: { instruments: { id: number; memberCount: number }[] }) => section.instruments,
+      )
+      .find((one: { id: number }) => one.id === souba);
+    expect(held.memberCount).toBe(1);
+  });
+
+  test('"Peut répondre pour moi" is set by the member alone, to a current member other than them', async ({
+    playwright,
+  }) => {
+    const zaza = await deviceOf(playwright, email('Zaza'));
+    // Neither oneself, nor a member who left, nor an invited member: the
+    // profile offers current members only (owner, 2026-11-08).
+    for (const nickname of ['Zaza', 'Lolo', 'Titi']) {
+      const refused = await zaza.put('/api/me/proxy', {
+        data: { proxyMemberId: memberId(nickname) },
+      });
+      expect(refused.status(), nickname).toBe(422);
+    }
+    expect((await zaza.put('/api/me/proxy', { data: { proxyMemberId: 999999 } })).status()).toBe(
+      422,
+    );
+
+    const popo = await zaza.put('/api/me/proxy', { data: { proxyMemberId: memberId('Popo') } });
+    expect((await popo.json()).proxyMemberId).toBe(memberId('Popo'));
+
+    // Nobody else reads it: neither the directory nor the record, whoever asks.
+    const momo = await deviceOf(playwright, email('Momo'));
+    for (const device of [zaza, momo]) {
+      const list = await (await device.get('/api/members')).json();
+      expect(list.some((member: object) => 'proxyMemberId' in member)).toBe(false);
+      const one = await (await device.get(`/api/members/${memberId('Zaza')}`)).json();
+      expect(one).not.toHaveProperty('proxyMemberId');
+    }
+    // The record a member manager saves leaves it as it is.
+    const record = await recordOf(momo, 'Zaza');
+    await momo.put(`/api/members/${memberId('Zaza')}`, {
+      data: { ...record, proxyMemberId: null },
+    });
+    expect(sql(`SELECT proxyMemberId FROM member WHERE id = ${memberId('Zaza')}`)).toBe(
+      String(memberId('Popo')),
+    );
+    expect(
+      (await (await deviceOf(playwright, email('Popo'))).get('/api/me').then((r) => r.json()))
+        .proxyMemberId,
+    ).toBeNull();
+  });
+
+  test('when either member leaves, nobody answers for the other any more', async ({
+    playwright,
+  }) => {
+    sql(`UPDATE member SET proxyMemberId = ${memberId('Popo')} WHERE id = ${memberId('Zaza')}`);
+    sql(`UPDATE member SET proxyMemberId = ${memberId('Zaza')} WHERE id = ${memberId('Momo')}`);
+    const jibe = await deviceOf(playwright, admin.email, admin.password);
+    const left = await jibe.put(`/api/members/${memberId('Zaza')}/status`, {
+      data: { status: 'LEFT' },
+    });
+    expect(left.status()).toBe(200);
+    expect(
+      sql(
+        `SELECT nickname, COALESCE(proxyMemberId, '-') FROM member WHERE nickname IN ('Zaza', 'Momo') ORDER BY nickname`,
+      ),
+    ).toBe('Momo\t-\nZaza\t-');
   });
 });

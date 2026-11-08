@@ -30,7 +30,7 @@ use Psr\Http\Message\ServerRequestInterface;
 final class CheckPasswordLinkAction
 {
     private const RECORD = 'nickname, firstName, lastName, email, mobilePhone, streetAddress,
-        postalCode, city, countryCode, addressInstructions, instrumentId, photoPath';
+        postalCode, city, countryCode, addressInstructions, instrumentId, secondaryInstrumentId, photoPath';
 
     public function __construct(
         private readonly Connection $database,
@@ -62,6 +62,7 @@ final class CheckPasswordLinkAction
         $photoPath = $member['photoPath'];
         unset($member['photoPath']);
         $member['instrumentId'] = (int) $member['instrumentId'];
+        $member['secondaryInstrumentId'] = $member['secondaryInstrumentId'] === null ? null : (int) $member['secondaryInstrumentId'];
 
         // Flat, in the order of the band: sections are not group titles where
         // one instrument is chosen.

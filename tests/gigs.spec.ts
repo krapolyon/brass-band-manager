@@ -552,6 +552,252 @@ test.describe('who may edit a gig', () => {
     await expect(page.getByText('Tu brasses ce plan')).toHaveCount(0);
   });
 
+  test('a power member who has not answered is not waited for: in no list and no count, until they answer (1.1.0)', async ({
+    page,
+  }) => {
+    addMember({ nickname: 'Tonton', status: 'POWER_MEMBER' });
+    addMember({ nickname: 'Pépé', status: 'POWER_MEMBER' });
+    const { gigId, slotId } = addGig('Carnaval', { startsOn: day(12) });
+    answerOf('Pépé', slotId, 'YES');
+    await asMember(page, 'Zaza');
+
+    // Six members are waited for: the five active ones and Pépé, who answered.
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByText('1 oui sur 6')).toBeVisible();
+    await page.goto(`/gigs/${gigId}/answers`);
+    await expect(page.getByText('Pépé')).toBeVisible();
+    await expect(page.getByText('Riton')).toBeVisible();
+    await expect(page.getByText('Tonton')).toHaveCount(0);
+
+    answerOf('Tonton', slotId, 'MAYBE');
+    await page.reload();
+    await expect(page.getByText('Tonton')).toBeVisible();
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByText('1 oui sur 7')).toBeVisible();
+  });
+
+  test('a member with a secondary instrument says which one they come with; the gig counts them there (1.1.0)', async ({
+    page,
+  }) => {
+    // The saxophones miss: Jibé, alone there, has not answered. Riton plays the souba.
+    sql(
+      `UPDATE member SET secondaryInstrumentId = (SELECT id FROM instrument WHERE name = 'Sax Ténor') WHERE id = ${memberId('Zaza')}`,
+    );
+    const { gigId, slotId } = addGig('Carnaval', { status: 'ACCEPTED', startsOn: day(12) });
+    answerOf('Riton', slotId, 'YES');
+    answerOf('Lulu', slotId, 'YES');
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+
+    // Nothing before answering.
+    const control = page.getByRole('radiogroup', { name: 'Tu viens avec' });
+    await expect(control).toHaveCount(0);
+    const choices = page.getByRole('radiogroup', { name: 'Ta réponse' });
+    await choices.getByRole('radio', { name: 'Non', exact: true }).click();
+    await expect(choices.getByRole('radio', { name: 'Non', exact: true })).toBeChecked();
+    await expect(control).toHaveCount(0);
+
+    await choices.getByRole('radio', { name: 'Oui', exact: true }).click();
+    // Her own instrument first, and chosen.
+    await expect(control.getByRole('radio')).toHaveCount(2);
+    await expect(control.getByRole('radio', { name: 'Trompette' })).toBeChecked();
+    await control.getByRole('radio', { name: 'Sax Ténor' }).check();
+    await expect(control.getByRole('radio', { name: 'Sax Ténor' })).toBeChecked();
+    await expect.poll(() => statusOf(gigId)).toBe('CONFIRMED');
+    expect(
+      sql(
+        `SELECT i.name FROM gigSlotAttendance a JOIN instrument i ON i.id = a.instrumentId WHERE a.memberId = ${memberId('Zaza')}`,
+      ),
+    ).toBe('Sax Ténor');
+
+    // Listed with the saxophones, with that instrument, and her section is that one.
+    await page.goto(`/gigs/${gigId}/answers`);
+    const saxes = page.getByRole('region', { name: 'Saxophone' });
+    const hers = saxes.getByRole('listitem').filter({ hasText: 'Zaza (toi)' });
+    await expect(hers).toContainText('Sax Ténor');
+  });
+
+  test('a member without a secondary instrument never sees the control (1.1.0)', async ({
+    page,
+  }) => {
+    const { gigId } = addGig('Carnaval', { startsOn: day(12) });
+    await asMember(page, 'Lulu');
+    await page.goto(`/gigs/${gigId}`);
+    await page
+      .getByRole('radiogroup', { name: 'Ta réponse' })
+      .getByRole('radio', { name: 'Oui', exact: true })
+      .click();
+    await expect(page.getByText('1 oui sur 5')).toBeVisible();
+    await expect(page.getByRole('radiogroup', { name: 'Tu viens avec' })).toHaveCount(0);
+  });
+
+  test('the member designated by another answers for them from the gig and from who comes, for them only (1.1.0)', async ({
+    page,
+  }) => {
+    sql(`UPDATE member SET proxyMemberId = ${memberId('Lulu')} WHERE id = ${memberId('Zaza')}`);
+    const { gigId, slotId } = addGig('Carnaval', { startsOn: day(12) });
+    await asMember(page, 'Lulu');
+    await page.goto(`/gigs/${gigId}`);
+
+    await expect(page.getByRole('heading', { name: 'Réponse de Zaza' })).toBeVisible();
+    await expect(
+      page.getByText('Zaza n’a pas encore répondu. Tu peux répondre à sa place.'),
+    ).toBeVisible();
+    await page
+      .getByRole('radiogroup', { name: 'Réponse de Zaza' })
+      .getByRole('radio', { name: 'Oui', exact: true })
+      .click();
+    await expect
+      .poll(() => sql(`SELECT answer FROM gigSlotAttendance WHERE memberId = ${memberId('Zaza')}`))
+      .toBe('YES');
+    await expect(page.getByText('Zaza n’a pas encore répondu.')).toHaveCount(0);
+
+    // In who comes, Zaza only is a button for Lulu.
+    answerOf('Riton', slotId, 'NO');
+    await page.goto(`/gigs/${gigId}/answers`);
+    await expect(page.getByRole('button', { name: /Noter la réponse de Zaza/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Noter la réponse de/ })).toHaveCount(1);
+    await expect(page.getByText('Tu brasses ce plan')).toHaveCount(0);
+  });
+
+  test('a member who was not designated finds no other answer to give (1.1.0)', async ({
+    page,
+  }) => {
+    sql(`UPDATE member SET proxyMemberId = ${memberId('Lulu')} WHERE id = ${memberId('Zaza')}`);
+    const { gigId } = addGig('Carnaval', { startsOn: day(12) });
+    await asMember(page, 'Riton');
+    await page.goto(`/gigs/${gigId}`);
+    await expect(page.getByRole('heading', { name: 'Ta réponse' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Réponse de/ })).toHaveCount(0);
+  });
+
+  test('who notes the answers finds the power members who have not answered, folded at the end (1.1.0)', async ({
+    page,
+    context,
+  }) => {
+    addMember({ nickname: 'Tonton', status: 'POWER_MEMBER' });
+    const { gigId } = addGig('Carnaval', { startsOn: day(12) });
+    organise(gigId, 'Lulu');
+    await asMember(page, 'Lulu');
+    await page.goto(`/gigs/${gigId}/answers`);
+
+    const group = page.getByRole('button', { name: /Power members/ });
+    await expect(group).toHaveAttribute('aria-expanded', 'false');
+    await expect(group).toContainText('· 1');
+    await expect(page.getByText('Tonton')).toHaveCount(0);
+    await group.press('Enter');
+    await expect(group).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+      page.getByText('Personne ne les attend : touche l’un d’eux pour noter sa réponse.'),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Noter la réponse de Tonton, Pas répondu' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Réponse de Tonton' });
+    await sheet.getByRole('radio', { name: 'Oui', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Answered, Tonton is in a section like anyone, and the group is gone.
+    await expect(page.getByRole('button', { name: /Power members/ })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Noter la réponse de Tonton, Oui' }),
+    ).toBeVisible();
+
+    // A plain member has no such group.
+    addMember({ nickname: 'Pépère', status: 'POWER_MEMBER' });
+    await context.clearCookies();
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}/answers`);
+    await expect(page.getByText('Tonton')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Power members/ })).toHaveCount(0);
+    await expect(page.getByText('Pépère')).toHaveCount(0);
+  });
+
+  test('who notes the answer of a member with a secondary instrument chooses it too (1.1.0)', async ({
+    page,
+  }) => {
+    sql(
+      `UPDATE member SET secondaryInstrumentId = (SELECT id FROM instrument WHERE name = 'Souba') WHERE id = ${memberId('Zaza')}`,
+    );
+    const { gigId, slotId } = addGig('Carnaval', { startsOn: day(12) });
+    answerOf('Zaza', slotId, 'YES');
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/answers`);
+    await page.getByRole('button', { name: 'Noter la réponse de Zaza, Oui' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Réponse de Zaza' });
+    const control = sheet.getByRole('radiogroup', { name: 'Vient avec' });
+    await expect(control.getByRole('radio', { name: 'Trompette' })).toBeChecked();
+    await expect(sheet.getByText('Sa réponse actuelle : oui, en Trompette.')).toBeVisible();
+    await control.getByRole('radio', { name: 'Souba' }).check();
+    await expect
+      .poll(() =>
+        sql(
+          `SELECT i.name FROM gigSlotAttendance a JOIN instrument i ON i.id = a.instrumentId WHERE a.memberId = ${memberId('Zaza')}`,
+        ),
+      )
+      .toBe('Souba');
+  });
+
+  test('noting one slot for a member keeps the instrument they chose for the gig (1.1.0, review)', async ({
+    page,
+  }) => {
+    sql(
+      `UPDATE member SET secondaryInstrumentId = (SELECT id FROM instrument WHERE name = 'Souba') WHERE id = ${memberId('Zaza')}`,
+    );
+    const { gigId, slotId } = addGig('Fête des Lumières', { startsOn: day(12) });
+    const second = Number(
+      sql(
+        `INSERT INTO gigSlot (gigId, position, name) VALUES (${gigId}, 2, 'Dimanche'); SELECT LAST_INSERT_ID();`,
+      ),
+    );
+    sql(`UPDATE gigSlot SET name = 'Samedi' WHERE id = ${slotId}`);
+    sql(
+      `INSERT INTO gigSlotAttendance (gigSlotId, memberId, answer, instrumentId) SELECT ${slotId}, ${memberId('Zaza')}, 'YES', id FROM instrument WHERE name = 'Souba'`,
+    );
+    await asMember(page, 'Gigi');
+    await page.goto(`/gigs/${gigId}/answers?slot=${second}`);
+    await page.getByRole('button', { name: 'Noter la réponse de Zaza, Pas répondu' }).click();
+    await page
+      .getByRole('dialog', { name: 'Réponse de Zaza' })
+      .getByRole('radio', { name: 'Oui', exact: true })
+      .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(
+      sql(
+        `SELECT i.name FROM gigSlotAttendance a JOIN instrument i ON i.id = a.instrumentId WHERE a.memberId = ${memberId('Zaza')} ORDER BY a.gigSlotId`,
+      ),
+    ).toBe('Souba\nSouba');
+  });
+
+  test('a member whose secondary instrument changed still answers; the instrument declared before is dropped (1.1.0, review)', async ({
+    page,
+  }) => {
+    const { gigId, slotId } = addGig('Fête des Lumières', { startsOn: day(12) });
+    const second = Number(
+      sql(
+        `INSERT INTO gigSlot (gigId, position, name) VALUES (${gigId}, 2, 'Dimanche'); SELECT LAST_INSERT_ID();`,
+      ),
+    );
+    sql(`UPDATE gigSlot SET name = 'Samedi' WHERE id = ${slotId}`);
+    // She came with the souba; since then her secondary instrument is the sax.
+    sql(
+      `INSERT INTO gigSlotAttendance (gigSlotId, memberId, answer, instrumentId) SELECT ${slotId}, ${memberId('Zaza')}, 'YES', id FROM instrument WHERE name = 'Souba'`,
+    );
+    sql(
+      `UPDATE member SET secondaryInstrumentId = (SELECT id FROM instrument WHERE name = 'Sax Ténor') WHERE id = ${memberId('Zaza')}`,
+    );
+    await asMember(page, 'Zaza');
+    await page.goto(`/gigs/${gigId}`);
+    await page
+      .getByRole('radiogroup', { name: 'Ta réponse pour Dimanche' })
+      .getByRole('radio', { name: 'Oui', exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        sql(
+          `SELECT answer FROM gigSlotAttendance WHERE gigSlotId = ${second} AND memberId = ${memberId('Zaza')}`,
+        ),
+      )
+      .toBe('YES');
+  });
+
   test('a member without the right gets neither the form nor a refusal that looks like a bug', async ({
     page,
   }) => {
@@ -560,7 +806,7 @@ test.describe('who may edit a gig', () => {
 
     for (const address of ['/gigs/new', `/gigs/${gigId}/edit`]) {
       await page.goto(address);
-      await expect(page.getByText('c’est pour ceux qui gèrent les plans')).toBeVisible();
+      await expect(page.getByText('c’est pour celles et ceux qui gèrent les plans')).toBeVisible();
       await expect(page.getByLabel('Nom du plan')).toHaveCount(0);
     }
   });

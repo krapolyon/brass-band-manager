@@ -346,7 +346,7 @@ test.describe('sections and instruments', () => {
     const remove = sheet(page).getByRole('button', { name: 'Retirer cet instrument' });
     await expect(remove).toBeDisabled();
     await expect(remove).toHaveAccessibleDescription(
-      'Plus personne n’en joue, mais les fiches de 2 invités ou anciens fanfarons le portent encore. Il ne peut pas être retiré.',
+      'Plus personne n’en joue, mais 2 fiches (invitations en cours ou départs) le portent encore. Il ne peut pas être retiré.',
     );
   });
 

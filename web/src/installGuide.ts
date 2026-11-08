@@ -32,12 +32,18 @@ export const INSTALL_GUIDE = '/install-app';
  */
 export type InstallPlatform = 'android' | 'iosSafari' | 'iosOther';
 
+/** An iPhone or an iPad (which says "Macintosh", with touch points). */
+export function isAppleTouchDevice(): boolean {
+  const agent = navigator.userAgent;
+  return (
+    /iPhone|iPad|iPod/.test(agent) || (agent.includes('Macintosh') && navigator.maxTouchPoints > 1)
+  );
+}
+
 export function installPlatform(): InstallPlatform | null {
   if (isInstalled()) return null;
   const agent = navigator.userAgent;
-  const isApple =
-    /iPhone|iPad|iPod/.test(agent) || (agent.includes('Macintosh') && navigator.maxTouchPoints > 1);
-  if (isApple) {
+  if (isAppleTouchDevice()) {
     const isSafari =
       agent.includes('Safari/') && !/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|GSA\/|DuckDuckGo/.test(agent);
     return isSafari ? 'iosSafari' : 'iosOther';

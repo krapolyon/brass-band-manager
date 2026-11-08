@@ -1,5 +1,6 @@
 # Business dictionary — Songs domain
 
+> v1.12 — 2026-11-07 · For 1.1.0, decided by the owner · No change to the tables · The parts of the secondary instrument of a member (Members domain) are theirs too
 > v1.11 — 2026-11-01 · For 1.1.0, to validate by the owner · No change to the tables · The tempo of a file is the one in force at its first note (issue #71); the engine of the app reads a third thing of MuseScore 4 wrongly, the order of `<tpc>` and `<tpc2>` (issue #71); the Live mode reworked (issues #69, #74, #75, #76, #77): one column from 768, one line in landscape, the switch "Jouer avec le MIDI", the Tempo sheet, the reading settings kept on the device, the visual metronome, the playhead, hidden controls; a quiet change of a song, without notification; the two filters of the list show their status alone, one at a time; the visual metronome follows the MIDI switch until the member chooses; every part of a song in one archive (2026-11-04)
 > v1.10 — 2026-10-24 · Validated by the owner, for 0.3.2 · Model: `songs.dbml` v1.10 · Migration: `016_memberSongRatedOn.sql` · A song the member has not rated stands out on its sheet, and levels older than a year are asked again (`memberSong.ratedOn`, issue #44); the Discord card of a song shows the messages that tag both the app and the section, without the tag of the app, all of them (issue #45); the mood Médium is labelled Normal
 > v1.9 — 2026-10-23 · Validated by the owner, for 0.3.1 · Model: `songs.dbml` v1.9 · The mood of a song and the places a set can give it replace its categories, "can also be" and "never first" (issue #47); the copyright of a song (issues #47 and #46); the form of a song shows nothing of Discord for a band without it (issue #49)
@@ -157,7 +158,7 @@ Decided on 2026-10-16 (issue #23), with the settings of each member (Members dom
 |---|---|---|---|
 | A song is created, whatever its status (decided with the owner) | `notifySongNew` | Every current member | "Les Krapos – Nouveau morceau", "Rasputin – Boney M." (the original artist, a required field) |
 | The MuseScore file of a song is replaced by another one | `notifySongScore` | Every current member | "Les Krapos – Nouveau MuseScore", "Rasputin : la partition a changé" |
-| A part is added to a song, or replaced | `notifySongPart` | The current members who play the instrument of the part | "Les Krapos – Nouvelle partition pour toi", "Rasputin – Sax ténor" |
+| A part is added to a song, or replaced | `notifySongPart` | The current members who play the instrument of the part, or hold it as secondary instrument (1.1.0) | "Les Krapos – Nouvelle partition pour toi", "Rasputin – Sax ténor" |
 
 - A song becomes news once: a MuseScore file given to a song that had none, and the parts sent in the first hour after the song was created, notify nothing; "Nouveau morceau" covers the files of an import.
 - The device that sent the song or the file does not receive the notification.
@@ -208,6 +209,7 @@ A part is the score of one instrument in a song, as a PDF already laid out; in t
 ### Rules
 - **One part per instrument and per song at most.** There is no second voice and no full score: a full score is printed from the MuseScore file. Sending a PDF for an instrument that already has one replaces it.
 - **A member opens their own part first.** The part shown first is the one of the instrument of the member; every other part stays one tap away.
+- **The parts of the secondary instrument are the member's own too** (1.1.0, decided on 2026-11-07). Where the app speaks of the part of the member — the part opened first, "Ma partition", "Toutes mes partitions", the own track of the MIDI player, the notification "Nouvelle partition" (`notifySongPart`) — a member who holds a secondary instrument (Members domain) has two: the part of their instrument first, the part of their secondary instrument right after, both marked as theirs. "Toutes mes partitions" takes both; `notifySongPart` reaches the members who hold the instrument of the part as instrument or as secondary instrument. The reading mode opens the part of the instrument; the part of the secondary instrument is one tap away, as any other, listed first.
 - **An instrument that has a part cannot be deleted** (Members domain, entry 2). Deleting an instrument deletes its aliases.
 
 ### Reading the name of a file

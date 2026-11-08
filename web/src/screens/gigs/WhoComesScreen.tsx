@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'react-router';
 import { api } from '../../api.ts';
 import { type AttendanceAnswer, AttendanceChoices } from '../../components/AttendanceChoices.tsx';
 import { Chip } from '../../components/Chip.tsx';
+import { Disclosure } from '../../components/Disclosure.tsx';
 import { FilterChip } from '../../components/FilterChip.tsx';
 import { MemberMention } from '../../components/MemberMention.tsx';
 import { Message } from '../../components/Message.tsx';
@@ -13,6 +14,7 @@ import { type Gig, isOpen, useGig } from '../../gigs.ts';
 import { useMembers, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { AppLayout } from '../AppLayout.tsx';
+import { AnswerInstrument, declaredInstrument } from './AnswerInstrument.tsx';
 import { type Attendee, attendanceOf } from './attendance.ts';
 import { AnswerChip } from './chips.tsx';
 import { dayText } from './format.ts';
@@ -21,6 +23,9 @@ import './gigs.css';
 // Figma: Gigs / Who comes — in detail (section 3). Every answer of a slot,
 // section by section. Who may edit the gig touches a member to note the
 // answer they were given: it counts at once, as if the member had given it.
+// So does a member for the one who designated them, and nobody else (1.1.0).
+// The power members who have not answered are waited for by nobody: only who
+// may note the answers of others finds them, folded at the end (1.1.0).
 export function WhoComesScreen() {
   const { t, i18n } = useTranslation();
   const params = useParams();
@@ -36,12 +41,23 @@ export function WhoComesScreen() {
   const gig = gigQuery.data;
   const slot = gig?.slots.find((one) => one.id === Number(search.get('slot'))) ?? gig?.slots[0];
   const canAnswerForOthers = gig ? gig.canEdit && isOpen(gig) : false;
+  const mayNoteFor = (memberId: number) =>
+    canAnswerForOthers ||
+    (gig !== undefined && isOpen(gig) && gig.proxyFor.some((one) => one.id === memberId));
 
   const answer = useMutation({
-    mutationFn: ({ memberId, value }: { memberId: number; value: AttendanceAnswer }) =>
+    mutationFn: ({
+      memberId,
+      value,
+      instrumentId,
+    }: {
+      memberId: number;
+      value: AttendanceAnswer;
+      instrumentId: number | null;
+    }) =>
       api<Gig>(`/api/gigs/${gigId}/slots/${slot?.id}/answers/${memberId}`, {
         method: 'PUT',
-        body: { answer: value },
+        body: { answer: value, instrumentId },
       }),
     onSuccess: (saved) => {
       queryClient.setQueryData(['gig', gigId], saved);
@@ -69,6 +85,16 @@ export function WhoComesScreen() {
     : undefined;
   const attendance =
     gig && slot ? attendanceOf(slot, members, sections, i18n.language, !isOpen(gig)) : null;
+  // The member the sheet is open for, when they hold a secondary instrument.
+  const answeredMember = members.find((member) => member.id === answeredFor?.memberId);
+  const answeredPlayer =
+    answeredMember?.secondaryInstrumentId != null
+      ? {
+          id: answeredMember.id,
+          instrumentId: answeredMember.instrumentId,
+          secondaryInstrumentId: answeredMember.secondaryInstrumentId,
+        }
+      : null;
 
   const row = (attendee: Attendee) => {
     const content = (
@@ -93,7 +119,7 @@ export function WhoComesScreen() {
     );
     return (
       <li key={attendee.memberId}>
-        {canAnswerForOthers ? (
+        {mayNoteFor(attendee.memberId) ? (
           <button
             type="button"
             className="gigs-member"
@@ -171,6 +197,18 @@ export function WhoComesScreen() {
               <ul className="gigs-members">{attendees.map(row)}</ul>
             </section>
           ))}
+          {canAnswerForOthers && attendance.powerMembersWithoutAnswer.length > 0 && (
+            // Figma: Gigs, section 25 (1.1.0).
+            <Disclosure
+              title={t('gigs.whoComes.powerMembers')}
+              detail={t('gigs.whoComes.powerMembersCount', {
+                count: attendance.powerMembersWithoutAnswer.length,
+              })}
+            >
+              <p className="gigs-muted textCaption">{t('gigs.whoComes.powerMembersHint')}</p>
+              <ul className="gigs-members">{attendance.powerMembersWithoutAnswer.map(row)}</ul>
+            </Disclosure>
+          )}
         </div>
       )}
 
@@ -186,17 +224,54 @@ export function WhoComesScreen() {
             </p>
             <AttendanceChoices
               answer={answeredFor.answer}
-              onChange={(value) => answer.mutate({ memberId: answeredFor.memberId, value })}
+              onChange={(value) =>
+                answer.mutate({
+                  memberId: answeredFor.memberId,
+                  value,
+                  // The one choice for the gig, not the one of this slot,
+                  // which is none while the member has not answered it.
+                  instrumentId:
+                    gig && answeredPlayer ? declaredInstrument(gig, answeredPlayer) : null,
+                })
+              }
               label={t('gigs.whoComes.answerOf', { nickname: answeredFor.nickname })}
               disabled={answer.isPending}
             />
+            {/* "Vient avec" (1.1.0): for a member who holds a secondary instrument, once answered. */}
+            {gig &&
+              answeredPlayer &&
+              answeredFor.answer !== null &&
+              answeredFor.answer !== 'NO' && (
+                <AnswerInstrument
+                  player={answeredPlayer}
+                  sections={sections}
+                  value={declaredInstrument(gig, answeredPlayer)}
+                  caption={t('gigs.answerFor.instrument')}
+                  onChange={(instrumentId) => {
+                    if (answeredFor.answer) {
+                      answer.mutate({
+                        memberId: answeredFor.memberId,
+                        value: answeredFor.answer,
+                        instrumentId,
+                      });
+                    }
+                  }}
+                />
+              )}
             {answer.isError && <Message kind="danger">{t('gigs.gig.saveFailed')}</Message>}
             <p className="gigs-muted textCaption">
-              {answeredFor.answer
-                ? t('gigs.whoComes.currentAnswer', {
+              {answeredFor.answer && answeredPlayer
+                ? t('gigs.answerFor.current', {
                     answer: t(`gigs.answer.${answeredFor.answer}`).toLocaleLowerCase(i18n.language),
+                    instrument: answeredFor.instrument,
                   })
-                : t('gigs.whoComes.noCurrentAnswer')}
+                : answeredFor.answer
+                  ? t('gigs.whoComes.currentAnswer', {
+                      answer: t(`gigs.answer.${answeredFor.answer}`).toLocaleLowerCase(
+                        i18n.language,
+                      ),
+                    })
+                  : t('gigs.whoComes.noCurrentAnswer')}
             </p>
           </div>
         )}

@@ -35,11 +35,13 @@ import { instrumentsOf, useMembers, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { useIsTablet } from '../songs/device.ts';
 import { day } from '../songs/format.ts';
+import { AnswerInstrument, declaredInstrument, showsInstrument } from './AnswerInstrument.tsx';
 import { type Attendance, attendanceOf } from './attendance.ts';
 import { AnswerChip, MomentChip, StatusChip } from './chips.tsx';
 import { addressText, inSentence, playableText, timeText, whenText, whereText } from './format.ts';
 import { GigSetlists } from './GigSetlists.tsx';
 import { ManagePanel } from './ManagePanel.tsx';
+import { ProxyAnswerCard } from './ProxyAnswerCard.tsx';
 
 type Props = {
   gigId: number;
@@ -53,8 +55,20 @@ type Props = {
 export function useAnswer(gigId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ slotId, answer }: { slotId: number; answer: AttendanceAnswer }) =>
-      api<Gig>(`/api/gigs/${gigId}/slots/${slotId}/answer`, { method: 'PUT', body: { answer } }),
+    mutationFn: ({
+      slotId,
+      answer,
+      instrumentId = null,
+    }: {
+      slotId: number;
+      answer: AttendanceAnswer;
+      /** The instrument the member comes with (1.1.0); null: their own. */
+      instrumentId?: number | null;
+    }) =>
+      api<Gig>(`/api/gigs/${gigId}/slots/${slotId}/answer`, {
+        method: 'PUT',
+        body: { answer, instrumentId },
+      }),
     onSuccess: (gig) => {
       queryClient.setQueryData(['gig', gigId], gig);
       queryClient.invalidateQueries({ queryKey: ['gigs'] });
@@ -181,8 +195,9 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
   const open = isOpen(gig);
   const isConfirmed = gig.status === 'CONFIRMED';
   const canDelete = me?.permissions.includes('manageGigs') ?? false;
+  // "ton pupitre": the section of the instrument the member comes with (1.1.0).
   const ownSectionId = instrumentsOf(sections).find(
-    (one) => one.id === me?.instrumentId,
+    (one) => one.id === (me ? declaredInstrument(gig, me) : undefined),
   )?.sectionId;
   const attendance = (slot: GigSlot) => attendanceOf(slot, members, sections, language, !open);
   const single = gig.slots.length === 1 ? gig.slots[0] : undefined;
@@ -196,10 +211,15 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       ? answer.variables.answer
       : slot.ownAnswer;
 
-  const say = (slotId: number, value: AttendanceAnswer) => {
+  // The instrument the member comes with (1.1.0): kept with every answer.
+  const player = me
+    ? { id: me.id, instrumentId: me.instrumentId, secondaryInstrumentId: me.secondaryInstrumentId }
+    : null;
+  const ownInstrument = player ? declaredInstrument(gig, player) : null;
+  const say = (slotId: number, value: AttendanceAnswer, instrumentId = ownInstrument) => {
     const before = gig.status;
     answer.mutate(
-      { slotId, answer: value },
+      { slotId, answer: value, instrumentId },
       {
         onSuccess: (saved) => {
           movesFocus.current = isChanging;
@@ -294,6 +314,26 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
     <Message kind="success">{t('gigs.gig.nowConfirmed')}</Message>
   );
 
+  // "Tu viens avec" (1.1.0): one tap saves it, with an answer already given;
+  // the server writes it on every answer of the member to the gig.
+  const instrumentChoice = (slots: GigSlot[]) => {
+    const answered = slots.find((slot) => shown(slot) !== null && shown(slot) !== 'NO');
+    if (!player || ownInstrument === null || !answered) return null;
+    if (!showsInstrument(player, slots.map(shown))) return null;
+    return (
+      <AnswerInstrument
+        player={player}
+        sections={sections}
+        value={ownInstrument}
+        caption={t('gigs.answer.instrument')}
+        onChange={(instrumentId) => {
+          const value = shown(answered);
+          if (value) say(answered.id, value, instrumentId);
+        }}
+      />
+    );
+  };
+
   // One slot: the four answers, large; or, once confirmed, the answer given
   // and a way to change it.
   const ownAnswerCard = single && open && (
@@ -328,6 +368,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
           />
         </div>
       )}
+      {instrumentChoice([single])}
       {single.ownYesMakesPlayable && showsPlayable(gig) && (
         <Message>
           {t('gigs.gig.yourYesMakesPlayable', {
@@ -369,7 +410,11 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
               let last: Gig | undefined;
               for (const slot of unanswered) {
                 try {
-                  last = await answer.mutateAsync({ slotId: slot.id, answer: 'YES' });
+                  last = await answer.mutateAsync({
+                    slotId: slot.id,
+                    answer: 'YES',
+                    instrumentId: ownInstrument,
+                  });
                 } catch {
                   failures += 1;
                 }
@@ -382,6 +427,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
           </Button>
         </div>
       )}
+      {instrumentChoice(gig.slots)}
       {confirmedNow}
       {failed}
       {saved}
@@ -424,6 +470,19 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       })}
     </section>
   );
+
+  // The answers of the members who let the signed-in member answer for them (1.1.0).
+  const proxyCards =
+    open &&
+    gig.proxyFor.map((member) => (
+      <ProxyAnswerCard
+        key={member.id}
+        gig={gig}
+        member={member}
+        sections={sections}
+        headingLevel={cardLevel}
+      />
+    ));
 
   const remindedAt = gig.remindedAt ? new Date(gig.remindedAt) : null;
   const lastReminder = remindedAt
@@ -754,7 +813,9 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
         )}
         {discordCard}
         {ownAnswerCard}
+        {single && proxyCards}
         {ownAnswersCard}
+        {!single && proxyCards}
         {single && whoComes(single, true)}
       </>
     );
@@ -765,6 +826,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
       <>
         <div className="gigs-column">
           {ownAnswerCard}
+          {single && proxyCards}
           {infos}
         </div>
         <div className="gigs-column">{whoComes(single, false)}</div>
@@ -772,6 +834,7 @@ export function GigView({ gigId, back, headingLevel = 1 }: Props) {
     ) : (
       <>
         {ownAnswersCard}
+        {!single && proxyCards}
         {infos}
       </>
     );

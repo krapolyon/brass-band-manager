@@ -7,7 +7,6 @@ import { FilterChip } from '../../components/FilterChip.tsx';
 import { Icon } from '../../components/Icon.tsx';
 import { IconButton } from '../../components/IconButton.tsx';
 import { Message } from '../../components/Message.tsx';
-import { NavRow } from '../../components/NavRow.tsx';
 import { Panel } from '../../components/Panel.tsx';
 import { Sheet } from '../../components/Sheet.tsx';
 import { SongCard } from '../../components/SongCard.tsx';
@@ -17,6 +16,7 @@ import { instrumentsOf, useSections } from '../../members.ts';
 import { useMe } from '../../session.ts';
 import { isPlayed, type SongSummary, useSongs } from '../../songs.ts';
 import { AppLayout } from '../AppLayout.tsx';
+import { DownloadRow, sharesFiles } from './DownloadRow.tsx';
 import { keep, kept, useIsDesktop } from './device.ts';
 import { weight } from './format.ts';
 import { MiniPlayer } from './Player.tsx';
@@ -270,10 +270,12 @@ type DownloadProps = { open: boolean; onClose: () => void; songs: SongSummary[] 
 function DownloadPanel({ open, onClose, songs }: DownloadProps) {
   const { t, i18n } = useTranslation();
   const me = useMe().data;
-  const instrument = instrumentsOf(useSections().data).find(
-    (other) => other.id === me?.instrumentId,
-  );
-  const instrumentName = instrument?.name ?? '';
+  // With the secondary instrument (1.1.0): "Trompette, Souba".
+  const instruments = instrumentsOf(useSections().data);
+  const instrumentName = [me?.instrumentId, me?.secondaryInstrumentId]
+    .flatMap((id) => instruments.filter((other) => other.id === id))
+    .map((other) => other.name)
+    .join(', ');
 
   const kinds = [
     { kind: 'parts', size: 'ownPart', label: t('songs.download.parts') },
@@ -308,20 +310,19 @@ function DownloadPanel({ open, onClose, songs }: DownloadProps) {
             const ids = having.map((song) => song.id).join(',');
 
             return (
-              <NavRow
+              <DownloadRow
                 key={kind}
-                icon="Download"
                 label={label}
                 detail={detail}
                 disabled={count === 0}
-                href={count === 0 ? undefined : `/api/songs/archive?kind=${kind}&songs=${ids}`}
-                download={`${t(`songs.download.archive.${kind}`, { instrument: instrumentName })}.zip`}
-                chevron={false}
+                href={`/api/songs/archive?kind=${kind}&songs=${ids}`}
+                fileName={`${t(`songs.download.archive.${kind}`, { instrument: instrumentName })}.zip`}
               />
             );
           })}
         </div>
         <p className="songs-muted textCaption">{t('songs.download.note')}</p>
+        {sharesFiles() && <p className="songs-muted textCaption">{t('songs.download.iosNote')}</p>}
       </div>
     </Panel>
   );

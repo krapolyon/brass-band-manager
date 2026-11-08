@@ -264,6 +264,7 @@ On the accent colour, an icon or a pictogram takes `onAccent`, never `text`: lig
 - Sentence case everywhere. No all-caps labels.
 - The names the band gives (sections, costumes, slots) are shown as they are, never put in the plural or declined: “Il ne manque plus que Souba”, “personne en Souba”, “Manque : Percu, Souba”. A member is named by their nickname.
 - French copy takes a no-break space before `?`, `!`, `;` and `:`: without it, a title leaves its question mark alone on a line.
+- **Epicene copy** (1.1.0, decided on 2026-11-07). The interface never speaks of a member in the masculine: no "il", "lui", "le", no participle or adjective agreed in the masculine ("parti", "invité", "nouveau", "le premier"), in the screens, the notifications and the emails. The sentence is turned so that the person is not gendered ("A quitté la fanfare", "Voici ton invitation", "Note sa réponse ici"). The words of the band's own vocabulary stay as the band says them ("fanfaron", "brasseur", "power member") when they name the role in general; the band may change them in its locale. No field records a gender: the app does not need it.
 
 ## Check before showing a screen
 

@@ -733,3 +733,10 @@ button.gigs-member {
   padding: 0;
   list-style: none;
 }
+
+/* Figma: Gigs, section 26 (1.1.0). "Tu viens avec" and its two instruments. */
+.gigs-instrument {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceXs);
+}

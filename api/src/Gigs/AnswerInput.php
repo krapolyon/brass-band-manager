@@ -6,7 +6,13 @@ namespace BrassBand\Gigs;
 
 final class AnswerInput
 {
-    public function __construct(public readonly AttendanceAnswer $answer)
-    {
+    /**
+     * @param int|null $instrumentId The instrument the member comes with
+     *                               (1.1.0): their own or their secondary one; null: their own
+     */
+    public function __construct(
+        public readonly AttendanceAnswer $answer,
+        public readonly ?int $instrumentId = null,
+    ) {
     }
 }

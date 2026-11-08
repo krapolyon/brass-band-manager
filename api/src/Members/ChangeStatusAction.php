@@ -101,11 +101,15 @@ final class ChangeStatusAction
             'photoPath' => null,
             // The calendar address stops with the member (model/members.md).
             'calendarToken' => null,
+            // Nobody answers for them any more (model/members.md, "When one of them leaves").
+            'proxyMemberId' => null,
             // The old password is not reused if they come back.
             'passwordHash' => null,
             'failedSignInCount' => 0,
             'signInLockedUntil' => null,
         ], $me);
+        // Nor do they answer for anyone.
+        $this->database->executeStatement('UPDATE member SET proxyMemberId = NULL WHERE proxyMemberId = ?', [$memberId]);
         $this->database->delete('memberRole', ['memberId' => $memberId]);
         // What they said of each song served while they played: it goes too
         // (model/songs.md, entry 3).

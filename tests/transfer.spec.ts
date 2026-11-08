@@ -62,7 +62,7 @@ test('a reprise is dropped, read, and loaded once the admin confirms; the new me
   await expect(page.getByText('reprise-krapos', { exact: false }).first()).toBeVisible();
   const fanfarons = page.getByRole('checkbox', { name: /Fanfarons/ });
   await expect(fanfarons).toBeChecked();
-  await expect(page.getByText('2 fanfarons et 0 photo · 2 nouveaux')).toBeVisible();
+  await expect(page.getByText('2 fanfarons et 0 photo · 2 à créer')).toBeVisible();
   // Songs, gigs and answers are not in this file.
   await expect(page.getByRole('checkbox', { name: /Morceaux/ })).toBeDisabled();
   await expect(

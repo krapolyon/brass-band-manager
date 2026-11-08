@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ImageField } from '../../components/ImageField.tsx';
 import { InstrumentRow } from '../../components/InstrumentRow.tsx';
@@ -41,6 +41,8 @@ type Props = {
   emailLocked?: string;
   /** What the email serves for, in place of the hint of the voice (an invitation that leaves by email, #50). */
   emailHint?: string;
+  /** Cards that come right after "Dans la fanfare" ("Présences" in the profile, 1.1.0). */
+  afterInTheBand?: ReactNode;
 };
 
 const NAME_MAX_LENGTH = 50;
@@ -59,11 +61,19 @@ export function MemberRecordFields({
   onPhoto,
   emailLocked,
   emailHint,
+  afterInTheBand,
 }: Props) {
   const { t, i18n } = useTranslation();
-  const [isPickerOpen, setPickerOpen] = useState(false);
+  // The instrument, or the secondary instrument (1.1.0): one panel, two uses.
+  const [picker, setPicker] = useState<'instrument' | 'secondary' | null>(null);
   const [isPhotoUnreadable, setPhotoUnreadable] = useState(false);
   const instrument = instruments.find((other) => other.id === draft.instrumentId);
+  const secondary = instruments.find(
+    (other) => other.id === draft.secondaryInstrumentId && other.id !== draft.instrumentId,
+  );
+  // On the profile and the record a member manager edits (Figma: Members,
+  // section 18); not while being invited or invited.
+  const hasSecondary = voice === 'self' || voice === 'other';
   const isAbout = voice === 'other' || voice === 'invite';
 
   const choosePhoto = async (file: File | null) => {
@@ -207,9 +217,23 @@ export function MemberRecordFields({
           error={errors.instrumentId}
           value={instrument?.name ?? ''}
           placeholder={t('member.instrument.placeholder')}
-          onPick={() => setPickerOpen(true)}
+          onPick={() => setPicker('instrument')}
         />
+        {hasSecondary && (
+          <PickerField
+            label={t('member.form.secondaryInstrument')}
+            hint={t(
+              voice === 'self'
+                ? 'member.form.secondaryInstrumentHint'
+                : 'manage.member.secondaryInstrumentHint',
+            )}
+            error={errors.secondaryInstrumentId}
+            value={secondary?.name ?? t('member.form.secondaryInstrumentNone')}
+            onPick={() => setPicker('secondary')}
+          />
+        )}
       </Sheet>
+      {afterInTheBand}
 
       {voice === 'self' || voice === 'invited' ? (
         <>
@@ -229,8 +253,8 @@ export function MemberRecordFields({
       )}
 
       <Panel
-        open={isPickerOpen}
-        onClose={() => setPickerOpen(false)}
+        open={picker === 'instrument'}
+        onClose={() => setPicker(null)}
         title={t('member.instrument.label')}
       >
         {instruments.map((other) => (
@@ -239,11 +263,45 @@ export function MemberRecordFields({
             name={other.name}
             choice={other.id === draft.instrumentId ? 'current' : 'none'}
             onPress={() => {
-              onChange({ instrumentId: other.id });
-              setPickerOpen(false);
+              // The secondary instrument that becomes the instrument is no longer a second one.
+              onChange({
+                instrumentId: other.id,
+                ...(other.id === draft.secondaryInstrumentId
+                  ? { secondaryInstrumentId: null }
+                  : {}),
+              });
+              setPicker(null);
             }}
           />
         ))}
+      </Panel>
+      <Panel
+        open={picker === 'secondary'}
+        onClose={() => setPicker(null)}
+        title={t('member.form.secondaryInstrument')}
+      >
+        {/* "Aucun" first, then the instruments of the band but the one chosen as instrument. */}
+        <InstrumentRow
+          name={t('member.form.secondaryInstrumentNone')}
+          choice={secondary === undefined ? 'current' : 'none'}
+          onPress={() => {
+            onChange({ secondaryInstrumentId: null });
+            setPicker(null);
+          }}
+        />
+        {instruments
+          .filter((other) => other.id !== draft.instrumentId)
+          .map((other) => (
+            <InstrumentRow
+              key={other.id}
+              name={other.name}
+              choice={other.id === secondary?.id ? 'current' : 'none'}
+              onPress={() => {
+                onChange({ secondaryInstrumentId: other.id });
+                setPicker(null);
+              }}
+            />
+          ))}
       </Panel>
     </>
   );

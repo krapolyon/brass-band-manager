@@ -12,6 +12,8 @@ export type MemberRecord = {
   lastName: string;
   email: string;
   instrumentId: number;
+  /** A second instrument (1.1.0); null: none. */
+  secondaryInstrumentId: number | null;
   mobilePhone: string | null;
   streetAddress: string | null;
   postalCode: string | null;
@@ -27,6 +29,7 @@ export type RecordDraft = {
   lastName: string;
   email: string;
   instrumentId: number | null;
+  secondaryInstrumentId: number | null;
   /** As the member reads and types it: "06 12 34 56 78". */
   mobilePhone: string;
   streetAddress: string;
@@ -44,6 +47,7 @@ export const emptyDraft: RecordDraft = {
   lastName: '',
   email: '',
   instrumentId: null,
+  secondaryInstrumentId: null,
   mobilePhone: '',
   streetAddress: '',
   postalCode: '',
@@ -59,6 +63,7 @@ export function draftOf(member: MemberRecord, bandCountry: string): RecordDraft 
     lastName: member.lastName,
     email: member.email,
     instrumentId: member.instrumentId,
+    secondaryInstrumentId: member.secondaryInstrumentId ?? null,
     mobilePhone: phoneForDisplay(member.mobilePhone, bandCountry),
     streetAddress: member.streetAddress ?? '',
     postalCode: member.postalCode ?? '',
@@ -77,6 +82,9 @@ export function recordOf(draft: RecordDraft, bandCountry: string): MemberRecord 
     lastName: draft.lastName.trim(),
     email: draft.email.trim(),
     instrumentId: draft.instrumentId ?? 0,
+    // Never the instrument itself: choosing it as instrument empties it.
+    secondaryInstrumentId:
+      draft.secondaryInstrumentId === draft.instrumentId ? null : draft.secondaryInstrumentId,
     mobilePhone: toInternational(draft.mobilePhone, bandCountry) || null,
     streetAddress: text(draft.streetAddress),
     postalCode: text(draft.postalCode),
@@ -106,6 +114,9 @@ export function useRecordErrors() {
     }
     if (draft.instrumentId === null || refused.instrumentId) {
       errors.instrumentId = t('member.errors.instrument.missing');
+    }
+    if (refused.secondaryInstrumentId) {
+      errors.secondaryInstrumentId = t('member.errors.secondaryInstrument.invalid');
     }
     if (draft.email.trim() === '') errors.email = t('member.errors.email.missing');
     else if (refused.email === 'duplicate') errors.email = t('member.errors.email.duplicate');

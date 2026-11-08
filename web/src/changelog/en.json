@@ -13,10 +13,6 @@
       },
       {
         "kind": "fixed",
-        "text": "Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI."
-      },
-      {
-        "kind": "fixed",
         "text": "The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network."
       },
       {
@@ -37,43 +33,7 @@
       },
       {
         "kind": "changed",
-        "text": "On a tablet or a computer, the Live mode shows the score as one column at the width of the screen, never in two or three columns side by side."
-      },
-      {
-        "kind": "added",
-        "text": "On a phone held sideways, the Live mode shows the score as one line that scrolls to the left, the controls at the right."
-      },
-      {
-        "kind": "changed",
-        "text": "The tempo of the Live mode is set in one place: a tap on the tempo opens a sheet to set it with − and +, or to tap it."
-      },
-      {
-        "kind": "changed",
-        "text": "Playing the Live mode with the MIDI is a switch beside Play; the tracks of the MIDI are set in the new reading settings, and a line shows where the MIDI is in the measure."
-      },
-      {
-        "kind": "added",
-        "text": "Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing."
-      },
-      {
-        "kind": "fixed",
-        "text": "In the Live mode with the MIDI, the line that shows where the MIDI is moves smoothly, on the note being heard, even with a Bluetooth headset."
-      },
-      {
-        "kind": "fixed",
-        "text": "The beat being played of the visual metronome no longer pushes the others aside."
-      },
-      {
-        "kind": "changed",
-        "text": "The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses."
-      },
-      {
-        "kind": "fixed",
-        "text": "In the Live mode, the score no longer stands still while it plays after the phone turned or a sheet closed."
-      },
-      {
-        "kind": "fixed",
-        "text": "On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too."
+        "text": "The Live mode was redesigned: “Jouer avec le MIDI” is easier to see, written in full. The button at the left opens a panel with both the manual tempo and the tap. A settings screen chooses how the lines jump and whether a visual metronome shows. When the MIDI plays, a playhead moves at the tempo of the song. The size of the score can be adjusted. The controls can be made smaller to leave more room to the score. In landscape the score scrolls as one continuous line; on a tablet or a computer it is one column at the width of the screen."
       },
       {
         "kind": "added",
@@ -82,6 +42,34 @@
       {
         "kind": "added",
         "text": "From a song, “Toutes les partitions” downloads every part in one .zip."
+      },
+      {
+        "kind": "fixed",
+        "text": "Scores show on browsers a year or two old (iOS 17 and 18 among them): they get a version of the PDF reader written for them."
+      },
+      {
+        "kind": "fixed",
+        "text": "On iPhone and iPad, downloading a file goes through the share sheet (“Enregistrer dans Fichiers”, AirDrop…) instead of opening it in the app with no way back."
+      },
+      {
+        "kind": "changed",
+        "text": "On a device older than the app (before iOS 16.4), the PDF, MIDI and Live modes say so and offer to download the part, instead of blaming the network."
+      },
+      {
+        "kind": "changed",
+        "text": "Only the power members who answered show in the attendance, whatever their answer. Who manages gigs finds those who did not answer in a folded group at the end, to keep answering for them."
+      },
+      {
+        "kind": "added",
+        "text": "A member can hold a secondary instrument and say which one they bring to a gig; the gig counts them in that section."
+      },
+      {
+        "kind": "added",
+        "text": "A member can let one other member answer gigs for them (“Peut répondre pour moi”)."
+      },
+      {
+        "kind": "changed",
+        "text": "The texts of the interface were rewritten so as not to show a gender (epicene wording)."
       }
     ]
   },

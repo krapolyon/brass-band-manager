@@ -1,0 +1,35 @@
+/* Figma: Disclosure (1.1.0). */
+.Disclosure {
+  display: flex;
+  flex-direction: column;
+}
+
+.Disclosure-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spaceXs);
+  min-height: var(--controlHeightSm);
+  padding-block: var(--spaceXs);
+  padding-inline: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: start;
+  cursor: pointer;
+}
+
+.Disclosure-detail {
+  color: var(--textMuted);
+}
+
+.Disclosure-header .Icon {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+
+.Disclosure-content:not(:empty) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+  padding-block-start: var(--spaceSm);
+}

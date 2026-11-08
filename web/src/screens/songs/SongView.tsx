@@ -24,14 +24,17 @@ import {
   downloadAddress,
   type LevelAverage,
   type Song,
+  type SongFile,
   type SongStatus,
   songStatuses,
   useSong,
   useSongDiscord,
 } from '../../songs.ts';
+import { DownloadRow, sharesFiles, useSaveFile } from './DownloadRow.tsx';
 import { keep, kept, useIsTablet } from './device.ts';
 import { saveOutline } from './files.ts';
 import { average, duration as clock, day, weight } from './format.ts';
+import { isOlderThanTheApp } from './older.ts';
 import { PdfView } from './PdfView.tsx';
 import { usePlayer } from './Player.tsx';
 import './songs.css';
@@ -131,17 +134,47 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
   }
 
   const data = song.data;
+  // Read once: a browser does not change its age while a page is open.
+  const isOld = isOlderThanTheApp();
   const edit = () => navigate(`/songs/${songId}/edit`);
-  const ownInstrument = instruments.find((instrument) => instrument.id === me?.instrumentId);
+  // The parts of the member: their instrument, then their secondary one
+  // (1.1.0, model/songs.md, "The parts of the secondary instrument").
+  const ownIds = [me?.instrumentId, me?.secondaryInstrumentId].filter(
+    (id): id is number => typeof id === 'number',
+  );
+  const ownParts = ownIds.flatMap((id) => {
+    const part = data.parts.find((one) => one.instrumentId === id);
+    const instrument = instruments.find((one) => one.id === id);
+    return part && instrument ? [{ part, instrument }] : [];
+  });
   const ownPart = data.parts.find((part) => part.instrumentId === me?.instrumentId);
+  // The member's first, then the band's order.
+  const pickerInstruments = [
+    ...ownIds.flatMap((id) => instruments.filter((one) => one.id === id)),
+    ...instruments.filter((one) => !ownIds.includes(one.id)),
+  ];
   // The part of the member's instrument first, with no word saying so.
   const shownPart =
-    data.parts.find((part) => part.instrumentId === shownPartOf) ?? ownPart ?? data.parts[0];
+    data.parts.find((part) => part.instrumentId === shownPartOf) ??
+    ownPart ??
+    ownParts[0]?.part ??
+    data.parts[0];
   const shownInstrument = instruments.find(
     (instrument) => instrument.id === shownPart?.instrumentId,
   );
 
-  if (mode === 'live' && data.musicXml) {
+  // Below the browsers the app is built for (1.1.0): the PDF, the MIDI player
+  // and the reading mode say so, and offer the part to download.
+  const tooOld = (text: string, withMidi = false) => (
+    <TooOld
+      text={text}
+      part={shownPart ?? null}
+      midi={withMidi ? data.midi : null}
+      onChoosePart={() => setPanel('parts')}
+    />
+  );
+
+  if (mode === 'live' && data.musicXml && !isOld) {
     return (
       <LivePart
         song={data}
@@ -193,9 +226,15 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
               />
             ))}
 
+          {mode === 'live' && data.musicXml && isOld && tooOld(t('songs.song.tooOldLive'))}
+
           {mode === 'midi' &&
             (data.midi ? (
-              <MidiPart song={data} />
+              isOld ? (
+                tooOld(t('songs.song.tooOldMidi'), true)
+              ) : (
+                <MidiPart song={data} />
+              )
             ) : (
               <NothingYet
                 icon="Piano"
@@ -235,11 +274,15 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
                     onClick={() => setFullScreen(true)}
                   />
                 </div>
-                <PdfView
-                  url={shownPart.url}
-                  isFullScreen={isFullScreen}
-                  onLeaveFullScreen={() => setFullScreen(false)}
-                />
+                {isOld ? (
+                  tooOld(t('songs.song.tooOldPdf'))
+                ) : (
+                  <PdfView
+                    url={shownPart.url}
+                    isFullScreen={isFullScreen}
+                    onLeaveFullScreen={() => setFullScreen(false)}
+                  />
+                )}
               </>
             ) : (
               <NothingYet
@@ -310,20 +353,18 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
           {(data.parts.length > 0 || data.audio || data.museScore || data.midi) && (
             <section className="songs-panelGroup">
               <h3 className="textLabel songs-muted">{t('songs.song.download')}</h3>
-              {ownPart && (
-                <NavRow
-                  icon="Download"
+              {ownParts.map(({ part, instrument }) => (
+                <DownloadRow
+                  key={instrument.id}
                   label={t('songs.song.ownPart')}
-                  detail={t('songs.song.ownPartDetail', { instrument: ownInstrument?.name ?? '' })}
-                  href={downloadAddress(ownPart)}
-                  chevron={false}
+                  detail={t('songs.song.ownPartDetail', { instrument: instrument.name })}
+                  href={downloadAddress(part)}
                 />
-              )}
+              ))}
               {data.parts.length > 0 && (
                 // Every part of the song in one archive (1.1.0), built by the
                 // server like "Tout télécharger" of the list.
-                <NavRow
-                  icon="Download"
+                <DownloadRow
                   label={t('songs.song.allParts')}
                   detail={t('songs.song.allPartsDetail', {
                     count: data.parts.length,
@@ -333,35 +374,28 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
                     ),
                   })}
                   href={`/api/songs/archive?kind=allParts&songs=${data.id}`}
-                  download={`${t('songs.download.archive.allParts', { song: data.name })}.zip`}
-                  chevron={false}
+                  fileName={`${t('songs.download.archive.allParts', { song: data.name })}.zip`}
                 />
               )}
               {data.audio && (
-                <NavRow
-                  icon="Download"
+                <DownloadRow
                   label={t('songs.song.audio')}
                   detail={data.audio.format}
                   href={downloadAddress(data.audio)}
-                  chevron={false}
                 />
               )}
               {data.museScore && (
-                <NavRow
-                  icon="Download"
+                <DownloadRow
                   label={t('songs.song.museScore')}
                   detail={t('songs.song.museScoreDetail')}
                   href={downloadAddress(data.museScore)}
-                  chevron={false}
                 />
               )}
               {data.midi && (
-                <NavRow
-                  icon="Download"
-                  label={t('songs.song.midi')}
-                  href={downloadAddress(data.midi)}
-                  chevron={false}
-                />
+                <DownloadRow label={t('songs.song.midi')} href={downloadAddress(data.midi)} />
+              )}
+              {sharesFiles() && (
+                <p className="songs-muted textCaption">{t('songs.download.iosNote')}</p>
               )}
             </section>
           )}
@@ -383,7 +417,7 @@ export function SongView({ songId, back, headingLevel = 1 }: Props) {
 
       <Panel open={panel === 'parts'} onClose={() => setPanel(null)} title={t('songs.song.parts')}>
         <ul className="songs-rows">
-          {instruments.map((instrument) => {
+          {pickerInstruments.map((instrument) => {
             const part = data.parts.find((other) => other.instrumentId === instrument.id);
             const isShown = part !== undefined && part === shownPart;
             return (
@@ -480,6 +514,47 @@ type NothingYetProps = {
 
 // Figma: Songs / Song — a mode with nothing yet. A message, and a way to add
 // what is missing for whoever manages songs.
+type TooOldProps = {
+  text: string;
+  /** The part shown, which the main button saves; null: the member chooses one. */
+  part: SongFile | null;
+  midi: SongFile | null;
+  onChoosePart: () => void;
+};
+
+// Figma: Songs, section 22, "Mode content — device too old" (1.1.0).
+function TooOld({ text, part, midi, onChoosePart }: TooOldProps) {
+  const { t } = useTranslation();
+  const partFile = useSaveFile(part ? downloadAddress(part) : null);
+  const midiFile = useSaveFile(midi ? downloadAddress(midi) : null);
+  return (
+    <div className="songs-nothing">
+      <Icon name="Smartphone" size={40} />
+      <h2 className="textHeading">{t('songs.song.tooOldTitle')}</h2>
+      <p className="songs-muted">{text}</p>
+      <Button
+        kind="secondary"
+        icon="Download"
+        aria-busy={partFile.isPreparing || undefined}
+        disabled={partFile.isPreparing}
+        onClick={part ? partFile.save : onChoosePart}
+      >
+        {t('songs.song.downloadPart')}
+      </Button>
+      {midi && (
+        <Button
+          kind="quiet"
+          aria-busy={midiFile.isPreparing || undefined}
+          disabled={midiFile.isPreparing}
+          onClick={midiFile.save}
+        >
+          {t('songs.song.midi')}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function NothingYet({ icon, title, text, action }: NothingYetProps) {
   return (
     <div className="songs-nothing">

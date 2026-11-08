@@ -43,6 +43,8 @@ export type GigAnswer = {
   nickname: string;
   sectionId: number;
   answer: AttendanceAnswer;
+  /** The instrument the member said they come with (1.1.0); null: their own. */
+  instrumentId: number | null;
   /** False for a member who left: their answer no longer counts. */
   isCurrentMember: boolean;
 };
@@ -99,6 +101,18 @@ export type Gig = Omit<GigSummary, 'slots'> & {
   setlistGapSeconds: number;
   /** The length the setlist generator proposes first, in minutes (band.setlistTargetMinutes). */
   setlistTargetMinutes: number;
+  /**
+   * The members who let the signed-in member answer for them, "Peut répondre
+   * pour moi" (1.1.0). Their answers are among those of the slots.
+   */
+  proxyFor: ProxyMember[];
+};
+
+export type ProxyMember = {
+  id: number;
+  nickname: string;
+  instrumentId: number;
+  secondaryInstrumentId: number | null;
 };
 
 export type SetlistSong = {
