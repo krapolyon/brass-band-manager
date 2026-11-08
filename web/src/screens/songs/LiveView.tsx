@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api.ts';
 import { Button } from '../../components/Button.tsx';
@@ -57,8 +57,12 @@ type TrackName = { name: string; instrumentId: number | null };
 // Where the line being played sits in the height of the score: the line
 // before it stays whole above, standing back.
 const READING_LINE = 0.27;
-// In landscape, where the music being played sits: 44 px from the left edge.
-const READING_X = 44;
+// In landscape, where the music being played sits: half a measure from the
+// left edge (half the usual width of a measure of the drawing), so that the
+// end of the measure before stays in sight; 44 px at least.
+const READING_X_MIN = 44;
+// And never more than this share of the width: a large score has wide measures.
+const READING_X_MAX_SHARE = 0.25;
 // The wheel moves the score one line for this much of a turn, and no faster
 // than this: a trackpad sends dozens of small turns for one gesture.
 const WHEEL_LINE = 60;
@@ -274,6 +278,15 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       setDriver('clock');
       setAt(0);
       setBarsHidden(false);
+    };
+    // The phone locked or the app was left (midiEngine.ts, leave()): paused
+    // at the measure being heard; the member plays again from there.
+    created.onStop = () => {
+      window.clearTimeout(nextOne.current);
+      setState('ready');
+      setDriver('clock');
+      setBarsHidden(false);
+      setBeat(null);
     };
     engine.current = created;
     return created;
@@ -512,6 +525,18 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
   // Less motion: the quick jump, with no transition (base.css stops it).
   const scrolling: Scrolling = isMotionReduced() ? 'quickJump' : reading.scrolling;
 
+  // In landscape, how far from the left edge the music being played sits.
+  const readingX = useMemo(() => {
+    const widths = boxes
+      .flatMap((box) => (box ? [box.right - box.left] : []))
+      .sort((a, b) => a - b);
+    const usual = widths[Math.floor(widths.length / 2)] ?? 0;
+    return Math.max(
+      READING_X_MIN,
+      Math.min(Math.round(usual / 2), Math.round(size.width * READING_X_MAX_SHARE)),
+    );
+  }, [boxes, size.width]);
+
   // How far the drawing is moved: the line being played at the reading line
   // (or, in landscape, the music being played at the reading position), plus
   // a drag until the member lets go.
@@ -521,8 +546,13 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       const box = boxes[played[Math.min(now.index, played.length - 1)] ?? 0];
       const fraction = isMotionReduced() ? 0 : now.fraction;
       if (isRibbon) {
-        const x = box ? box.left + (box.right - box.left) * fraction : 0;
-        return READING_X - x + dragged.current;
+        // Up to where the next measure starts when it follows on the drawing:
+        // the space of a barline is crossed too, with no jump at the 1.
+        const written = played[Math.min(now.index, played.length - 1)] ?? 0;
+        const next = played[now.index + 1] === written + 1 ? boxes[written + 1] : undefined;
+        const end = next && next.line === box?.line ? next.left : box?.right;
+        const x = box && end !== undefined ? box.left + (end - box.left) * fraction : 0;
+        return readingX - x + dragged.current;
       }
       const anchor = (viewport.current?.clientHeight ?? 0) * READING_LINE;
       const line = lineAt(now.index);
@@ -558,7 +588,7 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
       }
       return anchor - top + dragged.current;
     },
-    [boxes, played, isRibbon, lineAt, lines, scrolling, measures, timeline.beatQuarters],
+    [boxes, played, isRibbon, readingX, lineAt, lines, scrolling, measures, timeline.beatQuarters],
   );
 
   // Writes where the drawing is, and the playhead of the MIDI player.
@@ -721,7 +751,12 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
     if (isMidiOn) {
       engine.current?.pause();
       cancelNextOne();
-      nextOne.current = window.setTimeout(() => void startMidi(atNow.current), waitMs);
+      nextOne.current = window.setTimeout(() => {
+        // A phone locked during the wait: the sound would not start (see the
+        // pause when the page is hidden). The member plays again on return.
+        if (document.visibilityState === 'hidden') return;
+        void startMidi(atNow.current);
+      }, waitMs);
     } else {
       playFrom(at, waitMs);
     }
@@ -928,6 +963,8 @@ function LiveScore({ song, onClose, midi, midiFailed, score, parts, timeline }: 
           {isRibbon && isPlaying && (
             <div
               className="songs-liveReadingPlace"
+              // Computed from the drawing, like the moves of the score.
+              style={{ width: readingX }}
               data-midi={driver === 'midi' && isPlaying}
               aria-hidden="true"
             />

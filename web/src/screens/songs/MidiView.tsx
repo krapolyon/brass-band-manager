@@ -279,6 +279,8 @@ function MidiPlayer({ song, midi }: Props & { midi: MidiSong }) {
     const created = new MidiEngine(midi);
     engine.current = created;
     created.onEnd = () => isAlive && setPlaying(false);
+    // The phone locked or the app was left: paused (midiEngine.ts, leave()).
+    created.onStop = () => isAlive && setPlaying(false);
     // The sounds load from the first press (midiEngine.ts, issue #70).
     created.onSounds = (state) => isAlive && setSounds(state);
     // What was set before, here or in the Live mode.
