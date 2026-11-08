@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace BrassBand\Access;
 
 use BrassBand\Members\PersonalData;
+use BrassBand\Migrations\DatabaseBehind;
 use BrassBand\Http\ApiError;
 use BrassBand\Http\Input;
 use BrassBand\Http\Json;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 // POST /api/session: signs a member in with their email and password.
 //
@@ -27,6 +29,7 @@ final class SignInAction
         private readonly SessionCookie $cookie,
         private readonly Profile $profile,
         private readonly PersonalData $personal,
+        private readonly DatabaseBehind $databaseBehind,
     ) {
     }
 
@@ -49,7 +52,19 @@ final class SignInAction
         $this->sessions->removeExpired();
         [$current, $token] = $this->sessions->signIn($memberId);
 
-        return $this->cookie->write(Json::write($response, $this->profile->of($current)), $token);
+        try {
+            $profile = $this->profile->of($current);
+        } catch (Throwable $thrown) {
+            // A new version whose migrations wait: the member is signed in all
+            // the same, so that an admin reaches the screen that applies them.
+            if (!$this->databaseBehind->explains($thrown)) {
+                throw $thrown;
+            }
+
+            return $this->cookie->write(Json::write($response, ['error' => 'databaseBehind'], 503), $token);
+        }
+
+        return $this->cookie->write(Json::write($response, $profile), $token);
     }
 
     // The id of the member when the email and the password are right and

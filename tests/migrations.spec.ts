@@ -4,8 +4,10 @@ import {
   dropTables,
   forgetLast,
   LAST,
+  PROFILE,
   repairMigrations,
   unapplyLast,
+  unapplyProfile,
 } from './support/migrations.ts';
 import { addMember, admin, install, installInput, memberPassword } from './support/scenario.ts';
 import { expect, test } from './support/test.ts';
@@ -163,4 +165,58 @@ test('on an empty database, a migration that fails is not said to be a wrong key
   );
   await expect(page.getByText('Ce n’est pas la bonne clé.')).toBeHidden();
   await expect(page).toHaveURL('/install');
+});
+
+// A new version on a database that has not followed it, so that the app
+// cannot even say who is signed in (api/src/Migrations/DatabaseBehind.php).
+test.describe('a database behind the code', () => {
+  test('an admin already signed in lands on the screen, applies the migration and gets the app back', async ({
+    page,
+  }) => {
+    await signIn(page);
+    unapplyProfile();
+
+    await page.goto('/songs');
+
+    await expect(page).toHaveURL('/band/migrations');
+    await expect(title(page)).toHaveText('Mise à jour de la base');
+    await expect(page.getByText(PROFILE)).toBeVisible();
+    await page.getByRole('button', { name: 'Appliquer les mises à jour' }).click();
+    await panel(page).getByLabel('Mot de passe', { exact: true }).fill(admin.password);
+    await page.keyboard.press('Enter');
+
+    // What happened stays on screen, now that the app works again.
+    await expect(page.getByRole('status')).toContainText('La mise à jour est appliquée.');
+    await page.goto('/');
+    await expect(title(page)).toBeVisible();
+    await expect(page.getByText('mise à jour de la base')).toBeHidden();
+  });
+
+  test('an admin who signs in is led to the screen', async ({ page }) => {
+    unapplyProfile();
+
+    await page.goto('/sign-in');
+    await page.getByLabel('Adresse email').fill(admin.email);
+    await page.getByLabel('Mot de passe', { exact: true }).fill(admin.password);
+    await page.getByRole('button', { name: 'Se connecter' }).click();
+
+    await expect(page).toHaveURL('/band/migrations');
+    await expect(page.getByText(PROFILE)).toBeVisible();
+  });
+
+  test('a member who is not an admin is told to come back later, and sees no migration', async ({
+    page,
+  }) => {
+    const email = addMember({ nickname: 'Lulu', roles: ['MEMBER_MANAGER', 'GIG_MANAGER'] });
+    await signIn(page, email, memberPassword);
+    unapplyProfile();
+
+    await page.goto('/');
+
+    await expect(page).toHaveURL('/band/migrations');
+    await expect(title(page)).toHaveText('L’app change de version');
+    await expect(page.getByText('seuls les admins de la fanfare')).toBeVisible();
+    await expect(page.getByText(PROFILE)).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Appliquer les mises à jour' })).toBeHidden();
+  });
 });
