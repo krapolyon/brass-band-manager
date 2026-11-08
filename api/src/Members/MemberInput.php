@@ -20,6 +20,8 @@ final class MemberInput
         public readonly ?string $city = null,
         public readonly ?string $countryCode = null,
         public readonly ?string $addressInstructions = null,
+        // A second instrument the member can bring to a gig (1.1.0); null: none.
+        public readonly ?int $secondaryInstrumentId = null,
     ) {
     }
 }

@@ -39,7 +39,7 @@ final class Profile
         $profile = $this->database->fetchAssociative(
             'SELECT id, nickname, firstName, lastName, email, mobilePhone,
                     streetAddress, postalCode, city, countryCode, addressInstructions, photoPath,
-                    instrumentId, status, language, colorScheme, accentTheme,
+                    instrumentId, secondaryInstrumentId, proxyMemberId, status, language, colorScheme, accentTheme,
                     hasHighContrast, hasIncreasedSpacing, hasLegibleFont, hasReducedMotion, hasExtendedTimeouts
              FROM member
              WHERE id = ?',

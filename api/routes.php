@@ -44,6 +44,7 @@ use BrassBand\Discord\Discord;
 use BrassBand\Gigs\AnswerAction;
 use BrassBand\Gigs\ChangeGigStatusAction;
 use BrassBand\Gigs\CostumePictures;
+use BrassBand\Gigs\Geocoder;
 use BrassBand\Gigs\Costumes;
 use BrassBand\Gigs\DeleteCostumeAction;
 use BrassBand\Gigs\DeleteGigAction;
@@ -55,6 +56,7 @@ use BrassBand\Gigs\ListCostumesAction;
 use BrassBand\Gigs\ListGigsAction;
 use BrassBand\Gigs\RemindGigAction;
 use BrassBand\Gigs\Reminders;
+use BrassBand\Gigs\RequireAnswerer;
 use BrassBand\Gigs\RequireGigEditor;
 use BrassBand\Gigs\SaveCostumeAction;
 use BrassBand\Gigs\SaveGigAction;
@@ -84,6 +86,7 @@ use BrassBand\Access\ValidateInvitationAction;
 use BrassBand\Access\ForgotPasswordAction;
 use BrassBand\Mail\Mailer;
 use BrassBand\Access\CurrentPassword;
+use BrassBand\Migrations\DatabaseBehind;
 use BrassBand\Migrations\ListMigrationsAction;
 use BrassBand\Migrations\Migrations;
 use BrassBand\Migrations\RunMigrationsAction;
@@ -99,6 +102,7 @@ use BrassBand\Access\PasswordLinks;
 use BrassBand\Access\RequireSelfOrPermission;
 use BrassBand\Access\SignInFailures;
 use BrassBand\Access\UpdatePreferencesAction;
+use BrassBand\Access\UpdateProxyAction;
 use BrassBand\Access\UsePasswordLinkAction;
 use BrassBand\Members\ChangeStatusAction;
 use BrassBand\Members\CreateMemberAction;
@@ -156,7 +160,7 @@ use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
 /**
- * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, encryptionKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, discord?: array{botToken?: string, answersFrom?: string}} $config
+ * @param array{storageFolder: string, importFolder?: string, migrationsFolder: string, installKey?: string, encryptionKey?: string, session?: array{secureCookie?: bool}, appUrl?: string, mail?: array<string, mixed>, clipThumbnailUrls?: list<string>, push?: array<string, mixed>, mapTilesUrl?: string, geocoding?: array{url?: string, answersFrom?: string}, discord?: array{botToken?: string, answersFrom?: string}} $config
  */
 return function (App $app, Connection $database, array $config): void {
     $sessions = new Sessions($database);
@@ -170,6 +174,7 @@ return function (App $app, Connection $database, array $config): void {
     // (bootstrap.php says where): a file leaves it only through an action.
     $files = new Files($config['storageFolder']);
     $migrations = new Migrations($database, $config['migrationsFolder'], $personal);
+    $databaseBehind = new DatabaseBehind($database, $config['migrationsFolder']);
     $currentPassword = new CurrentPassword($database, $sessions, new SignInFailures($database));
     $logos = new LogoStore($database, $files);
     $mailer = new Mailer($config);
@@ -192,6 +197,8 @@ return function (App $app, Connection $database, array $config): void {
     $songPush = new SongPush($database, $push);
     // The bot of the band, which reads Discord (docs/discord-bot.md).
     $discord = Discord::from($config);
+    // Where the address of a gig is, when no coordinates are typed.
+    $geocoder = Geocoder::from($config);
     // Export, import and reprise of the data (model/export-import.md): the
     // folder "import" beside storage/, where a large zip arrives by FTP.
     $transferFolder = new TransferFolder($config['importFolder'] ?? dirname($config['storageFolder']) . '/import');
@@ -219,7 +226,7 @@ return function (App $app, Connection $database, array $config): void {
     $app->get('/api/install', new InstallStatusAction($database));
     $app->post('/api/install/key', new CheckInstallKeyAction($database, $installKey, $migrations))->add($refusals);
     $app->post('/api/install', new InstallAction($database, $sessions, $cookie, $profile, $installKey, $logos, $migrations, $personal))->add($refusals);
-    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal))->add($refusals);
+    $app->post('/api/session', new SignInAction($database, $sessions, $cookie, $profile, $personal, $databaseBehind))->add($refusals);
     // Whoever holds a password link is not signed in yet.
     $app->post('/api/passwordLink/request', new ForgotPasswordAction($database, $links, $mailer, $personal))->add($emailRequests);
     $app->post('/api/passwordLink/check', new CheckPasswordLinkAction($database, $links, $photos, $sections, $personal))->add($refusals);
@@ -260,6 +267,7 @@ return function (App $app, Connection $database, array $config): void {
         $migrations,
         $currentPassword,
         $discord,
+        $geocoder,
         $transferFolder,
         $transfers,
         $mailer,
@@ -270,6 +278,7 @@ return function (App $app, Connection $database, array $config): void {
     ): void {
         $group->get('/api/me', new MeAction($profile));
         $group->put('/api/me/preferences', new UpdatePreferencesAction($database, $profile));
+        $group->put('/api/me/proxy', new UpdateProxyAction($database, $profile));
         // What the member wants to be told of, on every device that receives.
         $notifications = new NotificationsAction($database);
         $group->get('/api/me/notifications', $notifications);
@@ -325,7 +334,7 @@ return function (App $app, Connection $database, array $config): void {
         // 3. One's own record or one's own gig, or a permission
         // ---------------------------------------------------------------
         $selfOrManager = new RequireSelfOrPermission(Permission::MANAGE_MEMBERS);
-        $group->put('/api/members/{id:[0-9]+}', new UpdateMemberAction($database, $members, $record))
+        $group->put('/api/members/{id:[0-9]+}', new UpdateMemberAction($database, $members, $record, $links, $invitations))
             ->add($selfOrManager);
         $group->put('/api/members/{id:[0-9]+}/photo', new UpdatePhotoAction($members, $photos, removes: false))
             ->add($selfOrManager);
@@ -334,16 +343,17 @@ return function (App $app, Connection $database, array $config): void {
 
         // A gig is edited by whoever manages gigs and by its organisers.
         $editGig = new RequireGigEditor($gigs);
-        $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs))->add($editGig);
+        $group->put('/api/gigs/{id:[0-9]+}', new SaveGigAction($database, $gigs, $geocoder))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/status', new ChangeGigStatusAction($database, $gigs, $setlists, $gigPush))->add($editGig);
         $group->post('/api/gigs/{id:[0-9]+}/slots', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new SaveSlotAction($database, $gigs))->add($editGig);
         $group->delete('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}', new DeleteSlotAction($database, $gigs))->add($editGig);
         // "Relancer": a notification to who has not answered for the gig.
         $group->post('/api/gigs/{id:[0-9]+}/reminder', new RemindGigAction($database, $gigs, new Reminders($database, $push)))->add($editGig);
-        // The answer of a member who told them.
+        // The answer of a member who told them; also noted by the member they
+        // designated to answer for them (1.1.0).
         $group->put('/api/gigs/{id:[0-9]+}/slots/{slotId:[0-9]+}/answers/{memberId:[0-9]+}', new AnswerAction($database, $gigs, $gigPush, forAnother: true))
-            ->add($editGig);
+            ->add(new RequireAnswerer($gigs));
 
         // ---------------------------------------------------------------
         // 4. Permission
@@ -423,7 +433,7 @@ return function (App $app, Connection $database, array $config): void {
         // Creating a gig and deleting a draft are for who manages gigs: an
         // organiser edits the gig they were given, nothing more.
         $manageGigs = new RequirePermission(Permission::MANAGE_GIGS);
-        $group->post('/api/gigs', new SaveGigAction($database, $gigs))->add($manageGigs);
+        $group->post('/api/gigs', new SaveGigAction($database, $gigs, $geocoder))->add($manageGigs);
         $group->delete('/api/gigs/{id:[0-9]+}', new DeleteGigAction($database, $gigs))->add($manageGigs);
 
         // Setlists are written and played live by who manages setlists.

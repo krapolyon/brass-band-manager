@@ -10,6 +10,7 @@ use BrassBand\Database;
 use BrassBand\Http\AfterResponse;
 use BrassBand\Http\BodyLimit;
 use BrassBand\Http\ErrorHandler;
+use BrassBand\Migrations\DatabaseBehind;
 use Slim\Factory\AppFactory;
 
 // An error is never shown to whoever made the request, whatever the host is
@@ -43,7 +44,10 @@ $app->add(new BodyLimit());
 // Added last, so that it wraps everything above: whatever goes wrong in a
 // route ends in ErrorHandler. Slim's own display and logging are turned off.
 $app->addErrorMiddleware(false, false, false)
-    ->setDefaultErrorHandler(new ErrorHandler($app->getResponseFactory()));
+    ->setDefaultErrorHandler(new ErrorHandler(
+        $app->getResponseFactory(),
+        new DatabaseBehind($database, $config['migrationsFolder']),
+    ));
 
 (require __DIR__ . '/../routes.php')($app, $database, $config);
 

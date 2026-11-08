@@ -45,4 +45,20 @@ final class Input
 
         return (new MapperBuilder())->mapper()->map($class, $body);
     }
+
+    // A yes-or-no of the address, for a request whose body is not JSON (a
+    // file, FileBody): "?quiet=1". Absent is no, 1 is yes; any other value is
+    // refused (400, invalidQuery), so that a typo is never read as a no.
+    public static function flag(ServerRequestInterface $request, string $name): bool
+    {
+        $query = $request->getQueryParams();
+        if (!array_key_exists($name, $query)) {
+            return false;
+        }
+        if ($query[$name] !== '1') {
+            throw new ApiError(400, 'invalidQuery');
+        }
+
+        return true;
+    }
 }

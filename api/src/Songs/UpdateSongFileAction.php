@@ -6,6 +6,7 @@ namespace BrassBand\Songs;
 
 use BrassBand\Access\CurrentMember;
 use BrassBand\Http\FileBody;
+use BrassBand\Http\Input;
 use BrassBand\Http\Json;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -17,7 +18,9 @@ use Psr\Http\Message\ServerRequestInterface;
 // The file is the body of the request, as it is (FileBody). What it is is
 // decided from its content: a file that is not of the kind its address says
 // is refused. A MuseScore file that replaces another one, and a part given or
-// replaced, are notified (SongPush).
+// replaced, are notified (SongPush), unless the address says "?quiet=1": the
+// switch "Ne pas prévenir la fanfare" of the edit form, for a technical
+// correction (1.1.0, model/songs.md, "A quiet change"). Nothing is stored.
 final class UpdateSongFileAction
 {
     /**
@@ -40,19 +43,20 @@ final class UpdateSongFileAction
     {
         $me = CurrentMember::of($request);
         $songId = (int) $arguments['id'];
+        $isQuiet = Input::flag($request, 'quiet');
         $content = $this->removes ? null : FileBody::from($request, SongFiles::MAX_BYTES[$this->kind]);
 
         if ($this->kind === 'part') {
             $instrumentId = (int) ($arguments['instrumentId'] ?? 0);
             $this->files->replacePart($songId, $instrumentId, $content, $me->id);
-            if ($content !== null) {
+            if ($content !== null && !$isQuiet) {
                 $this->songPush->partChanged($songId, $instrumentId, $me->sessionId);
             }
         } else {
             // 404 before the file is looked at.
             $hadScore = $this->songs->row($songId)['museScorePath'] !== null;
             $this->files->replace($songId, $this->kind, $content, $me->id);
-            if ($this->kind === 'museScore' && $content !== null && $hadScore) {
+            if ($this->kind === 'museScore' && $content !== null && $hadScore && !$isQuiet) {
                 $this->songPush->scoreReplaced($songId, $me->sessionId);
             }
         }

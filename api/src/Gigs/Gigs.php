@@ -26,7 +26,7 @@ final class Gigs
     // The columns are listed one by one on purpose: a column added to the
     // table is never sent by accident.
     private const COLUMNS = 'g.id, g.name, g.status, g.startsOn, g.endsOn, g.meetingTime, g.placeName, g.placeUrl,
-        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
+        g.streetAddress, g.postalCode, g.city, g.latitude, g.longitude, g.hasFoundCoordinates, g.notes, g.discordChannelId, g.remindedAt, g.proposedAt';
 
     private readonly Setlists $setlists;
 
@@ -50,6 +50,18 @@ final class Gigs
         return $member->can(Permission::MANAGE_GIGS) || $this->database->fetchOne(
             'SELECT 1 FROM gigOrganizer WHERE gigId = ? AND memberId = ?',
             [$gigId, $member->id],
+        ) !== false;
+    }
+
+    // Who may note the answer of another member on a gig (model/gigs.md,
+    // entry 2, "Access rights"): who may edit the gig, and the member that one
+    // designated to answer for them ("Peut répondre pour moi", 1.1.0), for
+    // that member only.
+    public function mayAnswerFor(CurrentMember $member, int $gigId, int $otherId): bool
+    {
+        return $this->mayEdit($member, $gigId) || $this->database->fetchOne(
+            'SELECT 1 FROM member WHERE id = ? AND proxyMemberId = ?',
+            [$otherId, $member->id],
         ) !== false;
     }
 
@@ -174,6 +186,8 @@ final class Gigs
             'streetAddress' => $gig['streetAddress'],
             'latitude' => $gig['latitude'] === null ? null : (float) $gig['latitude'],
             'longitude' => $gig['longitude'] === null ? null : (float) $gig['longitude'],
+            // Found from the address by the server, not typed (1.1.0): the form says so.
+            'hasFoundCoordinates' => (bool) $gig['hasFoundCoordinates'],
             // The map of the meeting point: only a gig that has coordinates has one.
             'mapTilesUrl' => $gig['latitude'] === null || $gig['longitude'] === null || $this->mapTilesUrl === '' ? null : $this->mapTilesUrl,
             'notes' => $gig['notes'],
@@ -208,6 +222,22 @@ final class Gigs
             // (band.setlistGapSeconds), and the length its generator proposes
             // first (band.setlistTargetMinutes, 0.4.0, issue #60).
             ...$this->setlistSettings(),
+            // The members who let the viewer answer for them ("Peut répondre
+            // pour moi", 1.1.0): sent to the viewer only, never to anyone else.
+            // Their answers are in those of the slots.
+            'proxyFor' => array_map(
+                fn (array $member) => [
+                    'id' => (int) $member['id'],
+                    'nickname' => (string) $member['nickname'],
+                    'instrumentId' => (int) $member['instrumentId'],
+                    'secondaryInstrumentId' => $member['secondaryInstrumentId'] === null ? null : (int) $member['secondaryInstrumentId'],
+                ],
+                $this->database->fetchAllAssociative(
+                    'SELECT id, nickname, instrumentId, secondaryInstrumentId FROM member
+                     WHERE proxyMemberId = ? AND status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ') ORDER BY nickname',
+                    [$viewer->id],
+                ),
+            ),
         ];
 
         return $view;
@@ -317,7 +347,8 @@ final class Gigs
              FROM gigSlot s
              LEFT JOIN (gigSlotAttendance a
                  JOIN member m ON m.id = a.memberId AND m.status IN ({$current})
-                 JOIN instrument i ON i.id = m.instrumentId
+                 -- The instrument the member said they come with (1.1.0), else their own.
+                 JOIN instrument i ON i.id = COALESCE(a.instrumentId, m.instrumentId)
              ) ON a.gigSlotId = s.id AND a.answer IN ('YES', 'IF_NEEDED')
              WHERE s.gigId IN (?)
              ORDER BY m.nickname",
@@ -374,27 +405,28 @@ final class Gigs
             return [];
         }
         $missing = $this->missingSections($gigIds);
-        $ownSection = (int) $this->database->fetchOne(
-            'SELECT i.sectionId FROM member m JOIN instrument i ON i.id = m.instrumentId WHERE m.id = ?',
-            [$viewer->id],
-        );
+        // The section the viewer comes in: the one of the instrument they said
+        // they come with on this slot (1.1.0), else the one of their own.
         $rows = $this->database->fetchAllAssociative(
-            'SELECT s.id, s.gigId, s.name, s.position, s.note, s.costumeId, own.answer AS ownAnswer
-             FROM gigSlot s LEFT JOIN gigSlotAttendance own ON own.gigSlotId = s.id AND own.memberId = ?
+            'SELECT s.id, s.gigId, s.name, s.position, s.note, s.costumeId, own.answer AS ownAnswer, i.sectionId AS ownSectionId
+             FROM gigSlot s
+             LEFT JOIN gigSlotAttendance own ON own.gigSlotId = s.id AND own.memberId = ?
+             JOIN member me ON me.id = ?
+             JOIN instrument i ON i.id = COALESCE(own.instrumentId, me.instrumentId)
              WHERE s.gigId IN (?) ORDER BY s.gigId, s.position, s.id',
-            [$viewer->id, $gigIds],
-            [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+            [$viewer->id, $viewer->id, $gigIds],
+            [ParameterType::INTEGER, ParameterType::INTEGER, ArrayParameterType::INTEGER],
         );
 
         $answers = [];
         if ($withAnswers) {
             $current = AccessRules::SIGN_IN_STATUSES_SQL;
             $given = $this->database->fetchAllAssociative(
-                "SELECT a.gigSlotId, a.memberId, a.answer, m.nickname, i.sectionId, m.status IN ({$current}) AS isCurrentMember
+                "SELECT a.gigSlotId, a.memberId, a.answer, a.instrumentId, m.nickname, i.sectionId, m.status IN ({$current}) AS isCurrentMember
                  FROM gigSlotAttendance a
                  JOIN gigSlot s ON s.id = a.gigSlotId
                  JOIN member m ON m.id = a.memberId
-                 JOIN instrument i ON i.id = m.instrumentId
+                 JOIN instrument i ON i.id = COALESCE(a.instrumentId, m.instrumentId)
                  WHERE s.gigId IN (?) ORDER BY m.nickname",
                 [$gigIds],
                 [ArrayParameterType::INTEGER],
@@ -404,8 +436,11 @@ final class Gigs
                     'memberId' => (int) $answer['memberId'],
                     // By nickname, so that a member who left still reads on a gig already played.
                     'nickname' => (string) $answer['nickname'],
+                    // The section of the instrument the member comes with.
                     'sectionId' => (int) $answer['sectionId'],
                     'answer' => (string) $answer['answer'],
+                    // The instrument they said they come with (1.1.0); null: their own.
+                    'instrumentId' => $answer['instrumentId'] === null ? null : (int) $answer['instrumentId'],
                     // The answers of a member who left do not count for playability.
                     'isCurrentMember' => (bool) $answer['isCurrentMember'],
                 ];
@@ -429,7 +464,7 @@ final class Gigs
                 // screen names them, so that they can be told they are needed.
                 'playableThanksTo' => $missing[$slotId]['thanksTo'] ?? [],
                 // The section of the member is the last one without anyone.
-                'ownYesMakesPlayable' => !in_array($row['ownAnswer'], [AttendanceAnswer::YES->value, AttendanceAnswer::IF_NEEDED->value], true) && $without === [$ownSection],
+                'ownYesMakesPlayable' => !in_array($row['ownAnswer'], [AttendanceAnswer::YES->value, AttendanceAnswer::IF_NEEDED->value], true) && $without === [(int) $row['ownSectionId']],
             ];
             if ($withAnswers) {
                 $slot['note'] = $row['note'];

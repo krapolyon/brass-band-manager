@@ -24,7 +24,8 @@ final class Sections
     /**
      * The sections of the band with their instruments, in the order of the band.
      *
-     * memberCount is the number of current members who play the instrument.
+     * memberCount is the number of current members who play the instrument,
+     * or hold it as secondary (1.1.0): either way it cannot be deleted.
      * Invited members and members who left are not counted, but their record
      * still holds the instrument, which keeps it from being deleted: whoever
      * manages sections ($forManaging) is told how many they are.
@@ -37,8 +38,8 @@ final class Sections
         $instruments = [];
         $rows = $this->database->fetchAllAssociative(
             "SELECT i.id, i.sectionId, i.name, i.position,
-                    (SELECT COUNT(*) FROM member m WHERE m.instrumentId = i.id AND m.status IN ({$current})) AS memberCount,
-                    (SELECT COUNT(*) FROM member m WHERE m.instrumentId = i.id AND m.status NOT IN ({$current})) AS otherMemberCount
+                    (SELECT COUNT(*) FROM member m WHERE (m.instrumentId = i.id OR m.secondaryInstrumentId = i.id) AND m.status IN ({$current})) AS memberCount,
+                    (SELECT COUNT(*) FROM member m WHERE (m.instrumentId = i.id OR m.secondaryInstrumentId = i.id) AND m.status NOT IN ({$current})) AS otherMemberCount
              FROM instrument i ORDER BY i.position, i.name",
         );
         foreach ($rows as $instrument) {

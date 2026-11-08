@@ -45,14 +45,25 @@ final class Migrations
      */
     public function pending(): array
     {
+        return self::pendingIn($this->database, $this->folder);
+    }
+
+    /**
+     * The same, without what applying them needs: for DatabaseBehind, which
+     * only asks whether some wait.
+     *
+     * @return list<string>
+     */
+    public static function pendingIn(Connection $database, string $folder): array
+    {
         try {
-            $applied = $this->database->fetchFirstColumn('SELECT name FROM schemaMigration');
+            $applied = $database->fetchFirstColumn('SELECT name FROM schemaMigration');
         } catch (TableNotFoundException) {
             // A database nothing was ever applied to.
             $applied = [];
         }
 
-        $names = array_map(basename(...), glob($this->folder . '/*.sql') ?: []);
+        $names = array_map(basename(...), glob($folder . '/*.sql') ?: []);
         sort($names);
 
         return array_values(array_diff($names, $applied));

@@ -228,7 +228,7 @@ final class Reprise
 
             $id = $this->knownMembers[$email] ?? null;
             $row = $id === null ? false : $this->database->fetchAssociative(
-                'SELECT nickname, firstName, lastName, email, mobilePhone, streetAddress, postalCode, city, countryCode, addressInstructions, instrumentId, status, passwordHash IS NOT NULL AS hasPassword, language FROM member WHERE id = ?',
+                'SELECT nickname, firstName, lastName, email, mobilePhone, streetAddress, postalCode, city, countryCode, addressInstructions, instrumentId, secondaryInstrumentId, status, passwordHash IS NOT NULL AS hasPassword, language FROM member WHERE id = ?',
                 [$id],
             );
             $current = $row === false ? null : $this->personal->opened($row);
@@ -282,6 +282,8 @@ final class Reprise
                     city: $kept('city'),
                     countryCode: $kept('countryCode'),
                     addressInstructions: $kept('addressInstructions'),
+                    // Not in the spreadsheets: the one set in the app stays (1.1.0).
+                    secondaryInstrumentId: is_numeric($current['secondaryInstrumentId'] ?? null) ? (int) $current['secondaryInstrumentId'] : null,
                 ), $id);
             } catch (ApiError $refused) {
                 foreach ($refused->fields as $field => $error) {
