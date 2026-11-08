@@ -9,8 +9,6 @@ What changes in the app, version after version. This file is written by
 
 - Sending an invitation again shows a confirmation panel, and the link to pass on by another means if the email lands in spam. “Copier un lien d’invitation” gives a link without any email.
 - When editing a song, “Ne pas prévenir la fanfare” saves its files without any notification, for a technical correction.
-- On a phone held sideways, the Live mode shows the score as one line that scrolls to the left, the controls at the right.
-- Reading settings in the Live mode, kept on the device: a continuous scrolling or a slower jump, the size of the score, a visual metronome with the first beat marked, and controls hidden while playing.
 - A gig with an address and no GPS coordinates shows its map: the server finds where the address is (OpenStreetMap), the form says so under the field, and coordinates typed by hand still win.
 - From a song, “Toutes les partitions” downloads every part in one .zip.
 - A member can hold a secondary instrument and say which one they bring to a gig; the gig counts them in that section.
@@ -18,26 +16,18 @@ What changes in the app, version after version. This file is written by
 
 ### Changed
 
-- On a tablet or a computer, the Live mode shows the score as one column at the width of the screen, never in two or three columns side by side.
-- The tempo of the Live mode is set in one place: a tap on the tempo opens a sheet to set it with − and +, or to tap it.
-- Playing the Live mode with the MIDI is a switch beside Play; the tracks of the MIDI are set in the new reading settings, and a line shows where the MIDI is in the measure.
-- The visual metronome is on by default when the Live mode plays with the MIDI, and off otherwise, until the member chooses.
+- The Live mode was redesigned: “Jouer avec le MIDI” is easier to see, written in full. The button at the left opens a panel with both the manual tempo and the tap. A settings screen chooses how the lines jump and whether a visual metronome shows. When the MIDI plays, a playhead moves at the tempo of the song. The size of the score can be adjusted. The controls can be made smaller to leave more room to the score. In landscape the score scrolls as one continuous line; on a tablet or a computer it is one column at the width of the screen.
 - On a device older than the app (before iOS 16.4), the PDF, MIDI and Live modes say so and offer to download the part, instead of blaming the network.
-- A power member who has not answered is no longer waited for: left out of the list of who comes and of its counts; who notes the answers finds them in a folded group at the end.
-- The interface no longer speaks of a member in the masculine.
+- Only the power members who answered show in the attendance, whatever their answer. Who manages gigs finds those who did not answer in a folded group at the end, to keep answering for them.
+- The texts of the interface were rewritten so as not to show a gender (epicene wording).
 
 ### Fixed
 
 - Fixed the wrong key of a MuseScore file edited by a script (e.g. “8 bit”).
 - When the first measure has no tempo, the tempo of a song is the one where the music starts; the MIDI player and the Live mode no longer play it too fast.
-- Songs imported before 1.1.0 whose MuseScore file was edited by a script may need their file dropped again to fix the MIDI.
 - The MIDI player plays on a computer whose sound takes time to start (a Bluetooth headset, Safari, Windows). When the sound of the device does not start, the app says so and offers to try again, instead of blaming the network.
 - The record of an invited member can be edited, its email included; a changed email cancels the former invitation link and sends a new one to the new address.
 - In the list of songs, the filters “Proposés” and “Abandonnés” show those songs alone, one filter at a time.
-- In the Live mode with the MIDI, the line that shows where the MIDI is moves smoothly, on the note being heard, even with a Bluetooth headset.
-- The beat being played of the visual metronome no longer pushes the others aside.
-- In the Live mode, the score no longer stands still while it plays after the phone turned or a sheet closed.
-- On a phone in landscape, the bar of the Live mode is wide enough for its tiles, beside the notch too.
 - Scores show on browsers a year or two old (iOS 17 and 18 among them): they get a version of the PDF reader written for them.
 - On iPhone and iPad, downloading a file goes through the share sheet (“Enregistrer dans Fichiers”, AirDrop…) instead of opening it in the app with no way back.
 

@@ -388,7 +388,7 @@ All of it is in `api/src/Access/`, and the rules come from [model/members.md](..
 | `GET /api/sections` | Signed in | Sections with their pictogram, and their instruments with the number of members who play each |
 | `POST`, `PUT`, `DELETE` on `/api/sections` and `/api/instruments` | `MANAGE_SECTIONS` | Adds, renames, moves, deletes; sets the pictogram of a section, one of `SectionIcons::AVAILABLE` |
 | `PUT /api/me/preferences`, `PUT /api/me/password` | Oneself | Preferences; password, with the current one |
-| `PUT /api/me/proxy` | Oneself | "Peut répondre pour moi" (1.1.0, `UpdateProxyAction`): `{ proxyMemberId }`, a current or invited member other than oneself, or null. Answered with the profile |
+| `PUT /api/me/proxy` | Oneself | "Peut répondre pour moi" (1.1.0, `UpdateProxyAction`): `{ proxyMemberId }`, a current member (`ACTIVE` or `POWER_MEMBER`) other than oneself, or null. Answered with the profile |
 | `GET`, `PUT /api/me/notifications` | Oneself | The seven notification settings of the account, all at once, each `OFF`, `PUSH`, `EMAIL` or `PUSH_AND_EMAIL` (`NotificationsAction`); the reminders never `OFF`, the live setlist never by email. Not in `/api/me`: see below |
 | `GET`, `POST`, `PUT /api/me/calendar` | Oneself | The calendar token of the member: read it, create it when there is none, replace it (`CalendarAction`). Not in `/api/me` either |
 | `GET /api/calendar/{token}.ics` | Anyone holding the address | The calendar feed of a member (`CalendarFeedAction`, `CalendarFeed`); see "The calendar feed" |

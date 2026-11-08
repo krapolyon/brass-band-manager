@@ -1,5 +1,6 @@
 # Export and import of the data — format 1
 
+> v1.5 — 2026-11-08 · For 1.1.0, decided by the owner · No change to the format · The secondary instrument, the member designated by "Peut répondre pour moi" and the instrument brought to a gig travel with the members and the answers
 > v1.4 — 2026-10-24 · Validated by the owner, for 0.4.0 · No change to the tables · Written as built: a mobile number without `+` is refused; the files are written in their place and deleted if the load fails; the admin who imports must be able to sign in with the file; a load invites only the members it adds and cancels the link of a member whose roles change; the size of each file of the zip is checked before it is read; the browser of the admin produces the MIDI file and the MusicXML of the MuseScore files of a reprise
 > v1.3 — 2026-10-24 · Validated by the owner, for 0.4.0 · The reprise: loading members, songs, gigs, slots and answers from spreadsheets (issue #43); an import that adds members without a password sends their invitations (issue #50); `band.setlistTargetMinutes` travels with the settings
 > v1.2 — 2026-10-18 · Validated · The new fields of a song and of the band travel with them (0.3.0); the encrypted fields of a member travel in clear in the zip (0.3.1, Members v1.23)
@@ -64,6 +65,7 @@ A reference to a member is its email, to a song its name, to an instrument its n
 - **Encrypted fields** (Members domain, "Encryption") are written in clear in the file and encrypted again with the key of the server that imports them; `emailHash` is not exported, it is computed again.
 - **Passwords** travel as their hashes (`passwordHash`, PHP `password_hash()`): they are never readable, and the members keep their passwords. A member who was invited and has not set one arrives as invited, without a pending link: the admin sends a new invitation.
 - **Positions** (`section.position`, `instrument.position`, `costume.position`, …) are taken from the file.
+- **Who may answer for a member** (`member.proxyMemberId`, 1.1.0, owner 2026-11-08) travels as `proxyMemberEmail`, the email of the member designated. It is read once every member of the file is in, so that the designated member may come later in the file. It must be a current member (`ACTIVE` or `POWER_MEMBER`) other than the member; otherwise the import refuses, like any reference that cannot be found. The secondary instrument travels as `secondaryInstrument`, by its name, and the instrument a member brings to a gig as `instrument` on the answer.
 
 ## The zip
 

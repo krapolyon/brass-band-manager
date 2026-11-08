@@ -366,10 +366,10 @@
       }
     },
     "status": {
-      "INVITED": "Invité",
-      "ACTIVE": "Actif",
+      "INVITED": "Invité.e",
+      "ACTIVE": "Actif.ve",
       "POWER_MEMBER": "Power member",
-      "LEFT": "Parti",
+      "LEFT": "Parti.e",
       "EXPIRED": "Invitation expirée"
     },
     "form": {
@@ -384,7 +384,7 @@
   },
   "onboarding": {
     "title": "Bienvenue, {{nickname}} !",
-    "lead": "On a rempli ce qu’on savait de toi. Vérifie, corrige, complète : ces infos ne se voient qu’une fois dans l’app.",
+    "lead": "On a rempli ce qu’on savait de toi. Vérifie, corrige, complète : ces infos ne sont visibles qu’après connexion.",
     "continue": "Continuer",
     "password": {
       "title": "Plus qu’un mot de passe",

@@ -29,11 +29,11 @@ final class UpdateProxyAction
         $proxyId = Input::from($request, ProxyInput::class)->proxyMemberId;
         $me = CurrentMember::of($request);
 
-        // A current member other than oneself; an invited one too, who
-        // answers once in.
+        // A current member other than oneself: the profile offers no one
+        // else, a member not seeing the invited ones (owner, 2026-11-08).
         if ($proxyId !== null) {
             $isAllowed = $proxyId !== $me->id && (int) $this->database->fetchOne(
-                "SELECT COUNT(*) FROM member WHERE id = ? AND status IN ('INVITED', " . AccessRules::SIGN_IN_STATUSES_SQL . ')',
+                'SELECT COUNT(*) FROM member WHERE id = ? AND status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')',
                 [$proxyId],
             ) === 1;
             if (!$isAllowed) {

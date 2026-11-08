@@ -493,9 +493,9 @@ final class ExportImport
             }
             $proxyEmail = is_string($member['proxyMemberEmail'] ?? null) ? mb_strtolower(trim($member['proxyMemberEmail'])) : null;
             $proxyId = $proxyEmail === null ? null : $this->memberId($proxyEmail);
-            // As the profile allows it: an invited or current member.
+            // As the profile allows it: a current member.
             $isAllowed = $proxyId !== null && $proxyId !== $id && $this->database->fetchOne(
-                "SELECT 1 FROM member WHERE id = ? AND status IN ('INVITED', " . AccessRules::SIGN_IN_STATUSES_SQL . ')',
+                'SELECT 1 FROM member WHERE id = ? AND status IN (' . AccessRules::SIGN_IN_STATUSES_SQL . ')',
                 [$proxyId],
             ) !== false;
             if ($proxyEmail !== null && !$isAllowed) {

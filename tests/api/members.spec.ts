@@ -728,7 +728,9 @@ test.describe('secondary instrument and "Peut répondre pour moi" (1.1.0)', () =
     playwright,
   }) => {
     const zaza = await deviceOf(playwright, email('Zaza'));
-    for (const nickname of ['Zaza', 'Lolo']) {
+    // Neither oneself, nor a member who left, nor an invited member: the
+    // profile offers current members only (owner, 2026-11-08).
+    for (const nickname of ['Zaza', 'Lolo', 'Titi']) {
       const refused = await zaza.put('/api/me/proxy', {
         data: { proxyMemberId: memberId(nickname) },
       });
@@ -738,9 +740,6 @@ test.describe('secondary instrument and "Peut répondre pour moi" (1.1.0)', () =
       422,
     );
 
-    // An invited member may be designated: they answer once in.
-    const titi = await zaza.put('/api/me/proxy', { data: { proxyMemberId: memberId('Titi') } });
-    expect(titi.status()).toBe(200);
     const popo = await zaza.put('/api/me/proxy', { data: { proxyMemberId: memberId('Popo') } });
     expect((await popo.json()).proxyMemberId).toBe(memberId('Popo'));
 

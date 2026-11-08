@@ -96,7 +96,7 @@ test.describe('the list', () => {
       'Tonton',
       'Zaza',
     ]);
-    await expect(rows(page).filter({ hasText: 'Bouboule' })).toContainText('Parti');
+    await expect(rows(page).filter({ hasText: 'Bouboule' })).toContainText('Parti.e');
     await expect(page.getByText('1 invitation en attente, 1 départ.')).toBeVisible();
   });
 
@@ -122,10 +122,10 @@ test.describe('the list', () => {
       'Rôles',
     ]);
     const line = (nickname: string) => table.getByRole('row').filter({ hasText: nickname });
-    await expect(line('Zaza')).toContainText('Actif');
+    await expect(line('Zaza')).toContainText('Actif.ve');
     await expect(line('Tonton')).toContainText('Power member');
     await expect(line('Kiki')).toContainText('Invitation expirée');
-    await expect(line('Bouboule')).toContainText('Parti');
+    await expect(line('Bouboule')).toContainText('Parti.e');
     await expect(line('Momo')).toContainText('Gère les fanfarons');
     await expect(line('Jibé')).toContainText('Sax Ténor');
     // The list of a phone is not there twice.
@@ -185,7 +185,7 @@ test.describe('an invitation', () => {
     await other.close();
 
     await panel.getByRole('button', { name: 'Fermer' }).click();
-    await expect(rows(page).filter({ hasText: 'Riton' })).toContainText('Invité');
+    await expect(rows(page).filter({ hasText: 'Riton' })).toContainText('Invité.e');
 
     // Shown once: neither a reload nor the history of the browser brings it back.
     await page.reload();

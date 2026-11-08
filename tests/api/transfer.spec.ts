@@ -646,3 +646,75 @@ test.describe('the checks added after the review', () => {
     ]);
   });
 });
+
+// 1.1.0 (model/export-import.md v1.5): who may answer for a member travels as
+// the email of the member designated, a current member other than oneself.
+test.describe('"Peut répondre pour moi" in an export', () => {
+  test('travels as proxyMemberEmail and comes back; an invited member, oneself or a stranger is refused', async ({
+    playwright,
+  }) => {
+    sql(
+      "UPDATE member SET proxyMemberId = (SELECT id FROM (SELECT id FROM member WHERE nickname = 'Momo') AS m) WHERE nickname = 'Zaza'",
+    );
+    const desk = await jibe(playwright);
+    const exported = readZip(
+      await (
+        await desk.post('/api/transfer/export', {
+          data: { password: admin.password, parts: ['settings', 'members'] },
+        })
+      ).body(),
+    );
+    const data = JSON.parse(exported.get('members/data.json')?.toString() ?? '{}');
+    const of = (nickname: string) =>
+      data.member.find((one: { nickname: string }) => one.nickname === nickname);
+    expect(of('Zaza').proxyMemberEmail).toBe(email('Momo'));
+    expect(of('Momo').proxyMemberEmail ?? null).toBeNull();
+
+    // Loaded again after it was emptied: the link comes back.
+    sql('UPDATE member SET proxyMemberId = NULL');
+    const name = await upload(desk, makeZip(Object.fromEntries(exported)), 'export.zip');
+    expect((await load(desk, name, ['settings', 'members'])).status()).toBe(200);
+    expect(
+      sql(
+        "SELECT p.nickname FROM member m JOIN member p ON p.id = m.proxyMemberId WHERE m.nickname = 'Zaza'",
+      ),
+    ).toBe('Momo');
+
+    const refusedWith = async (
+      change: (members: Record<string, unknown>[]) => void,
+      file: string,
+    ) => {
+      const files = new Map(exported);
+      const copy = structuredClone(data);
+      change(copy.member);
+      files.set('members/data.json', jsonOf(copy));
+      const fresh = await jibe(playwright);
+      return (await read(fresh, await upload(fresh, makeZip(Object.fromEntries(files)), file)))
+        .problems;
+    };
+    const zazaIn = (members: Record<string, unknown>[]) =>
+      members.find((one) => one.nickname === 'Zaza') as Record<string, unknown>;
+    const momoIn = (members: Record<string, unknown>[]) =>
+      members.find((one) => one.nickname === 'Momo') as Record<string, unknown>;
+
+    const invited = await refusedWith((members) => {
+      momoIn(members).status = 'INVITED';
+      delete momoIn(members).passwordHash;
+    }, 'invited.zip');
+    const oneself = await refusedWith((members) => {
+      zazaIn(members).proxyMemberEmail = email('Zaza');
+    }, 'oneself.zip');
+    const stranger = await refusedWith((members) => {
+      zazaIn(members).proxyMemberEmail = 'personne@example.org';
+    }, 'stranger.zip');
+    for (const [problems, value] of [
+      [invited, email('Momo')],
+      [oneself, email('Zaza')],
+      [stranger, 'personne@example.org'],
+    ] as const) {
+      expect(problems).toEqual([
+        expect.objectContaining({ column: 'proxyMemberEmail', error: 'unknownMember', value }),
+      ]);
+    }
+  });
+});
